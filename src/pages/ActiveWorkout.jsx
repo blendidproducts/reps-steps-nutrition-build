@@ -22,7 +22,8 @@ import {
   Footprints,
   Route,
   MapPin,
-  X
+  X,
+  RefreshCw
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -70,6 +71,8 @@ export default function ActiveWorkout() {
   const [route, setRoute] = useState([]);
   const [trackedDistance, setTrackedDistance] = useState(0);
   const lastPosition = useRef(null);
+  const [showSwapModal, setShowSwapModal] = useState(false);
+  const [allExercises, setAllExercises] = useState([]);
 
   useEffect(() => {
     loadWorkout();
@@ -81,8 +84,39 @@ export default function ActiveWorkout() {
     };
   }, []);
 
+  const swapExercise = (newExercise) => {
+    const updatedExercises = [...workout.exercises];
+    const exerciseDetails = allExercises.find(ex => ex.id === newExercise.id);
+    
+    updatedExercises[currentExerciseIndex] = {
+      ...updatedExercises[currentExerciseIndex],
+      exercise_id: newExercise.id,
+      exercise_name: newExercise.name,
+      image_url: exerciseDetails?.image_url,
+      instructions: exerciseDetails?.instructions,
+      metric: exerciseDetails?.metric || 'reps',
+      completed_reps: 0,
+      completed_time: 0
+    };
+    
+    setWorkout({...workout, exercises: updatedExercises});
+    setCurrentSet(1);
+    setCurrentReps(0);
+    setRepInput("");
+    setExerciseTimer(0);
+    setShowSwapModal(false);
+  };
+
   const nextExercise = () => {
     const currentExercise = workout.exercises[currentExerciseIndex];
+    
+    // Save completed reps/time for this set before moving on
+    const updatedExercises = [...workout.exercises];
+    if (updatedExercises[currentExerciseIndex]) {
+      const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
+      updatedExercises[currentExerciseIndex].completed_reps = previousCompleted + currentReps;
+      setWorkout({...workout, exercises: updatedExercises});
+    }
     
     // Check if we've completed all sets for current exercise
     if (currentSet < (currentExercise.sets || 1)) {
@@ -225,6 +259,7 @@ export default function ActiveWorkout() {
         // Fetch full exercise details to get images and other data
         const { Exercise } = await import('@/entities/Exercise');
         const allExercises = await Exercise.list();
+        setAllExercises(allExercises);
         
         // Merge exercise details with workout exercises
         data.exercises = data.exercises.map(workoutEx => {
@@ -284,8 +319,9 @@ export default function ActiveWorkout() {
      if (workout) {
       const updatedExercises = [...workout.exercises];
       if (updatedExercises[currentExerciseIndex]) {
+        // Store current set progress, don't overwrite total completed
         if (metric === 'reps') {
-          updatedExercises[currentExerciseIndex].completed_reps = value;
+          updatedExercises[currentExerciseIndex].current_set_reps = value;
         } else if (metric === 'time') {
           updatedExercises[currentExerciseIndex].completed_time = value;
         }
@@ -463,6 +499,13 @@ export default function ActiveWorkout() {
                 </Badge>
                 <div className="flex gap-2">
                   <button
+                    onClick={() => setShowSwapModal(true)}
+                    className="w-8 h-8 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors"
+                    title="Swap Exercise"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => setShowVideoHelp(true)}
                     className="w-8 h-8 bg-gray-700/50 hover:bg-gray-700 rounded-full flex items-center justify-center transition-colors"
                   >
@@ -615,6 +658,43 @@ export default function ActiveWorkout() {
                 </div>
                 <Button onClick={() => setShowVideoHelp(false)} className="w-full gradient-bg text-white">
                   Got It!
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Swap Exercise Modal */}
+      <AnimatePresence>
+        {showSwapModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setShowSwapModal(false)}
+          >
+            <Card className="bg-card max-w-lg w-full border-border max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+              <CardContent className="p-6">
+                <h3 className="text-xl font-bold mb-4 text-white">Swap Exercise</h3>
+                <p className="text-sm text-gray-400 mb-4">Choose a different exercise for this slot</p>
+                <div className="overflow-y-auto max-h-[50vh] space-y-2">
+                  {allExercises
+                    .filter(ex => ex.category === currentExercise.category || ex.category === 'full_body')
+                    .map(exercise => (
+                      <button
+                        key={exercise.id}
+                        onClick={() => swapExercise(exercise)}
+                        className="w-full text-left p-3 rounded-lg bg-gray-800/50 hover:bg-gray-700 transition-colors border border-gray-700 hover:border-brand-blue"
+                      >
+                        <div className="font-semibold text-white">{exercise.name}</div>
+                        <div className="text-xs text-gray-400 mt-1">{exercise.description}</div>
+                      </button>
+                    ))}
+                </div>
+                <Button onClick={() => setShowSwapModal(false)} variant="outline" className="w-full mt-4">
+                  Cancel
                 </Button>
               </CardContent>
             </Card>

@@ -102,14 +102,33 @@ export default function Exercises() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.6 }}
+              className="flex flex-wrap gap-3"
             >
-              <Link to={createPageUrl("RandomWorkout")}>
+              <Link to={createPageUrl("RandomWorkout") + "?type=upper"}>
                 <Button 
                   size="lg" 
-                  className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-base md:text-lg px-6 md:px-8 py-3 md:py-4 rounded-full font-bold backdrop-blur-sm touch-manipulation"
+                  className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-base px-6 py-3 rounded-full font-bold backdrop-blur-sm touch-manipulation"
                 >
                   <Zap className="w-5 h-5 mr-2" />
-                  GENERATE AI WORKOUT
+                  UPPER BODY AI
+                </Button>
+              </Link>
+              <Link to={createPageUrl("RandomWorkout") + "?type=lower"}>
+                <Button 
+                  size="lg" 
+                  className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-base px-6 py-3 rounded-full font-bold backdrop-blur-sm touch-manipulation"
+                >
+                  <Zap className="w-5 h-5 mr-2" />
+                  LOWER BODY AI
+                </Button>
+              </Link>
+              <Link to={createPageUrl("RandomWorkout") + "?type=mix"}>
+                <Button 
+                  size="lg" 
+                  className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-base px-6 py-3 rounded-full font-bold backdrop-blur-sm touch-manipulation"
+                >
+                  <Zap className="w-5 h-5 mr-2" />
+                  MIXED AI
                 </Button>
               </Link>
             </motion.div>
