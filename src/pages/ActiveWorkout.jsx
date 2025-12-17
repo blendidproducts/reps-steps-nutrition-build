@@ -249,39 +249,55 @@ export default function ActiveWorkout() {
   }, [isActive, isPaused, isResting, restTimer, workout, currentExerciseIndex]);
 
   const loadWorkout = async () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const workoutId = urlParams.get('workoutId');
-    if (workoutId) {
-      const workoutData = await Workout.filter({id: workoutId});
-      if (workoutData.length > 0) {
-        const data = workoutData[0];
-        
-        // Fetch full exercise details to get images and other data
-        const { Exercise } = await import('@/entities/Exercise');
-        const allExercises = await Exercise.list();
-        setAllExercises(allExercises);
-        
-        // Merge exercise details with workout exercises
-        data.exercises = data.exercises.map(workoutEx => {
-          const exerciseDetails = allExercises.find(ex => ex.id === workoutEx.exercise_id || ex.name === workoutEx.exercise_name);
-          return {
-            ...workoutEx,
-            image_url: exerciseDetails?.image_url,
-            instructions: exerciseDetails?.instructions,
-            metric: exerciseDetails?.metric || workoutEx.metric || 'reps'
-          };
-        });
-        
-        // Populate time-based exercise targets if workout type is time-based
-        if (data.workout_type === 'time_based' && data.total_duration > 0) {
-            const exerciseCount = data.exercises.length;
-            const timePerExercise = Math.floor((data.total_duration * 60) / exerciseCount);
-            data.exercises.forEach(ex => {
-                ex.target_time = timePerExercise;
-            });
-        }
-        setWorkout(data);
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const workoutId = urlParams.get('workoutId');
+      
+      if (!workoutId) {
+        console.error('No workout ID provided');
+        navigate(createPageUrl("Exercises"));
+        return;
       }
+      
+      const workoutData = await Workout.filter({id: workoutId});
+      
+      if (workoutData.length === 0) {
+        console.error('Workout not found');
+        navigate(createPageUrl("Exercises"));
+        return;
+      }
+      
+      const data = workoutData[0];
+      
+      // Fetch full exercise details to get images and other data
+      const { Exercise } = await import('@/entities/Exercise');
+      const allExercises = await Exercise.list();
+      setAllExercises(allExercises);
+      
+      // Merge exercise details with workout exercises
+      data.exercises = data.exercises.map(workoutEx => {
+        const exerciseDetails = allExercises.find(ex => ex.id === workoutEx.exercise_id || ex.name === workoutEx.exercise_name);
+        return {
+          ...workoutEx,
+          image_url: exerciseDetails?.image_url,
+          instructions: exerciseDetails?.instructions,
+          metric: exerciseDetails?.metric || workoutEx.metric || 'reps'
+        };
+      });
+      
+      // Populate time-based exercise targets if workout type is time-based
+      if (data.workout_type === 'time_based' && data.total_duration > 0) {
+        const exerciseCount = data.exercises.length;
+        const timePerExercise = Math.floor((data.total_duration * 60) / exerciseCount);
+        data.exercises.forEach(ex => {
+          ex.target_time = timePerExercise;
+        });
+      }
+      
+      setWorkout(data);
+    } catch (error) {
+      console.error('Error loading workout:', error);
+      navigate(createPageUrl("Exercises"));
     }
   };
 
