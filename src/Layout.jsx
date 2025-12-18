@@ -2,7 +2,6 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple } from "lucide-react";
-import { Helmet } from "react-helmet";
 import {
   Sidebar,
   SidebarContent,
@@ -38,13 +37,19 @@ export default function Layout({ children, currentPageName }) {
   React.useEffect(() => {
     document.documentElement.classList.add('dark');
     document.body.style.backgroundColor = '#0a0a0a';
+    
+    // Set viewport meta tag to prevent zoom issues on orientation change
+    let viewport = document.querySelector('meta[name="viewport"]');
+    if (!viewport) {
+      viewport = document.createElement('meta');
+      viewport.name = 'viewport';
+      document.head.appendChild(viewport);
+    }
+    viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
   }, []);
 
   return (
     <SidebarProvider>
-      <Helmet>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-      </Helmet>
       <style>
         {`
           * {
