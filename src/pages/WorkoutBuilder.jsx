@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Exercise } from "@/entities/Exercise";
 import { Workout } from "@/entities/Workout";
@@ -141,22 +140,38 @@ export default function WorkoutBuilder() {
       return;
     }
 
+    // Apply randomize order if enabled
+    let exercisesToUse = [...selectedExercises];
+    if (settings.randomizeOrder) {
+      exercisesToUse = exercisesToUse.sort(() => Math.random() - 0.5);
+    }
+
+    // Add warm-up exercises if enabled
+    if (settings.includeWarmup) {
+      const warmupExercises = [
+        { id: 'warmup-1', name: 'Arm Circles', category: 'warmup', metric: 'time', difficulty: 'beginner' },
+        { id: 'warmup-2', name: 'Leg Swings', category: 'warmup', metric: 'time', difficulty: 'beginner' },
+        { id: 'warmup-3', name: 'Torso Twists', category: 'warmup', metric: 'time', difficulty: 'beginner' }
+      ];
+      exercisesToUse = [...warmupExercises, ...exercisesToUse];
+    }
+
     const workoutData = {
-      name: workoutName || `Workout - ${new Date().toLocaleDateString()}`, // Use generated name if not set
-      exercises: selectedExercises.map(ex => ({
+      name: workoutName || `Workout - ${new Date().toLocaleDateString()}`,
+      exercises: exercisesToUse.map(ex => ({
         exercise_id: ex.id,
         exercise_name: ex.name,
-        // Set target reps or time based on exercise metric
         target_reps: ex.metric === 'reps' ? settings.defaultReps[0] : 0,
-        target_time: ex.metric === 'time' ? settings.defaultTime[0] : 0,
+        target_time: ex.metric === 'time' || ex.category === 'warmup' ? (ex.category === 'warmup' ? 30 : settings.defaultTime[0]) : 0,
         completed_reps: 0,
         completed_time: 0,
-        sets: settings.defaultSets[0],
-        superset_with_next: ex.superset_with_next
+        sets: ex.category === 'warmup' ? 1 : settings.defaultSets[0],
+        superset_with_next: ex.superset_with_next || false
       })),
       workout_type: workoutType,
-      difficulty: "intermediate", // This could be dynamically calculated
-      weight_added_lbs: settings.useWeightVest ? settings.vestWeightLbs[0] : 0
+      difficulty: "intermediate",
+      weight_added_lbs: settings.useWeightVest ? settings.vestWeightLbs[0] : 0,
+      rest_time: settings.restTime[0]
     };
 
     try {

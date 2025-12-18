@@ -259,9 +259,10 @@ export default function ActiveWorkout() {
         return;
       }
       
+      const { Workout } = await import('@/entities/Workout');
       const workoutData = await Workout.filter({id: workoutId});
       
-      if (workoutData.length === 0) {
+      if (!workoutData || workoutData.length === 0) {
         console.error('Workout not found');
         navigate(createPageUrl("Exercises"));
         return;

@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple } from "lucide-react";
+import { Helmet } from "react-helmet";
 import {
   Sidebar,
   SidebarContent,
@@ -41,6 +42,9 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <SidebarProvider>
+      <Helmet>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+      </Helmet>
       <style>
         {`
           * {
