@@ -516,6 +516,21 @@ export default function ActiveWorkout() {
 
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
+      {/* Fixed Debug Panel - Always Visible During Load */}
+      {!workout && (
+        <div className="fixed top-0 left-0 right-0 bg-red-600 text-white p-3 z-50 text-xs overflow-y-auto max-h-48">
+          <div className="font-bold mb-2">🔧 DEBUG INFO:</div>
+          {debugInfo.length === 0 ? (
+            <div>Initializing...</div>
+          ) : (
+            <div className="space-y-1">
+              {debugInfo.map((info, i) => (
+                <div key={i}>{info}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <div className="container mx-auto px-2 py-4 md:px-4 md:py-6 max-w-md">
         {/* Header */}
         <div className="text-center mb-4">
