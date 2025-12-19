@@ -106,30 +106,7 @@ export default function ActiveWorkout() {
     }
   }, [workout, currentExerciseIndex, currentSet, timer, currentReps, sessionStartTime, totalReps, exerciseTimer, isResting, restTimer, cardioIntervals, isActive, isPaused]);
 
-  // Load workout state from localStorage if exists
-  useEffect(() => {
-    const savedState = localStorage.getItem('activeWorkoutState');
-    if (savedState) {
-      try {
-        const state = JSON.parse(savedState);
-        setWorkout(state.workout);
-        setCurrentExerciseIndex(state.currentExerciseIndex);
-        setCurrentSet(state.currentSet);
-        setTimer(state.timer);
-        setCurrentReps(state.currentReps);
-        setSessionStartTime(state.sessionStartTime ? new Date(state.sessionStartTime) : null);
-        setTotalReps(state.totalReps);
-        setExerciseTimer(state.exerciseTimer);
-        setIsResting(state.isResting);
-        setRestTimer(state.restTimer);
-        setCardioIntervals(state.cardioIntervals || []);
-        setIsPaused(state.isPaused);
-        setIsActive(true);
-      } catch (error) {
-        console.error("Failed to restore workout state:", error);
-      }
-    }
-  }, []);
+
 
   const swapExercise = (newExercise) => {
     const updatedExercises = [...workout.exercises];
@@ -297,6 +274,31 @@ export default function ActiveWorkout() {
 
   const loadWorkout = async () => {
     try {
+      // First check if we're resuming from localStorage
+      const savedState = localStorage.getItem('activeWorkoutState');
+      if (savedState) {
+        try {
+          const state = JSON.parse(savedState);
+          setWorkout(state.workout);
+          setCurrentExerciseIndex(state.currentExerciseIndex);
+          setCurrentSet(state.currentSet);
+          setTimer(state.timer);
+          setCurrentReps(state.currentReps);
+          setSessionStartTime(state.sessionStartTime ? new Date(state.sessionStartTime) : null);
+          setTotalReps(state.totalReps);
+          setExerciseTimer(state.exerciseTimer);
+          setIsResting(state.isResting);
+          setRestTimer(state.restTimer);
+          setCardioIntervals(state.cardioIntervals || []);
+          setIsPaused(state.isPaused);
+          setIsActive(true);
+          return; // Exit early, we've restored the workout
+        } catch (error) {
+          console.error("Failed to restore workout state:", error);
+        }
+      }
+
+      // If no saved state, load from URL parameter
       const urlParams = new URLSearchParams(window.location.search);
       const workoutId = urlParams.get('workoutId');
       
