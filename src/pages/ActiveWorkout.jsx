@@ -287,37 +287,58 @@ export default function ActiveWorkout() {
 
   const loadWorkout = async () => {
     try {
-      setDebugInfo(['1. Starting...']);
+      // First check if we're resuming from localStorage
+      const savedState = localStorage.getItem('activeWorkoutState');
       
-      // Get workout ID from URL
+      if (savedState) {
+        try {
+          const state = JSON.parse(savedState);
+          // Restore full workout state
+          setWorkout(state.workout);
+          setCurrentExerciseIndex(state.currentExerciseIndex);
+          setCurrentSet(state.currentSet);
+          setTimer(state.timer);
+          setCurrentReps(state.currentReps);
+          setSessionStartTime(state.sessionStartTime ? new Date(state.sessionStartTime) : null);
+          setTotalReps(state.totalReps);
+          setExerciseTimer(state.exerciseTimer);
+          setIsResting(state.isResting);
+          setRestTimer(state.restTimer);
+          setCardioIntervals(state.cardioIntervals || []);
+          setIsPaused(state.isPaused);
+          setIsActive(state.isActive);
+          
+          // Load all exercises for swap functionality
+          const allExercises = await Exercise.list();
+          setAllExercises(allExercises);
+          return; // Exit early, we've restored the workout
+        } catch (error) {
+          console.error("Failed to restore workout state:", error);
+          localStorage.removeItem('activeWorkoutState');
+        }
+      }
+
+      // If no saved state, load from URL parameter
       const urlParams = new URLSearchParams(window.location.search);
       const workoutId = urlParams.get('workoutId');
-      setDebugInfo(prev => [...prev, `2. ID: ${workoutId || 'MISSING'}`]);
       
       if (!workoutId) {
         setLoadingError('No workout ID');
-        setDebugInfo(prev => [...prev, '❌ No ID in URL']);
         setTimeout(() => navigate(createPageUrl("Exercises")), 2000);
         return;
       }
       
-      setDebugInfo(prev => [...prev, '3. Fetching workout...']);
       const workoutData = await Workout.filter({id: workoutId});
-      setDebugInfo(prev => [...prev, `4. Got: ${workoutData?.length || 0} results`]);
       
       if (!workoutData || workoutData.length === 0) {
         setLoadingError('Workout not found');
-        setDebugInfo(prev => [...prev, '❌ Not in database']);
         setTimeout(() => navigate(createPageUrl("Exercises")), 2000);
         return;
       }
       
       const data = workoutData[0];
-      setDebugInfo(prev => [...prev, `5. Name: ${data.name}`]);
       
-      setDebugInfo(prev => [...prev, '6. Fetching exercises...']);
       const allExercises = await Exercise.list();
-      setDebugInfo(prev => [...prev, `7. Got ${allExercises.length} exercises`]);
       setAllExercises(allExercises);
       
       // Merge exercise details
@@ -339,12 +360,9 @@ export default function ActiveWorkout() {
         });
       }
       
-      setDebugInfo(prev => [...prev, '8. Setting workout...']);
       setWorkout(data);
-      setDebugInfo(prev => [...prev, '✅ SUCCESS!']);
     } catch (error) {
-      setLoadingError(error.message || 'Failed');
-      setDebugInfo(prev => [...prev, `❌ ${error.message || 'Unknown error'}`]);
+      setLoadingError(error.message || 'Failed to load workout');
       setTimeout(() => navigate(createPageUrl("Exercises")), 3000);
     }
   };
@@ -436,48 +454,17 @@ export default function ActiveWorkout() {
 
   if (!workout) {
     return (
-      <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb', padding: '20px' }}>
-        {/* BRIGHT RED DEBUG BANNER - ALWAYS VISIBLE */}
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          background: 'red',
-          color: 'white',
-          padding: '15px',
-          fontSize: '14px',
-          zIndex: 9999,
-          maxHeight: '200px',
-          overflowY: 'auto'
-        }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>🔧 DEBUG INFO:</div>
-          {debugInfo.length === 0 ? (
-            <div>Waiting to start...</div>
-          ) : (
-            <div>
-              {debugInfo.map((info, i) => (
-                <div key={i} style={{ marginBottom: '5px' }}>{info}</div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Main Loading Content */}
-        <div style={{ marginTop: '220px', textAlign: 'center' }}>
+      <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-6">
+        <div className="text-center">
           {loadingError ? (
             <div>
-              <div style={{ fontSize: '48px', marginBottom: '20px' }}>⚠️</div>
-              <div style={{ fontSize: '24px', color: '#ef4444', marginBottom: '10px' }}>
-                Error: {loadingError}
-              </div>
-              <div style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '20px' }}>
-                Redirecting to exercises...
-              </div>
+              <div className="text-6xl mb-4">⚠️</div>
+              <div className="text-xl text-red-400 mb-2">Error: {loadingError}</div>
+              <div className="text-sm text-gray-400 mb-4">Redirecting to exercises...</div>
               <Button 
                 onClick={() => {
                   localStorage.clear();
-                  window.location.href = createPageUrl("Exercises");
+                  navigate(createPageUrl("Exercises"));
                 }}
                 className="bg-blue-600 hover:bg-blue-700"
               >
@@ -487,7 +474,7 @@ export default function ActiveWorkout() {
           ) : (
             <div>
               <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-brand-blue mx-auto mb-4"></div>
-              <div style={{ fontSize: '20px', marginBottom: '20px' }}>Loading workout...</div>
+              <div className="text-xl">Loading workout...</div>
             </div>
           )}
         </div>
