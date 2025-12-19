@@ -79,8 +79,18 @@ export default function ActiveWorkout() {
 
   useEffect(() => {
     loadWorkout();
+    
+    // Timeout after 15 seconds
+    const timeout = setTimeout(() => {
+      if (!workout) {
+        setDebugInfo(prev => [...prev, '⏱️ TIMEOUT: Loading took too long']);
+        setLoadingError('Loading timeout - slow connection or data issue');
+      }
+    }, 15000);
+    
     // Clean up GPS watch on component unmount
     return () => {
+      clearTimeout(timeout);
       if (gpsWatchId) {
         navigator.geolocation.clearWatch(gpsWatchId);
       }
@@ -474,7 +484,16 @@ export default function ActiveWorkout() {
           <>
             <div className="text-red-500 mb-4 text-xl">⚠️</div>
             <div className="text-lg text-red-400 mb-2">Error: {loadingError}</div>
-            <div className="text-sm text-gray-400">Redirecting to exercises...</div>
+            <div className="text-sm text-gray-400 mb-4">Redirecting to exercises...</div>
+            <Button 
+              onClick={() => {
+                localStorage.removeItem('activeWorkoutState');
+                window.location.reload();
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Clear Cache & Retry
+            </Button>
           </>
         ) : (
           <>
@@ -499,8 +518,13 @@ export default function ActiveWorkout() {
           )}
         </div>
         
-        <div className="text-xs text-gray-500 mt-4">
-          Take a screenshot of this debug info if the issue persists
+        <div className="text-xs text-gray-500 mt-4 space-y-2">
+          <div className="font-bold text-white">📱 MOBILE TROUBLESHOOTING:</div>
+          <div>1. Screenshot this page</div>
+          <div>2. Close ALL Chrome tabs</div>
+          <div>3. Clear browser cache (Settings → Privacy)</div>
+          <div>4. Reopen app in new tab</div>
+          <div>5. If stuck, click button above</div>
         </div>
       </div>
     </div>;
