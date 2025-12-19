@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Workout } from "@/entities/Workout";
 import { WorkoutSession } from "@/entities/WorkoutSession";
+import { Exercise } from "@/entities/Exercise";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
