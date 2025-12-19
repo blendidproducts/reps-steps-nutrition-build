@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,9 +11,14 @@ import {
   Timer, 
   Smartphone,
   Bell,
-  Lock
+  Lock,
+  LogOut,
+  User as UserIcon
 } from "lucide-react";
 import { toast } from "sonner";
+import { base44 } from "@/api/base44Client";
+import { useNavigate } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
 const requestPermission = async (permissionName, friendlyName) => {
   try {
@@ -41,6 +45,10 @@ const requestPermission = async (permissionName, friendlyName) => {
 };
 
 export default function Settings() {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  
   const [settings, setSettings] = useState(() => {
     const defaultSettings = {
       voiceGuidance: true, soundEffects: true, musicVolume: [70], voiceVolume: [80],
@@ -63,6 +71,19 @@ export default function Settings() {
     notifications: 'default',
     camera: 'prompt'
   });
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const currentUser = await base44.auth.me();
+        setUser(currentUser);
+      } catch (error) {
+        console.log("User not logged in");
+      }
+      setIsLoadingUser(false);
+    };
+    loadUser();
+  }, []);
 
   useEffect(() => {
     if ('permissions' in navigator) {
@@ -110,6 +131,17 @@ export default function Settings() {
 
   const updateSetting = (key, value) => {
     setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleLogout = async () => {
+    try {
+      await base44.auth.logout();
+      toast.success("Logged out successfully!");
+      navigate(createPageUrl("Home"));
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Failed to logout. Please try again.");
+    }
   };
 
   return (
@@ -191,6 +223,56 @@ export default function Settings() {
 
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         <div className="grid gap-6">
+          {/* Account Section */}
+          {!isLoadingUser && (
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <UserIcon className="w-5 h-5 text-brand-blue" />
+                  Account
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {user ? (
+                  <>
+                    <div className="p-4 bg-background rounded-lg border border-border">
+                      <div className="mb-2">
+                        <Label className="font-medium text-foreground">Email</Label>
+                        <p className="text-sm text-gray-400">{user.email}</p>
+                      </div>
+                      <div className="mb-4">
+                        <Label className="font-medium text-foreground">Subscription Status</Label>
+                        <p className="text-sm">
+                          <span className={`font-semibold ${user.subscription_status === 'pro' ? 'text-brand-blue' : 'text-gray-400'}`}>
+                            {user.subscription_status === 'pro' ? '⭐ Pro Member' : 'Free'}
+                          </span>
+                        </p>
+                      </div>
+                      <Button
+                        onClick={handleLogout}
+                        variant="outline"
+                        className="w-full bg-red-500/10 border-red-500 text-red-500 hover:bg-red-500/20"
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Logout
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-4 bg-background rounded-lg border border-border text-center">
+                    <p className="text-gray-400 mb-4">You are not logged in</p>
+                    <Button
+                      onClick={() => base44.auth.redirectToLogin(window.location.pathname)}
+                      className="gradient-bg text-white hover:opacity-90"
+                    >
+                      Login
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          
           {/* Permissions */}
           <Card className="bg-card border-border">
             <CardHeader>
