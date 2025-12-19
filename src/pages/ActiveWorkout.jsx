@@ -49,6 +49,7 @@ const haversineDistance = (coords1, coords2) => {
 export default function ActiveWorkout() {
   const navigate = useNavigate();
   const [workout, setWorkout] = useState(null);
+  const [loadingError, setLoadingError] = useState(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [currentSet, setCurrentSet] = useState(1);
   const [isActive, setIsActive] = useState(false);
@@ -274,11 +275,16 @@ export default function ActiveWorkout() {
 
   const loadWorkout = async () => {
     try {
+      console.log('[ActiveWorkout] Starting loadWorkout...');
+      
       // First check if we're resuming from localStorage
       const savedState = localStorage.getItem('activeWorkoutState');
+      console.log('[ActiveWorkout] Saved state:', savedState ? 'exists' : 'none');
+      
       if (savedState) {
         try {
           const state = JSON.parse(savedState);
+          console.log('[ActiveWorkout] Restored from localStorage');
           setWorkout(state.workout);
           setCurrentExerciseIndex(state.currentExerciseIndex);
           setCurrentSet(state.currentSet);
@@ -294,32 +300,41 @@ export default function ActiveWorkout() {
           setIsActive(true);
           return; // Exit early, we've restored the workout
         } catch (error) {
-          console.error("Failed to restore workout state:", error);
+          console.error("[ActiveWorkout] Failed to restore workout state:", error);
+          localStorage.removeItem('activeWorkoutState');
         }
       }
 
       // If no saved state, load from URL parameter
       const urlParams = new URLSearchParams(window.location.search);
       const workoutId = urlParams.get('workoutId');
+      console.log('[ActiveWorkout] Workout ID from URL:', workoutId);
       
       if (!workoutId) {
-        console.error('No workout ID provided');
-        navigate(createPageUrl("Exercises"));
+        console.error('[ActiveWorkout] No workout ID provided');
+        setLoadingError('No workout ID provided');
+        setTimeout(() => navigate(createPageUrl("Exercises")), 2000);
         return;
       }
       
+      console.log('[ActiveWorkout] Fetching workout...');
       const workoutData = await Workout.filter({id: workoutId});
+      console.log('[ActiveWorkout] Workout data:', workoutData);
       
       if (!workoutData || workoutData.length === 0) {
-        console.error('Workout not found');
-        navigate(createPageUrl("Exercises"));
+        console.error('[ActiveWorkout] Workout not found');
+        setLoadingError('Workout not found');
+        setTimeout(() => navigate(createPageUrl("Exercises")), 2000);
         return;
       }
       
       const data = workoutData[0];
+      console.log('[ActiveWorkout] Workout loaded:', data.name);
       
       // Fetch full exercise details to get images and other data
+      console.log('[ActiveWorkout] Fetching exercises...');
       const allExercises = await Exercise.list();
+      console.log('[ActiveWorkout] Exercises loaded:', allExercises.length);
       setAllExercises(allExercises);
       
       // Merge exercise details with workout exercises
@@ -342,11 +357,13 @@ export default function ActiveWorkout() {
         });
       }
       
+      console.log('[ActiveWorkout] Workout ready, setting state...');
       setWorkout(data);
+      console.log('[ActiveWorkout] Workout loaded successfully!');
     } catch (error) {
-      console.error('Error loading workout:', error);
-      alert('Failed to load workout. Redirecting...');
-      navigate(createPageUrl("Exercises"));
+      console.error('[ActiveWorkout] Error loading workout:', error);
+      setLoadingError(error.message || 'Failed to load workout');
+      setTimeout(() => navigate(createPageUrl("Exercises")), 3000);
     }
   };
 
@@ -438,8 +455,19 @@ export default function ActiveWorkout() {
   if (!workout) {
     return <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-4">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue mx-auto mb-4"></div>
-        <div className="text-lg text-foreground">Loading workout...</div>
+        {loadingError ? (
+          <>
+            <div className="text-red-500 mb-4 text-xl">⚠️</div>
+            <div className="text-lg text-red-400 mb-2">Error: {loadingError}</div>
+            <div className="text-sm text-gray-400">Redirecting to exercises...</div>
+          </>
+        ) : (
+          <>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue mx-auto mb-4"></div>
+            <div className="text-lg text-foreground">Loading workout...</div>
+            <div className="text-sm text-gray-400 mt-2">Check browser console if stuck</div>
+          </>
+        )}
       </div>
     </div>;
   }
