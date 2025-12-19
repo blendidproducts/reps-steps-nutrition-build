@@ -85,6 +85,52 @@ export default function ActiveWorkout() {
     };
   }, []);
 
+  // Save workout state to localStorage
+  useEffect(() => {
+    if (workout && isActive) {
+      const workoutState = {
+        workout,
+        currentExerciseIndex,
+        currentSet,
+        timer,
+        currentReps,
+        sessionStartTime,
+        totalReps,
+        exerciseTimer,
+        isResting,
+        restTimer,
+        cardioIntervals,
+        isPaused
+      };
+      localStorage.setItem('activeWorkoutState', JSON.stringify(workoutState));
+    }
+  }, [workout, currentExerciseIndex, currentSet, timer, currentReps, sessionStartTime, totalReps, exerciseTimer, isResting, restTimer, cardioIntervals, isActive, isPaused]);
+
+  // Load workout state from localStorage if exists
+  useEffect(() => {
+    const savedState = localStorage.getItem('activeWorkoutState');
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState);
+        setWorkout(state.workout);
+        setCurrentExerciseIndex(state.currentExerciseIndex);
+        setCurrentSet(state.currentSet);
+        setTimer(state.timer);
+        setCurrentReps(state.currentReps);
+        setSessionStartTime(state.sessionStartTime ? new Date(state.sessionStartTime) : null);
+        setTotalReps(state.totalReps);
+        setExerciseTimer(state.exerciseTimer);
+        setIsResting(state.isResting);
+        setRestTimer(state.restTimer);
+        setCardioIntervals(state.cardioIntervals || []);
+        setIsPaused(state.isPaused);
+        setIsActive(true);
+      } catch (error) {
+        console.error("Failed to restore workout state:", error);
+      }
+    }
+  }, []);
+
   const swapExercise = (newExercise) => {
     const updatedExercises = [...workout.exercises];
     const exerciseDetails = allExercises.find(ex => ex.id === newExercise.id);
@@ -329,6 +375,7 @@ export default function ActiveWorkout() {
       await WorkoutSession.create(sessionData);
     }
     setIsActive(false);
+    localStorage.removeItem('activeWorkoutState');
     navigate(createPageUrl("WorkoutComplete"));
   };
   

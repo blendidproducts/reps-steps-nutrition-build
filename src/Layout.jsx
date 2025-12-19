@@ -1,7 +1,7 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple } from "lucide-react";
+import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +31,9 @@ const navigationItems = [
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [hasActiveWorkout, setHasActiveWorkout] = React.useState(false);
+  const [workoutTimer, setWorkoutTimer] = React.useState(0);
   const logoUrl = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/d1545e30c_repsandsteps_main_logo_2.png";
   const bannerUrl = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/8866d855e_repsandSteps_name_banner.png";
 
@@ -47,6 +50,38 @@ export default function Layout({ children, currentPageName }) {
     }
     viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
   }, []);
+
+  // Check for active workout and update timer
+  React.useEffect(() => {
+    const checkActiveWorkout = () => {
+      const savedState = localStorage.getItem('activeWorkoutState');
+      if (savedState) {
+        try {
+          const state = JSON.parse(savedState);
+          setHasActiveWorkout(true);
+          setWorkoutTimer(state.timer || 0);
+        } catch (error) {
+          setHasActiveWorkout(false);
+        }
+      } else {
+        setHasActiveWorkout(false);
+      }
+    };
+
+    checkActiveWorkout();
+    const interval = setInterval(checkActiveWorkout, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const resumeWorkout = () => {
+    navigate(createPageUrl("ActiveWorkout"));
+  };
 
   return (
     <SidebarProvider>
@@ -160,6 +195,30 @@ export default function Layout({ children, currentPageName }) {
               <img src={bannerUrl} alt="RepsAndSteps" className="h-6" />
             </div>
           </header>
+
+          {/* Active Workout Banner */}
+          {hasActiveWorkout && !location.pathname.includes('/ActiveWorkout') && (
+            <div 
+              onClick={resumeWorkout}
+              className="bg-gradient-to-r from-brand-blue to-blue-600 text-white px-4 py-3 cursor-pointer hover:opacity-90 transition-opacity sticky top-0 z-50 border-b-2 border-blue-400"
+            >
+              <div className="container mx-auto flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="animate-pulse">
+                    <Play className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">Workout in Progress</p>
+                    <p className="text-xs text-white/90">Tap to resume</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full">
+                  <Timer className="w-4 h-4" />
+                  <span className="font-mono font-bold">{formatTime(workoutTimer)}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex-1 overflow-auto" style={{ backgroundColor: '#0a0a0a' }}>
             {children}
