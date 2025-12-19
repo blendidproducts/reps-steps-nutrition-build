@@ -26,7 +26,9 @@ import {
   Zap,
   Star,
   Link2,
-  Upload // New icon import for save functionality
+  Upload,
+  Trash2,
+  RefreshCw
 } from "lucide-react";
 
 export default function WorkoutBuilder() {
@@ -92,6 +94,43 @@ export default function WorkoutBuilder() {
       newExercises[index].superset_with_next = !newExercises[index].superset_with_next;
       setSelectedExercises(newExercises);
     }
+  };
+
+  const removeExercise = (index) => {
+    const newExercises = [...selectedExercises];
+    newExercises.splice(index, 1);
+    setSelectedExercises(newExercises);
+    toast.success('Exercise removed');
+  };
+
+  const swapExercise = async (index) => {
+    // Load all exercises
+    const allExercises = await Exercise.list();
+    const currentExercise = selectedExercises[index];
+    
+    // Filter exercises by same category
+    const categoryExercises = allExercises.filter(ex => 
+      ex.category === currentExercise.category && ex.id !== currentExercise.id
+    );
+    
+    if (categoryExercises.length === 0) {
+      toast.error('No alternative exercises in this category');
+      return;
+    }
+    
+    // Pick a random exercise from the same category
+    const randomExercise = categoryExercises[Math.floor(Math.random() * categoryExercises.length)];
+    
+    const newExercises = [...selectedExercises];
+    newExercises[index] = { ...randomExercise, superset_with_next: currentExercise.superset_with_next };
+    setSelectedExercises(newExercises);
+    toast.success(`Swapped to ${randomExercise.name}`);
+  };
+
+  const setPresetDuration = (minutes) => {
+    updateSetting('workoutDuration', [minutes]);
+    setWorkoutType('time_based');
+    toast.success(`${minutes} minute workout set`);
   };
 
   const saveWorkoutTemplate = async () => {
@@ -189,25 +228,37 @@ export default function WorkoutBuilder() {
     <div className="min-h-screen bg-background text-foreground">
       <style>
         {`
-          /* Custom styling for shadcn/ui Slider components */
-          .workout-builder-slider > span[data-state="idle"].relative.h-2.w-full.grow.overflow-hidden.rounded-full {
-            height: 8px !important;
-            background-color: #374151 !important; /* Unfilled track background */
-            border-radius: 9999px !important;
+          /* Slider Track (background) */
+          [data-orientation="horizontal"].relative.h-2.w-full.grow.overflow-hidden.rounded-full {
+            height: 10px !important;
+            background-color: #374151 !important;
           }
           
-          .workout-builder-slider > span[data-state="idle"].relative.h-2.w-full.grow.overflow-hidden.rounded-full > span[data-orientation="horizontal"].absolute.h-full {
-            background-color: #00a9ff !important; /* Filled range (the blue progress bar) */
-            border-radius: 9999px !important;
-            height: 8px !important;
-          }
-          
-          .workout-builder-slider > span[role="slider"].block.h-5.w-5.rounded-full {
+          /* Slider Range (filled blue part) */
+          [data-orientation="horizontal"].absolute.h-full {
             background-color: #00a9ff !important;
-            border: 2px solid #ffffff !important;
-            box-shadow: 0 2px 8px rgba(0, 169, 255, 0.5) !important;
-            width: 20px !important;
-            height: 20px !important;
+            height: 10px !important;
+          }
+          
+          /* Slider Thumb (button) */
+          [role="slider"].block.h-5.w-5.rounded-full {
+            background-color: #00a9ff !important;
+            border: 3px solid #ffffff !important;
+            box-shadow: 0 0 10px rgba(0, 169, 255, 0.8) !important;
+            width: 24px !important;
+            height: 24px !important;
+          }
+          
+          /* Active Tab Styling */
+          [data-state="active"] {
+            background-color: #00a9ff !important;
+            color: white !important;
+            border-color: #00a9ff !important;
+          }
+          
+          /* Switch Active State */
+          [data-state="checked"] {
+            background-color: #00a9ff !important;
           }
         `}
       </style>
@@ -226,6 +277,27 @@ export default function WorkoutBuilder() {
             <div>
               <h1 className="text-3xl font-bold">Build Your Workout</h1>
               <p className="text-lg text-white/90">Customize your training session</p>
+            </div>
+          </div>
+          
+          {/* Preset Time Buttons */}
+          <div className="mt-6">
+            <p className="text-sm text-white/80 mb-3">⚡ Quick Time Presets:</p>
+            <div className="flex flex-wrap gap-3">
+              {[15, 30, 45, 60].map(minutes => (
+                <Button
+                  key={minutes}
+                  onClick={() => setPresetDuration(minutes)}
+                  className={`${
+                    workoutType === 'time_based' && settings.workoutDuration[0] === minutes
+                      ? 'bg-white text-blue-600 border-2 border-white'
+                      : 'bg-white/10 text-white border-2 border-white/30 hover:bg-white/20'
+                  } font-bold px-6 py-2 rounded-full transition-all`}
+                >
+                  <Timer className="w-4 h-4 mr-2" />
+                  {minutes} MIN
+                </Button>
+              ))}
             </div>
           </div>
         </div>
@@ -262,13 +334,13 @@ export default function WorkoutBuilder() {
                 <div className="space-y-1">
                   {selectedExercises.map((exercise, index) => (
                     <div key={exercise.id}>
-                      <div className="flex items-center justify-between p-3 bg-background rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-background rounded-lg border border-border hover:border-brand-blue/50 transition-all">
                         <div className="flex items-center gap-3">
-                          <span className="w-8 h-8 bg-gray-700 text-brand-blue rounded-full flex items-center justify-center font-semibold">
+                          <span className="w-8 h-8 bg-brand-blue/20 text-brand-blue rounded-full flex items-center justify-center font-semibold border border-brand-blue/50">
                             {index + 1}
                           </span>
                           <div>
-                            <h4 className="font-semibold">{exercise.name}</h4>
+                            <h4 className="font-semibold text-foreground">{exercise.name}</h4>
                             <p className="text-sm text-gray-400 capitalize">{exercise.category?.replace('_', ' ')}</p>
                           </div>
                         </div>
@@ -276,6 +348,46 @@ export default function WorkoutBuilder() {
                           <Badge variant="outline" className="border-brand-blue/50 text-brand-blue capitalize">
                             {exercise.difficulty}
                           </Badge>
+                          
+                          {/* Swap Button */}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => swapExercise(index)}
+                                  className="text-gray-400 hover:text-blue-400 hover:bg-blue-400/10"
+                                >
+                                  <RefreshCw className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Swap for another exercise</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          {/* Delete Button */}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => removeExercise(index)}
+                                  className="text-gray-400 hover:text-red-400 hover:bg-red-400/10"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Remove exercise</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          
+                          {/* Superset Link */}
                           {index < selectedExercises.length - 1 && (
                             <TooltipProvider>
                               <Tooltip>
@@ -284,7 +396,7 @@ export default function WorkoutBuilder() {
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => toggleSuperset(index)}
-                                    className={exercise.superset_with_next ? "text-brand-blue" : "text-gray-500 hover:text-brand-blue"}
+                                    className={exercise.superset_with_next ? "text-brand-blue bg-brand-blue/10" : "text-gray-500 hover:text-brand-blue"}
                                   >
                                     <Link2 className="w-5 h-5" />
                                   </Button>
@@ -470,7 +582,11 @@ export default function WorkoutBuilder() {
                 <div className="text-sm text-gray-400 text-right">{settings.restTime[0]} seconds</div>
               </div>
 
-              <div className="flex items-center justify-between py-3 px-4 bg-background rounded-lg border border-border">
+              <div className={`flex items-center justify-between py-3 px-4 rounded-lg border transition-all ${
+                settings.randomizeOrder 
+                  ? 'bg-brand-blue/10 border-brand-blue' 
+                  : 'bg-background border-border'
+              }`}>
                 <div>
                   <Label className="text-base font-medium text-foreground">Randomize Exercise Order</Label>
                   <p className="text-sm text-gray-500">Shuffle exercises for variety</p>
@@ -482,7 +598,11 @@ export default function WorkoutBuilder() {
                 />
               </div>
 
-              <div className="flex items-center justify-between py-3 px-4 bg-background rounded-lg border border-border">
+              <div className={`flex items-center justify-between py-3 px-4 rounded-lg border transition-all ${
+                settings.includeWarmup 
+                  ? 'bg-brand-blue/10 border-brand-blue' 
+                  : 'bg-background border-border'
+              }`}>
                 <div>
                   <Label className="text-base font-medium text-foreground">Include Warm-up</Label>
                   <p className="text-sm text-gray-500">Start with light dynamic movements</p>
@@ -495,7 +615,11 @@ export default function WorkoutBuilder() {
               </div>
 
               <div className="border-t border-border pt-6">
-                <div className="flex items-center justify-between py-3 px-4 bg-background rounded-lg border border-border mb-4">
+                <div className={`flex items-center justify-between py-3 px-4 rounded-lg border mb-4 transition-all ${
+                  settings.useWeightVest 
+                    ? 'bg-brand-blue/10 border-brand-blue' 
+                    : 'bg-background border-border'
+                }`}>
                   <div>
                     <Label className="text-base font-medium text-foreground">Use Weight Vest</Label>
                     <p className="text-sm text-gray-500">Add resistance to your bodyweight exercises</p>
