@@ -78,15 +78,17 @@ export default function ActiveWorkout() {
   const [debugInfo, setDebugInfo] = useState([]);
 
   useEffect(() => {
+    // Clear any stuck state immediately
+    localStorage.removeItem('activeWorkoutState');
     loadWorkout();
     
-    // Timeout after 15 seconds
+    // Timeout after 10 seconds
     const timeout = setTimeout(() => {
       if (!workout) {
-        setDebugInfo(prev => [...prev, '⏱️ TIMEOUT: Loading took too long']);
-        setLoadingError('Loading timeout - slow connection or data issue');
+        setDebugInfo(prev => [...prev, '⏱️ TIMEOUT: Taking too long']);
+        setLoadingError('Timeout - Check your connection');
       }
-    }, 15000);
+    }, 10000);
     
     // Clean up GPS watch on component unmount
     return () => {
@@ -286,80 +288,40 @@ export default function ActiveWorkout() {
 
   const loadWorkout = async () => {
     try {
-      console.log('[ActiveWorkout] Starting loadWorkout...');
-      setDebugInfo(prev => [...prev, '1. Starting workout load...']);
+      setDebugInfo(['1. Starting...']);
       
-      // First check if we're resuming from localStorage
-      const savedState = localStorage.getItem('activeWorkoutState');
-      console.log('[ActiveWorkout] Saved state:', savedState ? 'exists' : 'none');
-      setDebugInfo(prev => [...prev, `2. Saved state: ${savedState ? 'found' : 'none'}`]);
-      
-      if (savedState) {
-        try {
-          const state = JSON.parse(savedState);
-          console.log('[ActiveWorkout] Restored from localStorage');
-          setDebugInfo(prev => [...prev, '3. Restored from saved state']);
-          setWorkout(state.workout);
-          setCurrentExerciseIndex(state.currentExerciseIndex);
-          setCurrentSet(state.currentSet);
-          setTimer(state.timer);
-          setCurrentReps(state.currentReps);
-          setSessionStartTime(state.sessionStartTime ? new Date(state.sessionStartTime) : null);
-          setTotalReps(state.totalReps);
-          setExerciseTimer(state.exerciseTimer);
-          setIsResting(state.isResting);
-          setRestTimer(state.restTimer);
-          setCardioIntervals(state.cardioIntervals || []);
-          setIsPaused(state.isPaused);
-          setIsActive(true);
-          return; // Exit early, we've restored the workout
-        } catch (error) {
-          console.error("[ActiveWorkout] Failed to restore workout state:", error);
-          localStorage.removeItem('activeWorkoutState');
-        }
-      }
-
-      // If no saved state, load from URL parameter
+      // Get workout ID from URL
       const urlParams = new URLSearchParams(window.location.search);
       const workoutId = urlParams.get('workoutId');
-      console.log('[ActiveWorkout] Workout ID from URL:', workoutId);
-      setDebugInfo(prev => [...prev, `3. Workout ID: ${workoutId || 'MISSING'}`]);
+      setDebugInfo(prev => [...prev, `2. ID: ${workoutId || 'MISSING'}`]);
       
       if (!workoutId) {
-        console.error('[ActiveWorkout] No workout ID provided');
-        setLoadingError('No workout ID provided');
-        setDebugInfo(prev => [...prev, '❌ ERROR: No workout ID in URL']);
+        setLoadingError('No workout ID');
+        setDebugInfo(prev => [...prev, '❌ No ID in URL']);
         setTimeout(() => navigate(createPageUrl("Exercises")), 2000);
         return;
       }
       
-      console.log('[ActiveWorkout] Fetching workout...');
-      setDebugInfo(prev => [...prev, '4. Fetching workout from database...']);
+      setDebugInfo(prev => [...prev, '3. Fetching workout...']);
       const workoutData = await Workout.filter({id: workoutId});
-      console.log('[ActiveWorkout] Workout data:', workoutData);
-      setDebugInfo(prev => [...prev, `5. Workout data: ${workoutData ? 'found' : 'not found'}`]);
+      setDebugInfo(prev => [...prev, `4. Got: ${workoutData?.length || 0} results`]);
       
       if (!workoutData || workoutData.length === 0) {
-        console.error('[ActiveWorkout] Workout not found');
         setLoadingError('Workout not found');
-        setDebugInfo(prev => [...prev, '❌ ERROR: Workout not in database']);
+        setDebugInfo(prev => [...prev, '❌ Not in database']);
         setTimeout(() => navigate(createPageUrl("Exercises")), 2000);
         return;
       }
       
       const data = workoutData[0];
-      console.log('[ActiveWorkout] Workout loaded:', data.name);
-      setDebugInfo(prev => [...prev, `6. Workout: ${data.name}`]);
+      setDebugInfo(prev => [...prev, `5. Name: ${data.name}`]);
       
-      // Fetch full exercise details to get images and other data
-      console.log('[ActiveWorkout] Fetching exercises...');
-      setDebugInfo(prev => [...prev, '7. Fetching exercise library...']);
+      setDebugInfo(prev => [...prev, '6. Fetching exercises...']);
       const allExercises = await Exercise.list();
-      console.log('[ActiveWorkout] Exercises loaded:', allExercises.length);
-      setDebugInfo(prev => [...prev, `8. Exercises loaded: ${allExercises.length}`]);
+      setDebugInfo(prev => [...prev, `7. Got ${allExercises.length} exercises`]);
       setAllExercises(allExercises);
       
-      // Merge exercise details with workout exercises
+      // Merge exercise details
       data.exercises = data.exercises.map(workoutEx => {
         const exerciseDetails = allExercises.find(ex => ex.id === workoutEx.exercise_id || ex.name === workoutEx.exercise_name);
         return {
@@ -370,7 +332,6 @@ export default function ActiveWorkout() {
         };
       });
       
-      // Populate time-based exercise targets if workout type is time-based
       if (data.workout_type === 'time_based' && data.total_duration > 0) {
         const exerciseCount = data.exercises.length;
         const timePerExercise = Math.floor((data.total_duration * 60) / exerciseCount);
@@ -379,15 +340,12 @@ export default function ActiveWorkout() {
         });
       }
       
-      console.log('[ActiveWorkout] Workout ready, setting state...');
-      setDebugInfo(prev => [...prev, '9. Setting workout state...']);
+      setDebugInfo(prev => [...prev, '8. Setting workout...']);
       setWorkout(data);
-      setDebugInfo(prev => [...prev, '✅ SUCCESS: Workout loaded!']);
-      console.log('[ActiveWorkout] Workout loaded successfully!');
+      setDebugInfo(prev => [...prev, '✅ SUCCESS!']);
     } catch (error) {
-      console.error('[ActiveWorkout] Error loading workout:', error);
-      setLoadingError(error.message || 'Failed to load workout');
-      setDebugInfo(prev => [...prev, `❌ ERROR: ${error.message || error.toString()}`]);
+      setLoadingError(error.message || 'Failed');
+      setDebugInfo(prev => [...prev, `❌ ${error.message || 'Unknown error'}`]);
       setTimeout(() => navigate(createPageUrl("Exercises")), 3000);
     }
   };
@@ -478,56 +436,64 @@ export default function ActiveWorkout() {
   };
 
   if (!workout) {
-    return <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-4">
-      <div className="text-center max-w-md mx-auto">
-        {loadingError ? (
-          <>
-            <div className="text-red-500 mb-4 text-xl">⚠️</div>
-            <div className="text-lg text-red-400 mb-2">Error: {loadingError}</div>
-            <div className="text-sm text-gray-400 mb-4">Redirecting to exercises...</div>
-            <Button 
-              onClick={() => {
-                localStorage.removeItem('activeWorkoutState');
-                window.location.reload();
-              }}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              Clear Cache & Retry
-            </Button>
-          </>
-        ) : (
-          <>
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue mx-auto mb-4"></div>
-            <div className="text-lg text-foreground mb-4">Loading workout...</div>
-          </>
-        )}
-        
-        {/* Debug Info Panel */}
-        <div className="mt-6 bg-gray-800/50 rounded-lg p-4 text-left text-xs max-h-64 overflow-y-auto">
-          <div className="font-bold mb-2 text-brand-blue">Debug Info:</div>
+    return (
+      <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb', padding: '20px' }}>
+        {/* BRIGHT RED DEBUG BANNER - ALWAYS VISIBLE */}
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          background: 'red',
+          color: 'white',
+          padding: '15px',
+          fontSize: '14px',
+          zIndex: 9999,
+          maxHeight: '200px',
+          overflowY: 'auto'
+        }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>🔧 DEBUG INFO:</div>
           {debugInfo.length === 0 ? (
-            <div className="text-gray-400">Initializing...</div>
+            <div>Waiting to start...</div>
           ) : (
-            <div className="space-y-1 font-mono">
+            <div>
               {debugInfo.map((info, i) => (
-                <div key={i} className={info.includes('❌') ? 'text-red-400' : info.includes('✅') ? 'text-green-400' : 'text-gray-300'}>
-                  {info}
-                </div>
+                <div key={i} style={{ marginBottom: '5px' }}>{info}</div>
               ))}
             </div>
           )}
         </div>
-        
-        <div className="text-xs text-gray-500 mt-4 space-y-2">
-          <div className="font-bold text-white">📱 MOBILE TROUBLESHOOTING:</div>
-          <div>1. Screenshot this page</div>
-          <div>2. Close ALL Chrome tabs</div>
-          <div>3. Clear browser cache (Settings → Privacy)</div>
-          <div>4. Reopen app in new tab</div>
-          <div>5. If stuck, click button above</div>
+
+        {/* Main Loading Content */}
+        <div style={{ marginTop: '220px', textAlign: 'center' }}>
+          {loadingError ? (
+            <div>
+              <div style={{ fontSize: '48px', marginBottom: '20px' }}>⚠️</div>
+              <div style={{ fontSize: '24px', color: '#ef4444', marginBottom: '10px' }}>
+                Error: {loadingError}
+              </div>
+              <div style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '20px' }}>
+                Redirecting to exercises...
+              </div>
+              <Button 
+                onClick={() => {
+                  localStorage.clear();
+                  window.location.href = createPageUrl("Exercises");
+                }}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Go Back to Exercises
+              </Button>
+            </div>
+          ) : (
+            <div>
+              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-brand-blue mx-auto mb-4"></div>
+              <div style={{ fontSize: '20px', marginBottom: '20px' }}>Loading workout...</div>
+            </div>
+          )}
         </div>
       </div>
-    </div>;
+    );
   }
 
   const currentExercise = workout.exercises[currentExerciseIndex];
@@ -540,21 +506,6 @@ export default function ActiveWorkout() {
 
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
-      {/* Fixed Debug Panel - Always Visible During Load */}
-      {!workout && (
-        <div className="fixed top-0 left-0 right-0 bg-red-600 text-white p-3 z-50 text-xs overflow-y-auto max-h-48">
-          <div className="font-bold mb-2">🔧 DEBUG INFO:</div>
-          {debugInfo.length === 0 ? (
-            <div>Initializing...</div>
-          ) : (
-            <div className="space-y-1">
-              {debugInfo.map((info, i) => (
-                <div key={i}>{info}</div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
       <div className="container mx-auto px-2 py-4 md:px-4 md:py-6 max-w-md">
         {/* Header */}
         <div className="text-center mb-4">
