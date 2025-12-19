@@ -80,7 +80,22 @@ export default function Layout({ children, currentPageName }) {
   };
 
   const resumeWorkout = () => {
-    navigate(createPageUrl("ActiveWorkout"));
+    const savedState = localStorage.getItem('activeWorkoutState');
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState);
+        const workoutId = state.workout?.id;
+        if (workoutId) {
+          navigate(`${createPageUrl("ActiveWorkout")}?workoutId=${workoutId}`);
+        } else {
+          navigate(createPageUrl("ActiveWorkout"));
+        }
+      } catch (error) {
+        navigate(createPageUrl("ActiveWorkout"));
+      }
+    } else {
+      navigate(createPageUrl("ActiveWorkout"));
+    }
   };
 
   return (

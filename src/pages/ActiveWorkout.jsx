@@ -78,8 +78,6 @@ export default function ActiveWorkout() {
   const [debugInfo, setDebugInfo] = useState([]);
 
   useEffect(() => {
-    // Clear any stuck state immediately
-    localStorage.removeItem('activeWorkoutState');
     loadWorkout();
     
     // Timeout after 10 seconds
@@ -99,11 +97,11 @@ export default function ActiveWorkout() {
     };
   }, []);
 
-  // Save workout state to localStorage
+  // Save workout state to localStorage (including workout ID)
   useEffect(() => {
-    if (workout && isActive) {
+    if (workout) {
       const workoutState = {
-        workout,
+        workout: { ...workout, id: workout.id }, // Ensure ID is saved
         currentExerciseIndex,
         currentSet,
         timer,
@@ -114,7 +112,8 @@ export default function ActiveWorkout() {
         isResting,
         restTimer,
         cardioIntervals,
-        isPaused
+        isPaused,
+        isActive
       };
       localStorage.setItem('activeWorkoutState', JSON.stringify(workoutState));
     }
