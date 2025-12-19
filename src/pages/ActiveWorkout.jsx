@@ -259,7 +259,6 @@ export default function ActiveWorkout() {
         return;
       }
       
-      const { Workout } = await import('@/entities/Workout');
       const workoutData = await Workout.filter({id: workoutId});
       
       if (!workoutData || workoutData.length === 0) {
@@ -271,7 +270,6 @@ export default function ActiveWorkout() {
       const data = workoutData[0];
       
       // Fetch full exercise details to get images and other data
-      const { Exercise } = await import('@/entities/Exercise');
       const allExercises = await Exercise.list();
       setAllExercises(allExercises);
       
@@ -298,6 +296,7 @@ export default function ActiveWorkout() {
       setWorkout(data);
     } catch (error) {
       console.error('Error loading workout:', error);
+      alert('Failed to load workout. Redirecting...');
       navigate(createPageUrl("Exercises"));
     }
   };
