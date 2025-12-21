@@ -495,7 +495,21 @@ export default function ActiveWorkout() {
       <div className="container mx-auto px-2 py-4 md:px-4 md:py-6 max-w-md">
         {/* Header */}
         <div className="text-center mb-4">
-          <h1 className="text-xl md:text-2xl font-bold mb-2 px-2 leading-tight truncate">{workout.name}</h1>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex-1"></div>
+            <h1 className="text-xl md:text-2xl font-bold px-2 leading-tight truncate flex-1">{workout.name}</h1>
+            {isActive && (
+              <div className="flex-1 flex justify-end">
+                <Button
+                  onClick={stopWorkout}
+                  size="sm"
+                  className="bg-red-500 hover:bg-red-600 text-white font-bold"
+                >
+                  <Square className="w-4 h-4 mr-1" /> END
+                </Button>
+              </div>
+            )}
+          </div>
           <div className="flex justify-center gap-4 text-sm md:text-base">
             <div className="flex items-center gap-1.5">
               <Timer className="w-4 h-4" />
