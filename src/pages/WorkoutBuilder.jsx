@@ -118,10 +118,33 @@ export default function WorkoutBuilder() {
     // Randomly select exercises based on time
     const numExercises = Math.min(Math.max(5, Math.floor(selectedTime / 5)), filtered.length);
     const shuffled = filtered.sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, numExercises);
+    const selected = shuffled.slice(0, numExercises).map(ex => ({
+      ...ex,
+      superset_with_next: false
+    }));
     
     setSelectedExercises(selected);
     setSelectedCategory(category);
+  };
+
+  const removeExercise = (index) => {
+    const updated = selectedExercises.filter((_, i) => i !== index);
+    setSelectedExercises(updated);
+  };
+
+  const swapExercise = (index, newExercise) => {
+    const updated = [...selectedExercises];
+    updated[index] = { ...newExercise, superset_with_next: updated[index].superset_with_next || false };
+    setSelectedExercises(updated);
+  };
+
+  const toggleSuperset = (index) => {
+    const updated = [...selectedExercises];
+    updated[index] = {
+      ...updated[index],
+      superset_with_next: !updated[index].superset_with_next
+    };
+    setSelectedExercises(updated);
   };
 
   const canProceed = () => {
@@ -150,7 +173,7 @@ export default function WorkoutBuilder() {
 
     const workoutData = {
       name: `${selectedTime} Min ${selectedCategory?.toUpperCase()} Workout - ${new Date().toLocaleDateString()}`,
-      exercises: exercisesToUse.map(ex => ({
+      exercises: exercisesToUse.map((ex, idx) => ({
         exercise_id: ex.id,
         exercise_name: ex.name,
         target_reps: settings.defaultReps[0],
@@ -158,7 +181,7 @@ export default function WorkoutBuilder() {
         completed_reps: 0,
         completed_time: 0,
         sets: ex.category === 'warmup' ? 1 : settings.defaultSets[0],
-        superset_with_next: false
+        superset_with_next: ex.superset_with_next || false
       })),
       workout_type: "rep_based",
       difficulty: "intermediate",
