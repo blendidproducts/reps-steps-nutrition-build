@@ -31,6 +31,7 @@ export default function WorkoutBuilder() {
   const [customTime, setCustomTime] = useState("");
   const [isFreeTime, setIsFreeTime] = useState(false);
   const [selectedReps, setSelectedReps] = useState(null);
+  const [customReps, setCustomReps] = useState("");
   const [autoReps, setAutoReps] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [allExercises, setAllExercises] = useState([]);
@@ -515,16 +516,17 @@ export default function WorkoutBuilder() {
 
               <div>
                 <p className="text-white font-medium mb-3">Or select specific rep count:</p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-3 mb-4">
                   {[10, 15, 20, 25, 30].map(reps => (
                     <button
                       key={reps}
                       onClick={() => {
                         setSelectedReps(reps);
                         setAutoReps(false);
+                        setCustomReps("");
                       }}
                       className={`p-4 rounded-xl border-2 transition-all ${
-                        selectedReps === reps && !autoReps
+                        selectedReps === reps && !autoReps && !customReps
                           ? 'bg-brand-blue/20 border-brand-blue text-white'
                           : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-brand-blue/50'
                       }`}
@@ -533,6 +535,33 @@ export default function WorkoutBuilder() {
                       <div className="text-xs">REPS</div>
                     </button>
                   ))}
+                </div>
+
+                <div className="flex gap-3">
+                  <Input
+                    type="number"
+                    placeholder="Enter custom reps per set"
+                    value={customReps}
+                    onChange={(e) => {
+                      setCustomReps(e.target.value);
+                      if (e.target.value) {
+                        setSelectedReps(parseInt(e.target.value));
+                        setAutoReps(false);
+                      }
+                    }}
+                    className="flex-1 bg-gray-800 border-gray-700 text-white"
+                  />
+                  <Button
+                    onClick={() => {
+                      if (customReps) {
+                        setSelectedReps(parseInt(customReps));
+                        setAutoReps(false);
+                      }
+                    }}
+                    className="bg-brand-blue hover:bg-brand-blue/90"
+                  >
+                    Set
+                  </Button>
                 </div>
               </div>
             </CardContent>
