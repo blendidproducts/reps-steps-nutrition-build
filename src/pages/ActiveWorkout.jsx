@@ -581,6 +581,24 @@ export default function ActiveWorkout() {
                     <>
                       <h2 className="text-2xl font-bold mb-2 text-brand-blue">ACTIVE RECOVERY</h2>
                       <div className="flex items-center justify-center gap-3 mb-4">
+                        <div className="flex flex-col gap-2">
+                          <button
+                            onClick={() => addRestTime(-15)}
+                            className="w-10 h-10 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
+                            title="Subtract 15 seconds"
+                            disabled={restTimer <= 15}
+                          >
+                            <Minus className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => addRestTime(-30)}
+                            className="w-10 h-10 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors text-xs font-bold"
+                            title="Subtract 30 seconds"
+                            disabled={restTimer <= 30}
+                          >
+                            -30
+                          </button>
+                        </div>
                         <div className="text-6xl font-bold">{restTimer}s</div>
                         <div className="flex flex-col gap-2">
                           <button
