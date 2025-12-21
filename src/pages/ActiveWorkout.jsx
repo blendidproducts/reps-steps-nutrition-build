@@ -51,6 +51,8 @@ export default function ActiveWorkout() {
   const [allExercises, setAllExercises] = useState([]);
   const [heartRate, setHeartRate] = useState("");
   const [showHRInput, setShowHRInput] = useState(false);
+  const [activeCardio, setActiveCardio] = useState(null);
+  const [cardioTimer, setCardioTimer] = useState(0);
 
   useEffect(() => {
     loadWorkout();
@@ -146,6 +148,44 @@ export default function ActiveWorkout() {
     setIsResting(false);
     setRestTimer(0);
   };
+
+  const startCardio = (type) => {
+    setActiveCardio({ type, startTime: Date.now() });
+    setCardioTimer(0);
+    setIsResting(false);
+  };
+
+  const stopCardio = () => {
+    if (activeCardio) {
+      const cardioEntry = {
+        type: activeCardio.type,
+        time: cardioTimer,
+        timestamp: new Date().toISOString()
+      };
+      
+      setCardioIntervals(prev => [...prev, cardioEntry]);
+      
+      // Add to workout exercises list
+      const updatedExercises = [...workout.exercises];
+      const cardioExercise = {
+        exercise_id: `cardio-${Date.now()}`,
+        exercise_name: `${activeCardio.type.charAt(0).toUpperCase() + activeCardio.type.slice(1)}`,
+        target_time: cardioTimer,
+        completed_time: cardioTimer,
+        sets: 1,
+        metric: 'time',
+        category: 'cardio',
+        is_cardio_interval: true
+      };
+      
+      updatedExercises.splice(currentExerciseIndex + 1, 0, cardioExercise);
+      setWorkout({...workout, exercises: updatedExercises});
+      
+      setActiveCardio(null);
+      setCardioTimer(0);
+      toast.success(`${activeCardio.type} completed: ${formatTime(cardioTimer)}`);
+    }
+  };
   
 
 
@@ -154,7 +194,10 @@ export default function ActiveWorkout() {
     if (isActive && !isPaused) {
       interval = setInterval(() => {
         setTimer(prev => prev + 1);
-        if (!isResting) {
+        
+        if (activeCardio) {
+          setCardioTimer(prev => prev + 1);
+        } else if (!isResting) {
           const currentMetric = workout?.exercises[currentExerciseIndex]?.metric || 'reps';
           if (currentMetric === 'reps') {
             setExerciseTimer(prev => prev + 1);
@@ -163,7 +206,6 @@ export default function ActiveWorkout() {
             setExerciseTimer(prevTime => {
               const newTime = prevTime + 1;
               if (newTime >= targetTime) {
-                // Auto-complete and move to next
                 setTimeout(nextExercise, 500); 
               }
               return newTime;
@@ -172,12 +214,12 @@ export default function ActiveWorkout() {
         } else if (restTimer > 0) {
           setRestTimer(prev => prev - 1);
         } else if (restTimer === 0 && isResting) {
-          skipRest(); // Automatically skip rest when timer hits 0
+          skipRest();
         }
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isActive, isPaused, isResting, restTimer, workout, currentExerciseIndex]);
+  }, [isActive, isPaused, isResting, restTimer, workout, currentExerciseIndex, activeCardio]);
 
   const loadWorkout = async () => {
     try {
@@ -270,13 +312,18 @@ export default function ActiveWorkout() {
 
   const stopWorkout = async () => {
     if (sessionStartTime) {
+      // Calculate cardio analytics
+      const walkIntervals = cardioIntervals.filter(c => c.type === 'walk');
+      const jogIntervals = cardioIntervals.filter(c => c.type === 'jog');
+      const sprintIntervals = cardioIntervals.filter(c => c.type === 'sprint');
+      
       const sessionData = {
         workout_id: workout.id,
         start_time: sessionStartTime.toISOString(),
         end_time: new Date().toISOString(),
         duration: timer,
         total_reps: totalReps,
-        exercises_completed: workout.exercises.map((ex, index) => ({
+        exercises_completed: workout.exercises.filter(ex => !ex.is_cardio_interval).map((ex) => ({
           exercise_name: ex.exercise_name,
           reps_completed: ex.metric === 'reps' ? (ex.completed_reps || 0) : 0,
           time_spent: ex.metric === 'time' ? (ex.completed_time || 0) : 0
@@ -284,6 +331,25 @@ export default function ActiveWorkout() {
         calories_burned: Math.round(totalReps * 0.5 + timer * 0.1),
         weight_added_lbs: workout.weight_added_lbs || 0,
         cardio_intervals: cardioIntervals,
+        cardio_analytics: {
+          walk: {
+            count: walkIntervals.length,
+            total_time: walkIntervals.reduce((sum, c) => sum + c.time, 0),
+            avg_time: walkIntervals.length > 0 ? Math.round(walkIntervals.reduce((sum, c) => sum + c.time, 0) / walkIntervals.length) : 0
+          },
+          jog: {
+            count: jogIntervals.length,
+            total_time: jogIntervals.reduce((sum, c) => sum + c.time, 0),
+            avg_time: jogIntervals.length > 0 ? Math.round(jogIntervals.reduce((sum, c) => sum + c.time, 0) / jogIntervals.length) : 0
+          },
+          sprint: {
+            count: sprintIntervals.length,
+            total_time: sprintIntervals.reduce((sum, c) => sum + c.time, 0),
+            longest_sprint: sprintIntervals.length > 0 ? Math.max(...sprintIntervals.map(c => c.time)) : 0,
+            shortest_sprint: sprintIntervals.length > 0 ? Math.min(...sprintIntervals.map(c => c.time)) : 0,
+            avg_time: sprintIntervals.length > 0 ? Math.round(sprintIntervals.reduce((sum, c) => sum + c.time, 0) / sprintIntervals.length) : 0
+          }
+        }
       };
       await WorkoutSession.create(sessionData);
     }
@@ -480,58 +546,65 @@ export default function ActiveWorkout() {
             >
               <Card className="bg-gray-900/80 border-brand-blue/30 text-white w-full max-w-sm">
                 <CardContent className="p-6 text-center">
-                  <h2 className="text-2xl font-bold mb-2 text-brand-blue">REST PERIOD</h2>
-                  <div className="text-6xl font-bold mb-4">{restTimer}</div>
+                  {!activeCardio ? (
+                    <>
+                      <h2 className="text-2xl font-bold mb-2 text-brand-blue">ACTIVE RECOVERY</h2>
+                      <div className="text-6xl font-bold mb-4">{restTimer}</div>
+                      <p className="text-sm text-gray-400 mb-4">Choose cardio activity or rest</p>
 
-                  <p className="text-sm text-gray-400 mb-4">Active recovery or rest</p>
+                      <div className="grid grid-cols-3 gap-2 mb-4">
+                        <Button
+                          onClick={() => startCardio('walk')}
+                          className="flex flex-col items-center gap-2 h-auto py-4 bg-green-600/20 border-2 border-green-500 text-green-300 hover:bg-green-600/40"
+                        >
+                          <Footprints className="w-6 h-6" />
+                          <span className="text-xs font-bold">WALK</span>
+                        </Button>
 
-                  <div className="grid grid-cols-3 gap-2 mb-4">
-                    <Button
-                      onClick={() => {
-                        setCardioIntervals(prev => [...prev, { type: 'walk', time: 30 }]);
-                        skipRest();
-                      }}
-                      className="flex flex-col items-center gap-2 h-auto py-4 bg-green-600/20 border-2 border-green-500 text-green-300 hover:bg-green-600/40"
-                    >
-                      <Footprints className="w-6 h-6" />
-                      <span className="text-xs font-bold">WALK</span>
-                    </Button>
+                        <Button
+                          onClick={() => startCardio('jog')}
+                          className="flex flex-col items-center gap-2 h-auto py-4 bg-yellow-600/20 border-2 border-yellow-500 text-yellow-300 hover:bg-yellow-600/40"
+                        >
+                          <Route className="w-6 h-6" />
+                          <span className="text-xs font-bold">JOG</span>
+                        </Button>
 
-                    <Button
-                      onClick={() => {
-                        setCardioIntervals(prev => [...prev, { type: 'jog', time: 30 }]);
-                        skipRest();
-                      }}
-                      className="flex flex-col items-center gap-2 h-auto py-4 bg-yellow-600/20 border-2 border-yellow-500 text-yellow-300 hover:bg-yellow-600/40"
-                    >
-                      <Route className="w-6 h-6" />
-                      <span className="text-xs font-bold">JOG</span>
-                    </Button>
+                        <Button
+                          onClick={() => startCardio('sprint')}
+                          className="flex flex-col items-center gap-2 h-auto py-4 bg-red-600/20 border-2 border-red-500 text-red-300 hover:bg-red-600/40"
+                        >
+                          <Zap className="w-6 h-6" />
+                          <span className="text-xs font-bold">SPRINT</span>
+                        </Button>
+                      </div>
 
-                    <Button
-                      onClick={() => {
-                        setCardioIntervals(prev => [...prev, { type: 'sprint', time: 30 }]);
-                        skipRest();
-                      }}
-                      className="flex flex-col items-center gap-2 h-auto py-4 bg-red-600/20 border-2 border-red-500 text-red-300 hover:bg-red-600/40"
-                    >
-                      <Zap className="w-6 h-6" />
-                      <span className="text-xs font-bold">SPRINT</span>
-                    </Button>
-                  </div>
+                      <p className="text-base my-4 text-gray-300">
+                        Next: {workout.exercises[currentExerciseIndex]?.exercise_name || 'Workout Complete!'}
+                      </p>
+                      <Button
+                        onClick={skipRest}
+                        variant="outline"
+                        className="w-full border-gray-500 text-gray-300 hover:bg-gray-700"
+                      >
+                        SKIP - JUST REST
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <h2 className="text-3xl font-bold mb-2 text-brand-blue uppercase">{activeCardio.type}ING</h2>
+                      <div className="text-7xl font-bold mb-4 text-brand-blue animate-pulse">{formatTime(cardioTimer)}</div>
+                      <p className="text-sm text-gray-400 mb-6">Tracking your {activeCardio.type}...</p>
 
-                  <p className="text-xs text-gray-500 mb-4">Tap activity completed during rest</p>
-
-                  <p className="text-base my-4 text-gray-300">
-                    Next: {workout.exercises[currentExerciseIndex]?.exercise_name || 'Workout Complete!'}
-                  </p>
-                  <Button
-                    onClick={skipRest}
-                    variant="outline"
-                    className="w-full border-gray-500 text-gray-300 hover:bg-gray-700"
-                  >
-                    JUST REST
-                  </Button>
+                      <Button
+                        onClick={stopCardio}
+                        size="lg"
+                        className="w-full bg-red-500 hover:bg-red-600 text-white font-bold text-xl py-6"
+                      >
+                        <Square className="w-6 h-6 mr-2" />
+                        STOP
+                      </Button>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
@@ -662,23 +735,38 @@ export default function ActiveWorkout() {
                 <div
                   key={index}
                   className={`flex items-center justify-between p-2 rounded-lg text-sm ${
-                    index === currentExerciseIndex 
-                      ? 'bg-brand-blue/20 border border-brand-blue/30' 
-                      : index < currentExerciseIndex 
-                        ? 'bg-green-500/10 text-gray-400'
-                        : 'bg-gray-800/50 text-gray-300'
+                    exercise.is_cardio_interval 
+                      ? 'bg-purple-500/10 border border-purple-500/30 text-purple-300'
+                      : index === currentExerciseIndex 
+                        ? 'bg-brand-blue/20 border border-brand-blue/30' 
+                        : index < currentExerciseIndex 
+                          ? 'bg-green-500/10 text-gray-400'
+                          : 'bg-gray-800/50 text-gray-300'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0 ${
-                      index === currentExerciseIndex ? 'bg-brand-blue text-white' : index < currentExerciseIndex ? 'bg-green-500 text-white' : 'bg-gray-700 text-white'
-                    }`}>
-                      {index + 1}
-                    </span>
-                    <span className="font-medium truncate">{exercise.exercise_name}</span>
+                    {exercise.is_cardio_interval ? (
+                      <>
+                        <span className="text-purple-400">⚡</span>
+                        <span className="font-medium truncate">{exercise.exercise_name}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0 ${
+                          index === currentExerciseIndex ? 'bg-brand-blue text-white' : index < currentExerciseIndex ? 'bg-green-500 text-white' : 'bg-gray-700 text-white'
+                        }`}>
+                          {index + 1}
+                        </span>
+                        <span className="font-medium truncate">{exercise.exercise_name}</span>
+                      </>
+                    )}
                   </div>
                   <div className="text-xs flex-shrink-0 ml-2">
-                    {exercise.metric === 'time' ? `${exercise.target_time}s` : `${exercise.target_reps} reps`}
+                    {exercise.is_cardio_interval 
+                      ? `${formatTime(exercise.completed_time)}`
+                      : exercise.metric === 'time' 
+                        ? `${exercise.target_time}s` 
+                        : `${exercise.target_reps} reps`}
                   </div>
                 </div>
               ))}
