@@ -491,7 +491,7 @@ export default function WorkoutBuilder() {
                 <Target className="w-6 h-6 text-brand-blue" />
                 Step 2: Choose Rep Count
               </CardTitle>
-              <p className="text-gray-400">How many reps per set?</p>
+              <p className="text-gray-400">Total reps for the entire workout</p>
             </CardHeader>
             <CardContent className="space-y-4">
               <button
@@ -515,9 +515,9 @@ export default function WorkoutBuilder() {
               </button>
 
               <div>
-                <p className="text-white font-medium mb-3">Or select specific rep count:</p>
+                <p className="text-white font-medium mb-3">Or select total reps:</p>
                 <div className="grid grid-cols-3 gap-3 mb-4">
-                  {[10, 15, 20, 25, 30].map(reps => (
+                  {[100, 150, 200, 250, 300].map(reps => (
                     <button
                       key={reps}
                       onClick={() => {
@@ -540,7 +540,7 @@ export default function WorkoutBuilder() {
                 <div className="flex gap-3">
                   <Input
                     type="number"
-                    placeholder="Enter custom reps per set"
+                    placeholder="Enter total reps (e.g., 150, 500)"
                     value={customReps}
                     onChange={(e) => {
                       setCustomReps(e.target.value);
@@ -655,7 +655,7 @@ export default function WorkoutBuilder() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Reps per Set:</span>
+                    <span className="text-gray-400">Total Reps:</span>
                     <span className="font-bold text-white">{autoReps ? 'Auto-optimized' : `${selectedReps} reps`}</span>
                   </div>
                   <div className="flex justify-between">
