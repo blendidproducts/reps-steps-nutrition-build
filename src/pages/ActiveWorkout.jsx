@@ -55,6 +55,7 @@ export default function ActiveWorkout() {
   const [activeCardio, setActiveCardio] = useState(null);
   const [cardioTimer, setCardioTimer] = useState(0);
   const [restCardioTotal, setRestCardioTotal] = useState(0);
+  const [extendedRestTime, setExtendedRestTime] = useState(0);
 
   useEffect(() => {
     loadWorkout();
@@ -152,6 +153,17 @@ export default function ActiveWorkout() {
     setIsResting(false);
     setRestTimer(0);
     setRestCardioTotal(0);
+    setExtendedRestTime(0);
+  };
+
+  const addRestTime = (seconds) => {
+    setRestTimer(prev => prev + seconds);
+    setExtendedRestTime(prev => prev + seconds);
+  };
+
+  const isFourCountExercise = (exerciseName) => {
+    const fourCountExercises = ['jumping jacks', 'arm circles', 'bicycle crunches', 'flutter kicks', 'mountain climbers', 'high knees', 'butt kickers'];
+    return fourCountExercises.some(ex => exerciseName.toLowerCase().includes(ex));
   };
 
   const startCardio = (type) => {
@@ -568,7 +580,28 @@ export default function ActiveWorkout() {
                   {!activeCardio ? (
                     <>
                       <h2 className="text-2xl font-bold mb-2 text-brand-blue">ACTIVE RECOVERY</h2>
-                      <div className="text-6xl font-bold mb-4">{restTimer}s</div>
+                      <div className="flex items-center justify-center gap-3 mb-4">
+                        <div className="text-6xl font-bold">{restTimer}s</div>
+                        <div className="flex flex-col gap-2">
+                          <button
+                            onClick={() => addRestTime(15)}
+                            className="w-10 h-10 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors"
+                            title="Add 15 seconds"
+                          >
+                            <Plus className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => addRestTime(30)}
+                            className="w-10 h-10 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors text-xs font-bold"
+                            title="Add 30 seconds"
+                          >
+                            +30
+                          </button>
+                        </div>
+                      </div>
+                      {extendedRestTime > 0 && (
+                        <p className="text-xs text-blue-400 mb-2">+ {extendedRestTime}s added</p>
+                      )}
                       <div className="mb-4">
                         <p className="text-sm text-gray-400">Cardio Time: {restCardioTotal}s / {workout.rest_time || 60}s</p>
                         <Progress value={(restCardioTotal / (workout.rest_time || 60)) * 100} className="h-2 mt-2" />
@@ -689,6 +722,12 @@ export default function ActiveWorkout() {
               </div>
 
               <h2 className="text-2xl md:text-3xl font-bold mb-4 leading-tight">{currentExercise.exercise_name}</h2>
+              
+              {!isTimeBased && isFourCountExercise(currentExercise.exercise_name) && (
+                <div className="mb-3 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                  <p className="text-yellow-400 text-xs font-semibold">⚠️ 4-COUNT EXERCISE: 1...2...3...4 = 1 REP</p>
+                </div>
+              )}
               
               <div className="w-full h-32 md:h-40 bg-background rounded-lg flex items-center justify-center mb-4 relative overflow-hidden">
                 {currentExercise.image_url ? (
