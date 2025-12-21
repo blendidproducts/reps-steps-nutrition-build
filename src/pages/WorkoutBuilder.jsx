@@ -168,14 +168,20 @@ export default function WorkoutBuilder() {
 
   const getEstimatedTime = () => {
     if (!selectedExercises.length) return 0;
-    
+
     const numExercises = selectedExercises.length + (settings.includeWarmup ? 3 : 0);
     const totalSets = numExercises * settings.defaultSets[0];
     const workTime = totalSets * settings.defaultReps[0] * 2; // 2 sec per rep
     const restTime = (totalSets - 1) * settings.restTime[0];
     const totalSeconds = workTime + restTime;
-    
+
     return Math.ceil(totalSeconds / 60); // Convert to minutes
+  };
+
+  const getEstimatedTotalReps = () => {
+    if (!selectedExercises.length) return 0;
+    const numExercises = selectedExercises.length + (settings.includeWarmup ? 3 : 0);
+    return numExercises * settings.defaultSets[0] * settings.defaultReps[0];
   };
 
   const isTimeValid = () => {
@@ -657,6 +663,10 @@ export default function WorkoutBuilder() {
                   <div className="flex justify-between">
                     <span className="text-gray-400">Total Reps:</span>
                     <span className="font-bold text-white">{autoReps ? 'Auto-optimized' : `${selectedReps} reps`}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Estimated Total Reps:</span>
+                    <span className="font-bold text-brand-blue">{getEstimatedTotalReps()} reps</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Focus:</span>
