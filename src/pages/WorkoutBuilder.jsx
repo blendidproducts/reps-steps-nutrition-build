@@ -16,7 +16,10 @@ import {
   Timer,
   Dumbbell,
   ChevronRight,
-  Check
+  Check,
+  RefreshCw,
+  Trash2,
+  Link as LinkIcon
 } from "lucide-react";
 
 export default function WorkoutBuilder() {
