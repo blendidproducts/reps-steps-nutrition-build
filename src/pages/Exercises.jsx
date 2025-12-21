@@ -3,7 +3,7 @@ import { Exercise } from "@/entities/Exercise";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, ArrowRight, Zap, Star } from "lucide-react";
+import { Search, Filter, ArrowRight, Zap, Star, Dumbbell } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
