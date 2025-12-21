@@ -4,49 +4,34 @@ import { Workout } from "@/entities/Workout";
 import { User } from "@/entities/User";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea"; // New import for the save dialog
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { toast } from 'sonner'; // New import for toast notifications
+import { toast } from 'sonner';
 import {
   ArrowLeft,
   Play,
   Timer,
-  Repeat,
-  Shuffle,
-  Target,
-  Clock,
-  Zap,
-  Star,
-  Link2,
-  Upload,
-  Trash2,
-  RefreshCw
+  Dumbbell,
+  ChevronRight,
+  Check
 } from "lucide-react";
 
 export default function WorkoutBuilder() {
   const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [selectedTime, setSelectedTime] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [allExercises, setAllExercises] = useState([]);
   const [selectedExercises, setSelectedExercises] = useState([]);
-  const [workoutType, setWorkoutType] = useState("rep_based");
-  const [workoutName, setWorkoutName] = useState("");
   const [user, setUser] = useState(null);
-  const [showSaveDialog, setShowSaveDialog] = useState(false); // New state for showing save dialog
-  const [saveWorkoutName, setSaveWorkoutName] = useState(""); // New state for saved workout name
-  const [saveWorkoutDescription, setSaveWorkoutDescription] = useState(""); // New state for saved workout description
+  
   const [settings, setSettings] = useState({
-    defaultReps: [15],
     defaultSets: [3],
-    defaultTime: [30], // New setting for time-based exercises
+    defaultReps: [15],
     restTime: [30],
-    workoutDuration: [20],
-    randomizeOrder: false,
     includeWarmup: true,
     useWeightVest: false,
     vestWeightLbs: [10]
@@ -60,12 +45,47 @@ export default function WorkoutBuilder() {
       } catch (error) {
         setUser({ subscription_status: 'free' });
       }
-
+      
+      const exercises = await Exercise.list();
+      setAllExercises(exercises);
       loadSelectedExercises();
     };
-
     initialize();
   }, []);
+
+  // Auto-adjust settings based on time selection
+  useEffect(() => {
+    if (selectedTime && selectedExercises.length > 0) {
+      calculateRealisticSettings();
+    }
+  }, [selectedTime, selectedExercises.length]);
+
+  const calculateRealisticSettings = () => {
+    const totalMinutes = selectedTime;
+    const numExercises = selectedExercises.length + (settings.includeWarmup ? 3 : 0);
+    
+    // Calculate available time per exercise (accounting for rest)
+    const restTimeTotal = (numExercises * settings.defaultSets[0] - 1) * settings.restTime[0];
+    const workTime = (totalMinutes * 60) - restTimeTotal;
+    const timePerSet = Math.floor(workTime / (numExercises * settings.defaultSets[0]));
+    
+    // Adjust sets based on available time
+    let newSets = settings.defaultSets[0];
+    if (timePerSet < 20) {
+      newSets = Math.max(1, Math.floor(totalMinutes / 10));
+    } else if (timePerSet > 60) {
+      newSets = Math.min(5, Math.floor(totalMinutes / 5));
+    }
+    
+    // Adjust reps based on time per set
+    const repsPerSet = Math.max(5, Math.min(25, Math.floor(timePerSet / 2)));
+    
+    setSettings(prev => ({
+      ...prev,
+      defaultSets: [newSets],
+      defaultReps: [repsPerSet]
+    }));
+  };
 
   const loadSelectedExercises = async () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -75,12 +95,7 @@ export default function WorkoutBuilder() {
       const ids = exerciseIds.split(',');
       const exercises = await Exercise.list();
       const selected = exercises.filter(ex => ids.includes(ex.id));
-      const selectedWithData = selected.map(ex => ({
-        ...ex,
-        superset_with_next: false
-      }));
-      setSelectedExercises(selectedWithData);
-      setWorkoutName(`Custom Workout - ${new Date().toLocaleDateString()}`);
+      setSelectedExercises(selected);
     }
   };
 
@@ -88,104 +103,42 @@ export default function WorkoutBuilder() {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
-  const toggleSuperset = (index) => {
-    const newExercises = [...selectedExercises];
-    if (index < newExercises.length - 1) {
-      newExercises[index].superset_with_next = !newExercises[index].superset_with_next;
-      setSelectedExercises(newExercises);
-    }
-  };
-
-  const removeExercise = (index) => {
-    const newExercises = [...selectedExercises];
-    newExercises.splice(index, 1);
-    setSelectedExercises(newExercises);
-    toast.success('Exercise removed');
-  };
-
-  const swapExercise = async (index) => {
-    // Load all exercises
-    const allExercises = await Exercise.list();
-    const currentExercise = selectedExercises[index];
-    
-    // Filter exercises by same category
-    const categoryExercises = allExercises.filter(ex => 
-      ex.category === currentExercise.category && ex.id !== currentExercise.id
-    );
-    
-    if (categoryExercises.length === 0) {
-      toast.error('No alternative exercises in this category');
-      return;
+  const selectExercisesByCategory = async (category) => {
+    let filtered = [];
+    if (category === 'upper') {
+      filtered = allExercises.filter(ex => ex.category === 'upper_body');
+    } else if (category === 'lower') {
+      filtered = allExercises.filter(ex => ex.category === 'lower_body');
+    } else if (category === 'mix') {
+      filtered = allExercises.filter(ex => 
+        ['upper_body', 'lower_body', 'core', 'full_body'].includes(ex.category)
+      );
     }
     
-    // Pick a random exercise from the same category
-    const randomExercise = categoryExercises[Math.floor(Math.random() * categoryExercises.length)];
+    // Randomly select exercises based on time
+    const numExercises = Math.min(Math.max(5, Math.floor(selectedTime / 5)), filtered.length);
+    const shuffled = filtered.sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, numExercises);
     
-    const newExercises = [...selectedExercises];
-    newExercises[index] = { ...randomExercise, superset_with_next: currentExercise.superset_with_next };
-    setSelectedExercises(newExercises);
-    toast.success(`Swapped to ${randomExercise.name}`);
+    setSelectedExercises(selected);
+    setSelectedCategory(category);
   };
 
-  const setPresetDuration = (minutes) => {
-    updateSetting('workoutDuration', [minutes]);
-    setWorkoutType('time_based');
-    toast.success(`${minutes} minute workout set`);
-  };
-
-  const saveWorkoutTemplate = async () => {
-    if (!saveWorkoutName.trim()) {
-      toast.error('Please enter a workout name.');
-      return;
-    }
-    if (selectedExercises.length === 0) {
-      toast.error('Please select at least one exercise to save a workout template.');
-      return;
-    }
-
-    try {
-      const { SavedWorkout } = await import('@/entities/SavedWorkout'); // Dynamic import
-      await SavedWorkout.create({
-        name: saveWorkoutName,
-        description: saveWorkoutDescription,
-        exercises: selectedExercises.map(ex => ({
-          exercise_id: ex.id,
-          exercise_name: ex.name,
-          // Set target reps or time based on exercise metric
-          target_reps: ex.metric === 'reps' ? settings.defaultReps[0] : 0,
-          target_time: ex.metric === 'time' ? settings.defaultTime[0] : 0,
-          sets: settings.defaultSets[0],
-          superset_with_next: ex.superset_with_next
-        })),
-        workout_type: workoutType,
-        difficulty: "intermediate", // This could be dynamically calculated if needed
-        estimated_duration: settings.workoutDuration[0], // Store for template, useful for filtering/display
-        is_public: false // Default to private for user-saved templates
-      });
-
-      toast.success('Workout saved successfully!');
-      setShowSaveDialog(false);
-      setSaveWorkoutName("");
-      setSaveWorkoutDescription("");
-    } catch (error) {
-      console.error('Failed to save workout template:', error);
-      toast.error('Failed to save workout. Please try again.');
-    }
+  const canProceed = () => {
+    if (currentStep === 1) return selectedTime !== null;
+    if (currentStep === 2) return selectedCategory !== null;
+    if (currentStep === 3) return true;
+    return false;
   };
 
   const startWorkout = async () => {
     if (selectedExercises.length === 0) {
-      toast.error('Please select exercises before starting a workout.');
+      toast.error('Please complete all steps');
       return;
     }
 
-    // Apply randomize order if enabled
     let exercisesToUse = [...selectedExercises];
-    if (settings.randomizeOrder) {
-      exercisesToUse = exercisesToUse.sort(() => Math.random() - 0.5);
-    }
-
-    // Add warm-up exercises if enabled
+    
     if (settings.includeWarmup) {
       const warmupExercises = [
         { id: 'warmup-1', name: 'Arm Circles', category: 'warmup', metric: 'time', difficulty: 'beginner' },
@@ -196,18 +149,18 @@ export default function WorkoutBuilder() {
     }
 
     const workoutData = {
-      name: workoutName || `Workout - ${new Date().toLocaleDateString()}`,
+      name: `${selectedTime} Min ${selectedCategory?.toUpperCase()} Workout - ${new Date().toLocaleDateString()}`,
       exercises: exercisesToUse.map(ex => ({
         exercise_id: ex.id,
         exercise_name: ex.name,
-        target_reps: ex.metric === 'reps' ? settings.defaultReps[0] : 0,
-        target_time: ex.metric === 'time' || ex.category === 'warmup' ? (ex.category === 'warmup' ? 30 : settings.defaultTime[0]) : 0,
+        target_reps: settings.defaultReps[0],
+        target_time: ex.category === 'warmup' ? 30 : 0,
         completed_reps: 0,
         completed_time: 0,
         sets: ex.category === 'warmup' ? 1 : settings.defaultSets[0],
-        superset_with_next: ex.superset_with_next || false
+        superset_with_next: false
       })),
-      workout_type: workoutType,
+      workout_type: "rep_based",
       difficulty: "intermediate",
       weight_added_lbs: settings.useWeightVest ? settings.vestWeightLbs[0] : 0,
       rest_time: settings.restTime[0]
@@ -226,21 +179,334 @@ export default function WorkoutBuilder() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white py-6">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigate(createPageUrl("Exercises"))}
+              className="bg-white/10 text-white border-white/20 hover:bg-white/20 rounded-lg"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">Build Your Workout</h1>
+              <p className="text-sm text-white/80">Step-by-step workout creation</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Progress Steps */}
+      <div className="bg-gray-900/50 border-b border-gray-800">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between max-w-2xl mx-auto">
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                currentStep >= 1 ? 'bg-brand-blue text-white' : 'bg-gray-700 text-gray-400'
+              }`}>
+                {currentStep > 1 ? <Check className="w-5 h-5" /> : '1'}
+              </div>
+              <span className={`text-sm font-medium ${currentStep >= 1 ? 'text-white' : 'text-gray-400'}`}>
+                Time
+              </span>
+            </div>
+
+            <div className={`flex-1 h-1 mx-2 rounded ${currentStep > 1 ? 'bg-brand-blue' : 'bg-gray-700'}`} />
+
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                currentStep >= 2 ? 'bg-brand-blue text-white' : 'bg-gray-700 text-gray-400'
+              }`}>
+                {currentStep > 2 ? <Check className="w-5 h-5" /> : '2'}
+              </div>
+              <span className={`text-sm font-medium ${currentStep >= 2 ? 'text-white' : 'text-gray-400'}`}>
+                Focus
+              </span>
+            </div>
+
+            <div className={`flex-1 h-1 mx-2 rounded ${currentStep > 2 ? 'bg-brand-blue' : 'bg-gray-700'}`} />
+
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                currentStep >= 3 ? 'bg-brand-blue text-white' : 'bg-gray-700 text-gray-400'
+              }`}>
+                3
+              </div>
+              <span className={`text-sm font-medium ${currentStep >= 3 ? 'text-white' : 'text-gray-400'}`}>
+                Customize
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8 max-w-3xl">
+        {/* Step 1: Select Time */}
+        {currentStep === 1 && (
+          <Card className="bg-gray-900 border-gray-800 rounded-xl">
+            <CardHeader>
+              <CardTitle className="text-white text-2xl flex items-center gap-2">
+                <Timer className="w-6 h-6 text-brand-blue" />
+                Step 1: Choose Workout Duration
+              </CardTitle>
+              <p className="text-gray-400">How much time do you have?</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {[15, 30, 45, 60].map(minutes => (
+                  <button
+                    key={minutes}
+                    onClick={() => setSelectedTime(minutes)}
+                    className={`p-6 rounded-xl border-2 transition-all ${
+                      selectedTime === minutes
+                        ? 'bg-brand-blue/20 border-brand-blue text-white'
+                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-brand-blue/50'
+                    }`}
+                  >
+                    <Timer className="w-8 h-8 mx-auto mb-2" />
+                    <div className="text-3xl font-bold">{minutes}</div>
+                    <div className="text-sm">MINUTES</div>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 2: Select Focus */}
+        {currentStep === 2 && (
+          <Card className="bg-gray-900 border-gray-800 rounded-xl">
+            <CardHeader>
+              <CardTitle className="text-white text-2xl flex items-center gap-2">
+                <Dumbbell className="w-6 h-6 text-brand-blue" />
+                Step 2: Choose Workout Focus
+              </CardTitle>
+              <p className="text-gray-400">What area do you want to train?</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 gap-4">
+                <button
+                  onClick={() => selectExercisesByCategory('upper')}
+                  className={`p-6 rounded-xl border-2 transition-all text-left ${
+                    selectedCategory === 'upper'
+                      ? 'bg-brand-blue/20 border-brand-blue'
+                      : 'bg-gray-800/50 border-gray-700 hover:border-brand-blue/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xl font-bold text-white mb-1">Upper Body</div>
+                      <div className="text-sm text-gray-400">Chest, Back, Shoulders, Arms</div>
+                    </div>
+                    {selectedCategory === 'upper' && <Check className="w-6 h-6 text-brand-blue" />}
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => selectExercisesByCategory('lower')}
+                  className={`p-6 rounded-xl border-2 transition-all text-left ${
+                    selectedCategory === 'lower'
+                      ? 'bg-brand-blue/20 border-brand-blue'
+                      : 'bg-gray-800/50 border-gray-700 hover:border-brand-blue/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xl font-bold text-white mb-1">Lower Body</div>
+                      <div className="text-sm text-gray-400">Legs, Glutes, Calves</div>
+                    </div>
+                    {selectedCategory === 'lower' && <Check className="w-6 h-6 text-brand-blue" />}
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => selectExercisesByCategory('mix')}
+                  className={`p-6 rounded-xl border-2 transition-all text-left ${
+                    selectedCategory === 'mix'
+                      ? 'bg-brand-blue/20 border-brand-blue'
+                      : 'bg-gray-800/50 border-gray-700 hover:border-brand-blue/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xl font-bold text-white mb-1">Full Body Mix</div>
+                      <div className="text-sm text-gray-400">Balanced total body workout</div>
+                    </div>
+                    {selectedCategory === 'mix' && <Check className="w-6 h-6 text-brand-blue" />}
+                  </div>
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 3: Customize */}
+        {currentStep === 3 && (
+          <div className="space-y-4">
+            <Card className="bg-gray-900 border-gray-800 rounded-xl">
+              <CardHeader>
+                <CardTitle className="text-white text-xl">Workout Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-gray-300">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Duration:</span>
+                    <span className="font-bold text-white">{selectedTime} minutes</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Focus:</span>
+                    <span className="font-bold text-white capitalize">{selectedCategory} body</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Exercises:</span>
+                    <span className="font-bold text-white">{selectedExercises.length} exercises</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gray-900 border-gray-800 rounded-xl">
+              <CardHeader>
+                <CardTitle className="text-white text-xl">Fine-tune Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-3">
+                  <Label className="text-white text-base">Sets per Exercise</Label>
+                  <Slider
+                    value={settings.defaultSets}
+                    onValueChange={(value) => updateSetting('defaultSets', value)}
+                    min={1}
+                    max={5}
+                    step={1}
+                    className="w-full"
+                  />
+                  <div className="text-right text-white font-bold">{settings.defaultSets[0]} sets</div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-white text-base">Reps per Set</Label>
+                  <Slider
+                    value={settings.defaultReps}
+                    onValueChange={(value) => updateSetting('defaultReps', value)}
+                    min={5}
+                    max={30}
+                    step={1}
+                    className="w-full"
+                  />
+                  <div className="text-right text-white font-bold">{settings.defaultReps[0]} reps</div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-white text-base">Rest Time (seconds)</Label>
+                  <Slider
+                    value={settings.restTime}
+                    onValueChange={(value) => updateSetting('restTime', value)}
+                    min={15}
+                    max={120}
+                    step={5}
+                    className="w-full"
+                  />
+                  <div className="text-right text-white font-bold">{settings.restTime[0]} seconds</div>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-xl border border-gray-700">
+                  <div>
+                    <Label className="text-white text-base font-medium">Include Warm-up</Label>
+                    <p className="text-sm text-gray-400">3 dynamic warm-up exercises</p>
+                  </div>
+                  <Switch
+                    checked={settings.includeWarmup}
+                    onCheckedChange={(checked) => updateSetting('includeWarmup', checked)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-xl border border-gray-700">
+                  <div>
+                    <Label className="text-white text-base font-medium">Use Weight Vest</Label>
+                    <p className="text-sm text-gray-400">Add extra resistance</p>
+                  </div>
+                  <Switch
+                    checked={settings.useWeightVest}
+                    onCheckedChange={(checked) => updateSetting('useWeightVest', checked)}
+                  />
+                </div>
+
+                {settings.useWeightVest && (
+                  <div className="space-y-3">
+                    <Label className="text-white text-base">Vest Weight (LBS)</Label>
+                    <Slider
+                      value={settings.vestWeightLbs}
+                      onValueChange={(value) => updateSetting('vestWeightLbs', value)}
+                      min={5}
+                      max={50}
+                      step={5}
+                      className="w-full"
+                    />
+                    <div className="text-right text-white font-bold">{settings.vestWeightLbs[0]} LBS</div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 p-4">
+        <div className="container mx-auto max-w-3xl flex justify-between items-center">
+          {currentStep > 1 ? (
+            <Button
+              variant="outline"
+              onClick={() => setCurrentStep(currentStep - 1)}
+              className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700 rounded-lg"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+          ) : (
+            <div />
+          )}
+
+          {currentStep < 3 ? (
+            <Button
+              onClick={() => setCurrentStep(currentStep + 1)}
+              disabled={!canProceed()}
+              className="bg-brand-blue hover:bg-brand-blue/90 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed px-8"
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-2" />
+            </Button>
+          ) : (
+            <Button
+              onClick={startWorkout}
+              disabled={!canProceed()}
+              className="bg-gradient-to-r from-brand-blue to-blue-600 hover:opacity-90 text-white font-bold text-lg px-10 py-6 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            >
+              <Play className="w-5 h-5 mr-2" />
+              START WORKOUT
+            </Button>
+          )}
+        </div>
+      </div>
+
       <style>
         {`
-          /* Slider Track (background) */
+          /* Slider styling */
           [data-orientation="horizontal"].relative.h-2.w-full.grow.overflow-hidden.rounded-full {
             height: 10px !important;
             background-color: #374151 !important;
+            border-radius: 9999px !important;
           }
           
-          /* Slider Range (filled blue part) */
           [data-orientation="horizontal"].absolute.h-full {
             background-color: #00a9ff !important;
             height: 10px !important;
+            border-radius: 9999px !important;
           }
           
-          /* Slider Thumb (button) */
           [role="slider"].block.h-5.w-5.rounded-full {
             background-color: #00a9ff !important;
             border: 3px solid #ffffff !important;
@@ -249,471 +515,11 @@ export default function WorkoutBuilder() {
             height: 24px !important;
           }
           
-          /* Active Tab Styling */
-          [data-state="active"] {
-            background-color: #00a9ff !important;
-            color: white !important;
-            border-color: #00a9ff !important;
-          }
-          
-          /* Switch Active State */
           [data-state="checked"] {
             background-color: #00a9ff !important;
           }
         `}
       </style>
-      
-      <div className="gradient-bg text-white py-8">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center gap-4 mb-4">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => navigate(createPageUrl("Exercises"))}
-              className="bg-white text-black border-2 border-white hover:bg-gray-200"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Build Your Workout</h1>
-              <p className="text-lg text-white/90">Customize your training session</p>
-            </div>
-          </div>
-          
-          {/* Preset Time Buttons */}
-          <div className="mt-6">
-            <p className="text-sm text-white/80 mb-3">⚡ Quick Time Presets:</p>
-            <div className="flex flex-wrap gap-3">
-              {[15, 30, 45, 60].map(minutes => (
-                <Button
-                  key={minutes}
-                  onClick={() => setPresetDuration(minutes)}
-                  className={`${
-                    workoutType === 'time_based' && settings.workoutDuration[0] === minutes
-                      ? 'bg-white text-blue-600 border-2 border-white'
-                      : 'bg-white/10 text-white border-2 border-white/30 hover:bg-white/20'
-                  } font-bold px-6 py-2 rounded-full transition-all`}
-                >
-                  <Timer className="w-4 h-4 mr-2" />
-                  {minutes} MIN
-                </Button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
-        <div className="space-y-6">
-          {/* Workout Name */}
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle>Workout Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="workoutName">Workout Name</Label>
-                <Input
-                  id="workoutName"
-                  value={workoutName}
-                  onChange={(e) => setWorkoutName(e.target.value)}
-                  placeholder="Enter workout name..."
-                  className="text-lg bg-background border-border text-foreground"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Selected Exercises */}
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle>Selected Exercises ({selectedExercises.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {selectedExercises.length > 0 ? (
-                <div className="space-y-1">
-                  {selectedExercises.map((exercise, index) => (
-                    <div key={exercise.id}>
-                      <div className="flex items-center justify-between p-3 bg-background rounded-lg border border-border hover:border-brand-blue/50 transition-all">
-                        <div className="flex items-center gap-3">
-                          <span className="w-8 h-8 bg-brand-blue/20 text-brand-blue rounded-full flex items-center justify-center font-semibold border border-brand-blue/50">
-                            {index + 1}
-                          </span>
-                          <div>
-                            <h4 className="font-semibold text-foreground">{exercise.name}</h4>
-                            <p className="text-sm text-gray-400 capitalize">{exercise.category?.replace('_', ' ')}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="border-brand-blue/50 text-brand-blue capitalize">
-                            {exercise.difficulty}
-                          </Badge>
-                          
-                          {/* Swap Button */}
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => swapExercise(index)}
-                                  className="text-gray-400 hover:text-blue-400 hover:bg-blue-400/10"
-                                >
-                                  <RefreshCw className="w-4 h-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Swap for another exercise</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-
-                          {/* Delete Button */}
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => removeExercise(index)}
-                                  className="text-gray-400 hover:text-red-400 hover:bg-red-400/10"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Remove exercise</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          
-                          {/* Superset Link */}
-                          {index < selectedExercises.length - 1 && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => toggleSuperset(index)}
-                                    className={exercise.superset_with_next ? "text-brand-blue bg-brand-blue/10" : "text-gray-500 hover:text-brand-blue"}
-                                  >
-                                    <Link2 className="w-5 h-5" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{exercise.superset_with_next ? "Superset enabled. Click to unlink." : "Link with next exercise for a superset."}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </div>
-                      </div>
-                      {exercise.superset_with_next && (
-                        <div className="flex justify-center items-center h-6">
-                          <Link2 className="w-5 h-5 text-brand-blue animate-pulse" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-400">No exercises selected</p>
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate(createPageUrl("Exercises"))}
-                    className="mt-4 bg-background border-brand-blue text-brand-blue hover:bg-brand-blue hover:text-white"
-                  >
-                    Select Exercises
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Workout Type & Settings */}
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle>Workout Settings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TooltipProvider>
-                <Tabs defaultValue="rep_based" onValueChange={setWorkoutType}>
-                  <TabsList className="grid w-full grid-cols-3 bg-background border border-border">
-                    <TabsTrigger
-                      value="rep_based"
-                      className="flex items-center gap-2 data-[state=active]:bg-brand-blue data-[state=active]:text-white text-foreground border border-transparent data-[state=active]:border-brand-blue"
-                    >
-                      <Target className="w-4 h-4" />
-                      Rep Based
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="time_based"
-                      className="flex items-center gap-2 data-[state=active]:bg-brand-blue data-[state=active]:text-white text-foreground border border-transparent data-[state=active]:border-brand-blue"
-                    >
-                      <Clock className="w-4 h-4" />
-                      Time Based
-                    </TabsTrigger>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <TabsTrigger
-                          value="random"
-                          disabled={!isPro}
-                          className="flex items-center gap-2 data-[state=active]:bg-brand-blue data-[state=active]:text-white text-foreground border border-transparent data-[state=active]:border-brand-blue disabled:opacity-50"
-                        >
-                          <Shuffle className="w-4 h-4" />
-                          Random
-                          {!isPro && <Badge variant="destructive" className="ml-2 bg-yellow-400 text-black">PRO</Badge>}
-                        </TabsTrigger>
-                      </TooltipTrigger>
-                      {!isPro && (
-                        <TooltipContent>
-                          <p>Upgrade to Pro to unlock AI-powered random workouts!</p>
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TabsList>
-
-                  <div className="mt-6 space-y-6">
-                     <div className="space-y-2">
-                      <Label className="text-foreground">Default Sets per Exercise</Label>
-                      <Slider
-                        value={settings.defaultSets}
-                        onValueChange={(value) => updateSetting('defaultSets', value)}
-                        min={1}
-                        max={10}
-                        step={1}
-                        className="w-full workout-builder-slider"
-                      />
-                      <div className="text-sm text-gray-400 text-right">{settings.defaultSets[0]} sets</div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-foreground">Default Reps (for rep-based exercises)</Label>
-                      <Slider
-                        value={settings.defaultReps}
-                        onValueChange={(value) => updateSetting('defaultReps', value)}
-                        min={1}
-                        max={50}
-                        step={1}
-                        className="w-full workout-builder-slider"
-                      />
-                      <div className="text-sm text-gray-400 text-right">{settings.defaultReps[0]} reps</div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-foreground">Default Time (for time-based exercises)</Label>
-                      <Slider
-                        value={settings.defaultTime}
-                        onValueChange={(value) => updateSetting('defaultTime', value)}
-                        min={10}
-                        max={300}
-                        step={5}
-                        className="w-full workout-builder-slider"
-                      />
-                      <div className="text-sm text-gray-400 text-right">{settings.defaultTime[0]} seconds</div>
-                    </div>
-                  </div>
-
-                  <TabsContent value="time_based" className="mt-6 space-y-6">
-                    <div className="space-y-2">
-                      <Label className="text-foreground">Total Workout Duration (minutes)</Label>
-                      <Slider
-                        value={settings.workoutDuration}
-                        onValueChange={(value) => updateSetting('workoutDuration', value)}
-                        min={5}
-                        max={90}
-                        step={5}
-                        className="w-full workout-builder-slider"
-                      />
-                      <div className="text-sm text-gray-400 text-right">{settings.workoutDuration[0]} minutes</div>
-                    </div>
-                    <p className="text-xs text-gray-500">For 'Time Based' workouts, the app will automatically divide the total duration among the selected exercises.</p>
-                  </TabsContent>
-
-                  <TabsContent value="random" className="mt-6">
-                    {isPro ? (
-                      <div className="bg-brand-blue/10 p-6 rounded-lg border border-brand-blue/20">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Zap className="w-5 h-5 text-brand-blue" />
-                          <h4 className="font-semibold text-white">Surprise Workout!</h4>
-                        </div>
-                        <p className="text-gray-300">
-                          Let our AI create a dynamic workout using your selected exercises.
-                          Each session will be unique with randomized rep counts, timing, and order.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="text-center bg-gray-800 p-8 rounded-lg">
-                        <Star className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
-                        <h3 className="text-xl font-bold mb-2">Unlock AI Randomizer</h3>
-                        <p className="text-gray-400 mb-6">Upgrade to Pro for unique, AI-generated workouts every time.</p>
-                        <Button
-                          onClick={() => navigate(createPageUrl("Pricing"))}
-                          className="gradient-bg text-white hover:opacity-90"
-                        >
-                          Upgrade to Pro
-                        </Button>
-                      </div>
-                    )}
-                  </TabsContent>
-                </Tabs>
-              </TooltipProvider>
-            </CardContent>
-          </Card>
-
-          {/* Additional Settings */}
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle>Workout Modifiers</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label className="text-foreground">Rest Time Between Sets/Exercises (seconds)</Label>
-                <Slider
-                  value={settings.restTime}
-                  onValueChange={(value) => updateSetting('restTime', value)}
-                  min={10}
-                  max={180}
-                  step={5}
-                  className="w-full workout-builder-slider"
-                />
-                <div className="text-sm text-gray-400 text-right">{settings.restTime[0]} seconds</div>
-              </div>
-
-              <div className={`flex items-center justify-between py-3 px-4 rounded-lg border transition-all ${
-                settings.randomizeOrder 
-                  ? 'bg-brand-blue/10 border-brand-blue' 
-                  : 'bg-background border-border'
-              }`}>
-                <div>
-                  <Label className="text-base font-medium text-foreground">Randomize Exercise Order</Label>
-                  <p className="text-sm text-gray-500">Shuffle exercises for variety</p>
-                </div>
-                <Switch
-                  checked={settings.randomizeOrder}
-                  onCheckedChange={(checked) => updateSetting('randomizeOrder', checked)}
-                  className="data-[state=checked]:bg-brand-blue"
-                />
-              </div>
-
-              <div className={`flex items-center justify-between py-3 px-4 rounded-lg border transition-all ${
-                settings.includeWarmup 
-                  ? 'bg-brand-blue/10 border-brand-blue' 
-                  : 'bg-background border-border'
-              }`}>
-                <div>
-                  <Label className="text-base font-medium text-foreground">Include Warm-up</Label>
-                  <p className="text-sm text-gray-500">Start with light dynamic movements</p>
-                </div>
-                <Switch
-                  checked={settings.includeWarmup}
-                  onCheckedChange={(checked) => updateSetting('includeWarmup', checked)}
-                  className="data-[state=checked]:bg-brand-blue"
-                />
-              </div>
-
-              <div className="border-t border-border pt-6">
-                <div className={`flex items-center justify-between py-3 px-4 rounded-lg border mb-4 transition-all ${
-                  settings.useWeightVest 
-                    ? 'bg-brand-blue/10 border-brand-blue' 
-                    : 'bg-background border-border'
-                }`}>
-                  <div>
-                    <Label className="text-base font-medium text-foreground">Use Weight Vest</Label>
-                    <p className="text-sm text-gray-500">Add resistance to your bodyweight exercises</p>
-                  </div>
-                  <Switch
-                    checked={settings.useWeightVest}
-                    onCheckedChange={(checked) => updateSetting('useWeightVest', checked)}
-                    className="data-[state=checked]:bg-brand-blue"
-                  />
-                </div>
-                {settings.useWeightVest && (
-                   <div className="space-y-2">
-                      <Label className="text-foreground">Vest Weight (LBS)</Label>
-                      <Slider
-                        value={settings.vestWeightLbs}
-                        onValueChange={(value) => updateSetting('vestWeightLbs', value)}
-                        min={5}
-                        max={100}
-                        step={1}
-                        className="w-full workout-builder-slider"
-                      />
-                      <div className="text-sm text-gray-400 text-right">{settings.vestWeightLbs[0]} LBS</div>
-                    </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Action Buttons */}
-          {selectedExercises.length > 0 && (
-            <div className="flex flex-col md:flex-row justify-center gap-4 pt-4">
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => setShowSaveDialog(true)}
-                className="bg-background border-brand-blue text-brand-blue hover:bg-brand-blue hover:text-white px-8 py-3 text-lg font-bold rounded-full"
-              >
-                <Upload className="w-5 h-5 mr-3" />
-                SAVE WORKOUT
-              </Button>
-
-              <Button
-                size="lg"
-                onClick={startWorkout}
-                className="gradient-bg text-white hover:opacity-90 text-lg px-10 py-6 rounded-full font-bold shadow-lg shadow-brand-blue/20 hover:shadow-brand-blue/30 transition-all duration-300 transform hover:scale-105"
-              >
-                <Play className="w-5 h-5 mr-3" />
-                START WORKOUT
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Save Workout Dialog */}
-      {showSaveDialog && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowSaveDialog(false)}>
-          <Card className="bg-card max-w-md w-full border-border" onClick={e => e.stopPropagation()}>
-            <CardHeader>
-              <CardTitle>Save Workout Template</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="saveWorkoutName">Workout Name</Label>
-                <Input
-                  id="saveWorkoutName"
-                  value={saveWorkoutName}
-                  onChange={(e) => setSaveWorkoutName(e.target.value)}
-                  placeholder="e.g., Upper Body Blast"
-                  className="bg-background border-border text-foreground"
-                />
-              </div>
-              <div>
-                <Label htmlFor="saveWorkoutDescription">Description (Optional)</Label>
-                <Textarea
-                  id="saveWorkoutDescription"
-                  value={saveWorkoutDescription}
-                  onChange={(e) => setSaveWorkoutDescription(e.target.value)}
-                  placeholder="Describe your workout..."
-                  className="bg-background border-border text-foreground"
-                />
-              </div>
-              <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => setShowSaveDialog(false)} className="bg-background border-border">
-                  Cancel
-                </Button>
-                <Button onClick={saveWorkoutTemplate} className="gradient-bg text-white hover:opacity-90">
-                  Save
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }
