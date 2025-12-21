@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Dialog,
@@ -54,8 +53,31 @@ export default function ExerciseModal({ exercise, isOpen, onClose }) {
         </DialogHeader>
         
         <div className="space-y-4 pt-4">
-          <div className="w-full h-48 bg-background rounded-lg flex items-center justify-center overflow-hidden mb-4">
-            {exercise.image_url ? (
+          <div className="w-full h-64 bg-background rounded-lg flex items-center justify-center overflow-hidden mb-4">
+            {exercise.video_url ? (
+              <div className="w-full h-full">
+                {exercise.video_url.includes('youtube.com') || exercise.video_url.includes('youtu.be') ? (
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    src={exercise.video_url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                    title={exercise.name}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="rounded-lg"
+                  />
+                ) : (
+                  <video
+                    src={exercise.video_url}
+                    controls
+                    className="w-full h-full object-cover rounded-lg"
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                )}
+              </div>
+            ) : exercise.image_url ? (
               <img src={exercise.image_url} alt={exercise.name} className="w-full h-full object-contain" />
             ) : (
               <div className="text-center">
