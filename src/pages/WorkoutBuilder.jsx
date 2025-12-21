@@ -368,6 +368,67 @@ export default function WorkoutBuilder() {
               </CardContent>
             </Card>
 
+            {/* Exercise List */}
+            <Card className="bg-gray-900 border-gray-800 rounded-xl">
+              <CardHeader>
+                <CardTitle className="text-white text-xl">Exercise List</CardTitle>
+                <p className="text-sm text-gray-400">Customize your workout exercises</p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {selectedExercises.map((exercise, index) => (
+                  <div key={index} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h4 className="text-white font-semibold">{exercise.name}</h4>
+                        <p className="text-xs text-gray-400 mt-1">{exercise.category}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            const similar = allExercises.filter(ex => 
+                              ex.category === exercise.category && ex.id !== exercise.id
+                            );
+                            if (similar.length > 0) {
+                              const random = similar[Math.floor(Math.random() * similar.length)];
+                              swapExercise(index, random);
+                            }
+                          }}
+                          className="w-8 h-8 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors"
+                          title="Swap Exercise"
+                        >
+                          <RefreshCw className="w-4 h-4 text-white" />
+                        </button>
+                        <button
+                          onClick={() => removeExercise(index)}
+                          className="w-8 h-8 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
+                          title="Remove Exercise"
+                        >
+                          <Trash2 className="w-4 h-4 text-white" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {index < selectedExercises.length - 1 && (
+                      <button
+                        onClick={() => toggleSuperset(index)}
+                        className={`w-full flex items-center justify-between p-2 rounded-lg border-2 transition-all ${
+                          exercise.superset_with_next
+                            ? 'bg-purple-600/20 border-purple-500 text-purple-300'
+                            : 'bg-gray-700/50 border-gray-600 text-gray-400 hover:border-gray-500'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <LinkIcon className="w-4 h-4" />
+                          <span className="text-sm font-medium">Superset with next</span>
+                        </div>
+                        {exercise.superset_with_next && <Check className="w-4 h-4" />}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
             <Card className="bg-gray-900 border-gray-800 rounded-xl">
               <CardHeader>
                 <CardTitle className="text-white text-xl">Fine-tune Settings</CardTitle>
