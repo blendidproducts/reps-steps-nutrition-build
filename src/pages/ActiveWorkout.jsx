@@ -54,6 +54,7 @@ export default function ActiveWorkout() {
   const [showHRInput, setShowHRInput] = useState(false);
   const [activeCardio, setActiveCardio] = useState(null);
   const [cardioTimer, setCardioTimer] = useState(0);
+  const [restCardioTotal, setRestCardioTotal] = useState(0);
 
   useEffect(() => {
     loadWorkout();
@@ -127,12 +128,14 @@ export default function ActiveWorkout() {
       if (!currentExercise.superset_with_next) {
         setIsResting(true);
         setRestTimer(workout.rest_time || 30);
+        setRestCardioTotal(0);
       }
     } else {
       if (currentExerciseIndex < workout.exercises.length - 1) {
         if (!currentExercise.superset_with_next) {
             setIsResting(true);
             setRestTimer(workout.rest_time || 60);
+            setRestCardioTotal(0);
         }
         setCurrentExerciseIndex(prev => prev + 1);
         setCurrentSet(1);
@@ -148,12 +151,12 @@ export default function ActiveWorkout() {
   const skipRest = () => {
     setIsResting(false);
     setRestTimer(0);
+    setRestCardioTotal(0);
   };
 
   const startCardio = (type) => {
     setActiveCardio({ type, startTime: Date.now() });
     setCardioTimer(0);
-    setIsResting(false);
   };
 
   const stopCardio = () => {
@@ -165,6 +168,7 @@ export default function ActiveWorkout() {
       };
       
       setCardioIntervals(prev => [...prev, cardioEntry]);
+      setRestCardioTotal(prev => prev + cardioTimer);
       
       // Add to workout exercises list
       const updatedExercises = [...workout.exercises];
@@ -186,6 +190,13 @@ export default function ActiveWorkout() {
       setCardioTimer(0);
       toast.success(`${activeCardio.type} completed: ${formatTime(cardioTimer)}`);
     }
+  };
+
+  const getTotalEstimatedReps = () => {
+    if (!workout) return 0;
+    return workout.exercises
+      .filter(ex => !ex.is_cardio_interval && ex.metric === 'reps')
+      .reduce((sum, ex) => sum + (ex.target_reps || 0) * (ex.sets || 1), 0);
   };
   
 
@@ -213,7 +224,14 @@ export default function ActiveWorkout() {
             });
           }
         } else if (restTimer > 0) {
-          setRestTimer(prev => prev - 1);
+          setRestTimer(prev => {
+            const newTimer = prev - 1;
+            // Auto-close rest if cardio total reaches rest time
+            if (restCardioTotal >= (workout.rest_time || 60)) {
+              setTimeout(() => skipRest(), 100);
+            }
+            return newTimer;
+          });
         } else if (restTimer === 0 && isResting) {
           skipRest();
         }
@@ -478,7 +496,7 @@ export default function ActiveWorkout() {
             </div>
             <div className="flex items-center gap-1.5">
               <Target className="w-4 h-4" />
-              <span>{totalReps} reps</span>
+              <span>{totalReps} / {getTotalEstimatedReps()} reps</span>
             </div>
             <button
               onClick={() => setShowHRInput(!showHRInput)}
@@ -550,8 +568,12 @@ export default function ActiveWorkout() {
                   {!activeCardio ? (
                     <>
                       <h2 className="text-2xl font-bold mb-2 text-brand-blue">ACTIVE RECOVERY</h2>
-                      <div className="text-6xl font-bold mb-4">{restTimer}</div>
-                      <p className="text-sm text-gray-400 mb-4">Choose cardio activity or rest</p>
+                      <div className="text-6xl font-bold mb-4">{restTimer}s</div>
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-400">Cardio Time: {restCardioTotal}s / {workout.rest_time || 60}s</p>
+                        <Progress value={(restCardioTotal / (workout.rest_time || 60)) * 100} className="h-2 mt-2" />
+                      </div>
+                      <p className="text-sm text-gray-400 mb-4">Choose cardio activity or skip to rest</p>
 
                       <div className="grid grid-cols-3 gap-2 mb-4">
                         <Button
@@ -594,16 +616,33 @@ export default function ActiveWorkout() {
                     <>
                       <h2 className="text-3xl font-bold mb-2 text-brand-blue uppercase">{activeCardio.type}ING</h2>
                       <div className="text-7xl font-bold mb-4 text-brand-blue animate-pulse">{formatTime(cardioTimer)}</div>
-                      <p className="text-sm text-gray-400 mb-6">Tracking your {activeCardio.type}...</p>
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-400">Total Cardio: {restCardioTotal + cardioTimer}s / {workout.rest_time || 60}s</p>
+                        <Progress value={((restCardioTotal + cardioTimer) / (workout.rest_time || 60)) * 100} className="h-2 mt-2" />
+                      </div>
 
-                      <Button
-                        onClick={stopCardio}
-                        size="lg"
-                        className="w-full bg-red-500 hover:bg-red-600 text-white font-bold text-xl py-6"
-                      >
-                        <Square className="w-6 h-6 mr-2" />
-                        STOP
-                      </Button>
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <Button
+                          onClick={stopCardio}
+                          size="lg"
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-6"
+                        >
+                          <Square className="w-5 h-5 mr-2" />
+                          STOP & SWITCH
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            stopCardio();
+                            if (restCardioTotal + cardioTimer >= (workout.rest_time || 60)) {
+                              skipRest();
+                            }
+                          }}
+                          size="lg"
+                          className="bg-green-500 hover:bg-green-600 text-white font-bold py-6"
+                        >
+                          DONE
+                        </Button>
+                      </div>
                     </>
                   )}
                 </CardContent>
