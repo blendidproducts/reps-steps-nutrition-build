@@ -5,6 +5,7 @@ import { User } from "@/entities/User";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
@@ -19,13 +20,18 @@ import {
   Check,
   RefreshCw,
   Trash2,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Target
 } from "lucide-react";
 
 export default function WorkoutBuilder() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedTime, setSelectedTime] = useState(null);
+  const [customTime, setCustomTime] = useState("");
+  const [isFreeTime, setIsFreeTime] = useState(false);
+  const [selectedReps, setSelectedReps] = useState(null);
+  const [autoReps, setAutoReps] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [allExercises, setAllExercises] = useState([]);
   const [selectedExercises, setSelectedExercises] = useState([]);
@@ -102,32 +108,40 @@ export default function WorkoutBuilder() {
   };
 
   const calculateRealisticSettings = () => {
-    const totalMinutes = selectedTime;
+    const totalMinutes = isFreeTime ? 999 : selectedTime;
     const numExercises = selectedExercises.length + (settings.includeWarmup ? 3 : 0);
     const availableSeconds = totalMinutes * 60;
     
     // Start with reasonable defaults
     let newSets = 3;
-    let newReps = 15;
+    let newReps = autoReps ? 15 : (selectedReps || 15);
     let newRest = 30;
     
-    // Adjust based on total time
-    if (totalMinutes <= 15) {
-      newSets = 2;
-      newReps = 10;
-      newRest = 20;
-    } else if (totalMinutes <= 30) {
-      newSets = 3;
-      newReps = 15;
-      newRest = 30;
-    } else if (totalMinutes <= 45) {
-      newSets = 4;
-      newReps = 18;
-      newRest = 45;
+    // Adjust based on total time (only if auto-reps)
+    if (autoReps) {
+      if (totalMinutes <= 15) {
+        newSets = 2;
+        newReps = 10;
+        newRest = 20;
+      } else if (totalMinutes <= 30) {
+        newSets = 3;
+        newReps = 15;
+        newRest = 30;
+      } else if (totalMinutes <= 45) {
+        newSets = 4;
+        newReps = 18;
+        newRest = 45;
+      } else if (!isFreeTime) {
+        newSets = 5;
+        newReps = 20;
+        newRest = 60;
+      } else {
+        newSets = 3;
+        newReps = 15;
+        newRest = 60;
+      }
     } else {
-      newSets = 5;
-      newReps = 20;
-      newRest = 60;
+      newReps = selectedReps || 15;
     }
     
     // Validate the combination works
@@ -164,6 +178,7 @@ export default function WorkoutBuilder() {
   };
 
   const isTimeValid = () => {
+    if (isFreeTime) return true;
     const estimated = getEstimatedTime();
     return estimated <= selectedTime;
   };
@@ -253,9 +268,10 @@ export default function WorkoutBuilder() {
   };
 
   const canProceed = () => {
-    if (currentStep === 1) return selectedTime !== null;
-    if (currentStep === 2) return selectedCategory !== null;
-    if (currentStep === 3) return true;
+    if (currentStep === 1) return selectedTime !== null || isFreeTime;
+    if (currentStep === 2) return selectedReps !== null || autoReps;
+    if (currentStep === 3) return selectedCategory !== null;
+    if (currentStep === 4) return true;
     return false;
   };
 
@@ -330,7 +346,7 @@ export default function WorkoutBuilder() {
       {/* Progress Steps */}
       <div className="bg-gray-900/50 border-b border-gray-800">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between max-w-2xl mx-auto">
+          <div className="flex items-center justify-between max-w-3xl mx-auto">
             <div className="flex items-center gap-2">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
                 currentStep >= 1 ? 'bg-brand-blue text-white' : 'bg-gray-700 text-gray-400'
@@ -351,7 +367,7 @@ export default function WorkoutBuilder() {
                 {currentStep > 2 ? <Check className="w-5 h-5" /> : '2'}
               </div>
               <span className={`text-sm font-medium ${currentStep >= 2 ? 'text-white' : 'text-gray-400'}`}>
-                Focus
+                Reps
               </span>
             </div>
 
@@ -361,9 +377,22 @@ export default function WorkoutBuilder() {
               <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
                 currentStep >= 3 ? 'bg-brand-blue text-white' : 'bg-gray-700 text-gray-400'
               }`}>
-                3
+                {currentStep > 3 ? <Check className="w-5 h-5" /> : '3'}
               </div>
               <span className={`text-sm font-medium ${currentStep >= 3 ? 'text-white' : 'text-gray-400'}`}>
+                Focus
+              </span>
+            </div>
+
+            <div className={`flex-1 h-1 mx-2 rounded ${currentStep > 3 ? 'bg-brand-blue' : 'bg-gray-700'}`} />
+
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                currentStep >= 4 ? 'bg-brand-blue text-white' : 'bg-gray-700 text-gray-400'
+              }`}>
+                4
+              </div>
+              <span className={`text-sm font-medium ${currentStep >= 4 ? 'text-white' : 'text-gray-400'}`}>
                 Customize
               </span>
             </div>
@@ -383,13 +412,17 @@ export default function WorkoutBuilder() {
               <p className="text-gray-400">How much time do you have?</p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mb-4">
                 {[15, 30, 45, 60].map(minutes => (
                   <button
                     key={minutes}
-                    onClick={() => setSelectedTime(minutes)}
+                    onClick={() => {
+                      setSelectedTime(minutes);
+                      setIsFreeTime(false);
+                      setCustomTime("");
+                    }}
                     className={`p-6 rounded-xl border-2 transition-all ${
-                      selectedTime === minutes
+                      selectedTime === minutes && !isFreeTime
                         ? 'bg-brand-blue/20 border-brand-blue text-white'
                         : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-brand-blue/50'
                     }`}
@@ -400,12 +433,114 @@ export default function WorkoutBuilder() {
                   </button>
                 ))}
               </div>
+
+              <div className="space-y-4">
+                <div className="flex gap-3">
+                  <Input
+                    type="number"
+                    placeholder="Enter custom time (minutes)"
+                    value={customTime}
+                    onChange={(e) => {
+                      setCustomTime(e.target.value);
+                      if (e.target.value) {
+                        setSelectedTime(parseInt(e.target.value));
+                        setIsFreeTime(false);
+                      }
+                    }}
+                    className="flex-1 bg-gray-800 border-gray-700 text-white"
+                  />
+                  <Button
+                    onClick={() => {
+                      if (customTime) {
+                        setSelectedTime(parseInt(customTime));
+                        setIsFreeTime(false);
+                      }
+                    }}
+                    className="bg-brand-blue hover:bg-brand-blue/90"
+                  >
+                    Set
+                  </Button>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setIsFreeTime(true);
+                    setSelectedTime(999);
+                    setCustomTime("");
+                  }}
+                  className={`w-full p-6 rounded-xl border-2 transition-all ${
+                    isFreeTime
+                      ? 'bg-purple-600/20 border-purple-500 text-white'
+                      : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-purple-500/50'
+                  }`}
+                >
+                  <div className="text-xl font-bold mb-2">⏱️ NO TIME LIMIT</div>
+                  <div className="text-sm text-gray-400">Train at your own pace</div>
+                </button>
+              </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Step 2: Select Focus */}
+        {/* Step 2: Select Reps */}
         {currentStep === 2 && (
+          <Card className="bg-gray-900 border-gray-800 rounded-xl">
+            <CardHeader>
+              <CardTitle className="text-white text-2xl flex items-center gap-2">
+                <Target className="w-6 h-6 text-brand-blue" />
+                Step 2: Choose Rep Count
+              </CardTitle>
+              <p className="text-gray-400">How many reps per set?</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <button
+                onClick={() => {
+                  setAutoReps(true);
+                  setSelectedReps(null);
+                }}
+                className={`w-full p-6 rounded-xl border-2 transition-all text-left ${
+                  autoReps
+                    ? 'bg-brand-blue/20 border-brand-blue'
+                    : 'bg-gray-800/50 border-gray-700 hover:border-brand-blue/50'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xl font-bold text-white mb-1">✨ Choose For Me</div>
+                    <div className="text-sm text-gray-400">AI will optimize reps based on your time</div>
+                  </div>
+                  {autoReps && <Check className="w-6 h-6 text-brand-blue" />}
+                </div>
+              </button>
+
+              <div>
+                <p className="text-white font-medium mb-3">Or select specific rep count:</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {[10, 15, 20, 25, 30].map(reps => (
+                    <button
+                      key={reps}
+                      onClick={() => {
+                        setSelectedReps(reps);
+                        setAutoReps(false);
+                      }}
+                      className={`p-4 rounded-xl border-2 transition-all ${
+                        selectedReps === reps && !autoReps
+                          ? 'bg-brand-blue/20 border-brand-blue text-white'
+                          : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-brand-blue/50'
+                      }`}
+                    >
+                      <div className="text-2xl font-bold">{reps}</div>
+                      <div className="text-xs">REPS</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 3: Select Focus */}
+        {currentStep === 3 && (
           <Card className="bg-gray-900 border-gray-800 rounded-xl">
             <CardHeader>
               <CardTitle className="text-white text-2xl flex items-center gap-2">
@@ -471,8 +606,8 @@ export default function WorkoutBuilder() {
           </Card>
         )}
 
-        {/* Step 3: Customize */}
-        {currentStep === 3 && (
+        {/* Step 4: Customize */}
+        {currentStep === 4 && (
           <div className="space-y-4">
             <Card className="bg-gray-900 border-gray-800 rounded-xl">
               <CardHeader>
@@ -482,13 +617,17 @@ export default function WorkoutBuilder() {
                 <div className="space-y-2 text-gray-300">
                   <div className="flex justify-between">
                     <span className="text-gray-400">Target Duration:</span>
-                    <span className="font-bold text-white">{selectedTime} minutes</span>
+                    <span className="font-bold text-white">{isFreeTime ? 'No Time Limit' : `${selectedTime} minutes`}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Estimated Time:</span>
                     <span className={`font-bold ${isTimeValid() ? 'text-green-400' : 'text-red-400'}`}>
                       {getEstimatedTime()} minutes
                     </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Reps per Set:</span>
+                    <span className="font-bold text-white">{autoReps ? 'Auto-optimized' : `${selectedReps} reps`}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Focus:</span>
@@ -672,7 +811,7 @@ export default function WorkoutBuilder() {
             <div />
           )}
 
-          {currentStep < 3 ? (
+          {currentStep < 4 ? (
             <Button
               onClick={() => setCurrentStep(currentStep + 1)}
               disabled={!canProceed()}
