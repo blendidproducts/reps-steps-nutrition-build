@@ -22,29 +22,12 @@ import {
   HelpCircle,
   Footprints,
   Route,
-  MapPin,
-  X,
+  Zap,
   RefreshCw
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Haversine formula to calculate distance between two lat/lon points
-const haversineDistance = (coords1, coords2) => {
-  const toRad = (x) => (x * Math.PI) / 180;
-  const R = 6371; // Earth radius in km
 
-  const dLat = toRad(coords2.latitude - coords1.latitude);
-  const dLon = toRad(coords2.longitude - coords1.longitude);
-  const lat1 = toRad(coords1.latitude);
-  const lat2 = toRad(coords2.latitude);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  
-  return R * c; // Distance in km
-};
 
 export default function ActiveWorkout() {
   const navigate = useNavigate();
@@ -64,37 +47,11 @@ export default function ActiveWorkout() {
   const [restTimer, setRestTimer] = useState(0);
   const [showVideoHelp, setShowVideoHelp] = useState(false);
   const [cardioIntervals, setCardioIntervals] = useState([]);
-  const [stepsInput, setStepsInput] = useState("");
-  const [distanceInput, setDistanceInput] = useState("");
-
-  // GPS Tracking State
-  const [isTrackingGps, setIsTrackingGps] = useState(false);
-  const [gpsWatchId, setGpsWatchId] = useState(null);
-  const [route, setRoute] = useState([]);
-  const [trackedDistance, setTrackedDistance] = useState(0);
-  const lastPosition = useRef(null);
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [allExercises, setAllExercises] = useState([]);
-  const [debugInfo, setDebugInfo] = useState([]);
 
   useEffect(() => {
     loadWorkout();
-    
-    // Timeout after 10 seconds
-    const timeout = setTimeout(() => {
-      if (!workout) {
-        setDebugInfo(prev => [...prev, '⏱️ TIMEOUT: Taking too long']);
-        setLoadingError('Timeout - Check your connection');
-      }
-    }, 10000);
-    
-    // Clean up GPS watch on component unmount
-    return () => {
-      clearTimeout(timeout);
-      if (gpsWatchId) {
-        navigator.geolocation.clearWatch(gpsWatchId);
-      }
-    };
   }, []);
 
   // Save workout state to localStorage (including workout ID)
@@ -184,76 +141,11 @@ export default function ActiveWorkout() {
   };
 
   const skipRest = () => {
-    const steps = parseInt(stepsInput) || 0;
-    let distance_km = parseFloat(distanceInput) || 0;
-
-    if (isTrackingGps) {
-        stopGpsTracking();
-        distance_km += trackedDistance;
-    }
-    
-    if (steps > 0 || distance_km > 0) {
-        setCardioIntervals(prev => [...prev, { steps, distance_km }]);
-    }
-    setStepsInput("");
-    setDistanceInput("");
-    setTrackedDistance(0);
-    setRoute([]);
-    lastPosition.current = null;
-    
     setIsResting(false);
     setRestTimer(0);
   };
   
-  const startGpsTracking = () => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setIsTrackingGps(true);
-          const { latitude, longitude } = position.coords;
-          setRoute([{ latitude, longitude }]);
-          lastPosition.current = { latitude, longitude };
 
-          const watchId = navigator.geolocation.watchPosition(
-            (newPosition) => {
-              const { latitude, longitude } = newPosition.coords;
-              const newPoint = { latitude, longitude };
-              setRoute(prevRoute => [...prevRoute, newPoint]);
-
-              if (lastPosition.current) {
-                setTrackedDistance(prevDist => prevDist + haversineDistance(lastPosition.current, newPoint));
-              }
-              lastPosition.current = newPoint;
-            },
-            (error) => {
-              console.error("Error watching position:", error);
-              alert("GPS tracking failed. Please ensure location services are enabled.");
-              stopGpsTracking();
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-          );
-          setGpsWatchId(watchId);
-        },
-        (error) => {
-          if (error.code === 1) {
-            alert("GPS permission denied. Please enable location access in your browser settings to use this feature.");
-          } else {
-            alert(`Error getting location: ${error.message}`);
-          }
-        }
-      );
-    } else {
-      alert('GPS is not supported by your browser.');
-    }
-  };
-
-  const stopGpsTracking = () => {
-    if (gpsWatchId) {
-      navigator.geolocation.clearWatch(gpsWatchId);
-    }
-    setIsTrackingGps(false);
-    setGpsWatchId(null);
-  };
 
   useEffect(() => {
     let interval;
@@ -542,58 +434,57 @@ export default function ActiveWorkout() {
             >
               <Card className="bg-gray-900/80 border-brand-blue/30 text-white w-full max-w-sm">
                 <CardContent className="p-6 text-center">
-                  <h2 className="text-2xl font-bold mb-2 text-brand-blue">CARDIO / REST</h2>
+                  <h2 className="text-2xl font-bold mb-2 text-brand-blue">REST PERIOD</h2>
                   <div className="text-6xl font-bold mb-4">{restTimer}</div>
-                  
-                  <div className="space-y-3 mb-4 text-left">
-                    <p className="text-sm text-center text-gray-400">Log cardio or rest up.</p>
-                     <div className="relative">
-                       <Footprints className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                       <Input 
-                         type="number" value={stepsInput} onChange={(e) => setStepsInput(e.target.value)}
-                         placeholder="Enter steps"
-                         className="pl-10 bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
-                       />
-                     </div>
-                     <div className="relative">
-                       <Route className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                       <Input 
-                         type="number" value={distanceInput} onChange={(e) => setDistanceInput(e.target.value)}
-                         placeholder="Distance (km)"
-                         className="pl-10 bg-gray-800 border-gray-700 text-white placeholder:text-gray-500"
-                       />
-                     </div>
-                  </div>
-                  
-                  <div className="border-t border-gray-700 my-4"></div>
 
-                  <div className="space-y-3">
-                    <p className="text-sm text-center text-gray-400">Or track live distance:</p>
-                    {isTrackingGps ? (
-                      <div className="text-center">
-                        <div className="text-lg font-bold text-green-400 animate-pulse">
-                          {trackedDistance.toFixed(2)} km
-                        </div>
-                        <Button onClick={stopGpsTracking} variant="destructive" size="sm" className="mt-2">
-                           <X className="w-4 h-4 mr-1"/> Stop Tracking
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button onClick={startGpsTracking} variant="outline" className="w-full border-green-500 text-green-400 hover:bg-green-500/10 hover:text-green-300">
-                          <MapPin className="w-4 h-4 mr-2" /> Start GPS Tracking
-                      </Button>
-                    )}
+                  <p className="text-sm text-gray-400 mb-4">Active recovery or rest</p>
+
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    <Button
+                      onClick={() => {
+                        setCardioIntervals(prev => [...prev, { type: 'walk', time: 30 }]);
+                        skipRest();
+                      }}
+                      className="flex flex-col items-center gap-2 h-auto py-4 bg-green-600/20 border-2 border-green-500 text-green-300 hover:bg-green-600/40"
+                    >
+                      <Footprints className="w-6 h-6" />
+                      <span className="text-xs font-bold">WALK</span>
+                    </Button>
+
+                    <Button
+                      onClick={() => {
+                        setCardioIntervals(prev => [...prev, { type: 'jog', time: 30 }]);
+                        skipRest();
+                      }}
+                      className="flex flex-col items-center gap-2 h-auto py-4 bg-yellow-600/20 border-2 border-yellow-500 text-yellow-300 hover:bg-yellow-600/40"
+                    >
+                      <Route className="w-6 h-6" />
+                      <span className="text-xs font-bold">JOG</span>
+                    </Button>
+
+                    <Button
+                      onClick={() => {
+                        setCardioIntervals(prev => [...prev, { type: 'sprint', time: 30 }]);
+                        skipRest();
+                      }}
+                      className="flex flex-col items-center gap-2 h-auto py-4 bg-red-600/20 border-2 border-red-500 text-red-300 hover:bg-red-600/40"
+                    >
+                      <Zap className="w-6 h-6" />
+                      <span className="text-xs font-bold">SPRINT</span>
+                    </Button>
                   </div>
 
+                  <p className="text-xs text-gray-500 mb-4">Tap activity completed during rest</p>
 
                   <p className="text-base my-4 text-gray-300">
                     Next: {workout.exercises[currentExerciseIndex]?.exercise_name || 'Workout Complete!'}
                   </p>
                   <Button
                     onClick={skipRest}
-                    className="w-full gradient-bg text-white"
+                    variant="outline"
+                    className="w-full border-gray-500 text-gray-300 hover:bg-gray-700"
                   >
-                    CONTINUE
+                    JUST REST
                   </Button>
                 </CardContent>
               </Card>
