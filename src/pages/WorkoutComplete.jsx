@@ -1,11 +1,12 @@
-
 import React, { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Trophy, Target, Clock, TrendingUp, Share2, Home, RotateCcw } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { Trophy, Target, Clock, TrendingUp, Share2, Home, RotateCcw, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 export default function WorkoutComplete() {
   const navigate = useNavigate();
@@ -24,6 +25,27 @@ export default function WorkoutComplete() {
     } else {
       navigator.clipboard.writeText(text);
       alert('Results copied to clipboard!');
+    }
+  };
+
+  const deleteWorkout = async () => {
+    if (confirm('Are you sure you want to delete this workout session? This cannot be undone.')) {
+      try {
+        const savedState = localStorage.getItem('activeWorkoutState');
+        if (savedState) {
+          const state = JSON.parse(savedState);
+          const workoutId = state.workout?.id;
+          if (workoutId) {
+            await base44.entities.Workout.delete(workoutId);
+          }
+        }
+        localStorage.removeItem('activeWorkoutState');
+        toast.success('Workout deleted');
+        navigate(createPageUrl("Home"));
+      } catch (error) {
+        console.error('Failed to delete workout:', error);
+        toast.error('Failed to delete workout');
+      }
     }
   };
 
@@ -163,6 +185,15 @@ export default function WorkoutComplete() {
                 className="text-purple-400 hover:text-purple-300"
               >
                 View Full History
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={deleteWorkout}
+                className="w-full mt-2 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:border-red-500"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete This Workout
               </Button>
             </motion.div>
           </CardContent>
