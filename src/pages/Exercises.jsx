@@ -87,74 +87,69 @@ export default function Exercises() {
   };
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
+    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb', paddingBottom: '100px' }}>
       {/* Header */}
       <div className="gradient-bg text-white py-8 md:py-10">
         <div className="container mx-auto px-4">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Choose Your Exercises</h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">Choose Your Plan</h1>
           <p className="text-lg md:text-xl text-white/90 mb-6">
-            Build a workout or let our AI create one for you.
+            AI Generator or Manual Builder
           </p>
 
-          {/* Pro Randomizer Feature */}
-          {!isUserLoading && isPro && (
+          {/* Plan Selection Cards */}
+          <div className="grid md:grid-cols-2 gap-4 max-w-4xl">
+            {/* AI Workout Generator - PRO ONLY */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.6 }}
-              className="flex flex-wrap gap-3"
             >
-              <Link to={createPageUrl("RandomWorkout") + "?type=upper"}>
-                <Button 
-                  size="lg" 
-                  className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-base px-6 py-3 rounded-full font-bold backdrop-blur-sm touch-manipulation"
-                >
-                  <Zap className="w-5 h-5 mr-2" />
-                  UPPER BODY AI
-                </Button>
-              </Link>
-              <Link to={createPageUrl("RandomWorkout") + "?type=lower"}>
-                <Button 
-                  size="lg" 
-                  className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-base px-6 py-3 rounded-full font-bold backdrop-blur-sm touch-manipulation"
-                >
-                  <Zap className="w-5 h-5 mr-2" />
-                  LOWER BODY AI
-                </Button>
-              </Link>
-              <Link to={createPageUrl("RandomWorkout") + "?type=mix"}>
-                <Button 
-                  size="lg" 
-                  className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-base px-6 py-3 rounded-full font-bold backdrop-blur-sm touch-manipulation"
-                >
-                  <Zap className="w-5 h-5 mr-2" />
-                  MIXED AI
-                </Button>
+              <Link to={isPro ? createPageUrl("WorkoutBuilder") : createPageUrl("Pricing")}>
+                <div className={`relative bg-gradient-to-br from-purple-600 to-blue-600 p-6 rounded-2xl border-2 ${
+                  isPro ? 'border-yellow-400' : 'border-purple-500/50 opacity-75'
+                } hover:scale-105 transition-transform cursor-pointer`}>
+                  {!isPro && (
+                    <div className="absolute top-3 right-3">
+                      <Badge className="bg-yellow-400 text-black font-bold">PRO ONLY</Badge>
+                    </div>
+                  )}
+                  <Zap className="w-12 h-12 mb-3 text-white" />
+                  <h3 className="text-2xl font-bold mb-2">AI Workout Generator</h3>
+                  <p className="text-white/90 text-sm mb-4">
+                    Smart AI creates personalized workouts in seconds
+                  </p>
+                  <ul className="space-y-2 text-sm text-white/80">
+                    <li>✓ Choose duration & focus area</li>
+                    <li>✓ Auto-selected exercises</li>
+                    <li>✓ Optimized for your time</li>
+                  </ul>
+                </div>
               </Link>
             </motion.div>
-          )}
 
-          {!isUserLoading && !isPro && (
+            {/* Manual Builder - FREE */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="inline-block bg-background/20 backdrop-blur-sm rounded-full p-1 border border-white/20"
+              transition={{ delay: 0.3, duration: 0.6 }}
             >
-              <div className="flex items-center gap-4">
-                 <p className="text-sm md:text-base ml-4">🚀 Unlock AI-powered random workouts!</p>
-                  <Link to={createPageUrl("Pricing")}>
-                    <Button 
-                      size="sm"
-                      className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black hover:opacity-90 font-bold rounded-full"
-                    >
-                      <Star className="w-4 h-4 mr-2" />
-                      UPGRADE
-                    </Button>
-                  </Link>
+              <div className="relative bg-gradient-to-br from-gray-700 to-gray-800 p-6 rounded-2xl border-2 border-gray-600 hover:scale-105 transition-transform cursor-pointer">
+                <div className="absolute top-3 right-3">
+                  <Badge className="bg-green-500 text-white font-bold">FREE</Badge>
+                </div>
+                <Dumbbell className="w-12 h-12 mb-3 text-white" />
+                <h3 className="text-2xl font-bold mb-2">Build Your Workout</h3>
+                <p className="text-white/90 text-sm mb-4">
+                  Manually select exercises & customize
+                </p>
+                <ul className="space-y-2 text-sm text-white/80">
+                  <li>✓ Browse exercise library</li>
+                  <li>✓ Pick your favorites</li>
+                  <li>✓ Full control & flexibility</li>
+                </ul>
               </div>
             </motion.div>
-          )}
+          </div>
         </div>
       </div>
 
