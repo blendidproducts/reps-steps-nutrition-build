@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer } from "lucide-react";
+import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,6 +25,9 @@ const navigationItems = [
   { title: "Programs", url: createPageUrl("Programs"), icon: Calendar },
   { title: "History", url: createPageUrl("History"), icon: History },
   { title: "Progress", url: createPageUrl("Progress"), icon: Camera },
+  { title: "Achievements", url: createPageUrl("Achievements"), icon: Trophy },
+  { title: "Measurements", url: createPageUrl("BodyMeasurements"), icon: Ruler },
+  { title: "Referrals", url: createPageUrl("Referrals"), icon: Gift },
   { title: "Help", url: createPageUrl("Help"), icon: HelpCircle },
   { title: "Settings", url: createPageUrl("Settings"), icon: Settings },
 ];

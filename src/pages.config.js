@@ -16,6 +16,9 @@ import SavedWorkouts from './pages/SavedWorkouts';
 import Settings from './pages/Settings';
 import WorkoutBuilder from './pages/WorkoutBuilder';
 import WorkoutComplete from './pages/WorkoutComplete';
+import Achievements from './pages/Achievements';
+import BodyMeasurements from './pages/BodyMeasurements';
+import Referrals from './pages/Referrals';
 import __Layout from './Layout.jsx';
 
 
@@ -38,6 +41,9 @@ export const PAGES = {
     "Settings": Settings,
     "WorkoutBuilder": WorkoutBuilder,
     "WorkoutComplete": WorkoutComplete,
+    "Achievements": Achievements,
+    "BodyMeasurements": BodyMeasurements,
+    "Referrals": Referrals,
 }
 
 export const pagesConfig = {
