@@ -63,31 +63,109 @@ export default function WorkoutBuilder() {
     }
   }, [selectedTime, selectedExercises.length]);
 
+  // Validate and calculate max possible values for sliders
+  const getConstraints = () => {
+    if (!selectedTime || selectedExercises.length === 0) {
+      return { maxSets: 5, maxReps: 30, maxRest: 120 };
+    }
+
+    const totalMinutes = selectedTime;
+    const availableSeconds = totalMinutes * 60;
+    const numExercises = selectedExercises.length + (settings.includeWarmup ? 3 : 0);
+    
+    // Estimate 2 seconds per rep
+    const secondsPerRep = 2;
+    
+    // Calculate max sets given current reps and rest
+    const timePerSet = settings.defaultReps[0] * secondsPerRep;
+    const totalSets = numExercises * settings.defaultSets[0];
+    const restTime = (totalSets - 1) * settings.restTime[0];
+    const workTime = totalSets * timePerSet;
+    
+    // Calculate maximum values
+    const maxSets = Math.max(1, Math.min(5, Math.floor(
+      (availableSeconds - settings.restTime[0]) / 
+      (numExercises * (settings.defaultReps[0] * secondsPerRep + settings.restTime[0]))
+    )));
+    
+    const maxReps = Math.max(5, Math.min(30, Math.floor(
+      (availableSeconds - (numExercises * settings.defaultSets[0] - 1) * settings.restTime[0]) /
+      (numExercises * settings.defaultSets[0] * secondsPerRep)
+    )));
+    
+    const maxRest = Math.max(15, Math.min(120, Math.floor(
+      (availableSeconds - numExercises * settings.defaultSets[0] * settings.defaultReps[0] * secondsPerRep) /
+      (numExercises * settings.defaultSets[0] - 1)
+    )));
+
+    return { maxSets, maxReps, maxRest };
+  };
+
   const calculateRealisticSettings = () => {
     const totalMinutes = selectedTime;
     const numExercises = selectedExercises.length + (settings.includeWarmup ? 3 : 0);
+    const availableSeconds = totalMinutes * 60;
     
-    // Calculate available time per exercise (accounting for rest)
-    const restTimeTotal = (numExercises * settings.defaultSets[0] - 1) * settings.restTime[0];
-    const workTime = (totalMinutes * 60) - restTimeTotal;
-    const timePerSet = Math.floor(workTime / (numExercises * settings.defaultSets[0]));
+    // Start with reasonable defaults
+    let newSets = 3;
+    let newReps = 15;
+    let newRest = 30;
     
-    // Adjust sets based on available time
-    let newSets = settings.defaultSets[0];
-    if (timePerSet < 20) {
-      newSets = Math.max(1, Math.floor(totalMinutes / 10));
-    } else if (timePerSet > 60) {
-      newSets = Math.min(5, Math.floor(totalMinutes / 5));
+    // Adjust based on total time
+    if (totalMinutes <= 15) {
+      newSets = 2;
+      newReps = 10;
+      newRest = 20;
+    } else if (totalMinutes <= 30) {
+      newSets = 3;
+      newReps = 15;
+      newRest = 30;
+    } else if (totalMinutes <= 45) {
+      newSets = 4;
+      newReps = 18;
+      newRest = 45;
+    } else {
+      newSets = 5;
+      newReps = 20;
+      newRest = 60;
     }
     
-    // Adjust reps based on time per set
-    const repsPerSet = Math.max(5, Math.min(25, Math.floor(timePerSet / 2)));
+    // Validate the combination works
+    const totalSets = numExercises * newSets;
+    const workTime = totalSets * newReps * 2;
+    const restTime = (totalSets - 1) * newRest;
+    const totalTime = workTime + restTime;
+    
+    // If still too long, reduce reps
+    if (totalTime > availableSeconds) {
+      newReps = Math.max(5, Math.floor(
+        (availableSeconds - (totalSets - 1) * newRest) / (totalSets * 2)
+      ));
+    }
     
     setSettings(prev => ({
       ...prev,
       defaultSets: [newSets],
-      defaultReps: [repsPerSet]
+      defaultReps: [newReps],
+      restTime: [newRest]
     }));
+  };
+
+  const getEstimatedTime = () => {
+    if (!selectedExercises.length) return 0;
+    
+    const numExercises = selectedExercises.length + (settings.includeWarmup ? 3 : 0);
+    const totalSets = numExercises * settings.defaultSets[0];
+    const workTime = totalSets * settings.defaultReps[0] * 2; // 2 sec per rep
+    const restTime = (totalSets - 1) * settings.restTime[0];
+    const totalSeconds = workTime + restTime;
+    
+    return Math.ceil(totalSeconds / 60); // Convert to minutes
+  };
+
+  const isTimeValid = () => {
+    const estimated = getEstimatedTime();
+    return estimated <= selectedTime;
   };
 
   const loadSelectedExercises = async () => {
@@ -103,7 +181,31 @@ export default function WorkoutBuilder() {
   };
 
   const updateSetting = (key, value) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+    const newSettings = { ...settings, [key]: value };
+    
+    // Validate time feasibility after each change
+    const numExercises = selectedExercises.length + (newSettings.includeWarmup ? 3 : 0);
+    const totalSets = numExercises * newSettings.defaultSets[0];
+    const workTime = totalSets * newSettings.defaultReps[0] * 2;
+    const restTime = (totalSets - 1) * newSettings.restTime[0];
+    const totalSeconds = workTime + restTime;
+    const availableSeconds = selectedTime * 60;
+    
+    // If invalid, auto-adjust to make it valid
+    if (totalSeconds > availableSeconds && key !== 'includeWarmup' && key !== 'useWeightVest' && key !== 'vestWeightLbs') {
+      // Prioritize reducing rest time first
+      if (key === 'defaultSets' || key === 'defaultReps') {
+        const maxRest = Math.floor(
+          (availableSeconds - numExercises * newSettings.defaultSets[0] * newSettings.defaultReps[0] * 2) /
+          (numExercises * newSettings.defaultSets[0] - 1)
+        );
+        if (maxRest < newSettings.restTime[0] && maxRest >= 15) {
+          newSettings.restTime = [Math.max(15, maxRest)];
+        }
+      }
+    }
+    
+    setSettings(newSettings);
   };
 
   const selectExercisesByCategory = async (category) => {
@@ -379,8 +481,14 @@ export default function WorkoutBuilder() {
               <CardContent>
                 <div className="space-y-2 text-gray-300">
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Duration:</span>
+                    <span className="text-gray-400">Target Duration:</span>
                     <span className="font-bold text-white">{selectedTime} minutes</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Estimated Time:</span>
+                    <span className={`font-bold ${isTimeValid() ? 'text-green-400' : 'text-red-400'}`}>
+                      {getEstimatedTime()} minutes
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Focus:</span>
@@ -391,6 +499,13 @@ export default function WorkoutBuilder() {
                     <span className="font-bold text-white">{selectedExercises.length} exercises</span>
                   </div>
                 </div>
+                {!isTimeValid() && (
+                  <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                    <p className="text-red-400 text-sm">
+                      ⚠️ Workout exceeds time limit. Reduce sets, reps, or rest time.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -466,7 +581,7 @@ export default function WorkoutBuilder() {
                     value={settings.defaultSets}
                     onValueChange={(value) => updateSetting('defaultSets', value)}
                     min={1}
-                    max={5}
+                    max={Math.min(5, getConstraints().maxSets)}
                     step={1}
                     className="w-full"
                   />
@@ -479,7 +594,7 @@ export default function WorkoutBuilder() {
                     value={settings.defaultReps}
                     onValueChange={(value) => updateSetting('defaultReps', value)}
                     min={5}
-                    max={30}
+                    max={Math.min(30, getConstraints().maxReps)}
                     step={1}
                     className="w-full"
                   />
@@ -492,7 +607,7 @@ export default function WorkoutBuilder() {
                     value={settings.restTime}
                     onValueChange={(value) => updateSetting('restTime', value)}
                     min={15}
-                    max={120}
+                    max={Math.min(120, getConstraints().maxRest)}
                     step={5}
                     className="w-full"
                   />
@@ -569,7 +684,7 @@ export default function WorkoutBuilder() {
           ) : (
             <Button
               onClick={startWorkout}
-              disabled={!canProceed()}
+              disabled={!canProceed() || !isTimeValid()}
               className="bg-gradient-to-r from-brand-blue to-blue-600 hover:opacity-90 text-white font-bold text-lg px-10 py-6 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
             >
               <Play className="w-5 h-5 mr-2" />
