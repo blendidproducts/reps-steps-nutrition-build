@@ -49,6 +49,8 @@ export default function ActiveWorkout() {
   const [cardioIntervals, setCardioIntervals] = useState([]);
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [allExercises, setAllExercises] = useState([]);
+  const [heartRate, setHeartRate] = useState("");
+  const [showHRInput, setShowHRInput] = useState(false);
 
   useEffect(() => {
     loadWorkout();
@@ -402,7 +404,7 @@ export default function ActiveWorkout() {
               </div>
             )}
           </div>
-          <div className="flex justify-center gap-4 text-sm md:text-base">
+          <div className="flex justify-center gap-4 text-sm md:text-base flex-wrap">
             <div className="flex items-center gap-1.5">
               <Timer className="w-4 h-4" />
               <span>{formatTime(timer)}</span>
@@ -411,6 +413,15 @@ export default function ActiveWorkout() {
               <Target className="w-4 h-4" />
               <span>{totalReps} reps</span>
             </div>
+            <button
+              onClick={() => setShowHRInput(!showHRInput)}
+              className="flex items-center gap-1.5 text-red-400 hover:text-red-300 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+              </svg>
+              <span>{heartRate || "HR"}</span>
+            </button>
           </div>
         </div>
 
@@ -422,6 +433,41 @@ export default function ActiveWorkout() {
           </div>
           <Progress value={progress} className="h-2" />
         </div>
+
+        {/* Heart Rate Input */}
+        <AnimatePresence>
+          {showHRInput && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-4 px-2"
+            >
+              <Card className="bg-red-500/10 border-red-500/30">
+                <CardContent className="p-4">
+                  <h3 className="text-sm font-semibold text-red-400 mb-2">Heart Rate Monitor</h3>
+                  <div className="space-y-3">
+                    <Input
+                      type="number"
+                      value={heartRate}
+                      onChange={(e) => setHeartRate(e.target.value)}
+                      placeholder="Enter BPM"
+                      className="bg-background border-red-500/50 text-white text-center text-lg"
+                    />
+                    <div className="text-xs text-gray-400 space-y-1">
+                      <p><strong>How to measure:</strong></p>
+                      <p>1. Stop moving, find pulse on neck or wrist</p>
+                      <p>2. Count beats for 15 seconds</p>
+                      <p>3. Multiply by 4 = your BPM</p>
+                      <p className="text-red-400 mt-2"><strong>Target zones:</strong> Moderate 50-70% max | Vigorous 70-85% max</p>
+                      <p className="text-gray-500">Max HR ≈ 220 - your age</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Rest/Cardio Screen */}
         <AnimatePresence>
