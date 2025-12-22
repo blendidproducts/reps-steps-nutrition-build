@@ -11,12 +11,47 @@ import { toast } from "sonner";
 export default function WorkoutComplete() {
   const navigate = useNavigate();
   const [showConfetti, setShowConfetti] = useState(true);
+  const [workoutStats, setWorkoutStats] = useState(null);
+  const [newAchievements, setNewAchievements] = useState([]);
 
   useEffect(() => {
     // Auto-hide confetti after animation
     const timer = setTimeout(() => setShowConfetti(false), 3000);
+    loadWorkoutStats();
     return () => clearTimeout(timer);
   }, []);
+
+  const loadWorkoutStats = async () => {
+    try {
+      // Get the most recent workout session
+      const sessions = await base44.entities.WorkoutSession.list('-created_date', 1);
+      if (sessions.length > 0) {
+        const session = sessions[0];
+        setWorkoutStats({
+          totalReps: session.total_reps || 0,
+          duration: session.duration || 0,
+          caloriesBurned: session.calories_burned || 0
+        });
+      }
+
+      // Check for new achievements
+      const allAchievements = await base44.entities.Achievement.list('-earned_date', 5);
+      const recentAchievements = allAchievements.filter(a => {
+        const earnedTime = new Date(a.earned_date).getTime();
+        const now = Date.now();
+        return (now - earnedTime) < 60000; // Within last minute
+      });
+      setNewAchievements(recentAchievements);
+    } catch (error) {
+      console.error('Failed to load stats:', error);
+    }
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const shareResults = () => {
     const text = "Just crushed another workout with RepsAndSteps! 💪 #FitnessGoals #RepsAndSteps";
@@ -114,11 +149,65 @@ export default function WorkoutComplete() {
               </p>
             </motion.div>
 
+            {/* Workout Stats */}
+            {workoutStats && (
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.6, duration: 0.6 }}
+                className="grid grid-cols-3 gap-3 mb-6"
+              >
+                <div className="bg-background rounded-lg p-4 border border-brand-blue/30">
+                  <Target className="w-6 h-6 text-brand-blue mx-auto mb-2" />
+                  <div className="text-xs text-gray-400">Total Reps</div>
+                  <div className="text-2xl font-bold text-brand-blue">{workoutStats.totalReps}</div>
+                </div>
+                <div className="bg-background rounded-lg p-4 border border-purple-500/30">
+                  <Clock className="w-6 h-6 text-purple-400 mx-auto mb-2" />
+                  <div className="text-xs text-gray-400">Time</div>
+                  <div className="text-2xl font-bold text-purple-400">{formatTime(workoutStats.duration)}</div>
+                </div>
+                <div className="bg-background rounded-lg p-4 border border-orange-500/30">
+                  <TrendingUp className="w-6 h-6 text-orange-400 mx-auto mb-2" />
+                  <div className="text-xs text-gray-400">Calories</div>
+                  <div className="text-2xl font-bold text-orange-400">{workoutStats.caloriesBurned}</div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* New Achievements */}
+            {newAchievements.length > 0 && (
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.7, duration: 0.6 }}
+                className="mb-6"
+              >
+                <h3 className="text-lg font-bold text-yellow-400 mb-3 flex items-center justify-center gap-2">
+                  <Trophy className="w-5 h-5" />
+                  New Achievements Unlocked!
+                </h3>
+                <div className="space-y-2">
+                  {newAchievements.map(achievement => (
+                    <div key={achievement.id} className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/50 rounded-lg p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="text-3xl">{achievement.icon}</div>
+                        <div className="text-left">
+                          <div className="font-bold text-yellow-400">{achievement.title}</div>
+                          <div className="text-xs text-gray-400">{achievement.description}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
             {/* Motivational Stats */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.6, duration: 0.6 }}
+              transition={{ delay: 0.8, duration: 0.6 }}
               className="grid grid-cols-2 gap-4 mb-8"
             >
               <div className="bg-background rounded-lg p-4 border border-green-500/30">
@@ -137,7 +226,7 @@ export default function WorkoutComplete() {
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.8, duration: 0.6 }}
+              transition={{ delay: 0.9, duration: 0.6 }}
               className="bg-background rounded-lg p-4 mb-8 border border-purple-500/30"
             >
               <p className="text-purple-400 font-medium italic">
