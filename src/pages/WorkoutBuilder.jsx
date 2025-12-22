@@ -115,11 +115,11 @@ export default function WorkoutBuilder() {
     
     // Start with reasonable defaults
     let newSets = 3;
-    let newReps = autoReps ? 15 : (selectedReps || 15);
+    let newReps = 15;
     let newRest = 30;
     
-    // Adjust based on total time (only if auto-reps)
     if (autoReps) {
+      // Auto-optimize based on time
       if (totalMinutes <= 15) {
         newSets = 2;
         newReps = 10;
@@ -142,17 +142,37 @@ export default function WorkoutBuilder() {
         newRest = 60;
       }
     } else {
-      newReps = selectedReps || 15;
+      // User selected specific total reps - distribute across exercises and sets
+      const targetTotalReps = selectedReps || 300;
+      
+      // Determine optimal sets based on time
+      if (totalMinutes <= 15) {
+        newSets = 2;
+        newRest = 20;
+      } else if (totalMinutes <= 30) {
+        newSets = 3;
+        newRest = 30;
+      } else if (totalMinutes <= 45) {
+        newSets = 4;
+        newRest = 45;
+      } else {
+        newSets = 5;
+        newRest = 60;
+      }
+      
+      // Calculate reps per set to hit target total reps
+      const totalSets = numExercises * newSets;
+      newReps = Math.max(5, Math.round(targetTotalReps / totalSets));
     }
     
-    // Validate the combination works
+    // Validate the combination works within time constraint
     const totalSets = numExercises * newSets;
     const workTime = totalSets * newReps * 2;
     const restTime = (totalSets - 1) * newRest;
     const totalTime = workTime + restTime;
     
     // If still too long, reduce reps
-    if (totalTime > availableSeconds) {
+    if (totalTime > availableSeconds && !isFreeTime) {
       newReps = Math.max(5, Math.floor(
         (availableSeconds - (totalSets - 1) * newRest) / (totalSets * 2)
       ));
