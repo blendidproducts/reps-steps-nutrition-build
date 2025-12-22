@@ -253,12 +253,12 @@ export default function WorkoutBuilder() {
   const selectExercisesByCategory = async (category) => {
     let filtered = [];
     if (category === 'upper') {
-      filtered = allExercises.filter(ex => ex.category === 'upper_body');
+      filtered = allExercises.filter(ex => ex.category === 'upper_body' && ex.metric !== 'time');
     } else if (category === 'lower') {
-      filtered = allExercises.filter(ex => ex.category === 'lower_body');
+      filtered = allExercises.filter(ex => ex.category === 'lower_body' && ex.metric !== 'time');
     } else if (category === 'mix') {
       filtered = allExercises.filter(ex => 
-        ['upper_body', 'lower_body', 'core', 'full_body'].includes(ex.category)
+        ['upper_body', 'lower_body', 'core', 'full_body'].includes(ex.category) && ex.metric !== 'time'
       );
     }
     

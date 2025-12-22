@@ -126,14 +126,17 @@ export default function ActiveWorkout() {
       setRepInput("");
       setExerciseTimer(0);
       
-      if (!currentExercise.superset_with_next) {
+      // Skip rest for warmup exercises
+      if (!currentExercise.superset_with_next && currentExercise.category !== 'warmup') {
         setIsResting(true);
         setRestTimer(workout.rest_time || 30);
         setRestCardioTotal(0);
       }
     } else {
       if (currentExerciseIndex < workout.exercises.length - 1) {
-        if (!currentExercise.superset_with_next) {
+        const nextExercise = workout.exercises[currentExerciseIndex + 1];
+        // Skip rest for warmup exercises or supersets
+        if (!currentExercise.superset_with_next && currentExercise.category !== 'warmup' && nextExercise?.category !== 'warmup') {
             setIsResting(true);
             setRestTimer(workout.rest_time || 60);
             setRestCardioTotal(0);
