@@ -126,8 +126,8 @@ export default function ActiveWorkout() {
       setRepInput("");
       setExerciseTimer(0);
       
-      // Skip rest for warmup exercises
-      if (!currentExercise.superset_with_next && currentExercise.category !== 'warmup') {
+      // NO rest during warmup exercises - skip active recovery entirely
+      if (!currentExercise.superset_with_next && currentExercise.category !== 'warmup' && currentExercise.metric !== 'time') {
         setIsResting(true);
         setRestTimer(workout.rest_time || 30);
         setRestCardioTotal(0);
@@ -135,8 +135,11 @@ export default function ActiveWorkout() {
     } else {
       if (currentExerciseIndex < workout.exercises.length - 1) {
         const nextExercise = workout.exercises[currentExerciseIndex + 1];
-        // Skip rest for warmup exercises or supersets
-        if (!currentExercise.superset_with_next && currentExercise.category !== 'warmup' && nextExercise?.category !== 'warmup') {
+        // NO rest if current OR next is warmup/stretch - skip active recovery entirely
+        const isCurrentWarmup = currentExercise.category === 'warmup' || currentExercise.metric === 'time';
+        const isNextWarmup = nextExercise?.category === 'warmup' || nextExercise?.metric === 'time';
+        
+        if (!currentExercise.superset_with_next && !isCurrentWarmup && !isNextWarmup) {
             setIsResting(true);
             setRestTimer(workout.rest_time || 60);
             setRestCardioTotal(0);
