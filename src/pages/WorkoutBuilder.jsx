@@ -312,9 +312,11 @@ export default function WorkoutBuilder() {
     
     if (settings.includeWarmup) {
       const warmupExercises = [
-        { id: 'warmup-1', name: 'Arm Circles', category: 'warmup', metric: 'time', difficulty: 'beginner' },
-        { id: 'warmup-2', name: 'Leg Swings', category: 'warmup', metric: 'time', difficulty: 'beginner' },
-        { id: 'warmup-3', name: 'Torso Twists', category: 'warmup', metric: 'time', difficulty: 'beginner' }
+        { id: 'warmup-1', name: 'Toe Touches', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 20 },
+        { id: 'warmup-2', name: 'Arm Circles Forward', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 15 },
+        { id: 'warmup-3', name: 'Hip Circles', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 20 },
+        { id: 'warmup-4', name: 'Chest Opener Stretch', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 15 },
+        { id: 'warmup-5', name: 'Light Walk (in place)', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 90 }
       ];
       exercisesToUse = [...warmupExercises, ...exercisesToUse];
     }

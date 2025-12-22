@@ -182,22 +182,7 @@ export default function ActiveWorkout() {
       setCardioIntervals(prev => [...prev, cardioEntry]);
       setRestCardioTotal(prev => prev + cardioTimer);
       
-      // Add to workout exercises list
-      const updatedExercises = [...workout.exercises];
-      const cardioExercise = {
-        exercise_id: `cardio-${Date.now()}`,
-        exercise_name: `${activeCardio.type.charAt(0).toUpperCase() + activeCardio.type.slice(1)}`,
-        target_time: cardioTimer,
-        completed_time: cardioTimer,
-        sets: 1,
-        metric: 'time',
-        category: 'cardio',
-        is_cardio_interval: true
-      };
-      
-      updatedExercises.splice(currentExerciseIndex + 1, 0, cardioExercise);
-      setWorkout({...workout, exercises: updatedExercises});
-      
+      // DO NOT add to workout exercises - just log for analytics
       setActiveCardio(null);
       setCardioTimer(0);
       toast.success(`${activeCardio.type} completed: ${formatTime(cardioTimer)}`);
@@ -828,42 +813,29 @@ export default function ActiveWorkout() {
           <CardContent className="p-3">
             <h3 className="text-base font-semibold mb-3 text-white">Workout Plan</h3>
             <div className="space-y-2 max-h-40 overflow-y-auto">
-              {workout.exercises.map((exercise, index) => (
+              {workout.exercises.filter(ex => !ex.is_cardio_interval).map((exercise, index) => (
                 <div
                   key={index}
                   className={`flex items-center justify-between p-2 rounded-lg text-sm ${
-                    exercise.is_cardio_interval 
-                      ? 'bg-purple-500/10 border border-purple-500/30 text-purple-300'
-                      : index === currentExerciseIndex 
-                        ? 'bg-brand-blue/20 border border-brand-blue/30' 
-                        : index < currentExerciseIndex 
-                          ? 'bg-green-500/10 text-gray-400'
-                          : 'bg-gray-800/50 text-gray-300'
+                    index === currentExerciseIndex 
+                      ? 'bg-brand-blue/20 border border-brand-blue/30' 
+                      : index < currentExerciseIndex 
+                        ? 'bg-green-500/10 text-gray-400'
+                        : 'bg-gray-800/50 text-gray-300'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    {exercise.is_cardio_interval ? (
-                      <>
-                        <span className="text-purple-400">⚡</span>
-                        <span className="font-medium truncate">{exercise.exercise_name}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0 ${
-                          index === currentExerciseIndex ? 'bg-brand-blue text-white' : index < currentExerciseIndex ? 'bg-green-500 text-white' : 'bg-gray-700 text-white'
-                        }`}>
-                          {index + 1}
-                        </span>
-                        <span className="font-medium truncate">{exercise.exercise_name}</span>
-                      </>
-                    )}
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0 ${
+                      index === currentExerciseIndex ? 'bg-brand-blue text-white' : index < currentExerciseIndex ? 'bg-green-500 text-white' : 'bg-gray-700 text-white'
+                    }`}>
+                      {index + 1}
+                    </span>
+                    <span className="font-medium truncate">{exercise.exercise_name}</span>
                   </div>
                   <div className="text-xs flex-shrink-0 ml-2">
-                    {exercise.is_cardio_interval 
-                      ? `${formatTime(exercise.completed_time)}`
-                      : exercise.metric === 'time' 
-                        ? `${exercise.target_time}s` 
-                        : `${exercise.target_reps} reps`}
+                    {exercise.metric === 'time' 
+                      ? `${exercise.target_time}s` 
+                      : `${exercise.target_reps} reps`}
                   </div>
                 </div>
               ))}

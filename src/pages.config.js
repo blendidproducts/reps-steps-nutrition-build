@@ -19,6 +19,7 @@ import SavedWorkouts from './pages/SavedWorkouts';
 import Settings from './pages/Settings';
 import WorkoutBuilder from './pages/WorkoutBuilder';
 import WorkoutComplete from './pages/WorkoutComplete';
+import Stretches from './pages/Stretches';
 import __Layout from './Layout.jsx';
 
 
@@ -44,6 +45,7 @@ export const PAGES = {
     "Settings": Settings,
     "WorkoutBuilder": WorkoutBuilder,
     "WorkoutComplete": WorkoutComplete,
+    "Stretches": Stretches,
 }
 
 export const pagesConfig = {

@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 const navigationItems = [
   { title: "Home", url: createPageUrl("Home"), icon: Home },
   { title: "Exercises", url: createPageUrl("Exercises"), icon: Dumbbell },
+  { title: "Stretches", url: createPageUrl("Stretches"), icon: Timer },
   { title: "Nutrition", url: createPageUrl("Nutrition"), icon: Apple },
   { title: "Saved Workouts", url: createPageUrl("SavedWorkouts"), icon: BookmarkPlus },
   { title: "Programs", url: createPageUrl("Programs"), icon: Calendar },
