@@ -56,7 +56,13 @@ export default function Settings() {
       autoStart: false, restTimerEnabled: true, defaultRestTime: [30], vibrationFeedback: true,
       recordWorkouts: false, formAnalysis: false,
       autoShare: false, shareToSocial: true, includeStats: true,
-      workoutReminders: false, progressUpdates: false, achievements: false
+      workoutReminders: false, progressUpdates: false, achievements: false,
+      enableTimerBeeps: true,
+      audioLevels: {
+        voiceCommands: [50],
+        timerBeeps: [50],
+        completionSounds: [50]
+      }
     };
     try {
       const storedSettings = localStorage.getItem('appSettings');
@@ -334,6 +340,32 @@ export default function Settings() {
                   checked={settings.soundEffects} 
                   onCheckedChange={(c) => updateSetting('soundEffects', c)}
                 />
+              </div>
+
+              <div className="space-y-4 mt-4">
+                <div className="flex items-center justify-between p-4 bg-background rounded-lg border border-border">
+                  <div>
+                    <Label className="font-medium text-foreground">Timer Countdown Beeps</Label>
+                    <p className="text-sm text-gray-400">Beeps during last 3 seconds of timers</p>
+                  </div>
+                  <Switch
+                    checked={settings.enableTimerBeeps}
+                    onCheckedChange={(checked) => updateSetting('enableTimerBeeps', checked)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-foreground">Timer Beeps Volume</Label>
+                  <Slider
+                    value={settings.audioLevels?.timerBeeps || [50]}
+                    onValueChange={(value) => updateSetting('audioLevels', { ...settings.audioLevels, timerBeeps: value })}
+                    max={100}
+                    step={5}
+                    className="w-full"
+                    disabled={!settings.enableTimerBeeps}
+                  />
+                  <div className="text-right text-sm text-gray-400">{settings.audioLevels?.timerBeeps?.[0] || 50}%</div>
+                </div>
               </div>
             </CardContent>
           </Card>
