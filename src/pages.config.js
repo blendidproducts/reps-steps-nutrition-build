@@ -17,9 +17,9 @@ import RandomWorkout from './pages/RandomWorkout';
 import Referrals from './pages/Referrals';
 import SavedWorkouts from './pages/SavedWorkouts';
 import Settings from './pages/Settings';
+import Stretches from './pages/Stretches';
 import WorkoutBuilder from './pages/WorkoutBuilder';
 import WorkoutComplete from './pages/WorkoutComplete';
-import Stretches from './pages/Stretches';
 import __Layout from './Layout.jsx';
 
 
@@ -43,9 +43,9 @@ export const PAGES = {
     "Referrals": Referrals,
     "SavedWorkouts": SavedWorkouts,
     "Settings": Settings,
+    "Stretches": Stretches,
     "WorkoutBuilder": WorkoutBuilder,
     "WorkoutComplete": WorkoutComplete,
-    "Stretches": Stretches,
 }
 
 export const pagesConfig = {

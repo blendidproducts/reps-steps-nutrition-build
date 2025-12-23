@@ -56,6 +56,9 @@ export default function ActiveWorkout() {
   const [cardioTimer, setCardioTimer] = useState(0);
   const [restCardioTotal, setRestCardioTotal] = useState(0);
   const [extendedRestTime, setExtendedRestTime] = useState(0);
+  const [isTimerPaused, setIsTimerPaused] = useState(true);
+  const [lastBeepSecond, setLastBeepSecond] = useState(null);
+  const audioContextRef = useRef(null);
 
   useEffect(() => {
     loadWorkout();
@@ -204,6 +207,35 @@ export default function ActiveWorkout() {
   
 
 
+  const playBeep = (isLong = false) => {
+    const settings = JSON.parse(localStorage.getItem('appSettings') || '{}');
+    if (settings.enableTimerBeeps === false) return;
+    
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const ctx = audioContextRef.current;
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      oscillator.frequency.value = isLong ? 800 : 1000;
+      oscillator.type = 'sine';
+      
+      const volume = (settings.audioLevels?.timerBeeps || 50) / 100;
+      gainNode.gain.value = volume;
+      
+      const duration = isLong ? 0.5 : 0.15;
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + duration);
+    } catch (error) {
+      console.error('Audio playback failed:', error);
+    }
+  };
+
   useEffect(() => {
     let interval;
     if (isActive && !isPaused) {
@@ -220,15 +252,32 @@ export default function ActiveWorkout() {
             const targetTime = workout.exercises[currentExerciseIndex].target_time;
             setExerciseTimer(prevTime => {
               const newTime = prevTime + 1;
-              if (newTime >= targetTime) {
-                setTimeout(nextExercise, 500); 
+              const timeLeft = targetTime - newTime;
+              
+              // Countdown beeps for last 3 seconds
+              if (timeLeft <= 3 && timeLeft > 0 && timeLeft !== lastBeepSecond && !isTimerPaused) {
+                setLastBeepSecond(timeLeft);
+                playBeep(false);
+              } else if (timeLeft === 0 && !isTimerPaused) {
+                playBeep(true); // Long beep at completion
+                setTimeout(nextExercise, 500);
               }
+              
               return newTime;
             });
           }
         } else if (restTimer > 0) {
           setRestTimer(prev => {
             const newTimer = prev - 1;
+            
+            // Countdown beeps for last 3 seconds of rest
+            if (newTimer <= 3 && newTimer > 0 && newTimer !== lastBeepSecond) {
+              setLastBeepSecond(newTimer);
+              playBeep(false);
+            } else if (newTimer === 0) {
+              playBeep(true); // Long beep
+            }
+            
             // Auto-close rest if cardio total reaches rest time
             if (restCardioTotal >= (workout.rest_time || 60)) {
               setTimeout(() => skipRest(), 100);
@@ -241,7 +290,7 @@ export default function ActiveWorkout() {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isActive, isPaused, isResting, restTimer, workout, currentExerciseIndex, activeCardio]);
+  }, [isActive, isPaused, isResting, restTimer, workout, currentExerciseIndex, activeCardio, isTimerPaused, lastBeepSecond]);
 
   const loadWorkout = async () => {
     try {
@@ -339,6 +388,21 @@ export default function ActiveWorkout() {
       const jogIntervals = cardioIntervals.filter(c => c.type === 'jog');
       const sprintIntervals = cardioIntervals.filter(c => c.type === 'sprint');
       
+      // Improved calorie calculation (more accurate formula)
+      // Base: 5 calories per minute of active work
+      // Reps: 0.15 calories per rep (strength training)
+      // Cardio bonus: walk +2 cal/min, jog +5 cal/min, sprint +10 cal/min
+      const activeMinutes = timer / 60;
+      const baseCalories = activeMinutes * 5;
+      const repCalories = totalReps * 0.15;
+      const cardioCalories = (
+        (walkIntervals.reduce((sum, c) => sum + c.time, 0) / 60) * 2 +
+        (jogIntervals.reduce((sum, c) => sum + c.time, 0) / 60) * 5 +
+        (sprintIntervals.reduce((sum, c) => sum + c.time, 0) / 60) * 10
+      );
+      const weightBonus = workout.weight_added_lbs ? (workout.weight_added_lbs * 0.02 * activeMinutes) : 0;
+      const totalCalories = Math.round(baseCalories + repCalories + cardioCalories + weightBonus);
+      
       const sessionData = {
         workout_id: workout.id,
         start_time: sessionStartTime.toISOString(),
@@ -350,7 +414,7 @@ export default function ActiveWorkout() {
           reps_completed: ex.metric === 'reps' ? (ex.completed_reps || 0) : 0,
           time_spent: ex.metric === 'time' ? (ex.completed_time || 0) : 0
         })),
-        calories_burned: Math.round(totalReps * 0.5 + timer * 0.1),
+        calories_burned: totalCalories,
         weight_added_lbs: workout.weight_added_lbs || 0,
         cardio_intervals: cardioIntervals,
         cardio_analytics: {
@@ -757,6 +821,29 @@ export default function ActiveWorkout() {
                      Target: {formatTime(currentExercise.target_time)}
                    </p>
                    <Progress value={timeProgress} className="h-2" />
+
+                   <div className="flex justify-center gap-3 mt-4">
+                     <Button
+                       onClick={() => setIsTimerPaused(!isTimerPaused)}
+                       size="lg"
+                       className={`${isTimerPaused ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'} text-white font-bold px-8`}
+                     >
+                       {isTimerPaused ? <Play className="w-5 h-5 mr-2" /> : <Pause className="w-5 h-5 mr-2" />}
+                       {isTimerPaused ? 'START' : 'PAUSE'}
+                     </Button>
+                     <Button
+                       onClick={() => {
+                         setExerciseTimer(currentExercise.target_time);
+                         setTimeout(nextExercise, 500);
+                       }}
+                       size="lg"
+                       variant="outline"
+                       className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
+                     >
+                       <SkipForward className="w-5 h-5 mr-2" />
+                       SKIP
+                     </Button>
+                   </div>
                 </div>
               ) : (
                 // UI for Rep-Based Exercises
