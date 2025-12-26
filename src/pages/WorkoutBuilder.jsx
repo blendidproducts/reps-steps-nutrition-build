@@ -77,8 +77,8 @@ export default function WorkoutBuilder() {
         
         setSelectedTime(duration);
         setIsFreeTime(false);
-        setSelectedReps(reps * sets * exercises.length);
-        setAutoReps(false);
+        setSelectedReps(null);
+        setAutoReps(true);
         setSelectedCategory('mix');
         
         // Update settings

@@ -101,14 +101,16 @@ export default function Exercises() {
     setIsGenerating(true);
     try {
       const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are a professional fitness trainer. Generate a workout based on this request: "${aiPrompt}"
-        
+        prompt: `You are a professional fitness trainer. Generate a workout based on this EXACT request: "${aiPrompt}"
+
+IMPORTANT: Carefully read and follow ALL user constraints. If they say "no hands on ground" or any other restriction, you MUST respect it.
+
 Return a JSON object with this exact structure:
 {
   "exercises": [
     {
       "name": "Exercise Name",
-      "category": "upper_body|lower_body|core|full_body",
+      "category": "upper_body|lower_body|core|full_body|cardio",
       "target_reps": 15,
       "sets": 3,
       "superset_with_next": false
@@ -119,9 +121,11 @@ Return a JSON object with this exact structure:
   "difficulty": "beginner|intermediate|advanced"
 }
 
-Choose real exercises from this list: Push-ups, Squats, Lunges, Plank, Sit-ups, Burpees, Mountain Climbers, Jumping Jacks, Dips, Pull-ups, Tricep Dips, Leg Raises, Russian Twists, High Knees, Butt Kickers, Jump Squats, Wall Sits, Bicycle Crunches, Flutter Kicks, Crunches.
+Available exercises:
+- NO HANDS ON GROUND: Squats, Lunges, Sit-ups, Jumping Jacks, Pull-ups, Leg Raises, Russian Twists, High Knees, Butt Kickers, Jump Squats, Wall Sits, Bicycle Crunches, Flutter Kicks, Crunches, Air Squats, Calf Raises
+- HANDS ON GROUND: Push-ups, Burpees, Mountain Climbers, Plank, Dips, Tricep Dips
 
-Make it realistic and achievable.`,
+Choose exercises that match the user's constraints. Keep reps realistic (10-20 per set). Total workout should match the requested duration.`,
         response_json_schema: {
           type: "object",
           properties: {
