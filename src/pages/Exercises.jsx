@@ -7,7 +7,7 @@ import { Search, Filter, ArrowRight, Zap, Star, Dumbbell, RefreshCw } from "luci
 import { motion, AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { User } from "@/entities/User";
 
@@ -16,6 +16,7 @@ import CategoryFilter from "../components/exercises/CategoryFilter";
 import ExerciseModal from "../components/exercises/ExerciseModal";
 
 export default function Exercises() {
+  const navigate = useNavigate();
   const [exercises, setExercises] = useState([]);
   const [filteredExercises, setFilteredExercises] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -215,9 +216,8 @@ Make it realistic and achievable.`,
                 <div className="mt-4 inline-block bg-white/20 px-3 py-1 rounded-full text-xs font-bold">
                   "18 min low intensity upper & lower mix" →
                 </div>
-                </div>
-                </button>
-                </motion.div>
+              </button>
+            </motion.div>
 
           {/* Plan Selection Cards */}
           <div className="grid md:grid-cols-2 gap-4 max-w-4xl">
@@ -453,6 +453,6 @@ Make it realistic and achievable.`,
           </motion.div>
         )}
       </AnimatePresence>
-      </div>
-      );
-      }
+    </div>
+  );
+}
