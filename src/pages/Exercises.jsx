@@ -3,8 +3,10 @@ import { Exercise } from "@/entities/Exercise";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, ArrowRight, Zap, Star, Dumbbell } from "lucide-react";
+import { Search, Filter, ArrowRight, Zap, Star, Dumbbell, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { User } from "@/entities/User";
@@ -24,6 +26,9 @@ export default function Exercises() {
   const [isLoading, setIsLoading] = useState(true);
   const [isPro, setIsPro] = useState(false);
   const [isUserLoading, setIsUserLoading] = useState(true);
+  const [showAIPrompt, setShowAIPrompt] = useState(false);
+  const [aiPrompt, setAIPrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     const checkUserStatus = async () => {
@@ -86,6 +91,84 @@ export default function Exercises() {
     setShowModal(true);
   };
 
+  const generateAIWorkout = async () => {
+    if (!aiPrompt.trim()) {
+      toast.error('Please enter a workout description');
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are a professional fitness trainer. Generate a workout based on this request: "${aiPrompt}"
+        
+Return a JSON object with this exact structure:
+{
+  "exercises": [
+    {
+      "name": "Exercise Name",
+      "category": "upper_body|lower_body|core|full_body",
+      "target_reps": 15,
+      "sets": 3,
+      "superset_with_next": false
+    }
+  ],
+  "workout_type": "rep_based",
+  "estimated_duration": 30,
+  "difficulty": "beginner|intermediate|advanced"
+}
+
+Choose real exercises from this list: Push-ups, Squats, Lunges, Plank, Sit-ups, Burpees, Mountain Climbers, Jumping Jacks, Dips, Pull-ups, Tricep Dips, Leg Raises, Russian Twists, High Knees, Butt Kickers, Jump Squats, Wall Sits, Bicycle Crunches, Flutter Kicks, Crunches.
+
+Make it realistic and achievable.`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            exercises: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  category: { type: "string" },
+                  target_reps: { type: "number" },
+                  sets: { type: "number" },
+                  superset_with_next: { type: "boolean" }
+                }
+              }
+            },
+            workout_type: { type: "string" },
+            estimated_duration: { type: "number" },
+            difficulty: { type: "string" }
+          }
+        }
+      });
+
+      // Find exercise IDs from database
+      const dbExercises = await Exercise.list();
+      
+      const selectedExercises = response.exercises.map(aiEx => {
+        const dbEx = dbExercises.find(ex => ex.name.toLowerCase() === aiEx.name.toLowerCase());
+        return dbEx;
+      }).filter(Boolean);
+
+      if (selectedExercises.length === 0) {
+        toast.error('No matching exercises found');
+        setIsGenerating(false);
+        return;
+      }
+
+      // Navigate to WorkoutBuilder with the exercises
+      const exerciseIds = selectedExercises.map(ex => ex.id).join(',');
+      navigate(`${createPageUrl("WorkoutBuilder")}?exercises=${exerciseIds}&ai=true&duration=${response.estimated_duration}`);
+      
+    } catch (error) {
+      console.error('Failed to generate workout:', error);
+      toast.error('Failed to generate workout. Please try again.');
+    }
+    setIsGenerating(false);
+  };
+
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb', paddingBottom: '100px' }}>
       {/* Header */}
@@ -103,10 +186,17 @@ export default function Exercises() {
             transition={{ delay: 0.15, duration: 0.6 }}
             className="mb-4"
           >
-            <Link to={isPro ? createPageUrl("WorkoutBuilder") : createPageUrl("Pricing")}>
-              <div className={`relative bg-gradient-to-br from-yellow-500 to-orange-600 p-6 rounded-2xl border-2 ${
+            <button
+              onClick={() => {
+                if (isPro) {
+                  setShowAIPrompt(true);
+                } else {
+                  navigate(createPageUrl("Pricing"));
+                }
+              }}
+              className={`w-full relative bg-gradient-to-br from-yellow-500 to-orange-600 p-6 rounded-2xl border-2 ${
                 isPro ? 'border-yellow-400' : 'border-yellow-500/50 opacity-75'
-              } hover:scale-105 transition-transform cursor-pointer`}>
+              } hover:scale-105 transition-transform cursor-pointer text-left`}>
                 {!isPro && (
                   <div className="absolute top-3 right-3">
                     <Badge className="bg-black text-yellow-400 font-bold border border-yellow-400">PRO ONLY</Badge>
@@ -125,9 +215,9 @@ export default function Exercises() {
                 <div className="mt-4 inline-block bg-white/20 px-3 py-1 rounded-full text-xs font-bold">
                   "18 min low intensity upper & lower mix" →
                 </div>
-              </div>
-            </Link>
-          </motion.div>
+                </div>
+                </button>
+                </motion.div>
 
           {/* Plan Selection Cards */}
           <div className="grid md:grid-cols-2 gap-4 max-w-4xl">
@@ -289,6 +379,80 @@ export default function Exercises() {
         isOpen={showModal}
         onClose={() => setShowModal(false)}
       />
-    </div>
-  );
-}
+
+      {/* AI Prompt Modal */}
+      <AnimatePresence>
+        {showAIPrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => !isGenerating && setShowAIPrompt(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              className="bg-gray-900 border-gray-800 border-2 rounded-xl max-w-2xl w-full p-6"
+              onClick={e => e.stopPropagation()}
+            >
+              <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                🧞 WorkoutGenie
+                <Badge className="ml-auto bg-yellow-400 text-black font-bold text-xs">PRO</Badge>
+              </h2>
+              <p className="text-gray-400 mb-4">Describe your workout - AI builds it from our exercise library</p>
+
+              <div className="mb-4">
+                <textarea
+                  value={aiPrompt}
+                  onChange={(e) => setAIPrompt(e.target.value)}
+                  placeholder="Example: 'Build me a workout for 18 minutes, low intensity and mix up body upper and lower workouts'"
+                  className="w-full h-32 bg-gray-800 border-gray-700 border text-white rounded-lg p-3 resize-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400"
+                  disabled={isGenerating}
+                  autoFocus
+                />
+              </div>
+
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-4">
+                <p className="text-xs text-blue-400 mb-1">💡 Tips for better workouts:</p>
+                <ul className="text-xs text-gray-400 space-y-0.5">
+                  <li>• Mention time (e.g., "18 minutes", "quick 15 min")</li>
+                  <li>• Specify intensity (e.g., "low", "moderate", "high")</li>
+                  <li>• Choose focus (e.g., "upper body", "legs", "full body")</li>
+                </ul>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={generateAIWorkout}
+                  disabled={isGenerating || !aiPrompt.trim()}
+                  className="flex-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold hover:opacity-90 disabled:opacity-50"
+                >
+                  {isGenerating ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      🧞 Make My Workout
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={() => setShowAIPrompt(false)}
+                  variant="outline"
+                  className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
+                  disabled={isGenerating}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      </div>
+      );
+      }
