@@ -64,7 +64,34 @@ export default function WorkoutBuilder() {
       
       const exercises = await Exercise.list();
       setAllExercises(exercises);
-      loadSelectedExercises();
+      await loadSelectedExercises();
+      
+      // Check if AI generated workout
+      const urlParams = new URLSearchParams(window.location.search);
+      const isAI = urlParams.get('ai') === 'true';
+      if (isAI) {
+        // Auto-configure from AI parameters
+        const duration = parseInt(urlParams.get('duration')) || 30;
+        const sets = parseInt(urlParams.get('sets')) || 3;
+        const reps = parseInt(urlParams.get('reps')) || 15;
+        
+        setSelectedTime(duration);
+        setIsFreeTime(false);
+        setSelectedReps(reps * sets * exercises.length);
+        setAutoReps(false);
+        setSelectedCategory('mix');
+        
+        // Update settings
+        setSettings(prev => ({
+          ...prev,
+          defaultSets: [sets],
+          defaultReps: [reps],
+          restTime: [duration <= 15 ? 20 : duration <= 30 ? 30 : 45]
+        }));
+        
+        // Skip directly to step 4
+        setCurrentStep(4);
+      }
     };
     initialize();
   }, []);
@@ -223,7 +250,10 @@ export default function WorkoutBuilder() {
     if (exerciseIds) {
       const ids = exerciseIds.split(',');
       const exercises = await Exercise.list();
-      const selected = exercises.filter(ex => ids.includes(ex.id));
+      const selected = exercises.filter(ex => ids.includes(ex.id)).map(ex => ({
+        ...ex,
+        superset_with_next: false
+      }));
       setSelectedExercises(selected);
     }
   };

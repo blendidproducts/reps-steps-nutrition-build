@@ -159,9 +159,17 @@ Make it realistic and achievable.`,
         return;
       }
 
-      // Navigate to WorkoutBuilder with the exercises
+      // Navigate to WorkoutBuilder with full AI-generated workout
       const exerciseIds = selectedExercises.map(ex => ex.id).join(',');
-      navigate(`${createPageUrl("WorkoutBuilder")}?exercises=${exerciseIds}&ai=true&duration=${response.estimated_duration}`);
+      const params = new URLSearchParams({
+        exercises: exerciseIds,
+        ai: 'true',
+        duration: response.estimated_duration || 30,
+        sets: response.exercises[0]?.sets || 3,
+        reps: response.exercises[0]?.target_reps || 15,
+        difficulty: response.difficulty || 'intermediate'
+      });
+      navigate(`${createPageUrl("WorkoutBuilder")}?${params.toString()}`);
       
     } catch (error) {
       console.error('Failed to generate workout:', error);
