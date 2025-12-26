@@ -679,7 +679,56 @@ export default function ActiveWorkout() {
                         <p className="text-sm text-gray-400">Cardio Time: {restCardioTotal}s / {workout.rest_time || 60}s</p>
                         <Progress value={(restCardioTotal / (workout.rest_time || 60)) * 100} className="h-2 mt-2" />
                       </div>
-                      <p className="text-sm text-gray-400 mb-4">Choose cardio activity or skip to rest</p>
+
+                      {/* Exercise Preview Cards */}
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        {/* Just Completed */}
+                        <div className="bg-green-600/10 border border-green-500/30 rounded-lg p-3">
+                          <p className="text-xs text-green-400 font-bold mb-2">✓ COMPLETED</p>
+                          <div className="w-full h-20 bg-gray-800 rounded mb-2 flex items-center justify-center overflow-hidden">
+                            {currentExercise?.image_url ? (
+                              <img src={currentExercise.image_url} alt={currentExercise.exercise_name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Target className="w-8 h-8 text-gray-600" />
+                            )}
+                          </div>
+                          <p className="text-xs font-semibold text-white">{currentExercise?.exercise_name}</p>
+                        </div>
+
+                        {/* Coming Up Next */}
+                        {currentExerciseIndex < workout.exercises.length - 1 && (
+                          <div className="bg-brand-blue/10 border border-brand-blue/30 rounded-lg p-3">
+                            <p className="text-xs text-brand-blue font-bold mb-2">▶ UP NEXT</p>
+                            <div className="w-full h-20 bg-gray-800 rounded mb-2 flex items-center justify-center overflow-hidden">
+                              {workout.exercises[currentExerciseIndex + 1]?.image_url ? (
+                                <img src={workout.exercises[currentExerciseIndex + 1].image_url} alt={workout.exercises[currentExerciseIndex + 1].exercise_name} className="w-full h-full object-cover" />
+                              ) : (
+                                <Target className="w-8 h-8 text-gray-600" />
+                              )}
+                            </div>
+                            <p className="text-xs font-semibold text-white">{workout.exercises[currentExerciseIndex + 1]?.exercise_name}</p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              {workout.exercises[currentExerciseIndex + 1]?.metric === 'time' 
+                                ? `${workout.exercises[currentExerciseIndex + 1]?.target_time}s` 
+                                : `${workout.exercises[currentExerciseIndex + 1]?.target_reps} reps`}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Quick instructions for next exercise */}
+                      {currentExerciseIndex < workout.exercises.length - 1 && workout.exercises[currentExerciseIndex + 1]?.instructions && (
+                        <div className="bg-gray-800/50 rounded-lg p-3 mb-4 max-h-24 overflow-y-auto">
+                          <p className="text-xs text-brand-blue font-semibold mb-1">How to:</p>
+                          <ul className="text-xs text-gray-300 space-y-1">
+                            {workout.exercises[currentExerciseIndex + 1].instructions.slice(0, 2).map((instruction, i) => (
+                              <li key={i}>• {instruction}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      <p className="text-sm text-gray-400 mb-3">Choose cardio activity or skip to rest</p>
 
                       <div className="grid grid-cols-3 gap-2 mb-4">
                         <Button
@@ -707,9 +756,6 @@ export default function ActiveWorkout() {
                         </Button>
                       </div>
 
-                      <p className="text-base my-4 text-gray-300">
-                        Next: {workout.exercises[currentExerciseIndex]?.exercise_name || 'Workout Complete!'}
-                      </p>
                       <Button
                         onClick={skipRest}
                         variant="outline"
