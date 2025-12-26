@@ -96,6 +96,39 @@ export default function Exercises() {
             AI Generator or Manual Builder
           </p>
 
+          {/* AI Prompt Option - NEW PRO FEATURE */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.6 }}
+            className="mb-4"
+          >
+            <Link to={isPro ? createPageUrl("WorkoutBuilder") : createPageUrl("Pricing")}>
+              <div className={`relative bg-gradient-to-br from-yellow-500 to-orange-600 p-6 rounded-2xl border-2 ${
+                isPro ? 'border-yellow-400' : 'border-yellow-500/50 opacity-75'
+              } hover:scale-105 transition-transform cursor-pointer`}>
+                {!isPro && (
+                  <div className="absolute top-3 right-3">
+                    <Badge className="bg-black text-yellow-400 font-bold border border-yellow-400">PRO ONLY</Badge>
+                  </div>
+                )}
+                <Zap className="w-12 h-12 mb-3 text-white" />
+                <h3 className="text-2xl font-bold mb-2 text-white">✨ AI Prompt Generator</h3>
+                <p className="text-white/90 text-sm mb-4">
+                  Just describe what you want - AI creates the perfect workout instantly
+                </p>
+                <ul className="space-y-2 text-sm text-white/80">
+                  <li>✓ Natural language - just ask in plain English</li>
+                  <li>✓ Instant workout creation in seconds</li>
+                  <li>✓ Tailored to your exact needs</li>
+                </ul>
+                <div className="mt-4 inline-block bg-white/20 px-3 py-1 rounded-full text-xs font-bold">
+                  "Build me a 25 min upper body workout" →
+                </div>
+              </div>
+            </Link>
+          </motion.div>
+
           {/* Plan Selection Cards */}
           <div className="grid md:grid-cols-2 gap-4 max-w-4xl">
             {/* AI Workout Generator - PRO ONLY */}
