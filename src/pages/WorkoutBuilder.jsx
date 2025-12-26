@@ -21,8 +21,11 @@ import {
   RefreshCw,
   Trash2,
   Link as LinkIcon,
-  Target
+  Target,
+  Zap
 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { base44 } from "@/api/base44Client";
 
 export default function WorkoutBuilder() {
   const navigate = useNavigate();
@@ -37,6 +40,9 @@ export default function WorkoutBuilder() {
   const [allExercises, setAllExercises] = useState([]);
   const [selectedExercises, setSelectedExercises] = useState([]);
   const [user, setUser] = useState(null);
+  const [showAIPrompt, setShowAIPrompt] = useState(false);
+  const [aiPrompt, setAIPrompt] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
   
   const [settings, setSettings] = useState({
     defaultSets: [3],
@@ -350,6 +356,89 @@ export default function WorkoutBuilder() {
 
   const isPro = user?.subscription_status === 'pro';
 
+  const generateAIWorkout = async () => {
+    if (!aiPrompt.trim()) {
+      toast.error('Please enter a workout description');
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are a professional fitness trainer. Generate a workout based on this request: "${aiPrompt}"
+        
+Return a JSON object with this exact structure:
+{
+  "exercises": [
+    {
+      "name": "Exercise Name",
+      "category": "upper_body|lower_body|core|full_body",
+      "target_reps": 15,
+      "sets": 3,
+      "superset_with_next": false
+    }
+  ],
+  "workout_type": "rep_based",
+  "estimated_duration": 30,
+  "difficulty": "beginner|intermediate|advanced"
+}
+
+Choose real exercises from this list: Push-ups, Squats, Lunges, Plank, Sit-ups, Burpees, Mountain Climbers, Jumping Jacks, Dips, Pull-ups, Tricep Dips, Leg Raises, Russian Twists, High Knees, Butt Kickers, Jump Squats, Wall Sits, Bicycle Crunches, Flutter Kicks, Crunches.
+
+Make it realistic and achievable.`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            exercises: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  category: { type: "string" },
+                  target_reps: { type: "number" },
+                  sets: { type: "number" },
+                  superset_with_next: { type: "boolean" }
+                }
+              }
+            },
+            workout_type: { type: "string" },
+            estimated_duration: { type: "number" },
+            difficulty: { type: "string" }
+          }
+        }
+      });
+
+      // Find exercise IDs from database
+      const exerciseNames = response.exercises.map(ex => ex.name);
+      const dbExercises = await Exercise.list();
+      
+      const selectedExercises = response.exercises.map(aiEx => {
+        const dbEx = dbExercises.find(ex => ex.name.toLowerCase() === aiEx.name.toLowerCase());
+        return {
+          ...dbEx,
+          id: dbEx?.id || `temp-${Math.random()}`,
+          name: aiEx.name,
+          category: aiEx.category,
+          target_reps: aiEx.target_reps,
+          sets: aiEx.sets,
+          superset_with_next: aiEx.superset_with_next || false,
+          metric: 'reps'
+        };
+      });
+
+      setSelectedExercises(selectedExercises);
+      setSelectedTime(response.estimated_duration || 30);
+      setCurrentStep(4); // Skip to customize step
+      setShowAIPrompt(false);
+      toast.success('AI workout generated!');
+    } catch (error) {
+      console.error('Failed to generate workout:', error);
+      toast.error('Failed to generate workout. Please try again.');
+    }
+    setIsGenerating(false);
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
@@ -430,6 +519,79 @@ export default function WorkoutBuilder() {
       </div>
 
       <div className="container mx-auto px-4 py-8 max-w-3xl">
+        {/* AI Prompt Modal */}
+        <AnimatePresence>
+          {showAIPrompt && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+              onClick={() => setShowAIPrompt(false)}
+            >
+              <Card className="bg-gray-900 border-gray-800 rounded-xl max-w-2xl w-full" onClick={e => e.stopPropagation()}>
+                <CardHeader>
+                  <CardTitle className="text-white text-2xl flex items-center gap-2">
+                    <Zap className="w-6 h-6 text-yellow-400" />
+                    AI Workout Generator
+                    <Badge className="ml-auto bg-yellow-400 text-black font-bold">PRO</Badge>
+                  </CardTitle>
+                  <p className="text-gray-400">Describe your ideal workout and let AI build it for you</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label className="text-white mb-2">What workout do you want?</Label>
+                    <textarea
+                      value={aiPrompt}
+                      onChange={(e) => setAIPrompt(e.target.value)}
+                      placeholder="Example: 'Quick 20 minute full body workout focusing on strength' or 'Upper body workout with emphasis on chest and arms, 30 minutes'"
+                      className="w-full h-32 bg-gray-800 border-gray-700 text-white rounded-lg p-3 resize-none"
+                      disabled={isGenerating}
+                    />
+                  </div>
+
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                    <p className="text-sm text-blue-400 mb-2">💡 Tips for better results:</p>
+                    <ul className="text-xs text-gray-400 space-y-1">
+                      <li>• Mention duration (e.g., "20 minutes", "quick workout")</li>
+                      <li>• Specify focus area (e.g., "upper body", "legs", "full body")</li>
+                      <li>• Include intensity (e.g., "beginner", "intense", "moderate")</li>
+                    </ul>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={generateAIWorkout}
+                      disabled={isGenerating || !aiPrompt.trim()}
+                      className="flex-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold hover:opacity-90"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-4 h-4 mr-2" />
+                          Generate Workout
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={() => setShowAIPrompt(false)}
+                      variant="outline"
+                      className="bg-gray-800 border-gray-700"
+                      disabled={isGenerating}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Step 1: Select Time */}
         {currentStep === 1 && (
           <Card className="bg-gray-900 border-gray-800 rounded-xl">
