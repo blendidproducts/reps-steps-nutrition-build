@@ -532,30 +532,30 @@ Make it realistic and achievable.`,
               <Card className="bg-gray-900 border-gray-800 rounded-xl max-w-2xl w-full" onClick={e => e.stopPropagation()}>
                 <CardHeader>
                   <CardTitle className="text-white text-2xl flex items-center gap-2">
-                    <Zap className="w-6 h-6 text-yellow-400" />
-                    AI Workout Generator
+                    🧞 WorkoutGenie
                     <Badge className="ml-auto bg-yellow-400 text-black font-bold">PRO</Badge>
                   </CardTitle>
-                  <p className="text-gray-400">Describe your ideal workout and let AI build it for you</p>
+                  <p className="text-gray-400">Describe your workout - AI selects exercises from our database</p>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label className="text-white mb-2">What workout do you want?</Label>
+                    <Label className="text-white mb-2">Describe your workout idea</Label>
                     <textarea
                       value={aiPrompt}
                       onChange={(e) => setAIPrompt(e.target.value)}
-                      placeholder="Example: 'Quick 20 minute full body workout focusing on strength' or 'Upper body workout with emphasis on chest and arms, 30 minutes'"
+                      placeholder="Example: 'Build me a workout for 18 minutes, low intensity and mix up body upper and lower workouts' or 'Intense 30 minute leg day focusing on squats and lunges'"
                       className="w-full h-32 bg-gray-800 border-gray-700 text-white rounded-lg p-3 resize-none"
                       disabled={isGenerating}
                     />
                   </div>
 
                   <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                    <p className="text-sm text-blue-400 mb-2">💡 Tips for better results:</p>
+                    <p className="text-sm text-blue-400 mb-2">💡 Tips for better workouts:</p>
                     <ul className="text-xs text-gray-400 space-y-1">
-                      <li>• Mention duration (e.g., "20 minutes", "quick workout")</li>
-                      <li>• Specify focus area (e.g., "upper body", "legs", "full body")</li>
-                      <li>• Include intensity (e.g., "beginner", "intense", "moderate")</li>
+                      <li>• Mention time (e.g., "18 minutes", "quick 15 min")</li>
+                      <li>• Specify intensity (e.g., "low", "moderate", "high intensity")</li>
+                      <li>• Choose focus (e.g., "upper body", "legs", "full body mix")</li>
+                      <li>• WorkoutGenie uses real exercises from our library</li>
                     </ul>
                   </div>
 
@@ -572,8 +572,7 @@ Make it realistic and achievable.`,
                         </>
                       ) : (
                         <>
-                          <Zap className="w-4 h-4 mr-2" />
-                          Generate Workout
+                          🧞 Make My Workout
                         </>
                       )}
                     </Button>

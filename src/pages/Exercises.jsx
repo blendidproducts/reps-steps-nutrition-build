@@ -113,17 +113,17 @@ export default function Exercises() {
                   </div>
                 )}
                 <Zap className="w-12 h-12 mb-3 text-white" />
-                <h3 className="text-2xl font-bold mb-2 text-white">✨ AI Prompt Generator</h3>
+                <h3 className="text-2xl font-bold mb-2 text-white">🧞 WorkoutGenie</h3>
                 <p className="text-white/90 text-sm mb-4">
-                  Just describe what you want - AI creates the perfect workout instantly
+                  Describe your workout idea - AI builds it from our exercise library
                 </p>
                 <ul className="space-y-2 text-sm text-white/80">
-                  <li>✓ Natural language - just ask in plain English</li>
-                  <li>✓ Instant workout creation in seconds</li>
-                  <li>✓ Tailored to your exact needs</li>
+                  <li>✓ Just type what you want in plain English</li>
+                  <li>✓ Instant custom workout in seconds</li>
+                  <li>✓ Uses real exercises from our database</li>
                 </ul>
                 <div className="mt-4 inline-block bg-white/20 px-3 py-1 rounded-full text-xs font-bold">
-                  "Build me a 25 min upper body workout" →
+                  "18 min low intensity upper & lower mix" →
                 </div>
               </div>
             </Link>
