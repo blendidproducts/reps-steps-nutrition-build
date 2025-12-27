@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { User } from "@/entities/User";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -26,19 +25,8 @@ export default function Pricing() {
   }, []);
 
   const handleStripeCheckout = () => {
-    // Open Stripe checkout in new tab
+    // Open Stripe checkout in new tab with user email pre-filled
     window.open('https://buy.stripe.com/7sY8wP4lMg188m0bkVbQY01', '_blank');
-  };
-
-  const handleManualActivation = async () => {
-    setIsUpgrading(true);
-    try {
-      await User.updateMyUserData({ subscription_status: 'pro' });
-      setIsPro(true);
-    } catch (error) {
-      console.error("Upgrade failed:", error);
-    }
-    setIsUpgrading(false);
   };
 
   const freeFeatures = [
@@ -154,20 +142,11 @@ export default function Pricing() {
                       className="w-full gradient-bg hover:opacity-90 font-bold"
                     >
                       <ExternalLink className="w-5 h-5 mr-2" />
-                      Purchase Pro Access
+                      Upgrade to Pro - $9.99/month
                     </Button>
-                    
-                    <Button
-                      onClick={handleManualActivation}
-                      disabled={isUpgrading}
-                      variant="outline"
-                      className="w-full border-brand-blue/50 text-brand-blue hover:bg-brand-blue/10"
-                    >
-                      {isUpgrading ? "Activating..." : "Activate Pro (After Payment)"}
-                    </Button>
-                    
+
                     <p className="text-xs text-gray-500 text-center pt-2">
-                      Click "Activate Pro" only after completing your Stripe payment.
+                      After payment, contact info@repsandsteps.com to activate your Pro account.
                     </p>
                   </>
                 )}
