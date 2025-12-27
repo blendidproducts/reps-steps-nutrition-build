@@ -301,33 +301,44 @@ export default function ActiveWorkout() {
 
   const loadWorkout = async () => {
     try {
+      console.log('[ActiveWorkout] Loading workout...');
+      
       // First check if we're resuming from localStorage
       const savedState = localStorage.getItem('activeWorkoutState');
       
       if (savedState) {
         try {
+          console.log('[ActiveWorkout] Found saved state, restoring...');
           const state = JSON.parse(savedState);
+          
+          if (!state.workout || !state.workout.exercises || state.workout.exercises.length === 0) {
+            console.error('[ActiveWorkout] Invalid saved state:', state);
+            localStorage.removeItem('activeWorkoutState');
+            throw new Error('Invalid saved workout state');
+          }
+          
           // Restore full workout state
           setWorkout(state.workout);
-          setCurrentExerciseIndex(state.currentExerciseIndex);
-          setCurrentSet(state.currentSet);
-          setTimer(state.timer);
-          setCurrentReps(state.currentReps);
+          setCurrentExerciseIndex(state.currentExerciseIndex || 0);
+          setCurrentSet(state.currentSet || 1);
+          setTimer(state.timer || 0);
+          setCurrentReps(state.currentReps || 0);
           setSessionStartTime(state.sessionStartTime ? new Date(state.sessionStartTime) : null);
-          setTotalReps(state.totalReps);
-          setExerciseTimer(state.exerciseTimer);
-          setIsResting(state.isResting);
-          setRestTimer(state.restTimer);
+          setTotalReps(state.totalReps || 0);
+          setExerciseTimer(state.exerciseTimer || 0);
+          setIsResting(state.isResting || false);
+          setRestTimer(state.restTimer || 0);
           setCardioIntervals(state.cardioIntervals || []);
-          setIsPaused(state.isPaused);
-          setIsActive(state.isActive);
+          setIsPaused(state.isPaused || false);
+          setIsActive(state.isActive || false);
           
           // Load all exercises for swap functionality
           const allExercises = await Exercise.list();
           setAllExercises(allExercises);
-          return; // Exit early, we've restored the workout
+          console.log('[ActiveWorkout] Successfully restored workout');
+          return;
         } catch (error) {
-          console.error("Failed to restore workout state:", error);
+          console.error("[ActiveWorkout] Failed to restore workout state:", error);
           localStorage.removeItem('activeWorkoutState');
         }
       }
@@ -336,21 +347,33 @@ export default function ActiveWorkout() {
       const urlParams = new URLSearchParams(window.location.search);
       const workoutId = urlParams.get('workoutId');
       
+      console.log('[ActiveWorkout] Loading workout from ID:', workoutId);
+      
       if (!workoutId) {
-        setLoadingError('No workout ID');
+        console.error('[ActiveWorkout] No workout ID provided');
+        setLoadingError('No workout ID provided');
         setTimeout(() => navigate(createPageUrl("Exercises")), 2000);
         return;
       }
       
       const workoutData = await Workout.filter({id: workoutId});
+      console.log('[ActiveWorkout] Workout data fetched:', workoutData);
       
       if (!workoutData || workoutData.length === 0) {
+        console.error('[ActiveWorkout] Workout not found');
         setLoadingError('Workout not found');
         setTimeout(() => navigate(createPageUrl("Exercises")), 2000);
         return;
       }
       
       const data = workoutData[0];
+      
+      if (!data.exercises || data.exercises.length === 0) {
+        console.error('[ActiveWorkout] Workout has no exercises');
+        setLoadingError('Workout has no exercises');
+        setTimeout(() => navigate(createPageUrl("Exercises")), 2000);
+        return;
+      }
       
       const allExercises = await Exercise.list();
       setAllExercises(allExercises);
@@ -362,7 +385,8 @@ export default function ActiveWorkout() {
           ...workoutEx,
           image_url: exerciseDetails?.image_url,
           instructions: exerciseDetails?.instructions,
-          metric: exerciseDetails?.metric || workoutEx.metric || 'reps'
+          metric: exerciseDetails?.metric || workoutEx.metric || 'reps',
+          category: workoutEx.category || exerciseDetails?.category || 'full_body'
         };
       });
       
@@ -374,8 +398,10 @@ export default function ActiveWorkout() {
         });
       }
       
+      console.log('[ActiveWorkout] Workout loaded successfully:', data);
       setWorkout(data);
     } catch (error) {
+      console.error('[ActiveWorkout] Load error:', error);
       setLoadingError(error.message || 'Failed to load workout');
       setTimeout(() => navigate(createPageUrl("Exercises")), 3000);
     }
