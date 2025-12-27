@@ -868,28 +868,30 @@ export default function ActiveWorkout() {
                    </p>
                    <Progress value={timeProgress} className="h-2" />
 
-                   <div className="flex justify-center gap-3 mt-4">
-                     <Button
-                       onClick={() => setIsTimerPaused(!isTimerPaused)}
-                       size="lg"
-                       className={`${isTimerPaused ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'} text-white font-bold px-8`}
-                     >
-                       {isTimerPaused ? <Play className="w-5 h-5 mr-2" /> : <Pause className="w-5 h-5 mr-2" />}
-                       {isTimerPaused ? 'START' : 'PAUSE'}
-                     </Button>
-                     <Button
-                       onClick={() => {
-                         setExerciseTimer(currentExercise.target_time);
-                         setTimeout(nextExercise, 500);
-                       }}
-                       size="lg"
-                       variant="outline"
-                       className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
-                     >
-                       <SkipForward className="w-5 h-5 mr-2" />
-                       SKIP
-                     </Button>
-                   </div>
+                   {currentExercise.category !== 'warmup' && (
+                     <div className="flex justify-center gap-3 mt-4">
+                       <Button
+                         onClick={() => setIsTimerPaused(!isTimerPaused)}
+                         size="lg"
+                         className={`${isTimerPaused ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'} text-white font-bold px-8`}
+                       >
+                         {isTimerPaused ? <Play className="w-5 h-5 mr-2" /> : <Pause className="w-5 h-5 mr-2" />}
+                         {isTimerPaused ? 'START' : 'PAUSE'}
+                       </Button>
+                       <Button
+                         onClick={() => {
+                           setExerciseTimer(currentExercise.target_time);
+                           setTimeout(nextExercise, 500);
+                         }}
+                         size="lg"
+                         variant="outline"
+                         className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
+                       >
+                         <SkipForward className="w-5 h-5 mr-2" />
+                         SKIP
+                       </Button>
+                     </div>
+                   )}
                 </div>
               ) : (
                 // UI for Rep-Based Exercises
