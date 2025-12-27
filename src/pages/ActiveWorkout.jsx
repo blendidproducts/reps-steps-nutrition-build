@@ -39,6 +39,7 @@ export default function ActiveWorkout() {
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [timer, setTimer] = useState(0);
+  const [elapsedTimer, setElapsedTimer] = useState(0); // Total elapsed time like Garmin
   const [currentReps, setCurrentReps] = useState(0);
   const [repInput, setRepInput] = useState("");
   const [sessionStartTime, setSessionStartTime] = useState(null);
@@ -82,6 +83,7 @@ export default function ActiveWorkout() {
         currentExerciseIndex,
         currentSet,
         timer,
+        elapsedTimer,
         currentReps,
         sessionStartTime,
         totalReps,
@@ -94,7 +96,7 @@ export default function ActiveWorkout() {
       };
       localStorage.setItem('activeWorkoutState', JSON.stringify(workoutState));
     }
-  }, [workout, currentExerciseIndex, currentSet, timer, currentReps, sessionStartTime, totalReps, exerciseTimer, isResting, restTimer, cardioIntervals, isActive, isPaused]);
+  }, [workout, currentExerciseIndex, currentSet, timer, elapsedTimer, currentReps, sessionStartTime, totalReps, exerciseTimer, isResting, restTimer, cardioIntervals, isActive, isPaused]);
 
 
 
@@ -251,6 +253,7 @@ export default function ActiveWorkout() {
     if (isActive && !isPaused) {
       interval = setInterval(() => {
         setTimer(prev => prev + 1);
+        setElapsedTimer(prev => prev + 1); // Always increment elapsed time
         
         if (activeCardio) {
           setCardioTimer(prev => prev + 1);
@@ -334,6 +337,7 @@ export default function ActiveWorkout() {
           setCardioIntervals(state.cardioIntervals || []);
           setIsPaused(state.isPaused || false);
           setIsActive(state.isActive || false);
+          setElapsedTimer(state.elapsedTimer || 0);
           
           // Load all exercises for swap functionality
           const allExercises = await Exercise.list();
@@ -607,10 +611,20 @@ export default function ActiveWorkout() {
               </div>
             )}
           </div>
-          <div className="flex justify-center gap-4 text-sm md:text-base flex-wrap">
-            <div className="flex items-center gap-1.5">
-              <Timer className="w-4 h-4" />
-              <span>{formatTime(timer)}</span>
+          <div className="flex justify-center gap-3 text-sm md:text-base flex-wrap">
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-1.5">
+                <Timer className="w-4 h-4 text-brand-blue" />
+                <span className="font-bold">{formatTime(elapsedTimer)}</span>
+              </div>
+              <span className="text-xs text-gray-400">Total Time</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-green-400" />
+                <span className="font-bold">{formatTime(timer)}</span>
+              </div>
+              <span className="text-xs text-gray-400">Active Time</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Target className="w-4 h-4" />
