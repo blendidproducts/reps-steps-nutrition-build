@@ -45,14 +45,14 @@ export default function Layout({ children, currentPageName }) {
     document.documentElement.classList.add('dark');
     document.body.style.backgroundColor = '#0a0a0a';
     
-    // Set viewport meta tag to prevent zoom issues on orientation change
+    // Set viewport meta tag to allow pinch-to-zoom
     let viewport = document.querySelector('meta[name="viewport"]');
     if (!viewport) {
       viewport = document.createElement('meta');
       viewport.name = 'viewport';
       document.head.appendChild(viewport);
     }
-    viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    viewport.content = 'width=device-width, initial-scale=1.0, user-scalable=yes';
   }, []);
 
   // Check for active workout and update timer
