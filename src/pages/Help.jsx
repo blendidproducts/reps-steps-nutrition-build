@@ -1,10 +1,11 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 import { 
   HelpCircle, 
   Play, 
@@ -27,6 +28,7 @@ export default function Help() {
     email: '',
     message: ''
   });
+  const [isSending, setIsSending] = useState(false);
 
   const faqs = [
     {
@@ -67,11 +69,30 @@ export default function Help() {
     setExpandedFaq(expandedFaq === index ? null : index);
   };
 
-  const handleFeedbackSubmit = (e) => {
+  const handleFeedbackSubmit = async (e) => {
     e.preventDefault();
-    // In a real app, this would send feedback to a server
-    alert('Thank you for your feedback! We appreciate your input.');
-    setFeedbackForm({ name: '', email: '', message: '' });
+    setIsSending(true);
+    
+    try {
+      await base44.integrations.Core.SendEmail({
+        to: 'info@repsandsteps.com',
+        subject: `RepsAndSteps Feedback from ${feedbackForm.name}`,
+        body: `
+Name: ${feedbackForm.name}
+Email: ${feedbackForm.email}
+
+Message:
+${feedbackForm.message}
+        `
+      });
+      
+      toast.success('Thank you for your feedback! We\'ll get back to you soon.');
+      setFeedbackForm({ name: '', email: '', message: '' });
+    } catch (error) {
+      toast.error('Failed to send feedback. Please try again.');
+    }
+    
+    setIsSending(false);
   };
 
   return (
@@ -330,8 +351,8 @@ export default function Help() {
                     />
                   </div>
                   
-                  <Button type="submit" className="gradient-bg hover:opacity-90">
-                    Send Feedback
+                  <Button type="submit" disabled={isSending} className="gradient-bg hover:opacity-90">
+                    {isSending ? 'Sending...' : 'Send Feedback'}
                   </Button>
                 </form>
               </CardContent>
