@@ -551,7 +551,7 @@ Make it realistic and achievable.`,
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="container mx-auto px-4 py-8 pb-40 max-w-3xl">
         {/* AI Prompt Modal */}
         <AnimatePresence>
           {showAIPrompt && (
@@ -1054,7 +1054,7 @@ Make it realistic and achievable.`,
           </div>
 
           {/* Spacer for fixed bottom bar */}
-          <div className="h-32"></div>
+          <div className="h-48 md:h-32"></div>
 
           {/* Bottom Navigation */}
           <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-gray-900 via-gray-900 to-gray-900/95 border-t-2 border-brand-blue/30 p-6 shadow-2xl z-50">
