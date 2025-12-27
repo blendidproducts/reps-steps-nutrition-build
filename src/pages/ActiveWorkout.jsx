@@ -536,12 +536,27 @@ export default function ActiveWorkout() {
   }
 
   const currentExercise = workout.exercises[currentExerciseIndex];
+  
+  if (!currentExercise) {
+    return (
+      <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-6">
+        <div className="text-center">
+          <div className="text-6xl mb-4">⚠️</div>
+          <div className="text-xl text-red-400 mb-2">Invalid workout data</div>
+          <Button onClick={() => navigate(createPageUrl("Exercises"))} className="bg-blue-600 hover:bg-blue-700">
+            Go Back to Exercises
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  
   const isTimeBased = currentExercise.metric === 'time';
   const totalSets = workout.exercises.reduce((sum, ex) => sum + (ex.sets || 1), 0);
   const completedSets = workout.exercises.slice(0, currentExerciseIndex).reduce((sum, ex) => sum + (ex.sets || 1), 0) + (currentSet - 1);
   const progress = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
   
-  const timeProgress = isTimeBased ? (exerciseTimer / currentExercise.target_time) * 100 : 0;
+  const timeProgress = isTimeBased && currentExercise.target_time ? (exerciseTimer / currentExercise.target_time) * 100 : 0;
 
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
