@@ -1050,46 +1050,51 @@ Make it realistic and achievable.`,
               </CardContent>
             </Card>
           </div>
-        )}
-      </div>
-
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 p-4">
-        <div className="container mx-auto max-w-3xl flex justify-between items-center">
-          {currentStep > 1 ? (
-            <Button
-              variant="outline"
-              onClick={() => setCurrentStep(currentStep - 1)}
-              className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700 rounded-lg"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-          ) : (
-            <div />
           )}
+          </div>
 
-          {currentStep < 4 ? (
-            <Button
-              onClick={() => setCurrentStep(currentStep + 1)}
-              disabled={!canProceed()}
-              className="bg-brand-blue hover:bg-brand-blue/90 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed px-8"
-            >
-              Next
-              <ChevronRight className="w-4 h-4 ml-2" />
-            </Button>
-          ) : (
-            <Button
-              onClick={startWorkout}
-              disabled={!canProceed() || !isTimeValid()}
-              className="bg-gradient-to-r from-brand-blue to-blue-600 hover:opacity-90 text-white font-bold text-lg px-10 py-6 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-            >
-              <Play className="w-5 h-5 mr-2" />
-              START WORKOUT
-            </Button>
-          )}
-        </div>
-      </div>
+          {/* Spacer for fixed bottom bar */}
+          <div className="h-32"></div>
+
+          {/* Bottom Navigation */}
+          <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-gray-900 via-gray-900 to-gray-900/95 border-t-2 border-brand-blue/30 p-6 shadow-2xl z-50">
+          <div className="container mx-auto max-w-3xl">
+          <div className="flex justify-between items-center gap-4">
+            {currentStep > 1 ? (
+              <Button
+                variant="outline"
+                onClick={() => setCurrentStep(currentStep - 1)}
+                className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700 rounded-lg px-6 py-6 text-base"
+              >
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                Back
+              </Button>
+            ) : (
+              <div />
+            )}
+
+            {currentStep < 4 ? (
+              <Button
+                onClick={() => setCurrentStep(currentStep + 1)}
+                disabled={!canProceed()}
+                className="bg-brand-blue hover:bg-brand-blue/90 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed px-12 py-6 text-lg font-bold shadow-lg"
+              >
+                Next
+                <ChevronRight className="w-5 h-5 ml-2" />
+              </Button>
+            ) : (
+              <Button
+                onClick={startWorkout}
+                disabled={!canProceed() || !isTimeValid()}
+                className="bg-gradient-to-r from-brand-blue to-blue-600 hover:opacity-90 text-white font-bold text-xl px-12 py-7 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl flex-1 max-w-md mx-auto"
+              >
+                <Play className="w-6 h-6 mr-2" />
+                START WORKOUT
+              </Button>
+            )}
+          </div>
+          </div>
+          </div>
 
       <style>
         {`
