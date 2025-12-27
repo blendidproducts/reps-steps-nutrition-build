@@ -347,6 +347,14 @@ export default function WorkoutBuilder() {
       return;
     }
 
+    // Validate all exercises have valid data
+    const invalidExercises = selectedExercises.filter(ex => !ex.id || !ex.name);
+    if (invalidExercises.length > 0) {
+      toast.error('Some exercises are missing data. Please try regenerating your workout.');
+      console.error('Invalid exercises:', invalidExercises);
+      return;
+    }
+
     let exercisesToUse = [...selectedExercises];
     
     if (settings.includeWarmup) {
@@ -361,7 +369,7 @@ export default function WorkoutBuilder() {
     }
 
     const workoutData = {
-      name: `${selectedTime} Min ${selectedCategory?.toUpperCase()} Workout - ${new Date().toLocaleDateString()}`,
+      name: `${selectedTime} Min ${selectedCategory?.toUpperCase() || 'CUSTOM'} Workout - ${new Date().toLocaleDateString()}`,
       exercises: exercisesToUse.map((ex, idx) => ({
         exercise_id: ex.id,
         exercise_name: ex.name,
@@ -370,7 +378,9 @@ export default function WorkoutBuilder() {
         completed_reps: 0,
         completed_time: 0,
         sets: ex.category === 'warmup' ? 1 : settings.defaultSets[0],
-        superset_with_next: ex.superset_with_next || false
+        superset_with_next: ex.superset_with_next || false,
+        category: ex.category || 'full_body',
+        metric: ex.metric || 'reps'
       })),
       workout_type: "rep_based",
       difficulty: "intermediate",
@@ -379,11 +389,20 @@ export default function WorkoutBuilder() {
     };
 
     try {
+      toast.loading('Creating workout...');
       const workout = await Workout.create(workoutData);
+      
+      if (!workout || !workout.id) {
+        throw new Error('Workout created but no ID returned');
+      }
+      
+      toast.dismiss();
+      toast.success('Workout created!');
       navigate(`${createPageUrl("ActiveWorkout")}?workoutId=${workout.id}`);
     } catch (error) {
+      toast.dismiss();
       console.error('Failed to start workout:', error);
-      toast.error('Failed to start workout. Please try again.');
+      toast.error(`Failed to create workout: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -448,23 +467,34 @@ Make it realistic and achievable.`,
       
       const selectedExercises = response.exercises.map(aiEx => {
         const dbEx = dbExercises.find(ex => ex.name.toLowerCase() === aiEx.name.toLowerCase());
+        
+        if (!dbEx) {
+          console.warn(`Exercise not found in database: ${aiEx.name}`);
+        }
+        
         return {
           ...dbEx,
-          id: dbEx?.id || `temp-${Math.random()}`,
+          id: dbEx?.id,
           name: aiEx.name,
           category: aiEx.category,
           target_reps: aiEx.target_reps,
           sets: aiEx.sets,
           superset_with_next: aiEx.superset_with_next || false,
-          metric: 'reps'
+          metric: dbEx?.metric || 'reps'
         };
-      });
+      }).filter(ex => ex.id); // Remove exercises without valid IDs
+
+      if (selectedExercises.length === 0) {
+        toast.error('No matching exercises found. Try a different description.');
+        setIsGenerating(false);
+        return;
+      }
 
       setSelectedExercises(selectedExercises);
       setSelectedTime(response.estimated_duration || 30);
       setCurrentStep(4); // Skip to customize step
       setShowAIPrompt(false);
-      toast.success('AI workout generated!');
+      toast.success(`AI workout generated with ${selectedExercises.length} exercises!`);
     } catch (error) {
       console.error('Failed to generate workout:', error);
       toast.error('Failed to generate workout. Please try again.');
