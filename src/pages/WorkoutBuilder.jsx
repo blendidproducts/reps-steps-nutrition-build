@@ -551,7 +551,7 @@ Make it realistic and achievable.`,
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8 pb-40 max-w-3xl">
+      <div className="container mx-auto px-4 py-8 pb-64 md:pb-40 max-w-3xl">
         {/* AI Prompt Modal */}
         <AnimatePresence>
           {showAIPrompt && (
