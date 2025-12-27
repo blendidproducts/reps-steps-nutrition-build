@@ -121,7 +121,8 @@ export default function Pricing() {
                 <p className="text-gray-400">Flexible subscription</p>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold mb-6">$9.99<span className="text-lg font-normal text-gray-400">/month</span></div>
+                <div className="text-3xl font-bold mb-2">$9.99<span className="text-lg font-normal text-gray-400">/month</span></div>
+                <p className="text-sm text-green-400 mb-6">Cancel anytime</p>
                 <ul className="space-y-3 text-gray-300">
                   {proFeatures.map((feature, i) => (
                     <li key={i} className="flex items-center gap-3 font-medium">
