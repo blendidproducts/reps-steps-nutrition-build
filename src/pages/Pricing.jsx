@@ -24,9 +24,14 @@ export default function Pricing() {
     checkUserStatus();
   }, []);
 
-  const handleStripeCheckout = () => {
-    // Open Stripe checkout in new tab with user email pre-filled
-    window.open('https://buy.stripe.com/7sY8wP4lMg188m0bkVbQY01', '_blank');
+  const handleStripeCheckout = (plan) => {
+    // Monthly: $9.99/month
+    // Lifetime: $199.99 one-time
+    const links = {
+      monthly: 'https://buy.stripe.com/7sY8wP4lMg188m0bkVbQY01',
+      lifetime: 'https://buy.stripe.com/9B68wPbOecOW8m0dt3bQY0h'
+    };
+    window.open(links[plan], '_blank');
   };
 
   const freeFeatures = [
@@ -78,7 +83,7 @@ export default function Pricing() {
           </div>
         )}
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {/* Free Tier */}
           <motion.div whileHover={{ y: -5 }}>
             <Card className="h-full bg-card border-border">
@@ -105,18 +110,15 @@ export default function Pricing() {
             </Card>
           </motion.div>
 
-          {/* Pro Tier */}
+          {/* Pro Monthly */}
           <motion.div whileHover={{ y: -5 }}>
             <Card className="h-full border-brand-blue border-2 shadow-xl bg-card relative overflow-hidden">
-              <div className="absolute top-0 right-0 px-4 py-1 gradient-bg text-white font-semibold text-sm rounded-bl-lg">
-                BEST VALUE
-              </div>
               <CardHeader>
                 <CardTitle className="text-2xl flex items-center gap-2">
                   <Star className="w-6 h-6 text-yellow-400" />
-                  Pro
+                  Pro Monthly
                 </CardTitle>
-                <p className="text-gray-400">For the dedicated athlete</p>
+                <p className="text-gray-400">Flexible subscription</p>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold mb-6">$9.99<span className="text-lg font-normal text-gray-400">/month</span></div>
@@ -138,35 +140,75 @@ export default function Pricing() {
                 ) : (
                   <>
                     <Button
-                      onClick={handleStripeCheckout}
+                      onClick={() => handleStripeCheckout('monthly')}
                       className="w-full gradient-bg hover:opacity-90 font-bold"
                     >
                       <ExternalLink className="w-5 h-5 mr-2" />
-                      Upgrade to Pro - $9.99/month
+                      Get Pro Monthly
                     </Button>
 
                     <p className="text-xs text-gray-500 text-center pt-2">
-                      After payment, contact info@repsandsteps.com to activate your Pro account.
+                      After payment, webhook auto-activates Pro status
                     </p>
                   </>
                 )}
               </CardFooter>
             </Card>
           </motion.div>
-        </div>
 
-        <div className="text-center mt-12">
-          <Card className="max-w-md mx-auto bg-card border-green-500/30">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-2 justify-center mb-2">
-                <Check className="w-5 h-5 text-green-400" />
-                <span className="font-semibold text-green-300">30-Day Money-Back Guarantee</span>
+          {/* Pro Lifetime */}
+          <motion.div whileHover={{ y: -5 }}>
+            <Card className="h-full border-yellow-400 border-2 shadow-2xl bg-card relative overflow-hidden">
+              <div className="absolute top-0 right-0 px-4 py-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold text-sm rounded-bl-lg">
+                BEST VALUE
               </div>
-              <p className="text-sm text-gray-400">
-                Not satisfied? Get a full refund within 30 days, no questions asked.
-              </p>
-            </CardContent>
-          </Card>
+              <CardHeader>
+                <CardTitle className="text-2xl flex items-center gap-2">
+                  <Zap className="w-6 h-6 text-yellow-400" />
+                  Pro Lifetime
+                </CardTitle>
+                <p className="text-gray-400">One payment, forever</p>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold mb-2">$199.99<span className="text-lg font-normal text-gray-400"> once</span></div>
+                <p className="text-sm text-green-400 mb-6">Save $120/year vs monthly!</p>
+                <ul className="space-y-3 text-gray-300">
+                  {proFeatures.map((feature, i) => (
+                    <li key={i} className="flex items-center gap-3 font-medium">
+                      <Zap className="w-5 h-5 text-yellow-400" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                  <li className="flex items-center gap-3 font-bold text-yellow-400">
+                    <Star className="w-5 h-5" />
+                    <span>Lifetime access - pay once!</span>
+                  </li>
+                </ul>
+              </CardContent>
+              <CardFooter className="space-y-3 flex-col">
+                {isPro ? (
+                  <Button variant="outline" className="w-full" disabled>
+                    <Check className="w-5 h-5 mr-2" />
+                    You are a Pro Member!
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      onClick={() => handleStripeCheckout('lifetime')}
+                      className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 hover:opacity-90 text-black font-bold"
+                    >
+                      <ExternalLink className="w-5 h-5 mr-2" />
+                      Get Lifetime Pro - $199.99
+                    </Button>
+
+                    <p className="text-xs text-gray-500 text-center pt-2">
+                      After payment, webhook auto-activates Pro status
+                    </p>
+                  </>
+                )}
+              </CardFooter>
+            </Card>
+          </motion.div>
         </div>
 
         <div className="text-center mt-8">
