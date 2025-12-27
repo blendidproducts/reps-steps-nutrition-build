@@ -64,6 +64,13 @@ export default function ActiveWorkout() {
     loadWorkout();
   }, []);
 
+  // Auto-start warmup exercises
+  useEffect(() => {
+    if (workout && currentExercise?.category === 'warmup' && isActive) {
+      setIsTimerPaused(false);
+    }
+  }, [currentExerciseIndex, workout, isActive, currentExercise]);
+
   // Save workout state to localStorage (including workout ID)
   useEffect(() => {
     if (workout) {
