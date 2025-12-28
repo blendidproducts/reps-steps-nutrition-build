@@ -65,11 +65,11 @@ export default function ActiveWorkout() {
     loadWorkout();
   }, []);
 
-  // Auto-start warmup exercises
+  // Auto-start warmup and time-based exercises
   useEffect(() => {
     if (workout && workout.exercises && workout.exercises[currentExerciseIndex]) {
       const currentEx = workout.exercises[currentExerciseIndex];
-      if (currentEx.category === 'warmup' && isActive) {
+      if ((currentEx.category === 'warmup' || currentEx.metric === 'time') && isActive) {
         setIsTimerPaused(false);
       }
     }
@@ -141,8 +141,8 @@ export default function ActiveWorkout() {
       setRepInput("");
       setExerciseTimer(0);
       
-      // NO rest during warmup exercises - skip active recovery entirely
-      if (!currentExercise.superset_with_next && currentExercise.category !== 'warmup' && currentExercise.metric !== 'time') {
+      // Rest between sets (not for supersets or warmup)
+      if (!currentExercise.superset_with_next && currentExercise.category !== 'warmup') {
         setIsResting(true);
         setRestTimer(workout.rest_time || 30);
         setRestCardioTotal(0);
@@ -150,10 +150,10 @@ export default function ActiveWorkout() {
     } else {
       if (currentExerciseIndex < workout.exercises.length - 1) {
         const nextExercise = workout.exercises[currentExerciseIndex + 1];
-        // NO rest if current OR next is warmup/stretch - skip active recovery entirely
-        const isCurrentWarmup = currentExercise.category === 'warmup' || currentExercise.metric === 'time';
-        const isNextWarmup = nextExercise?.category === 'warmup' || nextExercise?.metric === 'time';
-        
+        // Rest between exercises (not for supersets or warmup)
+        const isCurrentWarmup = currentExercise.category === 'warmup';
+        const isNextWarmup = nextExercise?.category === 'warmup';
+
         if (!currentExercise.superset_with_next && !isCurrentWarmup && !isNextWarmup) {
             setIsResting(true);
             setRestTimer(workout.rest_time || 60);
@@ -183,7 +183,7 @@ export default function ActiveWorkout() {
   };
 
   const isFourCountExercise = (exerciseName) => {
-    const fourCountExercises = ['jumping jacks', 'arm circles', 'bicycle crunches', 'flutter kicks', 'mountain climbers', 'high knees', 'butt kickers'];
+    const fourCountExercises = ['jumping jacks', 'arm circles', 'bicycle crunches', 'flutter kicks', 'mountain climbers', 'butt kickers'];
     return fourCountExercises.some(ex => exerciseName.toLowerCase().includes(ex));
   };
 
@@ -933,30 +933,28 @@ export default function ActiveWorkout() {
                    </p>
                    <Progress value={timeProgress} className="h-2" />
 
-                   {currentExercise.category !== 'warmup' && (
-                     <div className="flex justify-center gap-3 mt-4">
-                       <Button
-                         onClick={() => setIsTimerPaused(!isTimerPaused)}
-                         size="lg"
-                         className={`${isTimerPaused ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'} text-white font-bold px-8`}
-                       >
-                         {isTimerPaused ? <Play className="w-5 h-5 mr-2" /> : <Pause className="w-5 h-5 mr-2" />}
-                         {isTimerPaused ? 'START' : 'PAUSE'}
-                       </Button>
-                       <Button
-                         onClick={() => {
-                           setExerciseTimer(currentExercise.target_time);
-                           setTimeout(nextExercise, 500);
-                         }}
-                         size="lg"
-                         variant="outline"
-                         className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
-                       >
-                         <SkipForward className="w-5 h-5 mr-2" />
-                         SKIP
-                       </Button>
-                     </div>
-                   )}
+                   <div className="flex justify-center gap-3 mt-4">
+                     <Button
+                       onClick={() => setIsTimerPaused(!isTimerPaused)}
+                       size="lg"
+                       className={`${isTimerPaused ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'} text-white font-bold px-8`}
+                     >
+                       {isTimerPaused ? <Play className="w-5 h-5 mr-2" /> : <Pause className="w-5 h-5 mr-2" />}
+                       {isTimerPaused ? 'START' : 'PAUSE'}
+                     </Button>
+                     <Button
+                       onClick={() => {
+                         setExerciseTimer(currentExercise.target_time);
+                         setTimeout(nextExercise, 500);
+                       }}
+                       size="lg"
+                       variant="outline"
+                       className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
+                     >
+                       <SkipForward className="w-5 h-5 mr-2" />
+                       SKIP
+                     </Button>
+                   </div>
                 </div>
               ) : (
                 // UI for Rep-Based Exercises

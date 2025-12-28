@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { WorkoutSession } from "@/entities/WorkoutSession";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -215,7 +214,14 @@ export default function History() {
           ) : sessions.length > 0 ? (
             <div className="space-y-4">
               {sessions.map((session) => (
-                <Card key={session.id} className="bg-card border-border hover:border-brand-blue/50 transition-colors">
+                <Card 
+                  key={session.id} 
+                  className="bg-card border-border hover:border-brand-blue/50 transition-colors cursor-pointer"
+                  onClick={() => {
+                    // Navigate to workout detail view
+                    window.location.href = createPageUrl("WorkoutDetail") + `?sessionId=${session.id}`;
+                  }}
+                >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
