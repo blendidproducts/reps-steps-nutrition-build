@@ -373,7 +373,7 @@ export default function WorkoutBuilder() {
       exercises: exercisesToUse.map((ex, idx) => ({
         exercise_id: ex.id,
         exercise_name: ex.name,
-        target_reps: settings.defaultReps[0],
+        target_reps: ex.metric === 'time' ? 0 : settings.defaultReps[0],
         target_time: ex.target_time || 0,
         completed_reps: 0,
         completed_time: 0,
