@@ -907,6 +907,17 @@ export default function ActiveWorkout() {
 
               <h2 className="text-2xl md:text-3xl font-bold mb-4 leading-tight">{currentExercise.exercise_name}</h2>
               
+              {/* Set Progress Badge */}
+              <div className="mb-3">
+                <Badge variant="outline" className="border-brand-blue/50 text-brand-blue text-sm">
+                  {currentSet < (currentExercise.sets || 1) 
+                    ? `Set ${currentSet} of ${currentExercise.sets || 1} → Next: Set ${currentSet + 1}`
+                    : currentExerciseIndex < workout.exercises.length - 1
+                      ? `Set ${currentSet} of ${currentExercise.sets || 1} completed → Next: ${workout.exercises[currentExerciseIndex + 1]?.exercise_name}`
+                      : `Final Set ${currentSet} of ${currentExercise.sets || 1} - Last Exercise!`}
+                </Badge>
+              </div>
+              
               {!isTimeBased && isFourCountExercise(currentExercise.exercise_name) && (
                 <div className="mb-3 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                   <p className="text-yellow-400 text-xs font-semibold">⚠️ 4-COUNT EXERCISE: 1...2...3...4 = 1 REP</p>
