@@ -36,7 +36,6 @@ export default function WorkoutBuilder() {
   const [selectedReps, setSelectedReps] = useState(null);
   const [customReps, setCustomReps] = useState("");
   const [autoReps, setAutoReps] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState(null);
   const [allExercises, setAllExercises] = useState([]);
   const [selectedExercises, setSelectedExercises] = useState([]);
   const [user, setUser] = useState(null);
@@ -79,8 +78,7 @@ export default function WorkoutBuilder() {
         setIsFreeTime(false);
         setSelectedReps(null);
         setAutoReps(true);
-        setSelectedCategory('mix');
-        
+
         // Update settings
         setSettings(prev => ({
           ...prev,
@@ -88,9 +86,9 @@ export default function WorkoutBuilder() {
           defaultReps: [reps],
           restTime: [duration <= 15 ? 20 : duration <= 30 ? 30 : 45]
         }));
-        
-        // Skip directly to step 4
-        setCurrentStep(4);
+
+        // Skip directly to step 3 (customize)
+        setCurrentStep(3);
       }
     };
     initialize();
@@ -336,8 +334,7 @@ export default function WorkoutBuilder() {
   const canProceed = () => {
     if (currentStep === 1) return selectedTime !== null || isFreeTime;
     if (currentStep === 2) return selectedReps !== null || autoReps;
-    if (currentStep === 3) return selectedCategory !== null;
-    if (currentStep === 4) return true;
+    if (currentStep === 3) return selectedExercises.length > 0;
     return false;
   };
 
@@ -820,75 +817,26 @@ Make it realistic and achievable.`,
           </Card>
         )}
 
-        {/* Step 3: Select Focus */}
-        {currentStep === 3 && (
+        {/* Step 3: Customize */}
+        {currentStep === 3 && selectedExercises.length === 0 && (
           <Card className="bg-gray-900 border-gray-800 rounded-xl">
-            <CardHeader>
-              <CardTitle className="text-white text-2xl flex items-center gap-2">
-                <Dumbbell className="w-6 h-6 text-brand-blue" />
-                Step 2: Choose Workout Focus
-              </CardTitle>
-              <p className="text-gray-400">What area do you want to train?</p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
-                <button
-                  onClick={() => selectExercisesByCategory('upper')}
-                  className={`p-6 rounded-xl border-2 transition-all text-left ${
-                    selectedCategory === 'upper'
-                      ? 'bg-brand-blue/20 border-brand-blue'
-                      : 'bg-gray-800/50 border-gray-700 hover:border-brand-blue/50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xl font-bold text-white mb-1">Upper Body</div>
-                      <div className="text-sm text-gray-400">Chest, Back, Shoulders, Arms</div>
-                    </div>
-                    {selectedCategory === 'upper' && <Check className="w-6 h-6 text-brand-blue" />}
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => selectExercisesByCategory('lower')}
-                  className={`p-6 rounded-xl border-2 transition-all text-left ${
-                    selectedCategory === 'lower'
-                      ? 'bg-brand-blue/20 border-brand-blue'
-                      : 'bg-gray-800/50 border-gray-700 hover:border-brand-blue/50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xl font-bold text-white mb-1">Lower Body</div>
-                      <div className="text-sm text-gray-400">Legs, Glutes, Calves</div>
-                    </div>
-                    {selectedCategory === 'lower' && <Check className="w-6 h-6 text-brand-blue" />}
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => selectExercisesByCategory('mix')}
-                  className={`p-6 rounded-xl border-2 transition-all text-left ${
-                    selectedCategory === 'mix'
-                      ? 'bg-brand-blue/20 border-brand-blue'
-                      : 'bg-gray-800/50 border-gray-700 hover:border-brand-blue/50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xl font-bold text-white mb-1">Full Body Mix</div>
-                      <div className="text-sm text-gray-400">Balanced total body workout</div>
-                    </div>
-                    {selectedCategory === 'mix' && <Check className="w-6 h-6 text-brand-blue" />}
-                  </div>
-                </button>
-              </div>
+            <CardContent className="p-12 text-center">
+              <Dumbbell className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-white mb-2">No Exercises Selected</h3>
+              <p className="text-gray-400 mb-6">
+                Please select exercises from the Exercises page first, then build your workout here.
+              </p>
+              <Button
+                onClick={() => navigate(createPageUrl("Exercises"))}
+                className="gradient-bg text-white hover:opacity-90"
+              >
+                Go to Exercises
+              </Button>
             </CardContent>
           </Card>
         )}
 
-        {/* Step 4: Customize */}
-        {currentStep === 4 && (
+        {currentStep === 3 && selectedExercises.length > 0 && (
           <div className="space-y-4">
             <Card className="bg-gray-900 border-gray-800 rounded-xl">
               <CardHeader>
@@ -916,10 +864,6 @@ Make it realistic and achievable.`,
                     <span className="text-gray-500">
                       ({selectedExercises.length} exercises × {settings.defaultSets[0]} sets × {settings.defaultReps[0]} reps)
                     </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Focus:</span>
-                    <span className="font-bold text-white capitalize">{selectedCategory} body</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Exercises:</span>
@@ -1103,7 +1047,7 @@ Make it realistic and achievable.`,
               <div />
             )}
 
-            {currentStep < 4 ? (
+            {currentStep < 3 ? (
               <Button
                 onClick={() => setCurrentStep(currentStep + 1)}
                 disabled={!canProceed()}
