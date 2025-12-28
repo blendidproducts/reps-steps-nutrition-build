@@ -489,7 +489,7 @@ Make it realistic and achievable.`,
 
       setSelectedExercises(selectedExercises);
       setSelectedTime(response.estimated_duration || 30);
-      setCurrentStep(4); // Skip to customize step
+      setCurrentStep(3); // Skip to customize step
       setShowAIPrompt(false);
       toast.success(`AI workout generated with ${selectedExercises.length} exercises!`);
     } catch (error) {
@@ -555,22 +555,9 @@ Make it realistic and achievable.`,
               <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
                 currentStep >= 3 ? 'bg-brand-blue text-white' : 'bg-gray-700 text-gray-400'
               }`}>
-                {currentStep > 3 ? <Check className="w-5 h-5" /> : '3'}
+                3
               </div>
               <span className={`text-sm font-medium ${currentStep >= 3 ? 'text-white' : 'text-gray-400'}`}>
-                Focus
-              </span>
-            </div>
-
-            <div className={`flex-1 h-1 mx-2 rounded ${currentStep > 3 ? 'bg-brand-blue' : 'bg-gray-700'}`} />
-
-            <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                currentStep >= 4 ? 'bg-brand-blue text-white' : 'bg-gray-700 text-gray-400'
-              }`}>
-                4
-              </div>
-              <span className={`text-sm font-medium ${currentStep >= 4 ? 'text-white' : 'text-gray-400'}`}>
                 Customize
               </span>
             </div>
