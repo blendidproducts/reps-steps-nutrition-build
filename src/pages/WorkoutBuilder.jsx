@@ -42,6 +42,7 @@ export default function WorkoutBuilder() {
   const [showAIPrompt, setShowAIPrompt] = useState(false);
   const [aiPrompt, setAIPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   
   const [settings, setSettings] = useState({
     defaultSets: [3],
@@ -333,7 +334,7 @@ export default function WorkoutBuilder() {
   };
 
   const canProceed = () => {
-    if (currentStep === 1) return selectedTime !== null || isFreeTime;
+    if (currentStep === 1) return (selectedTime !== null || isFreeTime) && selectedCategory !== null;
     if (currentStep === 2) return selectedReps !== null || autoReps;
     if (currentStep === 3) return selectedExercises.length > 0;
     return false;
@@ -639,17 +640,74 @@ Make it realistic and achievable.`,
           )}
         </AnimatePresence>
 
-        {/* Step 1: Select Time */}
+        {/* Step 1: Select Time and Body Focus */}
         {currentStep === 1 && (
           <Card className="bg-gray-900 border-gray-800 rounded-xl">
             <CardHeader>
               <CardTitle className="text-white text-2xl flex items-center gap-2">
                 <Timer className="w-6 h-6 text-brand-blue" />
-                Step 1: Choose Workout Duration
+                Step 1: Duration & Body Focus
               </CardTitle>
-              <p className="text-gray-400">How much time do you have?</p>
+              <p className="text-gray-400">Choose your workout time and focus area</p>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              {/* Body Focus Selection */}
+              <div>
+                <Label className="text-white text-lg font-semibold mb-3 block">Body Focus</Label>
+                <div className="grid grid-cols-3 gap-3 mb-6">
+                  <button
+                    onClick={() => {
+                      setSelectedCategory('upper');
+                      if (selectedTime) selectExercisesByCategory('upper');
+                    }}
+                    className={`p-5 rounded-xl border-2 transition-all ${
+                      selectedCategory === 'upper'
+                        ? 'bg-blue-600/20 border-blue-500 text-white'
+                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-blue-500/50'
+                    }`}
+                  >
+                    <div className="text-3xl mb-2">💪</div>
+                    <div className="font-bold text-sm">UPPER BODY</div>
+                    <div className="text-xs text-gray-400 mt-1">Chest, Arms, Back</div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setSelectedCategory('lower');
+                      if (selectedTime) selectExercisesByCategory('lower');
+                    }}
+                    className={`p-5 rounded-xl border-2 transition-all ${
+                      selectedCategory === 'lower'
+                        ? 'bg-green-600/20 border-green-500 text-white'
+                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-green-500/50'
+                    }`}
+                  >
+                    <div className="text-3xl mb-2">🦵</div>
+                    <div className="font-bold text-sm">LOWER BODY</div>
+                    <div className="text-xs text-gray-400 mt-1">Legs, Glutes, Calves</div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setSelectedCategory('mix');
+                      if (selectedTime) selectExercisesByCategory('mix');
+                    }}
+                    className={`p-5 rounded-xl border-2 transition-all ${
+                      selectedCategory === 'mix'
+                        ? 'bg-purple-600/20 border-purple-500 text-white'
+                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-purple-500/50'
+                    }`}
+                  >
+                    <div className="text-3xl mb-2">🔥</div>
+                    <div className="font-bold text-sm">MIXED</div>
+                    <div className="text-xs text-gray-400 mt-1">Full Body Balance</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Duration Selection */}
+              <div>
+                <Label className="text-white text-lg font-semibold mb-3 block">Workout Duration</Label>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 {[15, 30, 45, 60].map(minutes => (
                   <button
@@ -658,6 +716,7 @@ Make it realistic and achievable.`,
                       setSelectedTime(minutes);
                       setIsFreeTime(false);
                       setCustomTime("");
+                      if (selectedCategory) selectExercisesByCategory(selectedCategory);
                     }}
                     className={`p-6 rounded-xl border-2 transition-all ${
                       selectedTime === minutes && !isFreeTime
@@ -681,8 +740,10 @@ Make it realistic and achievable.`,
                     onChange={(e) => {
                       setCustomTime(e.target.value);
                       if (e.target.value) {
-                        setSelectedTime(parseInt(e.target.value));
+                        const time = parseInt(e.target.value);
+                        setSelectedTime(time);
                         setIsFreeTime(false);
+                        if (selectedCategory) selectExercisesByCategory(selectedCategory);
                       }
                     }}
                     className="flex-1 bg-gray-800 border-gray-700 text-white"
@@ -690,8 +751,10 @@ Make it realistic and achievable.`,
                   <Button
                     onClick={() => {
                       if (customTime) {
-                        setSelectedTime(parseInt(customTime));
+                        const time = parseInt(customTime);
+                        setSelectedTime(time);
                         setIsFreeTime(false);
+                        if (selectedCategory) selectExercisesByCategory(selectedCategory);
                       }
                     }}
                     className="bg-brand-blue hover:bg-brand-blue/90"

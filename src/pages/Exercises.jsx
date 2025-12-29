@@ -30,6 +30,9 @@ export default function Exercises() {
   const [showAIPrompt, setShowAIPrompt] = useState(false);
   const [aiPrompt, setAIPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [aiBodyFocus, setAiBodyFocus] = useState("mixed");
+  const [aiDuration, setAiDuration] = useState(30);
+  const [aiIntensity, setAiIntensity] = useState("moderate");
 
   useEffect(() => {
     const checkUserStatus = async () => {
@@ -93,39 +96,67 @@ export default function Exercises() {
   };
 
   const generateAIWorkout = async () => {
-    if (!aiPrompt.trim()) {
-      toast.error('Please enter a workout description');
-      return;
-    }
-
     setIsGenerating(true);
     try {
-      const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are a professional fitness trainer. Generate a workout based on this EXACT request: "${aiPrompt}"
+      // Construct detailed prompt based on user selections
+      const bodyFocusDescription = {
+        upper: "upper body only (chest, shoulders, arms, back)",
+        lower: "lower body only (legs, glutes, calves)",
+        mixed: "mixed workout with both upper and lower body exercises balanced equally"
+      }[aiBodyFocus];
 
-IMPORTANT: Carefully read and follow ALL user constraints. If they say "no hands on ground" or any other restriction, you MUST respect it.
+      const intensityDescription = {
+        low: "low intensity with longer rest periods and moderate reps",
+        moderate: "moderate intensity with balanced rest and rep ranges",
+        high: "high intensity with shorter rest periods and higher rep ranges or more challenging exercises"
+      }[aiIntensity];
+
+      const fullPrompt = aiPrompt.trim() 
+        ? `${aiPrompt} - Focus: ${bodyFocusDescription}, Duration: ${aiDuration} minutes, Intensity: ${intensityDescription}`
+        : `Create a ${aiDuration} minute workout focusing on ${bodyFocusDescription} at ${intensityDescription}`;
+
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are a professional fitness trainer. Generate a calisthenics workout based on this EXACT request:
+
+"${fullPrompt}"
+
+CRITICAL REQUIREMENTS:
+1. Body Focus: ${aiBodyFocus.toUpperCase()} - ${bodyFocusDescription}
+2. Duration Target: EXACTLY ${aiDuration} minutes total workout time
+3. Intensity: ${aiIntensity.toUpperCase()} - ${intensityDescription}
+4. Respect ALL user constraints mentioned in the prompt
 
 Return a JSON object with this exact structure:
 {
   "exercises": [
     {
       "name": "Exercise Name",
-      "category": "upper_body|lower_body|core|full_body|cardio",
+      "category": "upper_body|lower_body|core|full_body",
       "target_reps": 15,
       "sets": 3,
       "superset_with_next": false
     }
   ],
   "workout_type": "rep_based",
-  "estimated_duration": 30,
+  "estimated_duration": ${aiDuration},
   "difficulty": "beginner|intermediate|advanced"
 }
 
-Available exercises:
-- NO HANDS ON GROUND: Squats, Lunges, Sit-ups, Jumping Jacks, Pull-ups, Leg Raises, Russian Twists, High Knees, Butt Kickers, Jump Squats, Wall Sits, Bicycle Crunches, Flutter Kicks, Crunches, Air Squats, Calf Raises
-- HANDS ON GROUND: Push-ups, Burpees, Mountain Climbers, Plank, Dips, Tricep Dips
+AVAILABLE EXERCISES BY CATEGORY:
+UPPER BODY: Push-ups, Wide Push-ups, Diamond Push-ups, Decline Push-ups, Dips, Tricep Dips, Pull-ups, Arm Circles
+LOWER BODY: Squats, Jump Squats, Lunges, Calf Raises, Wall Sits, Glute Bridges
+CORE: Sit-ups, Crunches, Bicycle Crunches, Russian Twists, Leg Raises, Flutter Kicks, Plank, Mountain Climbers
+FULL BODY: Burpees, Jumping Jacks, High Knees, Butt Kickers
 
-Choose exercises that match the user's constraints. Keep reps realistic (10-20 per set). Total workout should match the requested duration.`,
+EXERCISE SELECTION RULES:
+- For UPPER focus: 80% upper body exercises, 20% core
+- For LOWER focus: 80% lower body exercises, 20% core
+- For MIXED focus: 40% upper, 40% lower, 20% core
+- Calculate total exercises needed: ${aiDuration} minutes / 5 minutes per exercise ≈ ${Math.floor(aiDuration / 5)} to ${Math.ceil(aiDuration / 4)} exercises
+- For ${aiIntensity} intensity: ${aiIntensity === 'low' ? '2 sets, 10-12 reps, 45s rest' : aiIntensity === 'moderate' ? '3 sets, 15 reps, 30s rest' : '4 sets, 18-20 reps, 20s rest'}
+- Ensure total time = (exercises × sets × reps × 2 seconds per rep) + (total sets - 1) × rest time ≈ ${aiDuration * 60} seconds
+
+Choose realistic exercises that match the body focus and intensity level.`,
         response_json_schema: {
           type: "object",
           properties: {
@@ -413,26 +444,111 @@ Choose exercises that match the user's constraints. Keep reps realistic (10-20 p
                 🧞 WorkoutGenie
                 <Badge className="ml-auto bg-yellow-400 text-black font-bold text-xs">PRO</Badge>
               </h2>
-              <p className="text-gray-400 mb-4">Describe your workout - AI builds it from our exercise library</p>
+              <p className="text-gray-400 mb-4">AI creates your perfect workout in 3 simple steps</p>
 
-              <div className="mb-4">
-                <textarea
-                  value={aiPrompt}
-                  onChange={(e) => setAIPrompt(e.target.value)}
-                  placeholder="Example: 'Build me a workout for 18 minutes, low intensity and mix up body upper and lower workouts'"
-                  className="w-full h-32 bg-gray-800 border-gray-700 border text-white rounded-lg p-3 resize-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400"
-                  disabled={isGenerating}
-                  autoFocus
-                />
-              </div>
+              <div className="space-y-4">
+                {/* Step 1: Body Focus */}
+                <div>
+                  <Label className="text-white font-semibold mb-2 block">1. Choose Body Focus</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => setAiBodyFocus("upper")}
+                      className={`p-3 rounded-lg border-2 transition-all ${
+                        aiBodyFocus === "upper"
+                          ? 'bg-blue-600/30 border-blue-500 text-white'
+                          : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-blue-500/50'
+                      }`}
+                      disabled={isGenerating}
+                    >
+                      <div className="text-2xl mb-1">💪</div>
+                      <div className="text-xs font-bold">UPPER</div>
+                    </button>
+                    <button
+                      onClick={() => setAiBodyFocus("lower")}
+                      className={`p-3 rounded-lg border-2 transition-all ${
+                        aiBodyFocus === "lower"
+                          ? 'bg-green-600/30 border-green-500 text-white'
+                          : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-green-500/50'
+                      }`}
+                      disabled={isGenerating}
+                    >
+                      <div className="text-2xl mb-1">🦵</div>
+                      <div className="text-xs font-bold">LOWER</div>
+                    </button>
+                    <button
+                      onClick={() => setAiBodyFocus("mixed")}
+                      className={`p-3 rounded-lg border-2 transition-all ${
+                        aiBodyFocus === "mixed"
+                          ? 'bg-purple-600/30 border-purple-500 text-white'
+                          : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-purple-500/50'
+                      }`}
+                      disabled={isGenerating}
+                    >
+                      <div className="text-2xl mb-1">🔥</div>
+                      <div className="text-xs font-bold">MIXED</div>
+                    </button>
+                  </div>
+                </div>
 
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-4">
-                <p className="text-xs text-blue-400 mb-1">💡 Tips for better workouts:</p>
-                <ul className="text-xs text-gray-400 space-y-0.5">
-                  <li>• Mention time (e.g., "18 minutes", "quick 15 min")</li>
-                  <li>• Specify intensity (e.g., "low", "moderate", "high")</li>
-                  <li>• Choose focus (e.g., "upper body", "legs", "full body")</li>
-                </ul>
+                {/* Step 2: Duration */}
+                <div>
+                  <Label className="text-white font-semibold mb-2 block">2. Choose Duration</Label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[15, 20, 30, 45].map(mins => (
+                      <button
+                        key={mins}
+                        onClick={() => setAiDuration(mins)}
+                        className={`p-3 rounded-lg border-2 transition-all ${
+                          aiDuration === mins
+                            ? 'bg-yellow-600/30 border-yellow-500 text-white'
+                            : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-yellow-500/50'
+                        }`}
+                        disabled={isGenerating}
+                      >
+                        <div className="text-xl font-bold">{mins}</div>
+                        <div className="text-xs">MIN</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Step 3: Intensity */}
+                <div>
+                  <Label className="text-white font-semibold mb-2 block">3. Choose Intensity</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { key: 'low', label: 'LOW', emoji: '😌' },
+                      { key: 'moderate', label: 'MODERATE', emoji: '💪' },
+                      { key: 'high', label: 'HIGH', emoji: '🔥' }
+                    ].map(({ key, label, emoji }) => (
+                      <button
+                        key={key}
+                        onClick={() => setAiIntensity(key)}
+                        className={`p-3 rounded-lg border-2 transition-all ${
+                          aiIntensity === key
+                            ? 'bg-orange-600/30 border-orange-500 text-white'
+                            : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-orange-500/50'
+                        }`}
+                        disabled={isGenerating}
+                      >
+                        <div className="text-2xl mb-1">{emoji}</div>
+                        <div className="text-xs font-bold">{label}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Optional: Custom Instructions */}
+                <div>
+                  <Label className="text-white font-semibold mb-2 block">Custom Instructions (Optional)</Label>
+                  <textarea
+                    value={aiPrompt}
+                    onChange={(e) => setAIPrompt(e.target.value)}
+                    placeholder="Any specific requests? e.g., 'no jumping exercises', 'focus on core', etc."
+                    className="w-full h-20 bg-gray-800 border-gray-700 border text-white rounded-lg p-3 resize-none text-sm"
+                    disabled={isGenerating}
+                  />
+                </div>
               </div>
 
               <div className="flex gap-3">
