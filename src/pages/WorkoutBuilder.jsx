@@ -141,7 +141,7 @@ export default function WorkoutBuilder() {
 
   const calculateRealisticSettings = () => {
     const totalMinutes = isFreeTime ? 999 : selectedTime;
-    const numExercises = selectedExercises.length + (settings.includeWarmup ? 3 : 0);
+    const numExercises = selectedExercises.length; // Warmup is time-based, don't count in rep calculations
     const availableSeconds = totalMinutes * 60;
     
     // Start with reasonable defaults
@@ -221,7 +221,7 @@ export default function WorkoutBuilder() {
     if (!selectedExercises.length) return 0;
 
     // Calculate warmup time separately (time-based, not rep-based)
-    const warmupTime = settings.includeWarmup ? 160 : 0; // ~2.5 minutes for warmup
+    const warmupTime = settings.includeWarmup ? 190 : 0; // ~3 minutes for warmup
     
     // Calculate workout time (only actual exercises)
     const totalSets = selectedExercises.length * settings.defaultSets[0];
@@ -262,12 +262,13 @@ export default function WorkoutBuilder() {
   const updateSetting = (key, value) => {
     const newSettings = { ...settings, [key]: value };
     
-    // Validate time feasibility after each change
-    const numExercises = selectedExercises.length + (newSettings.includeWarmup ? 3 : 0);
+    // Validate time feasibility after each change (warmup doesn't count for reps)
+    const numExercises = selectedExercises.length;
+    const warmupTime = newSettings.includeWarmup ? 190 : 0;
     const totalSets = numExercises * newSettings.defaultSets[0];
     const workTime = totalSets * newSettings.defaultReps[0] * 2;
     const restTime = (totalSets - 1) * newSettings.restTime[0];
-    const totalSeconds = workTime + restTime;
+    const totalSeconds = warmupTime + workTime + restTime;
     const availableSeconds = selectedTime * 60;
     
     // If invalid, auto-adjust to make it valid
