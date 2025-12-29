@@ -183,7 +183,7 @@ export default function ActiveWorkout() {
         setRestTimer(workout.rest_time || 30);
         setRestCardioTotal(0);
       }
-    } else {
+      } else {
       if (currentExerciseIndex < workout.exercises.length - 1) {
         const nextExercise = workout.exercises[currentExerciseIndex + 1];
         // Rest between exercises
@@ -192,7 +192,12 @@ export default function ActiveWorkout() {
 
         if (!currentExercise.superset_with_next) {
           if (isCurrentWarmup && isNextWarmup) {
-            // Short rest between warmup exercises
+            // Short rest between warmup exercises (5 seconds default)
+            setIsResting(true);
+            setRestTimer(warmupRestTime);
+            setRestCardioTotal(0);
+          } else if (isCurrentWarmup && !isNextWarmup) {
+            // Transition from warmup to workout - use short rest
             setIsResting(true);
             setRestTimer(warmupRestTime);
             setRestCardioTotal(0);
