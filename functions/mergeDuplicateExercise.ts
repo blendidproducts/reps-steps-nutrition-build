@@ -9,40 +9,58 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const duplicateId = '68c0eb1debaaf9c07e79f975'; // Single Leg Glute Bridges (no image)
-    const correctId = '69450b38137ff109194fd516'; // Single Leg Glute Bridge (with image)
+    // Define all duplicate mappings
+    const mergeRules = [
+      {
+        duplicateIds: ['68c0eb1debaaf9c07e79f975'],
+        correctId: '69450b38137ff109194fd516',
+        correctName: 'Single Leg Glute Bridge'
+      },
+      {
+        duplicateIds: ['68e721be08027b8688ecdcd8', '68e5ff74027b06d48b761358', '68e5fd282e591069c3c39b7a'],
+        correctId: '69450b52921aaaca6f32fb79',
+        correctName: 'Single Leg Squats (Pistol Squats)'
+      }
+    ];
     
-    // Update all Workout entities
-    const workouts = await base44.asServiceRole.entities.Workout.filter({
-      'exercises.exercise_id': duplicateId
-    });
-    
-    let workoutsUpdated = 0;
-    for (const workout of workouts) {
-      const updatedExercises = workout.exercises.map(ex => {
-        if (ex.exercise_id === duplicateId) {
-          return {
-            ...ex,
-            exercise_id: correctId,
-            exercise_name: 'Single Leg Glute Bridge'
-          };
-        }
-        return ex;
-      });
+    let totalWorkoutsUpdated = 0;
+    let totalDuplicatesDeleted = 0;
+
+    for (const rule of mergeRules) {
+      // Update all Workout entities
+      const workouts = await base44.asServiceRole.entities.Workout.list();
       
-      await base44.asServiceRole.entities.Workout.update(workout.id, {
-        exercises: updatedExercises
-      });
-      workoutsUpdated++;
+      for (const workout of workouts) {
+        let hasChanges = false;
+        const updatedExercises = workout.exercises.map(ex => {
+          if (rule.duplicateIds.includes(ex.exercise_id)) {
+            hasChanges = true;
+            return {
+              ...ex,
+              exercise_id: rule.correctId,
+              exercise_name: rule.correctName
+            };
+          }
+          return ex;
+        });
+        
+        if (hasChanges) {
+          await base44.asServiceRole.entities.Workout.update(workout.id, {
+            exercises: updatedExercises
+          });
+          totalWorkoutsUpdated++;
+        }
+      }
+      
+      // Delete duplicate exercises (they're already marked as deleted)
+      totalDuplicatesDeleted += rule.duplicateIds.length;
     }
-    
-    // Delete the duplicate exercise
-    await base44.asServiceRole.entities.Exercise.delete(duplicateId);
     
     return Response.json({
       success: true,
-      workoutsUpdated,
-      message: 'Duplicate exercise merged and deleted successfully'
+      workoutsUpdated: totalWorkoutsUpdated,
+      duplicatesRemoved: totalDuplicatesDeleted,
+      message: 'All duplicate exercises merged successfully'
     });
     
   } catch (error) {
