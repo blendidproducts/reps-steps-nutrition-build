@@ -195,20 +195,21 @@ export default function WorkoutBuilder() {
       // Calculate reps per set to hit target total reps
       const totalSets = numExercises * newSets;
       newReps = Math.max(5, Math.round(targetTotalReps / totalSets));
-    }
-    
-    // Validate the combination works within time constraint
-    const totalSets = numExercises * newSets;
-    const workTime = totalSets * newReps * 2;
-    const restTime = (totalSets - 1) * newRest;
-    const totalTime = workTime + restTime;
-    
-    // If still too long, reduce reps
-    if (totalTime > availableSeconds && !isFreeTime) {
+      }
+
+      // Validate the combination works within time constraint
+      const totalSets = numExercises * newSets;
+      const workTime = totalSets * newReps * 2;
+      const restTime = (totalSets - 1) * newRest;
+      const totalTime = workTime + restTime;
+
+      // If still too long and user wants auto reps, reduce reps
+      // If user explicitly chose reps, prioritize hitting their target
+      if (totalTime > availableSeconds && !isFreeTime && autoReps) {
       newReps = Math.max(5, Math.floor(
         (availableSeconds - (totalSets - 1) * newRest) / (totalSets * 2)
       ));
-    }
+      }
     
     setSettings(prev => ({
       ...prev,
@@ -906,9 +907,17 @@ Make it realistic and achievable.`,
                       {getEstimatedTime()} minutes
                     </span>
                   </div>
+                  {!autoReps && selectedReps && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Target Total Reps:</span>
+                      <span className="font-bold text-purple-400">
+                        {selectedReps} reps
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Estimated Total Reps:</span>
-                    <span className="font-bold text-brand-blue">
+                    <span className="text-gray-400">{!autoReps && selectedReps ? 'Actual Total Reps:' : 'Estimated Total Reps:'}</span>
+                    <span className={`font-bold ${!autoReps && selectedReps && getEstimatedTotalReps() !== selectedReps ? 'text-yellow-400' : 'text-brand-blue'}`}>
                       {getEstimatedTotalReps()} reps
                     </span>
                   </div>
@@ -925,7 +934,14 @@ Make it realistic and achievable.`,
                 {!isTimeValid() && (
                   <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
                     <p className="text-red-400 text-sm">
-                      ⚠️ Workout exceeds time limit. Reduce sets, reps, or rest time.
+                      ⚠️ Workout exceeds time limit by {getEstimatedTime() - selectedTime} minutes. {!autoReps && selectedReps ? 'Increase duration or reduce reps/sets.' : 'Reduce sets, reps, or rest time.'}
+                    </p>
+                  </div>
+                )}
+                {!autoReps && selectedReps && getEstimatedTotalReps() !== selectedReps && isTimeValid() && (
+                  <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                    <p className="text-yellow-400 text-sm">
+                      ℹ️ Your target of {selectedReps} reps will result in approximately {getEstimatedTotalReps()} reps based on your selected time and settings.
                     </p>
                   </div>
                 )}
