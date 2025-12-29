@@ -1053,34 +1053,30 @@ export default function ActiveWorkout() {
                      <p className="text-sm md:text-base text-gray-400">
                        Target: {formatTime(currentExercise.target_time)}
                      </p>
-                     {currentExercise.category === 'warmup' && (
-                       <div className="flex items-center gap-2">
-                         <button
-                           onClick={() => {
-                             const newTime = Math.max(10, warmupTargetTime - 5);
-                             setWarmupTargetTime(newTime);
-                             const updatedExercises = [...workout.exercises];
-                             updatedExercises[currentExerciseIndex].target_time = newTime;
-                             setWorkout({...workout, exercises: updatedExercises});
-                           }}
-                           className="w-8 h-8 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
-                         >
-                           <Minus className="w-4 h-4" />
-                         </button>
-                         <button
-                           onClick={() => {
-                             const newTime = Math.min(120, warmupTargetTime + 5);
-                             setWarmupTargetTime(newTime);
-                             const updatedExercises = [...workout.exercises];
-                             updatedExercises[currentExerciseIndex].target_time = newTime;
-                             setWorkout({...workout, exercises: updatedExercises});
-                           }}
-                           className="w-8 h-8 bg-green-600/50 hover:bg-green-600 rounded-full flex items-center justify-center transition-colors"
-                         >
-                           <Plus className="w-4 h-4" />
-                         </button>
-                       </div>
-                     )}
+                     <div className="flex items-center gap-2">
+                       <button
+                         onClick={() => {
+                           const newTime = Math.max(5, currentExercise.target_time - 5);
+                           const updatedExercises = [...workout.exercises];
+                           updatedExercises[currentExerciseIndex].target_time = newTime;
+                           setWorkout({...workout, exercises: updatedExercises});
+                         }}
+                         className="w-8 h-8 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
+                       >
+                         <Minus className="w-4 h-4" />
+                       </button>
+                       <button
+                         onClick={() => {
+                           const newTime = Math.min(300, currentExercise.target_time + 5);
+                           const updatedExercises = [...workout.exercises];
+                           updatedExercises[currentExerciseIndex].target_time = newTime;
+                           setWorkout({...workout, exercises: updatedExercises});
+                         }}
+                         className="w-8 h-8 bg-green-600/50 hover:bg-green-600 rounded-full flex items-center justify-center transition-colors"
+                       >
+                         <Plus className="w-4 h-4" />
+                       </button>
+                     </div>
                    </div>
                    <Progress value={timeProgress} className="h-2" />
                 </div>
