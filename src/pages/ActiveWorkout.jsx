@@ -62,6 +62,8 @@ export default function ActiveWorkout() {
   const audioContextRef = useRef(null);
   const [warmupRestTime, setWarmupRestTime] = useState(5);
   const [warmupTargetTime, setWarmupTargetTime] = useState(30);
+  const [showSupersetModal, setShowSupersetModal] = useState(false);
+  const [supersetSelections, setSupersetSelections] = useState([]);
 
   useEffect(() => {
     loadWorkout();
@@ -877,15 +879,28 @@ export default function ActiveWorkout() {
                         </Button>
                       </div>
 
-                      <Button
-                        onClick={skipRest}
-                        variant="outline"
-                        className="w-full border-gray-500 text-gray-300 hover:bg-gray-700"
-                      >
-                        SKIP - JUST REST
-                      </Button>
-                    </>
-                  ) : (
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={skipRest}
+                          variant="outline"
+                          className="flex-1 border-gray-500 text-gray-300 hover:bg-gray-700"
+                        >
+                          SKIP - JUST REST
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setShowSupersetModal(false);
+                            setIsResting(false);
+                            openSupersetModal();
+                          }}
+                          className="flex-1 bg-purple-600/20 border-2 border-purple-500 text-purple-300 hover:bg-purple-600/40"
+                        >
+                          <LinkIcon className="w-4 h-4 mr-2" />
+                          SUPERSET
+                        </Button>
+                      </div>
+                      </>
+                      ) : (
                     <>
                       <h2 className="text-3xl font-bold mb-2 text-brand-blue uppercase">{activeCardio.type}ING</h2>
                       <div className="text-7xl font-bold mb-4 text-brand-blue animate-pulse">{formatTime(cardioTimer)}</div>
@@ -939,6 +954,13 @@ export default function ActiveWorkout() {
                   Set {currentSet} of {currentExercise.sets || 1}
                 </Badge>
                 <div className="flex gap-2">
+                  <button
+                    onClick={openSupersetModal}
+                    className="w-8 h-8 bg-purple-600/50 hover:bg-purple-600 rounded-full flex items-center justify-center transition-colors"
+                    title="Configure Supersets"
+                  >
+                    <LinkIcon className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => setShowSwapModal(true)}
                     className="w-8 h-8 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors"
@@ -1149,6 +1171,72 @@ export default function ActiveWorkout() {
                 <Button onClick={() => setShowVideoHelp(false)} className="w-full gradient-bg text-white">
                   Got It!
                 </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Superset Configuration Modal */}
+      <AnimatePresence>
+        {showSupersetModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setShowSupersetModal(false)}
+          >
+            <Card className="bg-card max-w-lg w-full border-border max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+              <CardContent className="p-6">
+                <h3 className="text-xl font-bold mb-2 text-white flex items-center gap-2">
+                  <LinkIcon className="w-6 h-6 text-purple-400" />
+                  Configure Supersets
+                </h3>
+                <p className="text-sm text-gray-400 mb-4">Select exercises to link together (no rest between them)</p>
+
+                <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3 mb-4">
+                  <p className="text-xs text-purple-400 mb-1">💡 <strong>How Supersets Work:</strong></p>
+                  <ul className="text-xs text-gray-400 space-y-1">
+                    <li>• Check exercises to link them together</li>
+                    <li>• Checked exercises = superset with the NEXT exercise</li>
+                    <li>• Chain multiple exercises by checking all of them</li>
+                    <li>• Example: Check Ex1 & Ex2 = Ex1→Ex2→Ex3 superset</li>
+                  </ul>
+                </div>
+
+                <div className="overflow-y-auto max-h-[40vh] space-y-2 mb-4">
+                  {supersetSelections.map((selection, idx) => (
+                    <div key={selection.index} className="flex items-center gap-3 p-3 rounded-lg bg-gray-800/50 border border-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={selection.selected}
+                        onChange={() => toggleSupersetSelection(selection.index)}
+                        disabled={idx === supersetSelections.length - 1}
+                        className="w-5 h-5 rounded border-gray-600 text-purple-500 focus:ring-purple-500"
+                      />
+                      <div className="flex-1">
+                        <div className="font-semibold text-white">{selection.name}</div>
+                        {selection.selected && idx < supersetSelections.length - 1 && (
+                          <div className="text-xs text-purple-400 mt-1">→ Superset with next</div>
+                        )}
+                        {idx === supersetSelections.length - 1 && (
+                          <div className="text-xs text-gray-500 mt-1">Last exercise (can't superset)</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-3">
+                  <Button onClick={applySupersets} className="flex-1 bg-purple-600 hover:bg-purple-700">
+                    <LinkIcon className="w-4 h-4 mr-2" />
+                    Apply Supersets
+                  </Button>
+                  <Button onClick={() => setShowSupersetModal(false)} variant="outline" className="flex-1">
+                    Cancel
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </motion.div>
