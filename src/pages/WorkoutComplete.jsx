@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
-import { Trophy, Target, Clock, TrendingUp, Share2, Home, RotateCcw, Trash2 } from "lucide-react";
+import { Trophy, Target, Clock, TrendingUp, Share2, Home, RotateCcw, Trash2, Footprints } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
@@ -29,6 +29,7 @@ export default function WorkoutComplete() {
         const session = sessions[0];
         setWorkoutStats({
           totalReps: session.total_reps || 0,
+          totalSteps: session.cardio_analytics?.total_steps || 0,
           duration: session.duration || 0,
           caloriesBurned: session.calories_burned || 0
         });
@@ -155,7 +156,7 @@ export default function WorkoutComplete() {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.6, duration: 0.6 }}
-                className="grid grid-cols-3 gap-3 mb-6"
+                className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6"
               >
                 <div className="bg-background rounded-lg p-4 border border-brand-blue/30">
                   <Target className="w-6 h-6 text-brand-blue mx-auto mb-2" />
@@ -163,9 +164,14 @@ export default function WorkoutComplete() {
                   <div className="text-2xl font-bold text-brand-blue">{workoutStats.totalReps}</div>
                 </div>
                 <div className="bg-background rounded-lg p-4 border border-purple-500/30">
-                  <Clock className="w-6 h-6 text-purple-400 mx-auto mb-2" />
+                  <Footprints className="w-6 h-6 text-purple-400 mx-auto mb-2" />
+                  <div className="text-xs text-gray-400">Steps</div>
+                  <div className="text-2xl font-bold text-purple-400">{workoutStats.totalSteps?.toLocaleString() || 0}</div>
+                </div>
+                <div className="bg-background rounded-lg p-4 border border-green-500/30">
+                  <Clock className="w-6 h-6 text-green-400 mx-auto mb-2" />
                   <div className="text-xs text-gray-400">Time</div>
-                  <div className="text-2xl font-bold text-purple-400">{formatTime(workoutStats.duration)}</div>
+                  <div className="text-2xl font-bold text-green-400">{formatTime(workoutStats.duration)}</div>
                 </div>
                 <div className="bg-background rounded-lg p-4 border border-orange-500/30">
                   <TrendingUp className="w-6 h-6 text-orange-400 mx-auto mb-2" />

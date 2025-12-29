@@ -3,7 +3,7 @@ import { WorkoutSession } from "@/entities/WorkoutSession";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Target, TrendingUp, Share2 } from "lucide-react";
+import { Calendar, Clock, Target, TrendingUp, Share2, Footprints } from "lucide-react";
 import { format } from "date-fns";
 import { createPageUrl } from "@/utils";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -144,11 +144,12 @@ export default function History() {
 
       <div className="container mx-auto px-4 py-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
           {[
             {label: 'Workouts', value: stats.totalWorkouts, color: 'text-brand-blue'},
             {label: 'Total Reps', value: stats.totalReps.toLocaleString(), color: 'text-green-400'},
-            {label: 'Total Time', value: formatTime(stats.totalTime), color: 'text-purple-400'},
+            {label: 'Total Steps', value: sessions.reduce((sum, s) => sum + (s.cardio_analytics?.total_steps || 0), 0).toLocaleString(), color: 'text-purple-400'},
+            {label: 'Total Time', value: formatTime(stats.totalTime), color: 'text-yellow-400'},
             {label: 'Avg. Time', value: formatTime(stats.avgDuration), color: 'text-orange-400'},
             {label: 'Calories', value: Math.round(stats.caloriesBurned), color: 'text-red-400'},
           ].map(stat => (
@@ -235,7 +236,7 @@ export default function History() {
                           </Badge>
                         </div>
                         
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
                           <div className="flex items-center gap-2">
                             <Clock className="w-4 h-4 text-purple-400" />
                             <span className="text-sm">{formatTime(session.duration)}</span>
@@ -243,6 +244,10 @@ export default function History() {
                           <div className="flex items-center gap-2">
                             <Target className="w-4 h-4 text-green-400" />
                             <span className="text-sm">{session.total_reps} reps</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Footprints className="w-4 h-4 text-purple-400" />
+                            <span className="text-sm">{session.cardio_analytics?.total_steps?.toLocaleString() || 0} steps</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <TrendingUp className="w-4 h-4 text-red-400" />
