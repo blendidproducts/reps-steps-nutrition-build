@@ -60,6 +60,8 @@ export default function ActiveWorkout() {
   const [isTimerPaused, setIsTimerPaused] = useState(true);
   const [lastBeepSecond, setLastBeepSecond] = useState(null);
   const audioContextRef = useRef(null);
+  const [warmupRestTime, setWarmupRestTime] = useState(5);
+  const [warmupTargetTime, setWarmupTargetTime] = useState(30);
 
   useEffect(() => {
     loadWorkout();
@@ -150,14 +152,22 @@ export default function ActiveWorkout() {
     } else {
       if (currentExerciseIndex < workout.exercises.length - 1) {
         const nextExercise = workout.exercises[currentExerciseIndex + 1];
-        // Rest between exercises (not for supersets or warmup)
+        // Rest between exercises
         const isCurrentWarmup = currentExercise.category === 'warmup';
         const isNextWarmup = nextExercise?.category === 'warmup';
 
-        if (!currentExercise.superset_with_next && !isCurrentWarmup && !isNextWarmup) {
+        if (!currentExercise.superset_with_next) {
+          if (isCurrentWarmup && isNextWarmup) {
+            // Short rest between warmup exercises
+            setIsResting(true);
+            setRestTimer(warmupRestTime);
+            setRestCardioTotal(0);
+          } else if (!isCurrentWarmup && !isNextWarmup) {
+            // Normal rest between workout exercises
             setIsResting(true);
             setRestTimer(workout.rest_time || 60);
             setRestCardioTotal(0);
+          }
         }
         setCurrentExerciseIndex(prev => prev + 1);
         setCurrentSet(1);
@@ -727,38 +737,48 @@ export default function ActiveWorkout() {
                       <div className="flex items-center justify-center gap-3 mb-4">
                         <div className="flex flex-col gap-2">
                           <button
-                            onClick={() => addRestTime(-15)}
+                            onClick={() => {
+                              const decrement = workout.exercises[currentExerciseIndex]?.category === 'warmup' ? -5 : -15;
+                              addRestTime(decrement);
+                            }}
                             className="w-10 h-10 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
-                            title="Subtract 15 seconds"
-                            disabled={restTimer <= 15}
+                            title={workout.exercises[currentExerciseIndex]?.category === 'warmup' ? "Subtract 5 seconds" : "Subtract 15 seconds"}
+                            disabled={restTimer <= 5}
                           >
                             <Minus className="w-5 h-5" />
                           </button>
-                          <button
-                            onClick={() => addRestTime(-30)}
-                            className="w-10 h-10 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors text-xs font-bold"
-                            title="Subtract 30 seconds"
-                            disabled={restTimer <= 30}
-                          >
-                            -30
-                          </button>
+                          {workout.exercises[currentExerciseIndex]?.category !== 'warmup' && (
+                            <button
+                              onClick={() => addRestTime(-30)}
+                              className="w-10 h-10 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors text-xs font-bold"
+                              title="Subtract 30 seconds"
+                              disabled={restTimer <= 30}
+                            >
+                              -30
+                            </button>
+                          )}
                         </div>
                         <div className="text-6xl font-bold">{restTimer}s</div>
                         <div className="flex flex-col gap-2">
                           <button
-                            onClick={() => addRestTime(15)}
+                            onClick={() => {
+                              const increment = workout.exercises[currentExerciseIndex]?.category === 'warmup' ? 5 : 15;
+                              addRestTime(increment);
+                            }}
                             className="w-10 h-10 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors"
-                            title="Add 15 seconds"
+                            title={workout.exercises[currentExerciseIndex]?.category === 'warmup' ? "Add 5 seconds" : "Add 15 seconds"}
                           >
                             <Plus className="w-5 h-5" />
                           </button>
-                          <button
-                            onClick={() => addRestTime(30)}
-                            className="w-10 h-10 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors text-xs font-bold"
-                            title="Add 30 seconds"
-                          >
-                            +30
-                          </button>
+                          {workout.exercises[currentExerciseIndex]?.category !== 'warmup' && (
+                            <button
+                              onClick={() => addRestTime(30)}
+                              className="w-10 h-10 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors text-xs font-bold"
+                              title="Add 30 seconds"
+                            >
+                              +30
+                            </button>
+                          )}
                         </div>
                       </div>
                       {extendedRestTime > 0 && (
@@ -963,9 +983,39 @@ export default function ActiveWorkout() {
                 // UI for Time-Based Exercises
                 <div className="text-center mb-6">
                    <div className="text-4xl md:text-6xl font-bold mb-2">{formatTime(exerciseTimer)}</div>
-                   <p className="text-sm md:text-base text-gray-400 mb-4">
-                     Target: {formatTime(currentExercise.target_time)}
-                   </p>
+                   <div className="flex items-center justify-center gap-3 mb-4">
+                     <p className="text-sm md:text-base text-gray-400">
+                       Target: {formatTime(currentExercise.target_time)}
+                     </p>
+                     {currentExercise.category === 'warmup' && (
+                       <div className="flex items-center gap-2">
+                         <button
+                           onClick={() => {
+                             const newTime = Math.max(10, warmupTargetTime - 5);
+                             setWarmupTargetTime(newTime);
+                             const updatedExercises = [...workout.exercises];
+                             updatedExercises[currentExerciseIndex].target_time = newTime;
+                             setWorkout({...workout, exercises: updatedExercises});
+                           }}
+                           className="w-8 h-8 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
+                         >
+                           <Minus className="w-4 h-4" />
+                         </button>
+                         <button
+                           onClick={() => {
+                             const newTime = Math.min(120, warmupTargetTime + 5);
+                             setWarmupTargetTime(newTime);
+                             const updatedExercises = [...workout.exercises];
+                             updatedExercises[currentExerciseIndex].target_time = newTime;
+                             setWorkout({...workout, exercises: updatedExercises});
+                           }}
+                           className="w-8 h-8 bg-green-600/50 hover:bg-green-600 rounded-full flex items-center justify-center transition-colors"
+                         >
+                           <Plus className="w-4 h-4" />
+                         </button>
+                       </div>
+                     )}
+                   </div>
                    <Progress value={timeProgress} className="h-2" />
                 </div>
               ) : (
