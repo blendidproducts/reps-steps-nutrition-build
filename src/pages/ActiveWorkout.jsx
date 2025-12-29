@@ -23,7 +23,8 @@ import {
   Footprints,
   Route,
   Zap,
-  RefreshCw
+  RefreshCw,
+  Link as LinkIcon
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -125,6 +126,37 @@ export default function ActiveWorkout() {
     setRepInput("");
     setExerciseTimer(0);
     setShowSwapModal(false);
+  };
+
+  const openSupersetModal = () => {
+    // Initialize selections - get remaining exercises from current index onwards
+    const remaining = workout.exercises.slice(currentExerciseIndex).map((ex, idx) => ({
+      index: currentExerciseIndex + idx,
+      name: ex.exercise_name,
+      selected: ex.superset_with_next || false
+    }));
+    setSupersetSelections(remaining);
+    setShowSupersetModal(true);
+  };
+
+  const applySupersets = () => {
+    const updatedExercises = [...workout.exercises];
+    supersetSelections.forEach(selection => {
+      if (updatedExercises[selection.index]) {
+        updatedExercises[selection.index].superset_with_next = selection.selected;
+      }
+    });
+    setWorkout({...workout, exercises: updatedExercises});
+    setShowSupersetModal(false);
+    toast.success('Superset settings updated');
+  };
+
+  const toggleSupersetSelection = (index) => {
+    setSupersetSelections(prev => 
+      prev.map(item => 
+        item.index === index ? {...item, selected: !item.selected} : item
+      )
+    );
   };
 
   const nextExercise = () => {
