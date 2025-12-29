@@ -260,11 +260,22 @@ export default function ActiveWorkout() {
 
   useEffect(() => {
     let interval;
-    if (isActive && !isPaused) {
+    if (isActive) {
       interval = setInterval(() => {
-        setTimer(prev => prev + 1);
-        setElapsedTimer(prev => prev + 1); // Always increment elapsed time
-        
+        // Always increment elapsed time (total time) when workout is active
+        setElapsedTimer(prev => {
+          const newElapsed = prev + 1;
+          // Auto-stop after 4 hours
+          if (newElapsed >= 14400) {
+            stopWorkout();
+          }
+          return newElapsed;
+        });
+
+        // Only increment active timer when not paused
+        if (!isPaused) {
+          setTimer(prev => prev + 1);
+
         if (activeCardio) {
           setCardioTimer(prev => prev + 1);
         } else if (!isResting) {
@@ -306,14 +317,15 @@ export default function ActiveWorkout() {
               setTimeout(() => skipRest(), 100);
             }
             return newTimer;
-          });
-        } else if (restTimer === 0 && isResting) {
-          skipRest();
-        }
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isActive, isPaused, isResting, restTimer, workout, currentExerciseIndex, activeCardio, isTimerPaused, lastBeepSecond]);
+            });
+            } else if (restTimer === 0 && isResting) {
+            skipRest();
+            }
+            }
+            }, 1000);
+            }
+            return () => clearInterval(interval);
+            }, [isActive, isPaused, isResting, restTimer, workout, currentExerciseIndex, activeCardio, isTimerPaused, lastBeepSecond]);
 
   const loadWorkout = async () => {
     try {
