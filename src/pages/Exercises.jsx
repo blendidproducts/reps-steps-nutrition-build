@@ -65,9 +65,9 @@ export default function Exercises() {
   const loadExercises = async () => {
     setIsLoading(true);
     const data = await Exercise.list();
-    // Remove duplicates by name and sort alphabetically
+    // Filter out deleted exercises, remove duplicates by name and sort alphabetically
     const uniqueExercises = data.filter((exercise, index, self) => 
-      index === self.findIndex(e => e.name?.toLowerCase() === exercise.name?.toLowerCase())
+      !exercise.is_deleted && index === self.findIndex(e => e.name?.toLowerCase() === exercise.name?.toLowerCase())
     );
     const sortedExercises = uniqueExercises.sort((a, b) => 
       (a.name || '').localeCompare(b.name || '')
