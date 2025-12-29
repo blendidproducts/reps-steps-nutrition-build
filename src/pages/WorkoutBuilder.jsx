@@ -708,7 +708,7 @@ Make it realistic and achievable.`,
               {/* Duration Selection */}
               <div>
                 <Label className="text-white text-lg font-semibold mb-3 block">Workout Duration</Label>
-              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-4 mb-4">
                 {[15, 30, 45, 60].map(minutes => (
                   <button
                     key={minutes}
@@ -778,6 +778,7 @@ Make it realistic and achievable.`,
                   <div className="text-xl font-bold mb-2">⏱️ NO TIME LIMIT</div>
                   <div className="text-sm text-gray-400">Train at your own pace</div>
                 </button>
+              </div>
               </div>
             </CardContent>
           </Card>
