@@ -807,10 +807,10 @@ export default function ActiveWorkout() {
 
                       {/* Quick instructions for next exercise */}
                       {currentExercise?.instructions && (
-                        <div className="bg-gray-800/50 rounded-lg p-3 mb-4 max-h-24 overflow-y-auto">
+                        <div className="bg-gray-800/50 rounded-lg p-3 mb-4 max-h-32 overflow-y-auto">
                           <p className="text-xs text-brand-blue font-semibold mb-1">How to:</p>
                           <ul className="text-xs text-gray-300 space-y-1">
-                            {currentExercise.instructions.slice(0, 2).map((instruction, i) => (
+                            {currentExercise.instructions.map((instruction, i) => (
                               <li key={i}>• {instruction}</li>
                             ))}
                           </ul>
