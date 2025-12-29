@@ -132,7 +132,22 @@ export default function WorkoutDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-3 gap-4">
+              {session.cardio_analytics?.total_steps > 0 && (
+              <div className="bg-brand-blue/10 border border-brand-blue/30 rounded-lg p-4 mb-4">
+                <h3 className="font-bold text-brand-blue text-lg mb-2">Total Cardio Summary</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-gray-400 text-sm">Total Steps</p>
+                    <p className="text-2xl font-bold text-white">{session.cardio_analytics.total_steps.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-sm">Total Distance</p>
+                    <p className="text-2xl font-bold text-white">{session.cardio_analytics.total_distance_miles} miles</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="grid md:grid-cols-3 gap-4">
                 {session.cardio_analytics.walk && session.cardio_analytics.walk.count > 0 && (
                   <div className="bg-green-600/10 border border-green-500/30 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
@@ -142,6 +157,12 @@ export default function WorkoutDetail() {
                     <p className="text-sm text-gray-300">Count: {session.cardio_analytics.walk.count}</p>
                     <p className="text-sm text-gray-300">Total: {formatTime(session.cardio_analytics.walk.total_time)}</p>
                     <p className="text-sm text-gray-300">Avg: {formatTime(session.cardio_analytics.walk.avg_time)}</p>
+                    {session.cardio_analytics.walk.total_steps > 0 && (
+                      <>
+                        <p className="text-sm text-green-400 font-bold mt-2">Steps: {session.cardio_analytics.walk.total_steps.toLocaleString()}</p>
+                        <p className="text-sm text-green-400 font-bold">Distance: {session.cardio_analytics.walk.total_distance_miles} mi</p>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -154,6 +175,12 @@ export default function WorkoutDetail() {
                     <p className="text-sm text-gray-300">Count: {session.cardio_analytics.jog.count}</p>
                     <p className="text-sm text-gray-300">Total: {formatTime(session.cardio_analytics.jog.total_time)}</p>
                     <p className="text-sm text-gray-300">Avg: {formatTime(session.cardio_analytics.jog.avg_time)}</p>
+                    {session.cardio_analytics.jog.total_steps > 0 && (
+                      <>
+                        <p className="text-sm text-yellow-400 font-bold mt-2">Steps: {session.cardio_analytics.jog.total_steps.toLocaleString()}</p>
+                        <p className="text-sm text-yellow-400 font-bold">Distance: {session.cardio_analytics.jog.total_distance_miles} mi</p>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -167,6 +194,12 @@ export default function WorkoutDetail() {
                     <p className="text-sm text-gray-300">Total: {formatTime(session.cardio_analytics.sprint.total_time)}</p>
                     <p className="text-sm text-gray-300">Longest: {formatTime(session.cardio_analytics.sprint.longest_sprint)}</p>
                     <p className="text-sm text-gray-300">Avg: {formatTime(session.cardio_analytics.sprint.avg_time)}</p>
+                    {session.cardio_analytics.sprint.total_steps > 0 && (
+                      <>
+                        <p className="text-sm text-red-400 font-bold mt-2">Steps: {session.cardio_analytics.sprint.total_steps.toLocaleString()}</p>
+                        <p className="text-sm text-red-400 font-bold">Distance: {session.cardio_analytics.sprint.total_distance_miles} mi</p>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

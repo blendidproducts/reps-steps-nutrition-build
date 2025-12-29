@@ -423,10 +423,26 @@ export default function ActiveWorkout() {
 
   const stopWorkout = async () => {
     if (sessionStartTime) {
-      // Calculate cardio analytics
+      // Calculate cardio analytics with steps and distance
       const walkIntervals = cardioIntervals.filter(c => c.type === 'walk');
       const jogIntervals = cardioIntervals.filter(c => c.type === 'jog');
       const sprintIntervals = cardioIntervals.filter(c => c.type === 'sprint');
+      
+      // Calculate steps and distance
+      // Walking: 110 steps/min, 3.5 mph
+      // Jogging: 170 steps/min, 6 mph
+      // Sprinting: 190 steps/min, 10 mph
+      const walkSteps = Math.round(walkIntervals.reduce((sum, c) => sum + (c.time / 60) * 110, 0));
+      const walkDistance = walkIntervals.reduce((sum, c) => sum + (c.time / 3600) * 3.5, 0);
+      
+      const jogSteps = Math.round(jogIntervals.reduce((sum, c) => sum + (c.time / 60) * 170, 0));
+      const jogDistance = jogIntervals.reduce((sum, c) => sum + (c.time / 3600) * 6, 0);
+      
+      const sprintSteps = Math.round(sprintIntervals.reduce((sum, c) => sum + (c.time / 60) * 190, 0));
+      const sprintDistance = sprintIntervals.reduce((sum, c) => sum + (c.time / 3600) * 10, 0);
+      
+      const totalSteps = walkSteps + jogSteps + sprintSteps;
+      const totalDistance = walkDistance + jogDistance + sprintDistance;
       
       // Improved calorie calculation (more accurate formula)
       // Base: 5 calories per minute of active work
@@ -461,20 +477,28 @@ export default function ActiveWorkout() {
           walk: {
             count: walkIntervals.length,
             total_time: walkIntervals.reduce((sum, c) => sum + c.time, 0),
-            avg_time: walkIntervals.length > 0 ? Math.round(walkIntervals.reduce((sum, c) => sum + c.time, 0) / walkIntervals.length) : 0
+            avg_time: walkIntervals.length > 0 ? Math.round(walkIntervals.reduce((sum, c) => sum + c.time, 0) / walkIntervals.length) : 0,
+            total_steps: walkSteps,
+            total_distance_miles: Math.round(walkDistance * 100) / 100
           },
           jog: {
             count: jogIntervals.length,
             total_time: jogIntervals.reduce((sum, c) => sum + c.time, 0),
-            avg_time: jogIntervals.length > 0 ? Math.round(jogIntervals.reduce((sum, c) => sum + c.time, 0) / jogIntervals.length) : 0
+            avg_time: jogIntervals.length > 0 ? Math.round(jogIntervals.reduce((sum, c) => sum + c.time, 0) / jogIntervals.length) : 0,
+            total_steps: jogSteps,
+            total_distance_miles: Math.round(jogDistance * 100) / 100
           },
           sprint: {
             count: sprintIntervals.length,
             total_time: sprintIntervals.reduce((sum, c) => sum + c.time, 0),
             longest_sprint: sprintIntervals.length > 0 ? Math.max(...sprintIntervals.map(c => c.time)) : 0,
             shortest_sprint: sprintIntervals.length > 0 ? Math.min(...sprintIntervals.map(c => c.time)) : 0,
-            avg_time: sprintIntervals.length > 0 ? Math.round(sprintIntervals.reduce((sum, c) => sum + c.time, 0) / sprintIntervals.length) : 0
-          }
+            avg_time: sprintIntervals.length > 0 ? Math.round(sprintIntervals.reduce((sum, c) => sum + c.time, 0) / sprintIntervals.length) : 0,
+            total_steps: sprintSteps,
+            total_distance_miles: Math.round(sprintDistance * 100) / 100
+          },
+          total_steps: totalSteps,
+          total_distance_miles: Math.round(totalDistance * 100) / 100
         }
       };
       await WorkoutSession.create(sessionData);
