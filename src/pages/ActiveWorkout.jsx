@@ -61,7 +61,7 @@ export default function ActiveWorkout() {
   const [isTimerPaused, setIsTimerPaused] = useState(true);
   const [lastBeepSecond, setLastBeepSecond] = useState(null);
   const audioContextRef = useRef(null);
-  const [warmupRestTime, setWarmupRestTime] = useState(5);
+  const WARMUP_REST_TIME = 5; // Fixed 5 seconds between warmup exercises
   const [warmupTargetTime, setWarmupTargetTime] = useState(30);
   const [showSupersetModal, setShowSupersetModal] = useState(false);
   const [supersetSelections, setSupersetSelections] = useState([]);
@@ -192,14 +192,14 @@ export default function ActiveWorkout() {
 
         if (!currentExercise.superset_with_next) {
           if (isCurrentWarmup && isNextWarmup) {
-            // Short rest between warmup exercises (5 seconds default)
+            // Fixed 5 seconds rest between warmup exercises
             setIsResting(true);
-            setRestTimer(warmupRestTime);
+            setRestTimer(WARMUP_REST_TIME);
             setRestCardioTotal(0);
           } else if (isCurrentWarmup && !isNextWarmup) {
-            // Transition from warmup to workout - use short rest
+            // Transition from warmup to workout - use 5 seconds
             setIsResting(true);
-            setRestTimer(warmupRestTime);
+            setRestTimer(WARMUP_REST_TIME);
             setRestCardioTotal(0);
           } else if (!isCurrentWarmup && !isNextWarmup) {
             // Normal rest between workout exercises
