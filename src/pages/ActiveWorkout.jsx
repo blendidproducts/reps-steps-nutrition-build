@@ -178,45 +178,51 @@ export default function ActiveWorkout() {
       setExerciseTimer(0);
       
       // Rest between sets (not for supersets or warmup)
-      if (!currentExercise.superset_with_next && currentExercise.category !== 'warmup') {
-        setIsResting(true);
-        setRestTimer(workout.rest_time || 30);
-        setRestCardioTotal(0);
+      if (!currentExercise.superset_with_next) {
+        if (currentExercise.category === 'warmup') {
+          // Warmup sets = 5 seconds rest
+          setIsResting(true);
+          setRestTimer(WARMUP_REST_TIME);
+          setRestCardioTotal(0);
+        } else {
+          // Normal workout sets
+          setIsResting(true);
+          setRestTimer(workout.rest_time || 30);
+          setRestCardioTotal(0);
+        }
       }
       } else {
       if (currentExerciseIndex < workout.exercises.length - 1) {
         const nextExercise = workout.exercises[currentExerciseIndex + 1];
-        // Rest between exercises
+
+        // Move to next exercise first
+        setCurrentExerciseIndex(prev => prev + 1);
+        setCurrentSet(1);
+        setCurrentReps(0);
+        setRepInput("");
+        setExerciseTimer(0);
+
+        // Then set rest based on exercise types
         const isCurrentWarmup = currentExercise.category === 'warmup';
         const isNextWarmup = nextExercise?.category === 'warmup';
 
         if (!currentExercise.superset_with_next) {
-          if (isCurrentWarmup && isNextWarmup) {
-            // Fixed 5 seconds rest between warmup exercises
+          if (isCurrentWarmup || isNextWarmup) {
+            // ANY warmup transition = 5 seconds only
             setIsResting(true);
             setRestTimer(WARMUP_REST_TIME);
             setRestCardioTotal(0);
-          } else if (isCurrentWarmup && !isNextWarmup) {
-            // Transition from warmup to workout - use 5 seconds
-            setIsResting(true);
-            setRestTimer(WARMUP_REST_TIME);
-            setRestCardioTotal(0);
-          } else if (!isCurrentWarmup && !isNextWarmup) {
+          } else {
             // Normal rest between workout exercises
             setIsResting(true);
             setRestTimer(workout.rest_time || 60);
             setRestCardioTotal(0);
           }
         }
-        setCurrentExerciseIndex(prev => prev + 1);
-        setCurrentSet(1);
-        setCurrentReps(0);
-        setRepInput("");
-        setExerciseTimer(0);
       } else {
         stopWorkout();
       }
-    }
+      }
   };
 
   const skipRest = () => {
@@ -836,8 +842,8 @@ export default function ActiveWorkout() {
                         <p className="text-xs text-blue-400 mb-2">+ {extendedRestTime}s added</p>
                       )}
                       <div className="mb-4">
-                        <p className="text-sm text-gray-400">Cardio Time: {restCardioTotal}s / {workout.rest_time || 60}s</p>
-                        <Progress value={(restCardioTotal / (workout.rest_time || 60)) * 100} className="h-2 mt-2" />
+                        <p className="text-sm text-gray-400">Cardio Time: {restCardioTotal}s / {restTimer + restCardioTotal}s</p>
+                        <Progress value={(restCardioTotal / (restTimer + restCardioTotal)) * 100} className="h-2 mt-2" />
                       </div>
 
                       {/* Exercise Preview Cards */}
