@@ -1220,15 +1220,15 @@ Make it realistic and achievable.`,
               </CardContent>
             </Card>
           </div>
-          )}
-          </div>
+        )}
+      </div>
 
-          {/* Spacer for fixed bottom bar */}
-          <div className="h-64 md:h-32"></div>
+      {/* Spacer for fixed bottom bar */}
+      <div className="h-64 md:h-32"></div>
 
-          {/* Bottom Navigation */}
-          <div className="fixed bottom-20 md:bottom-0 left-0 right-0 bg-gradient-to-t from-gray-900 via-gray-900 to-gray-900/95 border-t-2 border-brand-blue/30 p-6 shadow-2xl z-50">
-          <div className="container mx-auto max-w-3xl">
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-20 md:bottom-0 left-0 right-0 bg-gradient-to-t from-gray-900 via-gray-900 to-gray-900/95 border-t-2 border-brand-blue/30 p-6 shadow-2xl z-50">
+        <div className="container mx-auto max-w-3xl">
           <div className="flex justify-between items-center gap-4">
             {currentStep > 1 ? (
               <Button
@@ -1262,14 +1262,14 @@ Make it realistic and achievable.`,
                 START WORKOUT
               </Button>
             )}
-            </div>
-            </div>
-            </div>
+          </div>
+        </div>
+      </div>
 
-            {/* Bottom Placeholder/Graphic */}
-            <div className="fixed bottom-0 left-0 right-0 h-20 bg-black md:hidden z-40 flex items-center justify-center">
-            <div className="text-gray-800 text-xs">RepsAndSteps</div>
-            </div>
+      {/* Bottom Placeholder/Graphic */}
+      <div className="fixed bottom-0 left-0 right-0 h-20 bg-black md:hidden z-40 flex items-center justify-center">
+        <div className="text-gray-800 text-xs">RepsAndSteps</div>
+      </div>
 
       <style>
         {`
