@@ -36,6 +36,7 @@ export default function WorkoutBuilder() {
   const [selectedReps, setSelectedReps] = useState(null);
   const [customReps, setCustomReps] = useState("");
   const [autoReps, setAutoReps] = useState(true);
+  const [workoutLevel, setWorkoutLevel] = useState(null);
   const [allExercises, setAllExercises] = useState([]);
   const [selectedExercises, setSelectedExercises] = useState([]);
   const [user, setUser] = useState(null);
@@ -336,7 +337,7 @@ export default function WorkoutBuilder() {
 
   const canProceed = () => {
     if (currentStep === 1) return (selectedTime !== null || isFreeTime) && selectedCategory !== null;
-    if (currentStep === 2) return selectedReps !== null || autoReps;
+    if (currentStep === 2) return (selectedReps !== null || autoReps) && workoutLevel !== null;
     if (currentStep === 3) return selectedExercises.length > 0;
     return false;
   };
@@ -785,17 +786,142 @@ Make it realistic and achievable.`,
           </Card>
         )}
 
-        {/* Step 2: Select Reps */}
+        {/* Step 2: Select Reps & Level */}
         {currentStep === 2 && (
           <Card className="bg-gray-900 border-gray-800 rounded-xl">
             <CardHeader>
               <CardTitle className="text-white text-2xl flex items-center gap-2">
                 <Target className="w-6 h-6 text-brand-blue" />
-                Step 2: Choose Rep Count
+                Step 2: Workout Level & Reps
               </CardTitle>
-              <p className="text-gray-400">Total reps for the entire workout</p>
+              <p className="text-gray-400">Choose your fitness level and target reps</p>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              {/* Workout Level Selection */}
+              <div>
+                <Label className="text-white text-lg font-semibold mb-3 block">Workout Level</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <button
+                    onClick={() => {
+                      setWorkoutLevel('beginner');
+                      // Auto-adjust for beginner
+                      if (selectedTime > 30) setSelectedTime(30);
+                      if (selectedReps > 200 || !selectedReps) setSelectedReps(150);
+                      setSettings(prev => ({
+                        ...prev,
+                        defaultSets: [2],
+                        defaultReps: [10],
+                        restTime: [45],
+                        useWeightVest: false
+                      }));
+                    }}
+                    className={`p-6 rounded-xl border-2 transition-all text-left ${
+                      workoutLevel === 'beginner'
+                        ? 'bg-green-600/20 border-green-500'
+                        : 'bg-gray-800/50 border-gray-700 hover:border-green-500/50'
+                    }`}
+                  >
+                    <div className="text-3xl mb-2">🌱</div>
+                    <div className="text-xl font-bold text-white mb-2">Beginner</div>
+                    <ul className="text-sm text-gray-400 space-y-1">
+                      <li>• 15-30 minutes max</li>
+                      <li>• Up to 200 reps</li>
+                      <li>• Light jog & walking</li>
+                      <li>• 45+ seconds rest</li>
+                      <li>• No weight vest</li>
+                    </ul>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setWorkoutLevel('average');
+                      setSettings(prev => ({
+                        ...prev,
+                        defaultSets: [3],
+                        defaultReps: [15],
+                        restTime: [30]
+                      }));
+                    }}
+                    className={`p-6 rounded-xl border-2 transition-all text-left ${
+                      workoutLevel === 'average'
+                        ? 'bg-blue-600/20 border-blue-500'
+                        : 'bg-gray-800/50 border-gray-700 hover:border-blue-500/50'
+                    }`}
+                  >
+                    <div className="text-3xl mb-2">💪</div>
+                    <div className="text-xl font-bold text-white mb-2">Average</div>
+                    <ul className="text-sm text-gray-400 space-y-1">
+                      <li>• 30-45 minutes</li>
+                      <li>• 200-400 reps</li>
+                      <li>• Walk, jog & sprints</li>
+                      <li>• 30-60 seconds rest</li>
+                      <li>• Optional weight vest</li>
+                    </ul>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setWorkoutLevel('advanced');
+                      setSettings(prev => ({
+                        ...prev,
+                        defaultSets: [4],
+                        defaultReps: [20],
+                        restTime: [20],
+                        useWeightVest: true,
+                        vestWeightLbs: [10]
+                      }));
+                    }}
+                    className={`p-6 rounded-xl border-2 transition-all text-left ${
+                      workoutLevel === 'advanced'
+                        ? 'bg-orange-600/20 border-orange-500'
+                        : 'bg-gray-800/50 border-gray-700 hover:border-orange-500/50'
+                    }`}
+                  >
+                    <div className="text-3xl mb-2">🔥</div>
+                    <div className="text-xl font-bold text-white mb-2">Advanced</div>
+                    <ul className="text-sm text-gray-400 space-y-1">
+                      <li>• 45-60 minutes</li>
+                      <li>• 400-600 reps</li>
+                      <li>• High intensity sprints</li>
+                      <li>• 20-30 seconds rest</li>
+                      <li>• Weight vest recommended</li>
+                    </ul>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setWorkoutLevel('military');
+                      if (selectedReps < 200) setSelectedReps(300);
+                      setSettings(prev => ({
+                        ...prev,
+                        defaultSets: [5],
+                        defaultReps: [25],
+                        restTime: [15],
+                        useWeightVest: true,
+                        vestWeightLbs: [20]
+                      }));
+                    }}
+                    className={`p-6 rounded-xl border-2 transition-all text-left ${
+                      workoutLevel === 'military'
+                        ? 'bg-red-600/20 border-red-500'
+                        : 'bg-gray-800/50 border-gray-700 hover:border-red-500/50'
+                    }`}
+                  >
+                    <div className="text-3xl mb-2">⚔️</div>
+                    <div className="text-xl font-bold text-white mb-2">Spartan/Military</div>
+                    <ul className="text-sm text-gray-400 space-y-1">
+                      <li>• 60+ minutes</li>
+                      <li>• 600+ reps minimum</li>
+                      <li>• Heavy sprints only</li>
+                      <li>• Max 30 seconds rest</li>
+                      <li>• Weight vest required</li>
+                    </ul>
+                  </button>
+                </div>
+              </div>
+
+              {/* Rep Selection */}
+              <div>
               <button
                 onClick={() => {
                   setAutoReps(true);
