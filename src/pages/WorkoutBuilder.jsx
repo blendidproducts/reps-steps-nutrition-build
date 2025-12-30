@@ -922,12 +922,13 @@ Make it realistic and achievable.`,
 
               {/* Rep Selection */}
               <div>
+                <p className="text-white font-medium mb-3">Rep Count</p>
               <button
                 onClick={() => {
                   setAutoReps(true);
                   setSelectedReps(null);
                 }}
-                className={`w-full p-6 rounded-xl border-2 transition-all text-left ${
+                className={`w-full p-6 rounded-xl border-2 transition-all text-left mb-4 ${
                   autoReps
                     ? 'bg-brand-blue/20 border-brand-blue'
                     : 'bg-gray-800/50 border-gray-700 hover:border-brand-blue/50'
@@ -943,7 +944,7 @@ Make it realistic and achievable.`,
               </button>
 
               <div>
-                <p className="text-white font-medium mb-3">Or select total reps:</p>
+                <p className="text-white font-medium mb-3">Or manually set total reps:</p>
                 <div className="grid grid-cols-3 gap-3 mb-4">
                   {[100, 150, 200, 250, 300].map(reps => (
                     <button
@@ -991,6 +992,7 @@ Make it realistic and achievable.`,
                     Set
                   </Button>
                 </div>
+              </div>
               </div>
             </CardContent>
           </Card>
