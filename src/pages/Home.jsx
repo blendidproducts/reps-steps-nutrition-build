@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Play, Zap, Target, Trophy, TrendingUp, Star, Moon, Sun } from "lucide-react";
 import { motion } from "framer-motion";
 import { User } from "@/entities/User";
+import FitnessAvatar3D from "../components/FitnessAvatar3D";
 
 export default function Home() {
   const [isPro, setIsPro] = React.useState(false);
@@ -71,6 +72,16 @@ export default function Home() {
             <div className="flex justify-center mb-4 md:mb-6">
               <img src={bannerUrl} alt="RepsAndSteps" className="h-8 md:h-12 lg:h-16" />
             </div>
+            
+            {/* 3D Fitness Avatar */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2, duration: 0.8 }}
+              className="my-8 md:my-12"
+            >
+              <FitnessAvatar3D />
+            </motion.div>
             
             <p className="text-lg md:text-xl lg:text-2xl mb-8 md:mb-10 text-gray-300 max-w-2xl mx-auto px-4">
               Your ultimate calisthenics companion to track every rep and count every step.
