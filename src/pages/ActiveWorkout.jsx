@@ -170,59 +170,90 @@ export default function ActiveWorkout() {
       setWorkout({...workout, exercises: updatedExercises});
     }
     
-    // Check if we've completed all sets for current exercise
-    if (currentSet < (currentExercise.sets || 1)) {
-      setCurrentSet(prev => prev + 1);
+    // If superset, move to next exercise in the superset chain (same set number)
+    if (currentExercise.superset_with_next && currentExerciseIndex < workout.exercises.length - 1) {
+      // Move to next exercise but keep the same set number
+      setCurrentExerciseIndex(prev => prev + 1);
       setCurrentReps(0);
       setRepInput("");
       setExerciseTimer(0);
+      // No rest for supersets
+      return;
+    }
+    
+    // Check if we completed a set and need to go back to start of superset chain
+    if (currentSet < (currentExercise.sets || 1)) {
+      // Find the start of the current superset chain
+      let supersetStart = currentExerciseIndex;
+      while (supersetStart > 0 && workout.exercises[supersetStart - 1].superset_with_next) {
+        supersetStart--;
+      }
       
-      // Rest between sets (not for supersets or warmup)
-      if (!currentExercise.superset_with_next) {
+      // If we're at the end of a superset chain, go back to the beginning for next set
+      if (supersetStart !== currentExerciseIndex) {
+        setCurrentExerciseIndex(supersetStart);
+        setCurrentSet(prev => prev + 1);
+        setCurrentReps(0);
+        setRepInput("");
+        setExerciseTimer(0);
+        
+        // Rest after completing full superset round
         if (currentExercise.category === 'warmup') {
-          // Warmup sets = 5 seconds rest
           setIsResting(true);
           setRestTimer(WARMUP_REST_TIME);
           setRestCardioTotal(0);
         } else {
-          // Normal workout sets
+          setIsResting(true);
+          setRestTimer(workout.rest_time || 60);
+          setRestCardioTotal(0);
+        }
+      } else {
+        // Not in a superset, just move to next set
+        setCurrentSet(prev => prev + 1);
+        setCurrentReps(0);
+        setRepInput("");
+        setExerciseTimer(0);
+        
+        // Rest between sets
+        if (currentExercise.category === 'warmup') {
+          setIsResting(true);
+          setRestTimer(WARMUP_REST_TIME);
+          setRestCardioTotal(0);
+        } else {
           setIsResting(true);
           setRestTimer(workout.rest_time || 30);
           setRestCardioTotal(0);
         }
       }
-      } else {
+    } else {
+      // Completed all sets, move to next exercise
       if (currentExerciseIndex < workout.exercises.length - 1) {
         const nextExercise = workout.exercises[currentExerciseIndex + 1];
 
-        // Move to next exercise first
+        // Move to next exercise
         setCurrentExerciseIndex(prev => prev + 1);
         setCurrentSet(1);
         setCurrentReps(0);
         setRepInput("");
         setExerciseTimer(0);
 
-        // Then set rest based on exercise types
+        // Rest based on exercise types
         const isCurrentWarmup = currentExercise.category === 'warmup';
         const isNextWarmup = nextExercise?.category === 'warmup';
 
-        if (!currentExercise.superset_with_next) {
-          if (isCurrentWarmup || isNextWarmup) {
-            // ANY warmup transition = 5 seconds only
-            setIsResting(true);
-            setRestTimer(WARMUP_REST_TIME);
-            setRestCardioTotal(0);
-          } else {
-            // Normal rest between workout exercises
-            setIsResting(true);
-            setRestTimer(workout.rest_time || 60);
-            setRestCardioTotal(0);
-          }
+        if (isCurrentWarmup || isNextWarmup) {
+          setIsResting(true);
+          setRestTimer(WARMUP_REST_TIME);
+          setRestCardioTotal(0);
+        } else {
+          setIsResting(true);
+          setRestTimer(workout.rest_time || 60);
+          setRestCardioTotal(0);
         }
       } else {
         stopWorkout();
       }
-      }
+    }
   };
 
   const skipRest = () => {
