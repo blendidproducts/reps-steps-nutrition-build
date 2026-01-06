@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Play, Zap, Target, Trophy, TrendingUp, Star, Moon, Sun } from "lucide-react";
 import { motion } from "framer-motion";
 import { User } from "@/entities/User";
-import FitnessAvatar3D from "../components/FitnessAvatar3D";
 
 export default function Home() {
   const [isPro, setIsPro] = React.useState(false);
@@ -73,14 +72,21 @@ export default function Home() {
               <img src={bannerUrl} alt="RepsAndSteps" className="h-8 md:h-12 lg:h-16" />
             </div>
             
-            {/* 3D Fitness Avatar */}
+            {/* Fat to Fit Transformation */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2, duration: 0.8 }}
               className="my-8 md:my-12"
             >
-              <FitnessAvatar3D />
+              <h3 className="text-2xl md:text-3xl font-bold text-brand-blue mb-4">
+                From Fat to FIT
+              </h3>
+              <img 
+                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/ba6ad5e5a_RepsandSteps_FattoFit_Model.png" 
+                alt="Fat to Fit Transformation"
+                className="max-w-full md:max-w-2xl mx-auto rounded-2xl shadow-2xl"
+              />
             </motion.div>
             
             <p className="text-lg md:text-xl lg:text-2xl mb-8 md:mb-10 text-gray-300 max-w-2xl mx-auto px-4">
