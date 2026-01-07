@@ -91,8 +91,8 @@ export default function WorkoutBuilder() {
           restTime: [duration <= 15 ? 20 : duration <= 30 ? 30 : 45]
         }));
 
-        // Skip directly to step 3 (customize)
-        setCurrentStep(3);
+        // Skip directly to step 2 (summary)
+        setCurrentStep(2);
       }
     };
     initialize();
@@ -348,9 +348,8 @@ export default function WorkoutBuilder() {
   };
 
   const canProceed = () => {
-    if (currentStep === 1) return selectedExercises.length > 0;
-    if (currentStep === 2) return (selectedTime !== null || isFreeTime);
-    if (currentStep === 3) return selectedExercises.length > 0;
+    if (currentStep === 1) return selectedExercises.length > 0 && (selectedTime !== null || isFreeTime);
+    if (currentStep === 2) return selectedExercises.length > 0;
     return false;
   };
 
@@ -505,7 +504,7 @@ Make it realistic and achievable.`,
 
       setSelectedExercises(selectedExercises);
       setSelectedTime(response.estimated_duration || 30);
-      setCurrentStep(3); // Skip to customize step
+      setCurrentStep(2); // Skip to summary step
       setShowAIPrompt(false);
       toast.success(`AI workout generated with ${selectedExercises.length} exercises!`);
     } catch (error) {
@@ -548,7 +547,7 @@ Make it realistic and achievable.`,
                 {currentStep > 1 ? <Check className="w-5 h-5" /> : '1'}
               </div>
               <span className={`text-sm font-medium ${currentStep >= 1 ? 'text-white' : 'text-gray-400'}`}>
-                Exercises
+                Configure
               </span>
             </div>
 
@@ -558,22 +557,9 @@ Make it realistic and achievable.`,
               <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
                 currentStep >= 2 ? 'bg-brand-blue text-white' : 'bg-gray-700 text-gray-400'
               }`}>
-                {currentStep > 2 ? <Check className="w-5 h-5" /> : '2'}
+                2
               </div>
               <span className={`text-sm font-medium ${currentStep >= 2 ? 'text-white' : 'text-gray-400'}`}>
-                Time & Reps
-              </span>
-            </div>
-
-            <div className={`flex-1 h-1 mx-2 rounded ${currentStep > 2 ? 'bg-brand-blue' : 'bg-gray-700'}`} />
-
-            <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                currentStep >= 3 ? 'bg-brand-blue text-white' : 'bg-gray-700 text-gray-400'
-              }`}>
-                3
-              </div>
-              <span className={`text-sm font-medium ${currentStep >= 3 ? 'text-white' : 'text-gray-400'}`}>
                 Summary
               </span>
             </div>
@@ -654,7 +640,7 @@ Make it realistic and achievable.`,
           )}
         </AnimatePresence>
 
-        {/* Step 1: Choose Exercises */}
+        {/* Step 1: Configure Duration and Reps */}
         {currentStep === 1 && selectedExercises.length === 0 && (
           <Card className="bg-gray-900 border-gray-800 rounded-xl">
             <CardContent className="p-12 text-center">
@@ -674,31 +660,6 @@ Make it realistic and achievable.`,
         )}
 
         {currentStep === 1 && selectedExercises.length > 0 && (
-          <Card className="bg-gray-900 border-gray-800 rounded-xl">
-            <CardHeader>
-              <CardTitle className="text-white text-2xl flex items-center gap-2">
-                <Dumbbell className="w-6 h-6 text-brand-blue" />
-                Step 1: Your Exercises
-              </CardTitle>
-              <p className="text-gray-400">Review your selected exercises - configure in the next steps</p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {selectedExercises.map((exercise, index) => (
-                <div key={index} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <h4 className="text-white font-semibold">{exercise.name}</h4>
-                      <p className="text-xs text-gray-400 mt-1">{exercise.category}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Step 2: Duration and Reps */}
-        {currentStep === 2 && (
           <Card className="bg-gray-900 border-gray-800 rounded-xl">
             <CardHeader>
               <CardTitle className="text-white text-2xl flex items-center gap-2">
@@ -845,9 +806,9 @@ Make it realistic and achievable.`,
             <CardHeader>
               <CardTitle className="text-white text-2xl flex items-center gap-2">
                 <Timer className="w-6 h-6 text-brand-blue" />
-                Step 2: Duration & Reps
+                Step 1: Configure Your Workout
               </CardTitle>
-              <p className="text-gray-400">Set your workout duration and rep targets</p>
+              <p className="text-gray-400">Set duration and rep targets for your {selectedExercises.length} exercises</p>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Duration Selection */}
@@ -1001,8 +962,8 @@ Make it realistic and achievable.`,
           </Card>
         )}
 
-        {/* Step 3: Customize */}
-        {currentStep === 3 && selectedExercises.length === 0 && (
+        {/* Step 2: Summary */}
+        {currentStep === 2 && selectedExercises.length === 0 && (
           <Card className="bg-gray-900 border-gray-800 rounded-xl">
             <CardContent className="p-12 text-center">
               <Dumbbell className="w-16 h-16 text-gray-600 mx-auto mb-4" />
@@ -1020,7 +981,7 @@ Make it realistic and achievable.`,
           </Card>
         )}
 
-        {currentStep === 3 && selectedExercises.length > 0 && (
+        {currentStep === 2 && selectedExercises.length > 0 && (
           <div className="space-y-4">
             <Card className="bg-gray-900 border-gray-800 rounded-xl">
               <CardHeader>
@@ -1270,7 +1231,7 @@ Make it realistic and achievable.`,
               <div />
             )}
 
-            {currentStep < 3 ? (
+            {currentStep < 2 ? (
               <Button
                 onClick={() => setCurrentStep(currentStep + 1)}
                 disabled={!canProceed()}
