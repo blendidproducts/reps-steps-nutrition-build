@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { toast } from 'sonner';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import {
   ArrowLeft,
   Play,
@@ -22,7 +23,8 @@ import {
   Trash2,
   Link as LinkIcon,
   Target,
-  Zap
+  Zap,
+  GripVertical
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { base44 } from "@/api/base44Client";
@@ -335,9 +337,19 @@ export default function WorkoutBuilder() {
     setSelectedExercises(updated);
   };
 
+  const onDragEnd = (result) => {
+    if (!result.destination) return;
+    
+    const items = Array.from(selectedExercises);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    
+    setSelectedExercises(items);
+  };
+
   const canProceed = () => {
-    if (currentStep === 1) return (selectedTime !== null || isFreeTime) && selectedCategory !== null;
-    if (currentStep === 2) return (selectedReps !== null || autoReps) && workoutLevel !== null;
+    if (currentStep === 1) return selectedExercises.length > 0;
+    if (currentStep === 2) return (selectedTime !== null || isFreeTime);
     if (currentStep === 3) return selectedExercises.length > 0;
     return false;
   };
@@ -360,7 +372,7 @@ export default function WorkoutBuilder() {
     
     if (settings.includeWarmup) {
       const warmupExercises = [
-        { id: 'warmup-1', name: 'Walk in Place', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 120 },
+        { id: 'warmup-1', name: 'Walk in Place', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 60 },
         { id: 'warmup-2', name: 'Toe Touches', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 20 },
         { id: 'warmup-3', name: 'Arm Circles Forward', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 15 },
         { id: 'warmup-4', name: 'Hip Circles', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 20 },
@@ -536,7 +548,7 @@ Make it realistic and achievable.`,
                 {currentStep > 1 ? <Check className="w-5 h-5" /> : '1'}
               </div>
               <span className={`text-sm font-medium ${currentStep >= 1 ? 'text-white' : 'text-gray-400'}`}>
-                Time
+                Exercises
               </span>
             </div>
 
@@ -549,7 +561,7 @@ Make it realistic and achievable.`,
                 {currentStep > 2 ? <Check className="w-5 h-5" /> : '2'}
               </div>
               <span className={`text-sm font-medium ${currentStep >= 2 ? 'text-white' : 'text-gray-400'}`}>
-                Reps
+                Time & Reps
               </span>
             </div>
 
@@ -562,7 +574,7 @@ Make it realistic and achievable.`,
                 3
               </div>
               <span className={`text-sm font-medium ${currentStep >= 3 ? 'text-white' : 'text-gray-400'}`}>
-                Customize
+                Summary
               </span>
             </div>
           </div>
@@ -642,8 +654,51 @@ Make it realistic and achievable.`,
           )}
         </AnimatePresence>
 
-        {/* Step 1: Select Time and Body Focus */}
-        {currentStep === 1 && (
+        {/* Step 1: Choose Exercises */}
+        {currentStep === 1 && selectedExercises.length === 0 && (
+          <Card className="bg-gray-900 border-gray-800 rounded-xl">
+            <CardContent className="p-12 text-center">
+              <Dumbbell className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-white mb-2">Choose Your Exercises</h3>
+              <p className="text-gray-400 mb-6">
+                Select exercises from the Exercises page first, then return here to build your workout.
+              </p>
+              <Button
+                onClick={() => navigate(createPageUrl("Exercises"))}
+                className="gradient-bg text-white hover:opacity-90"
+              >
+                Go to Exercises
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {currentStep === 1 && selectedExercises.length > 0 && (
+          <Card className="bg-gray-900 border-gray-800 rounded-xl">
+            <CardHeader>
+              <CardTitle className="text-white text-2xl flex items-center gap-2">
+                <Dumbbell className="w-6 h-6 text-brand-blue" />
+                Step 1: Your Exercises
+              </CardTitle>
+              <p className="text-gray-400">Review your selected exercises - configure in the next steps</p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {selectedExercises.map((exercise, index) => (
+                <div key={index} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h4 className="text-white font-semibold">{exercise.name}</h4>
+                      <p className="text-xs text-gray-400 mt-1">{exercise.category}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 2: Duration and Reps */}
+        {currentStep === 2 && (
           <Card className="bg-gray-900 border-gray-800 rounded-xl">
             <CardHeader>
               <CardTitle className="text-white text-2xl flex items-center gap-2">
@@ -786,143 +841,91 @@ Make it realistic and achievable.`,
           </Card>
         )}
 
-        {/* Step 2: Select Reps & Level */}
-        {currentStep === 2 && (
           <Card className="bg-gray-900 border-gray-800 rounded-xl">
             <CardHeader>
               <CardTitle className="text-white text-2xl flex items-center gap-2">
-                <Target className="w-6 h-6 text-brand-blue" />
-                Step 2: Workout Level & Reps
+                <Timer className="w-6 h-6 text-brand-blue" />
+                Step 2: Duration & Reps
               </CardTitle>
-              <p className="text-gray-400">Choose your fitness level and target reps</p>
+              <p className="text-gray-400">Set your workout duration and rep targets</p>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Workout Level Selection */}
+              {/* Duration Selection */}
               <div>
-                <Label className="text-white text-lg font-semibold mb-3 block">Workout Level</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <Label className="text-white text-lg font-semibold mb-3 block">Workout Duration</Label>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                {[15, 30, 45, 60].map(minutes => (
                   <button
+                    key={minutes}
                     onClick={() => {
-                      setWorkoutLevel('beginner');
-                      // Auto-adjust for beginner
-                      if (selectedTime > 30) setSelectedTime(30);
-                      if (selectedReps > 200 || !selectedReps) setSelectedReps(150);
-                      setSettings(prev => ({
-                        ...prev,
-                        defaultSets: [2],
-                        defaultReps: [10],
-                        restTime: [45],
-                        useWeightVest: false
-                      }));
+                      setSelectedTime(minutes);
+                      setIsFreeTime(false);
+                      setCustomTime("");
                     }}
-                    className={`p-6 rounded-xl border-2 transition-all text-left ${
-                      workoutLevel === 'beginner'
-                        ? 'bg-green-600/20 border-green-500'
-                        : 'bg-gray-800/50 border-gray-700 hover:border-green-500/50'
+                    className={`p-6 rounded-xl border-2 transition-all ${
+                      selectedTime === minutes && !isFreeTime
+                        ? 'bg-brand-blue/20 border-brand-blue text-white'
+                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-brand-blue/50'
                     }`}
                   >
-                    <div className="text-3xl mb-2">🌱</div>
-                    <div className="text-xl font-bold text-white mb-2">Beginner</div>
-                    <ul className="text-sm text-gray-400 space-y-1">
-                      <li>• 15-30 minutes max</li>
-                      <li>• Up to 200 reps</li>
-                      <li>• Light jog & walking</li>
-                      <li>• 45+ seconds rest</li>
-                      <li>• No weight vest</li>
-                    </ul>
+                    <Timer className="w-8 h-8 mx-auto mb-2" />
+                    <div className="text-3xl font-bold">{minutes}</div>
+                    <div className="text-sm">MINUTES</div>
                   </button>
-
-                  <button
-                    onClick={() => {
-                      setWorkoutLevel('average');
-                      setSettings(prev => ({
-                        ...prev,
-                        defaultSets: [3],
-                        defaultReps: [15],
-                        restTime: [30]
-                      }));
-                    }}
-                    className={`p-6 rounded-xl border-2 transition-all text-left ${
-                      workoutLevel === 'average'
-                        ? 'bg-blue-600/20 border-blue-500'
-                        : 'bg-gray-800/50 border-gray-700 hover:border-blue-500/50'
-                    }`}
-                  >
-                    <div className="text-3xl mb-2">💪</div>
-                    <div className="text-xl font-bold text-white mb-2">Average</div>
-                    <ul className="text-sm text-gray-400 space-y-1">
-                      <li>• 30-45 minutes</li>
-                      <li>• 200-400 reps</li>
-                      <li>• Walk, jog & sprints</li>
-                      <li>• 30-60 seconds rest</li>
-                      <li>• Optional weight vest</li>
-                    </ul>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setWorkoutLevel('advanced');
-                      setSettings(prev => ({
-                        ...prev,
-                        defaultSets: [4],
-                        defaultReps: [20],
-                        restTime: [20],
-                        useWeightVest: true,
-                        vestWeightLbs: [10]
-                      }));
-                    }}
-                    className={`p-6 rounded-xl border-2 transition-all text-left ${
-                      workoutLevel === 'advanced'
-                        ? 'bg-orange-600/20 border-orange-500'
-                        : 'bg-gray-800/50 border-gray-700 hover:border-orange-500/50'
-                    }`}
-                  >
-                    <div className="text-3xl mb-2">🔥</div>
-                    <div className="text-xl font-bold text-white mb-2">Advanced</div>
-                    <ul className="text-sm text-gray-400 space-y-1">
-                      <li>• 45-60 minutes</li>
-                      <li>• 400-600 reps</li>
-                      <li>• High intensity sprints</li>
-                      <li>• 20-30 seconds rest</li>
-                      <li>• Weight vest recommended</li>
-                    </ul>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setWorkoutLevel('military');
-                      if (selectedReps < 200) setSelectedReps(300);
-                      setSettings(prev => ({
-                        ...prev,
-                        defaultSets: [5],
-                        defaultReps: [25],
-                        restTime: [15],
-                        useWeightVest: true,
-                        vestWeightLbs: [20]
-                      }));
-                    }}
-                    className={`p-6 rounded-xl border-2 transition-all text-left ${
-                      workoutLevel === 'military'
-                        ? 'bg-red-600/20 border-red-500'
-                        : 'bg-gray-800/50 border-gray-700 hover:border-red-500/50'
-                    }`}
-                  >
-                    <div className="text-3xl mb-2">⚔️</div>
-                    <div className="text-xl font-bold text-white mb-2">Spartan/Military</div>
-                    <ul className="text-sm text-gray-400 space-y-1">
-                      <li>• 60+ minutes</li>
-                      <li>• 600+ reps minimum</li>
-                      <li>• Heavy sprints only</li>
-                      <li>• Max 30 seconds rest</li>
-                      <li>• Weight vest required</li>
-                    </ul>
-                  </button>
-                </div>
+                ))}
               </div>
 
-              {/* Rep Selection */}
+              <div className="space-y-4">
+                <div className="flex gap-3">
+                  <Input
+                    type="number"
+                    placeholder="Enter custom time (minutes)"
+                    value={customTime}
+                    onChange={(e) => {
+                      setCustomTime(e.target.value);
+                      if (e.target.value) {
+                        const time = parseInt(e.target.value);
+                        setSelectedTime(time);
+                        setIsFreeTime(false);
+                      }
+                    }}
+                    className="flex-1 bg-gray-800 border-gray-700 text-white"
+                  />
+                  <Button
+                    onClick={() => {
+                      if (customTime) {
+                        const time = parseInt(customTime);
+                        setSelectedTime(time);
+                        setIsFreeTime(false);
+                      }
+                    }}
+                    className="bg-brand-blue hover:bg-brand-blue/90"
+                  >
+                    Set
+                  </Button>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setIsFreeTime(true);
+                    setSelectedTime(999);
+                    setCustomTime("");
+                  }}
+                  className={`w-full p-6 rounded-xl border-2 transition-all ${
+                    isFreeTime
+                      ? 'bg-purple-600/20 border-purple-500 text-white'
+                      : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-purple-500/50'
+                  }`}
+                >
+                  <div className="text-xl font-bold mb-2">⏱️ NO TIME LIMIT</div>
+                  <div className="text-sm text-gray-400">Train at your own pace</div>
+                </button>
+              </div>
+              </div>
+              {/* Reps Only - No Level */}
               <div>
-                <p className="text-white font-medium mb-3">Rep Count</p>
+                <Label className="text-white text-lg font-semibold mb-3 block">Rep Settings</Label>
+
               <button
                 onClick={() => {
                   setAutoReps(true);
@@ -1076,64 +1079,88 @@ Make it realistic and achievable.`,
               </CardContent>
             </Card>
 
-            {/* Exercise List */}
+            {/* Exercise List with Drag & Drop */}
             <Card className="bg-gray-900 border-gray-800 rounded-xl">
               <CardHeader>
                 <CardTitle className="text-white text-xl">Exercise List</CardTitle>
-                <p className="text-sm text-gray-400">Customize your workout exercises</p>
+                <p className="text-sm text-gray-400">Drag to reorder, customize settings, and configure supersets</p>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {selectedExercises.map((exercise, index) => (
-                  <div key={index} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h4 className="text-white font-semibold">{exercise.name}</h4>
-                        <p className="text-xs text-gray-400 mt-1">{exercise.category}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            const similar = allExercises.filter(ex => 
-                              ex.category === exercise.category && ex.id !== exercise.id
-                            );
-                            if (similar.length > 0) {
-                              const random = similar[Math.floor(Math.random() * similar.length)];
-                              swapExercise(index, random);
-                            }
-                          }}
-                          className="w-8 h-8 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors"
-                          title="Swap Exercise"
-                        >
-                          <RefreshCw className="w-4 h-4 text-white" />
-                        </button>
-                        <button
-                          onClick={() => removeExercise(index)}
-                          className="w-8 h-8 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
-                          title="Remove Exercise"
-                        >
-                          <Trash2 className="w-4 h-4 text-white" />
-                        </button>
-                      </div>
-                    </div>
+              <CardContent>
+                <DragDropContext onDragEnd={onDragEnd}>
+                  <Droppable droppableId="exercises">
+                    {(provided) => (
+                      <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                        {selectedExercises.map((exercise, index) => (
+                          <Draggable key={`${exercise.id}-${index}`} draggableId={`${exercise.id}-${index}`} index={index}>
+                            {(provided) => (
+                              <div 
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className="bg-gray-800/50 rounded-lg p-4 border border-gray-700"
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div {...provided.dragHandleProps} className="mt-1 cursor-grab active:cursor-grabbing">
+                                    <GripVertical className="w-5 h-5 text-gray-400" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex items-start justify-between mb-3">
+                                      <div className="flex-1">
+                                        <h4 className="text-white font-semibold">{exercise.name}</h4>
+                                        <p className="text-xs text-gray-400 mt-1">{exercise.category}</p>
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => {
+                                            const similar = allExercises.filter(ex => 
+                                              ex.category === exercise.category && ex.id !== exercise.id
+                                            );
+                                            if (similar.length > 0) {
+                                              const random = similar[Math.floor(Math.random() * similar.length)];
+                                              swapExercise(index, random);
+                                            }
+                                          }}
+                                          className="w-8 h-8 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors"
+                                          title="Swap Exercise"
+                                        >
+                                          <RefreshCw className="w-4 h-4 text-white" />
+                                        </button>
+                                        <button
+                                          onClick={() => removeExercise(index)}
+                                          className="w-8 h-8 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
+                                          title="Remove Exercise"
+                                        >
+                                          <Trash2 className="w-4 h-4 text-white" />
+                                        </button>
+                                      </div>
+                                    </div>
 
-                    {index < selectedExercises.length - 1 && (
-                      <button
-                        onClick={() => toggleSuperset(index)}
-                        className={`w-full flex items-center justify-between p-2 rounded-lg border-2 transition-all ${
-                          exercise.superset_with_next
-                            ? 'bg-purple-600/20 border-purple-500 text-purple-300'
-                            : 'bg-gray-700/50 border-gray-600 text-gray-400 hover:border-gray-500'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <LinkIcon className="w-4 h-4" />
-                          <span className="text-sm font-medium">Superset with next</span>
-                        </div>
-                        {exercise.superset_with_next && <Check className="w-4 h-4" />}
-                      </button>
+                                    {index < selectedExercises.length - 1 && (
+                                      <button
+                                        onClick={() => toggleSuperset(index)}
+                                        className={`w-full flex items-center justify-between p-2 rounded-lg border-2 transition-all ${
+                                          exercise.superset_with_next
+                                            ? 'bg-purple-600/20 border-purple-500 text-purple-300'
+                                            : 'bg-gray-700/50 border-gray-600 text-gray-400 hover:border-gray-500'
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <LinkIcon className="w-4 h-4" />
+                                          <span className="text-sm font-medium">Superset with next</span>
+                                        </div>
+                                        {exercise.superset_with_next && <Check className="w-4 h-4" />}
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
                     )}
-                  </div>
-                ))}
+                  </Droppable>
+                </DragDropContext>
               </CardContent>
             </Card>
 
