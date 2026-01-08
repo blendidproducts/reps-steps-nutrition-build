@@ -962,11 +962,7 @@ export default function ActiveWorkout() {
                           SKIP - JUST REST
                         </Button>
                         <Button
-                          onClick={() => {
-                            setShowSupersetModal(false);
-                            setIsResting(false);
-                            openSupersetModal();
-                          }}
+                          onClick={openSupersetModal}
                           className="flex-1 bg-purple-600/20 border-2 border-purple-500 text-purple-300 hover:bg-purple-600/40"
                         >
                           <LinkIcon className="w-4 h-4 mr-2" />
@@ -1330,9 +1326,7 @@ export default function ActiveWorkout() {
                 </div>
 
                 <div className="flex gap-3">
-                  <Button onClick={() => {
-                    applySupersets();
-                  }} className="flex-1 bg-purple-600 hover:bg-purple-700">
+                  <Button onClick={applySupersets} className="flex-1 bg-purple-600 hover:bg-purple-700">
                     <Check className="w-4 h-4 mr-2" />
                     Confirm
                   </Button>
