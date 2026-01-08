@@ -1332,10 +1332,9 @@ export default function ActiveWorkout() {
                 <div className="flex gap-3">
                   <Button onClick={() => {
                     applySupersets();
-                    setShowSupersetModal(false);
                   }} className="flex-1 bg-purple-600 hover:bg-purple-700">
                     <Check className="w-4 h-4 mr-2" />
-                    Confirm Superset
+                    Confirm
                   </Button>
                   <Button onClick={() => setShowSupersetModal(false)} variant="outline" className="flex-1">
                     Cancel
