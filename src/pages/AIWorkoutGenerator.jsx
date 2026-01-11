@@ -138,10 +138,16 @@ export default function AIWorkoutGenerator() {
         sets = Math.min(5, sets + 1);
       }
 
-      // If user selected specific reps, calculate to hit target
-      if (!autoReps && selectedReps) {
+      // CRITICAL: If user selected specific reps, calculate to hit target EXACTLY
+      if (!autoReps && selectedReps && selectedReps > 0) {
         const totalSets = numExercises * sets;
         reps = Math.max(5, Math.round(selectedReps / totalSets));
+        // Ensure we hit the target as closely as possible
+        const actualTotal = numExercises * sets * reps;
+        if (actualTotal < selectedReps) {
+          // Increase reps to get closer
+          reps = Math.ceil(selectedReps / totalSets);
+        }
       }
 
       setSettings({
@@ -154,6 +160,23 @@ export default function AIWorkoutGenerator() {
       });
     }
   }, [currentStep, selectedExercises, workoutLevel, selectedTime, isFreeTime, autoReps, selectedReps]);
+
+  // Recalculate settings when user adjusts sliders in step 3
+  useEffect(() => {
+    if (currentStep === 3 && !autoReps && selectedReps && selectedReps > 0 && selectedExercises.length > 0) {
+      // User wants specific total reps - adjust to hit target
+      const numExercises = selectedExercises.length;
+      const totalSets = numExercises * settings.defaultSets[0];
+      const calculatedReps = Math.ceil(selectedReps / totalSets);
+      
+      if (calculatedReps !== settings.defaultReps[0]) {
+        setSettings(prev => ({
+          ...prev,
+          defaultReps: [Math.max(5, calculatedReps)]
+        }));
+      }
+    }
+  }, [settings.defaultSets, currentStep, autoReps, selectedReps, selectedExercises]);
 
   const updateSetting = (key, value) => {
     setSettings(prev => ({ ...prev, [key]: value }));
@@ -676,14 +699,21 @@ export default function AIWorkoutGenerator() {
                     </div>
                   )}
                   <div className="flex justify-between p-2 sm:p-3">
-                    <span className="text-gray-400">{!autoReps && selectedReps ? 'Actual Total Reps:' : 'Estimated Total Reps:'}</span>
-                    <span className="font-bold text-brand-blue">{getEstimatedTotalReps()} reps</span>
-                  </div>
-                  <div className="flex justify-between p-2 sm:p-3 text-xs">
-                    <span className="text-gray-500">
-                      ({selectedExercises.length} exercises × {settings.defaultSets[0]} sets × {settings.defaultReps[0]} reps)
+                    <span className="text-gray-400">Actual Total Reps:</span>
+                    <span className={`font-bold ${!autoReps && selectedReps && Math.abs(getEstimatedTotalReps() - selectedReps) <= 10 ? 'text-green-400' : 'text-brand-blue'}`}>
+                      {getEstimatedTotalReps()} reps
                     </span>
                   </div>
+                  <div className="p-2 sm:p-3 text-xs text-gray-500">
+                    ({selectedExercises.length} exercises × {settings.defaultSets[0]} sets × {settings.defaultReps[0]} reps)
+                  </div>
+                  {!autoReps && selectedReps && Math.abs(getEstimatedTotalReps() - selectedReps) > 10 && (
+                    <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                      <p className="text-yellow-400 text-xs sm:text-sm">
+                        ℹ️ Your target of {selectedReps} reps will result in approximately {getEstimatedTotalReps()} reps based on your selected time and settings.
+                      </p>
+                    </div>
+                  )}
                   <div className="flex justify-between p-2 sm:p-3">
                     <span className="text-gray-400">Exercises:</span>
                     <span className="font-bold text-white">{selectedExercises.length} exercises</span>
@@ -795,7 +825,15 @@ export default function AIWorkoutGenerator() {
                   <Label className="text-white text-sm sm:text-base">Sets per Exercise</Label>
                   <Slider
                     value={settings.defaultSets}
-                    onValueChange={(value) => updateSetting('defaultSets', value)}
+                    onValueChange={(value) => {
+                      updateSetting('defaultSets', value);
+                      // If manual reps target is set, recalculate reps per set
+                      if (!autoReps && selectedReps && selectedReps > 0 && selectedExercises.length > 0) {
+                        const totalSets = selectedExercises.length * value[0];
+                        const calculatedReps = Math.ceil(selectedReps / totalSets);
+                        updateSetting('defaultReps', [Math.max(5, Math.min(30, calculatedReps))]);
+                      }
+                    }}
                     min={1}
                     max={5}
                     step={1}
@@ -810,11 +848,16 @@ export default function AIWorkoutGenerator() {
                     value={settings.defaultReps}
                     onValueChange={(value) => updateSetting('defaultReps', value)}
                     min={5}
-                    max={30}
+                    max={50}
                     step={1}
                     className="w-full"
                   />
                   <div className="text-right text-white font-bold text-sm sm:text-base">{settings.defaultReps[0]} reps</div>
+                  {!autoReps && selectedReps && (
+                    <p className="text-xs text-gray-400">
+                      Adjust to hit your target of {selectedReps} reps
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-3">
