@@ -98,6 +98,21 @@ export default function WorkoutBuilder() {
     initialize();
   }, []);
 
+  // Recalculate settings when user manually sets total reps
+  useEffect(() => {
+    if (currentStep === 2 && !autoReps && selectedReps && selectedReps > 0 && selectedExercises.length > 0) {
+      // User wants specific total reps - adjust reps per set to hit target
+      const numExercises = selectedExercises.length;
+      const totalSets = numExercises * settings.defaultSets[0];
+      const calculatedReps = Math.ceil(selectedReps / totalSets);
+      
+      setSettings(prev => ({
+        ...prev,
+        defaultReps: [Math.max(5, Math.min(50, calculatedReps))]
+      }));
+    }
+  }, [selectedReps, autoReps, currentStep, selectedExercises.length]);
+
   // Auto-adjust settings based on time selection
   useEffect(() => {
     if (selectedTime && selectedExercises.length > 0) {
@@ -1001,7 +1016,12 @@ Make it realistic and achievable.`,
         )}
 
         {currentStep === 2 && selectedExercises.length > 0 && (
-          <div className="space-y-4">
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            className="space-y-4"
+          >
             <Card className="bg-gray-900 border-gray-800 rounded-xl">
               <CardHeader>
                 <CardTitle className="text-white text-xl">Workout Summary</CardTitle>
@@ -1153,9 +1173,17 @@ Make it realistic and achievable.`,
                   <Label className="text-white text-base">Sets per Exercise</Label>
                   <Slider
                     value={settings.defaultSets}
-                    onValueChange={(value) => updateSetting('defaultSets', value)}
+                    onValueChange={(value) => {
+                      updateSetting('defaultSets', value);
+                      // If manual reps target is set, recalculate reps per set
+                      if (!autoReps && selectedReps && selectedReps > 0 && selectedExercises.length > 0) {
+                        const totalSets = selectedExercises.length * value[0];
+                        const calculatedReps = Math.ceil(selectedReps / totalSets);
+                        updateSetting('defaultReps', [Math.max(5, Math.min(50, calculatedReps))]);
+                      }
+                    }}
                     min={1}
-                    max={Math.min(5, getConstraints().maxSets)}
+                    max={5}
                     step={1}
                     className="w-full"
                   />
@@ -1168,11 +1196,16 @@ Make it realistic and achievable.`,
                     value={settings.defaultReps}
                     onValueChange={(value) => updateSetting('defaultReps', value)}
                     min={5}
-                    max={Math.min(30, getConstraints().maxReps)}
+                    max={50}
                     step={1}
                     className="w-full"
                   />
                   <div className="text-right text-white font-bold">{settings.defaultReps[0]} reps</div>
+                  {!autoReps && selectedReps && (
+                    <p className="text-xs text-gray-400">
+                      Adjust to hit your target of {selectedReps} reps
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-3">
@@ -1226,7 +1259,7 @@ Make it realistic and achievable.`,
                 )}
               </CardContent>
             </Card>
-          </div>
+          </motion.div>
         )}
       </div>
 
