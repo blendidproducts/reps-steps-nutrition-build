@@ -35,6 +35,14 @@ export default function AIWorkoutGenerator() {
   const [allExercises, setAllExercises] = useState([]);
   const [selectedExercises, setSelectedExercises] = useState([]);
   const [user, setUser] = useState(null);
+  const [settings, setSettings] = useState({
+    defaultSets: [3],
+    defaultReps: [15],
+    restTime: [30],
+    includeWarmup: true,
+    useWeightVest: false,
+    vestWeightLbs: [10]
+  });
 
   useEffect(() => {
     const initialize = async () => {
@@ -90,46 +98,88 @@ export default function AIWorkoutGenerator() {
     setSelectedExercises(selected);
   };
 
-  const calculateSettings = () => {
-    if (!selectedTime || selectedExercises.length === 0) return { sets: 3, reps: 15, rest: 30 };
+  useEffect(() => {
+    if (currentStep === 3 && selectedExercises.length > 0) {
+      // Calculate and set settings when reaching step 3
+      const totalMinutes = isFreeTime ? 999 : selectedTime;
+      const numExercises = selectedExercises.length;
+      
+      let sets = 3;
+      let reps = 15;
+      let rest = 30;
+      
+      // Level-based adjustments
+      if (workoutLevel === 'beginner') {
+        sets = 2;
+        reps = 10;
+        rest = 45;
+      } else if (workoutLevel === 'intermediate') {
+        sets = 3;
+        reps = 15;
+        rest = 30;
+      } else if (workoutLevel === 'advanced') {
+        sets = 4;
+        reps = 20;
+        rest = 20;
+      }
 
-    const totalMinutes = isFreeTime ? 999 : selectedTime;
-    const numExercises = selectedExercises.length;
+      // Time-based adjustments
+      if (totalMinutes <= 15) {
+        sets = Math.max(1, sets - 1);
+        rest = 20;
+      } else if (totalMinutes >= 45) {
+        sets = Math.min(5, sets + 1);
+      }
+
+      // If user selected specific reps, calculate to hit target
+      if (!autoReps && selectedReps) {
+        const totalSets = numExercises * sets;
+        reps = Math.max(5, Math.round(selectedReps / totalSets));
+      }
+
+      setSettings({
+        defaultSets: [sets],
+        defaultReps: [reps],
+        restTime: [rest],
+        includeWarmup: true,
+        useWeightVest: false,
+        vestWeightLbs: [10]
+      });
+    }
+  }, [currentStep, selectedExercises, workoutLevel, selectedTime, isFreeTime, autoReps, selectedReps]);
+
+  const updateSetting = (key, value) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const removeExercise = (index) => {
+    const updated = selectedExercises.filter((_, i) => i !== index);
+    setSelectedExercises(updated);
+  };
+
+  const swapExercise = (index, newExercise) => {
+    const updated = [...selectedExercises];
+    updated[index] = { ...newExercise, superset_with_next: updated[index].superset_with_next || false };
+    setSelectedExercises(updated);
+  };
+
+  const toggleSuperset = (index) => {
+    const updated = [...selectedExercises];
+    updated[index] = {
+      ...updated[index],
+      superset_with_next: !updated[index].superset_with_next
+    };
+    setSelectedExercises(updated);
+  };
+
+  const onDragEnd = (result) => {
+    if (!result.destination) return;
     
-    let sets = 3;
-    let reps = 15;
-    let rest = 30;
+    const items = Array.from(selectedExercises);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
     
-    // Level-based adjustments
-    if (workoutLevel === 'beginner') {
-      sets = 2;
-      reps = 10;
-      rest = 45;
-    } else if (workoutLevel === 'intermediate') {
-      sets = 3;
-      reps = 15;
-      rest = 30;
-    } else if (workoutLevel === 'advanced') {
-      sets = 4;
-      reps = 20;
-      rest = 20;
-    }
-
-    // Time-based adjustments
-    if (totalMinutes <= 15) {
-      sets = Math.max(1, sets - 1);
-      rest = 20;
-    } else if (totalMinutes >= 45) {
-      sets = Math.min(5, sets + 1);
-    }
-
-    // If user selected specific reps, calculate to hit target
-    if (!autoReps && selectedReps) {
-      const totalSets = numExercises * sets;
-      reps = Math.max(5, Math.round(selectedReps / totalSets));
-    }
-
-    return { sets, reps, rest };
+    setSelectedExercises(items);
   };
 
   const canProceed = () => {
@@ -153,35 +203,37 @@ export default function AIWorkoutGenerator() {
       return;
     }
 
-    const settings = calculateSettings();
+    let exercisesToUse = [...selectedExercises];
     
-    const warmupExercises = [
-      { id: 'warmup-1', name: 'Walk in Place', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 60 },
-      { id: 'warmup-2', name: 'Toe Touches', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 20 },
-      { id: 'warmup-3', name: 'Arm Circles Forward', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 15 },
-      { id: 'warmup-4', name: 'Hip Circles', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 20 },
-      { id: 'warmup-5', name: 'Chest Opener Stretch', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 15 }
-    ];
-    
-    const exercisesToUse = [...warmupExercises, ...selectedExercises];
+    if (settings.includeWarmup) {
+      const warmupExercises = [
+        { id: 'warmup-1', name: 'Walk in Place', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 60 },
+        { id: 'warmup-2', name: 'Toe Touches', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 20 },
+        { id: 'warmup-3', name: 'Arm Circles Forward', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 15 },
+        { id: 'warmup-4', name: 'Hip Circles', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 20 },
+        { id: 'warmup-5', name: 'Chest Opener Stretch', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 15 }
+      ];
+      exercisesToUse = [...warmupExercises, ...exercisesToUse];
+    }
 
     const workoutData = {
       name: `AI ${workoutLevel.toUpperCase()} ${selectedCategory?.toUpperCase()} Workout - ${new Date().toLocaleDateString()}`,
       exercises: exercisesToUse.map((ex) => ({
         exercise_id: ex.id,
         exercise_name: ex.name,
-        target_reps: ex.metric === 'time' ? 0 : settings.reps,
+        target_reps: ex.metric === 'time' ? 0 : settings.defaultReps[0],
         target_time: ex.target_time || 0,
         completed_reps: 0,
         completed_time: 0,
-        sets: ex.category === 'warmup' ? 1 : settings.sets,
+        sets: ex.category === 'warmup' ? 1 : settings.defaultSets[0],
         superset_with_next: ex.superset_with_next || false,
         category: ex.category || 'full_body',
         metric: ex.metric || 'reps'
       })),
       workout_type: "rep_based",
       difficulty: workoutLevel,
-      rest_time: settings.rest
+      weight_added_lbs: settings.useWeightVest ? settings.vestWeightLbs[0] : 0,
+      rest_time: settings.restTime[0]
     };
 
     try {
@@ -204,18 +256,22 @@ export default function AIWorkoutGenerator() {
 
   const getEstimatedTime = () => {
     if (!selectedExercises.length) return 0;
-    const settings = calculateSettings();
-    const warmupTime = 190; // ~3 minutes
-    const totalSets = selectedExercises.length * settings.sets;
-    const workTime = totalSets * settings.reps * 2; // 2 sec per rep
-    const restTime = (totalSets - 1) * settings.rest;
+    const warmupTime = settings.includeWarmup ? 190 : 0;
+    const totalSets = selectedExercises.length * settings.defaultSets[0];
+    const workTime = totalSets * settings.defaultReps[0] * 2; // 2 sec per rep
+    const restTime = (totalSets - 1) * settings.restTime[0];
     return Math.ceil((warmupTime + workTime + restTime) / 60);
   };
 
   const getEstimatedTotalReps = () => {
     if (!selectedExercises.length) return 0;
-    const settings = calculateSettings();
-    return selectedExercises.length * settings.sets * settings.reps;
+    return selectedExercises.length * settings.defaultSets[0] * settings.defaultReps[0];
+  };
+
+  const isTimeValid = () => {
+    if (isFreeTime) return true;
+    const estimated = getEstimatedTime();
+    return estimated <= selectedTime;
   };
 
   return (
@@ -574,7 +630,7 @@ export default function AIWorkoutGenerator() {
           </motion.div>
         )}
 
-        {/* Step 3: Confirm */}
+        {/* Step 3: Confirm & Customize */}
         {currentStep === 3 && (
           <motion.div
             initial={{ opacity: 0, x: 50 }}
@@ -591,53 +647,222 @@ export default function AIWorkoutGenerator() {
                 <p className="text-sm sm:text-base text-gray-400">Review your AI-generated workout</p>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3 text-sm sm:text-base">
-                  <div className="flex justify-between p-3 sm:p-4 bg-gray-800/50 rounded-lg">
+                <div className="space-y-2 text-sm sm:text-base">
+                  <div className="flex justify-between p-2 sm:p-3">
                     <span className="text-gray-400">Level:</span>
                     <span className="font-bold text-white capitalize">{workoutLevel}</span>
                   </div>
-                  <div className="flex justify-between p-3 sm:p-4 bg-gray-800/50 rounded-lg">
+                  <div className="flex justify-between p-2 sm:p-3">
                     <span className="text-gray-400">Body Focus:</span>
                     <span className="font-bold text-white capitalize">{selectedCategory} body</span>
                   </div>
-                  <div className="flex justify-between p-3 sm:p-4 bg-gray-800/50 rounded-lg">
-                    <span className="text-gray-400">Duration:</span>
+                  <div className="flex justify-between p-2 sm:p-3">
+                    <span className="text-gray-400">Target Duration:</span>
                     <span className="font-bold text-brand-blue">{isFreeTime ? 'No Limit' : `${selectedTime} min`}</span>
                   </div>
-                  <div className="flex justify-between p-3 sm:p-4 bg-gray-800/50 rounded-lg">
+                  <div className="flex justify-between p-2 sm:p-3">
                     <span className="text-gray-400">Estimated Time:</span>
-                    <span className="font-bold text-green-400">{getEstimatedTime()} min</span>
+                    <span className={`font-bold ${isTimeValid() ? 'text-green-400' : 'text-red-400'}`}>
+                      {getEstimatedTime()} min
+                    </span>
                   </div>
-                  <div className="flex justify-between p-3 sm:p-4 bg-gray-800/50 rounded-lg">
-                    <span className="text-gray-400">Total Reps:</span>
-                    <span className="font-bold text-purple-400">{getEstimatedTotalReps()} reps</span>
+                  {!autoReps && selectedReps && (
+                    <div className="flex justify-between p-2 sm:p-3">
+                      <span className="text-gray-400">Target Total Reps:</span>
+                      <span className="font-bold text-purple-400">{selectedReps} reps</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between p-2 sm:p-3">
+                    <span className="text-gray-400">{!autoReps && selectedReps ? 'Actual Total Reps:' : 'Estimated Total Reps:'}</span>
+                    <span className="font-bold text-brand-blue">{getEstimatedTotalReps()} reps</span>
                   </div>
-                  <div className="flex justify-between p-3 sm:p-4 bg-gray-800/50 rounded-lg">
+                  <div className="flex justify-between p-2 sm:p-3 text-xs">
+                    <span className="text-gray-500">
+                      ({selectedExercises.length} exercises × {settings.defaultSets[0]} sets × {settings.defaultReps[0]} reps)
+                    </span>
+                  </div>
+                  <div className="flex justify-between p-2 sm:p-3">
                     <span className="text-gray-400">Exercises:</span>
                     <span className="font-bold text-white">{selectedExercises.length} exercises</span>
                   </div>
                 </div>
+                {!isTimeValid() && (
+                  <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                    <p className="text-red-400 text-xs sm:text-sm">
+                      ⚠️ Workout exceeds time limit. Reduce sets/reps in settings below.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
+            {/* Exercise List with Drag & Drop */}
             <Card className="bg-gray-900 border-gray-800 rounded-xl">
               <CardHeader>
                 <CardTitle className="text-white text-lg sm:text-xl">Exercise List</CardTitle>
+                <p className="text-xs sm:text-sm text-gray-400">Drag to reorder, swap, or configure supersets</p>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {selectedExercises.map((exercise, index) => (
-                    <div key={index} className="flex items-center gap-3 p-3 sm:p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-brand-blue text-white flex items-center justify-center font-bold text-xs sm:text-sm flex-shrink-0">
-                        {index + 1}
+                <DragDropContext onDragEnd={onDragEnd}>
+                  <Droppable droppableId="exercises">
+                    {(provided) => (
+                      <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2 sm:space-y-3">
+                        {selectedExercises.map((exercise, index) => (
+                          <Draggable key={`${exercise.id}-${index}`} draggableId={`${exercise.id}-${index}`} index={index}>
+                            {(provided) => (
+                              <div 
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className="bg-gray-800/50 rounded-lg p-3 sm:p-4 border border-gray-700"
+                              >
+                                <div className="flex items-start gap-2 sm:gap-3">
+                                  <div {...provided.dragHandleProps} className="mt-1 cursor-grab active:cursor-grabbing">
+                                    <GripVertical className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-start justify-between mb-2 sm:mb-3">
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className="text-white font-semibold text-sm sm:text-base truncate">{exercise.name}</h4>
+                                        <p className="text-xs text-gray-400 mt-1">{exercise.category}</p>
+                                      </div>
+                                      <div className="flex gap-1 sm:gap-2 flex-shrink-0 ml-2">
+                                        <button
+                                          onClick={() => {
+                                            const similar = allExercises.filter(ex => 
+                                              ex.category === exercise.category && ex.id !== exercise.id
+                                            );
+                                            if (similar.length > 0) {
+                                              const random = similar[Math.floor(Math.random() * similar.length)];
+                                              swapExercise(index, random);
+                                            }
+                                          }}
+                                          className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors"
+                                          title="Swap Exercise"
+                                        >
+                                          <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                                        </button>
+                                        <button
+                                          onClick={() => removeExercise(index)}
+                                          className="w-7 h-7 sm:w-8 sm:h-8 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
+                                          title="Remove Exercise"
+                                        >
+                                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {index < selectedExercises.length - 1 && (
+                                      <button
+                                        onClick={() => toggleSuperset(index)}
+                                        className={`w-full flex items-center justify-between p-2 rounded-lg border-2 transition-all ${
+                                          exercise.superset_with_next
+                                            ? 'bg-purple-600/20 border-purple-500 text-purple-300'
+                                            : 'bg-gray-700/50 border-gray-600 text-gray-400 hover:border-gray-500'
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <LinkIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                                          <span className="text-xs sm:text-sm font-medium">Superset with next</span>
+                                        </div>
+                                        {exercise.superset_with_next && <Check className="w-3 h-3 sm:w-4 sm:h-4" />}
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-white text-sm sm:text-base truncate">{exercise.name}</div>
-                        <div className="text-xs text-gray-400">{exercise.category}</div>
-                      </div>
-                    </div>
-                  ))}
+                    )}
+                  </Droppable>
+                </DragDropContext>
+              </CardContent>
+            </Card>
+
+            {/* Fine-tune Settings */}
+            <Card className="bg-gray-900 border-gray-800 rounded-xl">
+              <CardHeader>
+                <CardTitle className="text-white text-lg sm:text-xl">Fine-tune Settings</CardTitle>
+                <p className="text-xs sm:text-sm text-gray-400">Adjust workout parameters</p>
+              </CardHeader>
+              <CardContent className="space-y-4 sm:space-y-6">
+                <div className="space-y-3">
+                  <Label className="text-white text-sm sm:text-base">Sets per Exercise</Label>
+                  <Slider
+                    value={settings.defaultSets}
+                    onValueChange={(value) => updateSetting('defaultSets', value)}
+                    min={1}
+                    max={5}
+                    step={1}
+                    className="w-full"
+                  />
+                  <div className="text-right text-white font-bold text-sm sm:text-base">{settings.defaultSets[0]} sets</div>
                 </div>
+
+                <div className="space-y-3">
+                  <Label className="text-white text-sm sm:text-base">Reps per Set</Label>
+                  <Slider
+                    value={settings.defaultReps}
+                    onValueChange={(value) => updateSetting('defaultReps', value)}
+                    min={5}
+                    max={30}
+                    step={1}
+                    className="w-full"
+                  />
+                  <div className="text-right text-white font-bold text-sm sm:text-base">{settings.defaultReps[0]} reps</div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-white text-sm sm:text-base">Rest Time (seconds)</Label>
+                  <Slider
+                    value={settings.restTime}
+                    onValueChange={(value) => updateSetting('restTime', value)}
+                    min={15}
+                    max={120}
+                    step={5}
+                    className="w-full"
+                  />
+                  <div className="text-right text-white font-bold text-sm sm:text-base">{settings.restTime[0]} seconds</div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-800/50 rounded-xl border border-gray-700">
+                  <div>
+                    <Label className="text-white text-sm sm:text-base font-medium">Include Warm-up</Label>
+                    <p className="text-xs sm:text-sm text-gray-400">5 dynamic warm-up exercises</p>
+                  </div>
+                  <Switch
+                    checked={settings.includeWarmup}
+                    onCheckedChange={(checked) => updateSetting('includeWarmup', checked)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-800/50 rounded-xl border border-gray-700">
+                  <div>
+                    <Label className="text-white text-sm sm:text-base font-medium">Use Weight Vest</Label>
+                    <p className="text-xs sm:text-sm text-gray-400">Add extra resistance</p>
+                  </div>
+                  <Switch
+                    checked={settings.useWeightVest}
+                    onCheckedChange={(checked) => updateSetting('useWeightVest', checked)}
+                  />
+                </div>
+
+                {settings.useWeightVest && (
+                  <div className="space-y-3">
+                    <Label className="text-white text-sm sm:text-base">Vest Weight (LBS)</Label>
+                    <Slider
+                      value={settings.vestWeightLbs}
+                      onValueChange={(value) => updateSetting('vestWeightLbs', value)}
+                      min={5}
+                      max={50}
+                      step={5}
+                      className="w-full"
+                    />
+                    <div className="text-right text-white font-bold text-sm sm:text-base">{settings.vestWeightLbs[0]} LBS</div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -688,6 +913,35 @@ export default function AIWorkoutGenerator() {
       <div className="fixed bottom-0 left-0 right-0 h-20 bg-black sm:hidden z-40 flex items-center justify-center">
         <div className="text-gray-800 text-xs">RepsAndSteps</div>
       </div>
+
+      <style>
+        {`
+          /* Slider styling */
+          [data-orientation="horizontal"].relative.h-2.w-full.grow.overflow-hidden.rounded-full {
+            height: 10px !important;
+            background-color: #374151 !important;
+            border-radius: 9999px !important;
+          }
+          
+          [data-orientation="horizontal"].absolute.h-full {
+            background-color: #00a9ff !important;
+            height: 10px !important;
+            border-radius: 9999px !important;
+          }
+          
+          [role="slider"].block.h-5.w-5.rounded-full {
+            background-color: #00a9ff !important;
+            border: 3px solid #ffffff !important;
+            box-shadow: 0 0 10px rgba(0, 169, 255, 0.8) !important;
+            width: 24px !important;
+            height: 24px !important;
+          }
+          
+          [data-state="checked"] {
+            background-color: #00a9ff !important;
+          }
+        `}
+      </style>
     </div>
   );
 }
