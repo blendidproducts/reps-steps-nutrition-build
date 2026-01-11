@@ -1,3 +1,4 @@
+import AIWorkoutGenerator from './pages/AIWorkoutGenerator';
 import Achievements from './pages/Achievements';
 import ActiveWorkout from './pages/ActiveWorkout';
 import BodyMeasurements from './pages/BodyMeasurements';
@@ -21,11 +22,11 @@ import Stretches from './pages/Stretches';
 import WorkoutBuilder from './pages/WorkoutBuilder';
 import WorkoutComplete from './pages/WorkoutComplete';
 import WorkoutDetail from './pages/WorkoutDetail';
-import AIWorkoutGenerator from './pages/AIWorkoutGenerator';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "AIWorkoutGenerator": AIWorkoutGenerator,
     "Achievements": Achievements,
     "ActiveWorkout": ActiveWorkout,
     "BodyMeasurements": BodyMeasurements,
@@ -49,7 +50,6 @@ export const PAGES = {
     "WorkoutBuilder": WorkoutBuilder,
     "WorkoutComplete": WorkoutComplete,
     "WorkoutDetail": WorkoutDetail,
-    "AIWorkoutGenerator": AIWorkoutGenerator,
 }
 
 export const pagesConfig = {

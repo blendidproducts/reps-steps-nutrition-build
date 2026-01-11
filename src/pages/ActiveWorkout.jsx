@@ -287,7 +287,7 @@ export default function ActiveWorkout() {
       };
       
       setCardioIntervals(prev => [...prev, cardioEntry]);
-      setRestCardioTotal(prev => prev + cardioTimer);
+      // restCardioTotal is already updated in real-time by the timer
       
       // DO NOT add to workout exercises - just log for analytics
       setActiveCardio(null);
@@ -353,7 +353,12 @@ export default function ActiveWorkout() {
           setTimer(prev => prev + 1);
 
         if (activeCardio) {
+          // Cardio is active - increment cardio timer and decrement rest timer
           setCardioTimer(prev => prev + 1);
+          setRestCardioTotal(prev => prev + 1);
+          if (restTimer > 0) {
+            setRestTimer(prev => Math.max(0, prev - 1));
+          }
         } else if (!isResting) {
           const currentMetric = workout?.exercises[currentExerciseIndex]?.metric || 'reps';
           if (currentMetric === 'reps') {
@@ -388,7 +393,7 @@ export default function ActiveWorkout() {
               playBeep(true); // Long beep
             }
             
-            // Auto-close rest if cardio total reaches rest time
+            // Auto-close rest if cardio total reaches or exceeds rest time
             if (restCardioTotal >= (workout.rest_time || 60)) {
               setTimeout(() => skipRest(), 100);
             }
@@ -401,7 +406,7 @@ export default function ActiveWorkout() {
             }, 1000);
             }
             return () => clearInterval(interval);
-            }, [isActive, isPaused, isResting, restTimer, workout, currentExerciseIndex, activeCardio, isTimerPaused, lastBeepSecond]);
+            }, [isActive, isPaused, isResting, restTimer, workout, currentExerciseIndex, activeCardio, isTimerPaused, lastBeepSecond, restCardioTotal]);
 
   const loadWorkout = async () => {
     try {
@@ -715,7 +720,7 @@ export default function ActiveWorkout() {
 
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
-      <div className="container mx-auto px-2 py-4 md:px-4 md:py-6 max-w-md">
+      <div className="container mx-auto px-2 py-4 md:px-4 md:py-6 max-w-md" style={{ paddingBottom: '120px' }}>
         {/* Header */}
         <div className="text-center mb-4">
           <div className="flex items-center justify-between mb-2">
@@ -873,8 +878,11 @@ export default function ActiveWorkout() {
                         <p className="text-xs text-blue-400 mb-2">+ {extendedRestTime}s added</p>
                       )}
                       <div className="mb-4">
-                        <p className="text-sm text-gray-400">Cardio Time: {restCardioTotal}s / {restTimer + restCardioTotal}s</p>
-                        <Progress value={(restCardioTotal / (restTimer + restCardioTotal)) * 100} className="h-2 mt-2" />
+                        <p className="text-sm text-gray-400">Cardio Time: {restCardioTotal}s / {workout.rest_time || 60}s</p>
+                        <Progress value={(restCardioTotal / (workout.rest_time || 60)) * 100} className="h-2 mt-2" />
+                        {restTimer <= 0 && restCardioTotal >= (workout.rest_time || 60) && (
+                          <p className="text-xs text-green-400 mt-1">✓ Rest complete - tap DONE</p>
+                        )}
                       </div>
 
                       {/* Exercise Preview Cards */}
@@ -975,8 +983,11 @@ export default function ActiveWorkout() {
                       <h2 className="text-3xl font-bold mb-2 text-brand-blue uppercase">{activeCardio.type}ING</h2>
                       <div className="text-7xl font-bold mb-4 text-brand-blue animate-pulse">{formatTime(cardioTimer)}</div>
                       <div className="mb-4">
-                        <p className="text-sm text-gray-400">Total Cardio: {restCardioTotal + cardioTimer}s / {workout.rest_time || 60}s</p>
-                        <Progress value={((restCardioTotal + cardioTimer) / (workout.rest_time || 60)) * 100} className="h-2 mt-2" />
+                        <p className="text-sm text-gray-400">Total Cardio: {restCardioTotal}s / {workout.rest_time || 60}s</p>
+                        <Progress value={(restCardioTotal / (workout.rest_time || 60)) * 100} className="h-2 mt-2" />
+                        {restTimer <= 0 && restCardioTotal >= (workout.rest_time || 60) && (
+                          <p className="text-xs text-green-400 mt-1">✓ Rest complete!</p>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-2 gap-3 mb-4">
@@ -991,8 +1002,8 @@ export default function ActiveWorkout() {
                         <Button
                           onClick={() => {
                             stopCardio();
-                            if (restCardioTotal + cardioTimer >= (workout.rest_time || 60)) {
-                              skipRest();
+                            if (restCardioTotal >= (workout.rest_time || 60)) {
+                              setTimeout(() => skipRest(), 100);
                             }
                           }}
                           size="lg"
@@ -1187,18 +1198,18 @@ export default function ActiveWorkout() {
         {/* Control Buttons */}
         <div className="flex justify-center gap-2 mb-4 px-2">
           {!isActive ? (
-            <Button size="lg" onClick={startWorkout} className="gradient-bg text-white px-6 py-3 text-lg font-bold rounded-full flex-1 max-w-xs">
+            <Button size="lg" onClick={startWorkout} className="gradient-bg text-white px-6 py-3 text-base sm:text-lg font-bold rounded-full flex-1 max-w-xs touch-manipulation min-h-[48px]">
               <Play className="w-5 h-5 mr-2" /> START
             </Button>
           ) : (
             <>
-              <Button size="sm" onClick={pauseWorkout} variant="outline" className="bg-yellow-500/20 border-yellow-400 text-white hover:bg-yellow-500/30 px-3 py-2 flex-1">
+              <Button size="sm" onClick={pauseWorkout} variant="outline" className="bg-yellow-500/20 border-yellow-400 text-white hover:bg-yellow-500/30 px-2 sm:px-3 py-2 flex-1 touch-manipulation min-h-[44px] text-xs sm:text-sm">
                 <Pause className="w-4 h-4 mr-1" /> {isPaused ? 'RESUME' : 'PAUSE'}
               </Button>
-              <Button size="sm" onClick={nextExercise} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 flex-1">
+              <Button size="sm" onClick={nextExercise} className="bg-blue-500 hover:bg-blue-600 text-white px-2 sm:px-3 py-2 flex-1 touch-manipulation min-h-[44px] text-xs sm:text-sm">
                 <SkipForward className="w-4 h-4 mr-1" /> NEXT
               </Button>
-              <Button size="sm" onClick={stopWorkout} variant="outline" className="bg-red-500/20 border-red-400 text-white hover:bg-red-500/30 px-3 py-2 flex-1">
+              <Button size="sm" onClick={stopWorkout} variant="outline" className="bg-red-500/20 border-red-400 text-white hover:bg-red-500/30 px-2 sm:px-3 py-2 flex-1 touch-manipulation min-h-[44px] text-xs sm:text-sm">
                 <Square className="w-4 h-4 mr-1" /> STOP
               </Button>
             </>
@@ -1206,10 +1217,10 @@ export default function ActiveWorkout() {
         </div>
 
         {/* Exercise List */}
-        <Card className="bg-card border-border mx-2">
+        <Card className="bg-card border-border mx-2 mb-4">
           <CardContent className="p-3">
-            <h3 className="text-base font-semibold mb-3 text-white">Workout Plan</h3>
-            <div className="space-y-2 max-h-40 overflow-y-auto">
+            <h3 className="text-sm sm:text-base font-semibold mb-3 text-white">Workout Plan</h3>
+            <div className="space-y-2 max-h-40 overflow-y-auto touch-manipulation">
               {workout.exercises.filter(ex => !ex.is_cardio_interval).map((exercise, index) => (
                 <div
                   key={index}
@@ -1242,16 +1253,17 @@ export default function ActiveWorkout() {
       </div>
 
       <AnimatePresence>
-        {showVideoHelp && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setShowVideoHelp(false)}
-          >
-            <Card className="bg-card max-w-md w-full border-border" onClick={e => e.stopPropagation()}>
-              <CardContent className="p-6">
+              {showVideoHelp && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
+                  onClick={() => setShowVideoHelp(false)}
+                  style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
+                >
+                  <Card className="bg-gray-900 max-w-md w-full border-gray-800" onClick={e => e.stopPropagation()}>
+                    <CardContent className="p-4 sm:p-6">
                 <h3 className="text-xl font-bold mb-4 text-white">{currentExercise.exercise_name} - How To</h3>
                 <div className="w-full h-48 bg-background rounded-lg flex items-center justify-center mb-4">
                   <div className="text-center">
@@ -1281,11 +1293,12 @@ export default function ActiveWorkout() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
             onClick={() => setShowSupersetModal(false)}
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
           >
-            <Card className="bg-card max-w-lg w-full border-border max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-              <CardContent className="p-6">
+            <Card className="bg-gray-900 max-w-lg w-full border-gray-800 max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+              <CardContent className="p-4 sm:p-6">
                 <h3 className="text-xl font-bold mb-2 text-white flex items-center gap-2">
                   <LinkIcon className="w-6 h-6 text-purple-400" />
                   Configure Supersets
@@ -1347,11 +1360,12 @@ export default function ActiveWorkout() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
             onClick={() => setShowSwapModal(false)}
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
           >
-            <Card className="bg-card max-w-lg w-full border-border max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-              <CardContent className="p-6">
+            <Card className="bg-gray-900 max-w-lg w-full border-gray-800 max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+              <CardContent className="p-4 sm:p-6">
                 <h3 className="text-xl font-bold mb-4 text-white">Swap Exercise</h3>
                 <p className="text-sm text-gray-400 mb-4">Choose a different exercise for this slot</p>
                 <div className="overflow-y-auto max-h-[50vh] space-y-2">
