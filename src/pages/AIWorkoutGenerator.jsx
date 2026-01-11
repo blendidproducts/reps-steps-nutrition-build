@@ -611,10 +611,6 @@ export default function AIWorkoutGenerator() {
                         value={customReps}
                         onChange={(e) => {
                           setCustomReps(e.target.value);
-                          if (e.target.value) {
-                            setSelectedReps(parseInt(e.target.value));
-                            setAutoReps(false);
-                          }
                         }}
                         className="flex-1 bg-gray-800 border-gray-700 text-white"
                       />
