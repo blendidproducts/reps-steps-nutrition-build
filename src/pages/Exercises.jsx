@@ -204,10 +204,10 @@ Choose realistic exercises that match the body focus and intensity level.`,
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb', paddingBottom: '100px' }}>
       {/* Header */}
-      <div className="gradient-bg text-white py-8 md:py-10">
-        <div className="container mx-auto px-4">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Choose Your Plan</h1>
-          <p className="text-lg md:text-xl text-white/90 mb-6">
+      <div className="gradient-bg text-white py-6 sm:py-8 md:py-10">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">Choose Your Plan</h1>
+          <p className="text-base sm:text-lg md:text-xl text-white/90 mb-4 sm:mb-6">
             AI Generator or Manual Builder
           </p>
 
@@ -251,7 +251,7 @@ Choose realistic exercises that match the body focus and intensity level.`,
             </motion.div>
 
           {/* Plan Selection Cards */}
-          <div className="grid md:grid-cols-2 gap-4 max-w-4xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-4xl">
             {/* AI Workout Generator - PRO ONLY */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -307,9 +307,9 @@ Choose realistic exercises that match the body focus and intensity level.`,
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         {/* Search and Filters */}
-        <div className="bg-card rounded-xl shadow-lg p-4 mb-6 sticky top-0 z-10">
+        <div className="bg-card rounded-xl shadow-lg p-3 sm:p-4 mb-4 sm:mb-6 sticky top-0 z-10">
           <div className="flex flex-col gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -369,19 +369,19 @@ Choose realistic exercises that match the body focus and intensity level.`,
 
         {/* Exercise Grid */}
         {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
             {Array(12).fill(0).map((_, i) => (
-              <div key={i} className="bg-card rounded-xl p-4 animate-pulse">
-                <div className="w-full h-24 bg-gray-700 rounded-lg mb-4"></div>
-                <div className="h-4 bg-gray-700 rounded mb-2 w-3/4"></div>
-                <div className="h-3 bg-gray-700 rounded w-1/2"></div>
+              <div key={i} className="bg-card rounded-xl p-3 sm:p-4 animate-pulse">
+                <div className="w-full h-20 sm:h-24 bg-gray-700 rounded-lg mb-3 sm:mb-4"></div>
+                <div className="h-3 sm:h-4 bg-gray-700 rounded mb-2 w-3/4"></div>
+                <div className="h-2 sm:h-3 bg-gray-700 rounded w-1/2"></div>
               </div>
             ))}
           </div>
         ) : (
           <motion.div 
             layout
-            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-24"
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 pb-24 sm:pb-28"
           >
             <AnimatePresence>
               {filteredExercises.map((exercise) => (

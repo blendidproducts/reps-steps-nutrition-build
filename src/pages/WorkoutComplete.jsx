@@ -86,7 +86,7 @@ export default function WorkoutComplete() {
   };
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-6 relative overflow-hidden">
+    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
       {/* Animated Background Elements */}
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none">
@@ -156,7 +156,7 @@ export default function WorkoutComplete() {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.6, duration: 0.6 }}
-                className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6"
+                className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-6"
               >
                 <div className="bg-background rounded-lg p-4 border border-brand-blue/30">
                   <Target className="w-6 h-6 text-brand-blue mx-auto mb-2" />

@@ -517,20 +517,20 @@ Make it realistic and achievable.`,
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white py-6">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center gap-4">
+      <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white py-4 sm:py-6">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3 sm:gap-4">
             <Button
               variant="outline"
               size="icon"
               onClick={() => navigate(createPageUrl("Exercises"))}
-              className="bg-white/10 text-white border-white/20 hover:bg-white/20 rounded-lg"
+              className="bg-white/10 text-white border-white/20 hover:bg-white/20 rounded-lg flex-shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold">Build Your Workout</h1>
-              <p className="text-sm text-white/80">Step-by-step workout creation</p>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold truncate">Build Your Workout</h1>
+              <p className="text-xs sm:text-sm text-white/80">Step-by-step workout creation</p>
             </div>
           </div>
         </div>
@@ -538,7 +538,7 @@ Make it realistic and achievable.`,
 
       {/* Progress Steps */}
       <div className="bg-gray-900/50 border-b border-gray-800">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between max-w-3xl mx-auto">
             <div className="flex items-center gap-2">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
@@ -567,7 +567,7 @@ Make it realistic and achievable.`,
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8 pb-64 md:pb-40 max-w-3xl">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8 pb-64 md:pb-40 max-w-3xl">
         {/* AI Prompt Modal */}
         <AnimatePresence>
           {showAIPrompt && (
