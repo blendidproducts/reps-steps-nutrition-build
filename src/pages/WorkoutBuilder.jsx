@@ -811,10 +811,6 @@ Make it realistic and achievable.`,
                     value={customReps}
                     onChange={(e) => {
                       setCustomReps(e.target.value);
-                      if (e.target.value) {
-                        setSelectedReps(parseInt(e.target.value));
-                        setAutoReps(false);
-                      }
                     }}
                     className="flex-1 bg-gray-800 border-gray-700 text-white"
                   />
@@ -836,6 +832,7 @@ Make it realistic and achievable.`,
           </Card>
         )}
 
+        {currentStep === 1 && selectedExercises.length > 0 && (
           <Card className="bg-gray-900 border-gray-800 rounded-xl">
             <CardHeader>
               <CardTitle className="text-white text-2xl flex items-center gap-2">
