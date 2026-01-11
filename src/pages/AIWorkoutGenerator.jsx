@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { toast } from 'sonner';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import {
   ArrowLeft,
   Play,
@@ -17,7 +20,11 @@ import {
   Check,
   Target,
   Zap,
-  TrendingUp
+  TrendingUp,
+  RefreshCw,
+  Trash2,
+  Link as LinkIcon,
+  GripVertical
 } from "lucide-react";
 import { motion } from "framer-motion";
 
