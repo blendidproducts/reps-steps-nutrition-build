@@ -258,7 +258,7 @@ Choose realistic exercises that match the body focus and intensity level.`,
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.6 }}
             >
-              <Link to={isPro ? createPageUrl("WorkoutBuilder") : createPageUrl("Pricing")}>
+              <Link to={isPro ? createPageUrl("AIWorkoutGenerator") : createPageUrl("Pricing")}>
                 <div className={`relative bg-gradient-to-br from-purple-600 to-blue-600 p-6 rounded-2xl border-2 ${
                   isPro ? 'border-yellow-400' : 'border-purple-500/50 opacity-75'
                 } hover:scale-105 transition-transform cursor-pointer`}>
@@ -273,9 +273,9 @@ Choose realistic exercises that match the body focus and intensity level.`,
                     Smart AI creates personalized workouts in seconds
                   </p>
                   <ul className="space-y-2 text-sm text-white/80">
-                    <li>✓ Choose duration & focus area</li>
+                    <li>✓ Choose your fitness level</li>
+                    <li>✓ Select body focus & duration</li>
                     <li>✓ Auto-selected exercises</li>
-                    <li>✓ Optimized for your time</li>
                   </ul>
                 </div>
               </Link>
