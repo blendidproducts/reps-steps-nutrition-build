@@ -1145,8 +1145,8 @@ export default function ActiveWorkout() {
                     ))}
                   </div>
 
-                  <div className="flex justify-center items-center gap-2 mb-4">
-                    <div className="flex flex-col gap-1">
+                  <div className="flex justify-center items-center gap-2 mb-4 mx-auto max-w-sm">
+                    <div className="flex flex-col gap-1 items-center">
                       <Button size="icon" variant="outline" onClick={subtractRep} className="w-10 h-10 rounded-full bg-gray-800 border-gray-700">
                         <Minus className="w-5 h-5" />
                       </Button>
@@ -1165,7 +1165,7 @@ export default function ActiveWorkout() {
                       placeholder="Reps"
                       className="w-20 bg-gray-800 border-gray-700 text-white text-center text-lg placeholder:text-gray-500"
                     />
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1 items-center">
                       <Button size="icon" variant="outline" onClick={addRep} className="w-10 h-10 rounded-full bg-gray-800 border-gray-700">
                         <Plus className="w-5 h-5" />
                       </Button>
@@ -1179,15 +1179,17 @@ export default function ActiveWorkout() {
                         +5
                       </Button>
                     </div>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => setCurrentReps(currentReps + 10)} 
-                      className="w-12 h-12 rounded-full bg-green-700/50 border-green-600 text-white font-bold"
-                      title="Add 10"
-                    >
-                      +10
-                    </Button>
+                    <div className="flex items-center">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => setCurrentReps(currentReps + 10)} 
+                        className="w-14 h-14 rounded-full bg-green-700/50 border-green-600 text-white font-bold"
+                        title="Add 10"
+                      >
+                        +10
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
