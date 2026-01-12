@@ -22,6 +22,7 @@ import Stretches from './pages/Stretches';
 import WorkoutBuilder from './pages/WorkoutBuilder';
 import WorkoutComplete from './pages/WorkoutComplete';
 import WorkoutDetail from './pages/WorkoutDetail';
+import PresetPrograms from './pages/PresetPrograms';
 import __Layout from './Layout.jsx';
 
 
@@ -50,6 +51,7 @@ export const PAGES = {
     "WorkoutBuilder": WorkoutBuilder,
     "WorkoutComplete": WorkoutComplete,
     "WorkoutDetail": WorkoutDetail,
+    "PresetPrograms": PresetPrograms,
 }
 
 export const pagesConfig = {
