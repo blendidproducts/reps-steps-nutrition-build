@@ -23,7 +23,7 @@ const navigationItems = [
   { title: "Stretches", url: createPageUrl("Stretches"), icon: Timer },
   { title: "Nutrition", url: createPageUrl("Nutrition"), icon: Apple },
   { title: "Saved Workouts", url: createPageUrl("SavedWorkouts"), icon: BookmarkPlus },
-  { title: "Programs", url: createPageUrl("Programs"), icon: Calendar },
+  { title: "Preset Programs", url: createPageUrl("PresetPrograms"), icon: Calendar },
   { title: "History", url: createPageUrl("History"), icon: History },
   { title: "Progress", url: createPageUrl("Progress"), icon: Camera },
   { title: "Achievements", url: createPageUrl("Achievements"), icon: Trophy },
