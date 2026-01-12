@@ -24,7 +24,8 @@ import {
   Route,
   Zap,
   RefreshCw,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Check
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
