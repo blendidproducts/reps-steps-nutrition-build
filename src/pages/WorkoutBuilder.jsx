@@ -27,6 +27,7 @@ import {
   GripVertical
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
 import { base44 } from "@/api/base44Client";
 
 export default function WorkoutBuilder() {
