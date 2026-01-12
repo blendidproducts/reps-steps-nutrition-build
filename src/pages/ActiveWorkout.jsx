@@ -1145,7 +1145,7 @@ export default function ActiveWorkout() {
                     ))}
                   </div>
 
-                  <div className="flex justify-center items-center gap-2 mb-4 mx-auto max-w-sm">
+                  <div className="flex justify-center items-center gap-2 mb-4 mx-auto max-w-sm pl-4">
                     <div className="flex flex-col gap-1 items-center">
                       <Button size="icon" variant="outline" onClick={subtractRep} className="w-10 h-10 rounded-full bg-gray-800 border-gray-700">
                         <Minus className="w-5 h-5" />
