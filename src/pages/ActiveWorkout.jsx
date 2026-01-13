@@ -62,6 +62,8 @@ export default function ActiveWorkout() {
   const [isTimerPaused, setIsTimerPaused] = useState(true);
   const [lastBeepSecond, setLastBeepSecond] = useState(null);
   const audioContextRef = useRef(null);
+  const timerStartTimeRef = useRef(null);
+  const lastTickTimeRef = useRef(Date.now());
   const WARMUP_REST_TIME = 5; // Fixed 5 seconds between warmup exercises
   const [warmupTargetTime, setWarmupTargetTime] = useState(30);
   const [showSupersetModal, setShowSupersetModal] = useState(false);
@@ -339,35 +341,41 @@ export default function ActiveWorkout() {
     let interval;
     if (isActive) {
       interval = setInterval(() => {
-        // Always increment elapsed time (total time) when workout is active
-        setElapsedTimer(prev => {
-          const newElapsed = prev + 1;
-          // Auto-stop after 4 hours
-          if (newElapsed >= 14400) {
-            stopWorkout();
-          }
-          return newElapsed;
-        });
+        const now = Date.now();
+        const actualElapsed = Math.floor((now - lastTickTimeRef.current) / 1000);
+        
+        if (actualElapsed > 0) {
+          lastTickTimeRef.current = now;
+          
+          // Always increment elapsed time (total time) when workout is active
+          setElapsedTimer(prev => {
+            const newElapsed = prev + actualElapsed;
+            // Auto-stop after 4 hours
+            if (newElapsed >= 14400) {
+              stopWorkout();
+            }
+            return newElapsed;
+          });
 
-        // Only increment active timer when not paused
-        if (!isPaused) {
-          setTimer(prev => prev + 1);
+          // Only increment active timer when not paused
+          if (!isPaused) {
+            setTimer(prev => prev + actualElapsed);
 
-        if (activeCardio) {
-          // Cardio is active - increment cardio timer and decrement rest timer
-          setCardioTimer(prev => prev + 1);
-          setRestCardioTotal(prev => prev + 1);
-          if (restTimer > 0) {
-            setRestTimer(prev => Math.max(0, prev - 1));
-          }
-        } else if (!isResting) {
-          const currentMetric = workout?.exercises[currentExerciseIndex]?.metric || 'reps';
-          if (currentMetric === 'reps') {
-            setExerciseTimer(prev => prev + 1);
-          } else { // Time-based
-            const targetTime = workout.exercises[currentExerciseIndex].target_time;
-            setExerciseTimer(prevTime => {
-              const newTime = prevTime + 1;
+          if (activeCardio) {
+            // Cardio is active - increment cardio timer and decrement rest timer
+            setCardioTimer(prev => prev + actualElapsed);
+            setRestCardioTotal(prev => prev + actualElapsed);
+            if (restTimer > 0) {
+              setRestTimer(prev => Math.max(0, prev - actualElapsed));
+            }
+          } else if (!isResting) {
+            const currentMetric = workout?.exercises[currentExerciseIndex]?.metric || 'reps';
+            if (currentMetric === 'reps') {
+              setExerciseTimer(prev => prev + actualElapsed);
+            } else { // Time-based
+              const targetTime = workout.exercises[currentExerciseIndex].target_time;
+              setExerciseTimer(prevTime => {
+                const newTime = prevTime + actualElapsed;
               const timeLeft = targetTime - newTime;
               
               // Countdown beeps for last 3 seconds
@@ -379,12 +387,12 @@ export default function ActiveWorkout() {
                 setTimeout(nextExercise, 500);
               }
               
-              return newTime;
-            });
-          }
-        } else if (restTimer > 0) {
-          setRestTimer(prev => {
-            const newTimer = prev - 1;
+                return newTime;
+              });
+            }
+          } else if (restTimer > 0) {
+            setRestTimer(prev => {
+              const newTimer = prev - actualElapsed;
             
             // Countdown beeps for last 3 seconds of rest
             if (newTimer <= 3 && newTimer > 0 && newTimer !== lastBeepSecond) {
@@ -398,13 +406,14 @@ export default function ActiveWorkout() {
             if (restCardioTotal >= (workout.rest_time || 60)) {
               setTimeout(() => skipRest(), 100);
             }
-            return newTimer;
-            });
-            } else if (restTimer === 0 && isResting) {
-            skipRest();
-            }
-            }
-            }, 1000);
+              return Math.max(0, newTimer);
+              });
+          } else if (restTimer <= 0 && isResting) {
+              skipRest();
+          }
+        }
+        }
+      }, 100);
             }
             return () => clearInterval(interval);
             }, [isActive, isPaused, isResting, restTimer, workout, currentExerciseIndex, activeCardio, isTimerPaused, lastBeepSecond, restCardioTotal]);
@@ -521,6 +530,8 @@ export default function ActiveWorkout() {
   const startWorkout = () => {
     setIsActive(true);
     setSessionStartTime(new Date());
+    timerStartTimeRef.current = Date.now();
+    lastTickTimeRef.current = Date.now();
   };
 
   const pauseWorkout = () => setIsPaused(!isPaused);
@@ -1261,12 +1272,12 @@ export default function ActiveWorkout() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
+                  className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4"
                   onClick={() => setShowVideoHelp(false)}
-                  style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
+                  style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)', overflow: 'auto' }}
                 >
-                  <Card className="bg-gray-900 max-w-md w-full border-gray-800" onClick={e => e.stopPropagation()}>
-                    <CardContent className="p-4 sm:p-6">
+                  <Card className="bg-gray-900 w-full max-w-[95vw] sm:max-w-md border-gray-800 max-h-[90vh] overflow-auto my-auto" onClick={e => e.stopPropagation()}>
+                    <CardContent className="p-3 sm:p-6">
                 <h3 className="text-xl font-bold mb-4 text-white">{currentExercise.exercise_name} - How To</h3>
                 <div className="w-full h-48 bg-background rounded-lg flex items-center justify-center mb-4">
                   <div className="text-center">
@@ -1296,40 +1307,42 @@ export default function ActiveWorkout() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
+            className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4"
             onClick={() => setShowSupersetModal(false)}
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)', overflow: 'auto' }}
           >
-            <Card className="bg-gray-900 max-w-lg w-full border-gray-800 max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-              <CardContent className="p-4 sm:p-6">
-                <h3 className="text-xl font-bold mb-2 text-white flex items-center gap-2">
-                  <LinkIcon className="w-6 h-6 text-purple-400" />
-                  Configure Supersets
-                </h3>
-                <p className="text-sm text-gray-400 mb-4">Select exercises to link together (no rest between them)</p>
+            <Card className="bg-gray-900 w-full max-w-[95vw] sm:max-w-lg border-gray-800 max-h-[90vh] sm:max-h-[85vh] overflow-hidden my-auto" onClick={e => e.stopPropagation()}>
+              <CardContent className="p-3 sm:p-6 flex flex-col h-full max-h-[90vh]">
+                <div className="flex-shrink-0">
+                  <h3 className="text-lg sm:text-xl font-bold mb-2 text-white flex items-center gap-2">
+                    <LinkIcon className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
+                    Configure Supersets
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-400 mb-3">Select exercises to link together (no rest between them)</p>
 
-                <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3 mb-4">
-                  <p className="text-xs text-purple-400 mb-1">💡 <strong>How Supersets Work:</strong></p>
-                  <ul className="text-xs text-gray-400 space-y-1">
-                    <li>• Check exercises to link them together</li>
-                    <li>• Checked exercises = superset with the NEXT exercise</li>
-                    <li>• Chain multiple exercises by checking all of them</li>
-                    <li>• Example: Check Ex1 & Ex2 = Ex1→Ex2→Ex3 superset</li>
-                  </ul>
+                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-2 sm:p-3 mb-3">
+                    <p className="text-xs text-purple-400 mb-1">💡 <strong>How Supersets Work:</strong></p>
+                    <ul className="text-xs text-gray-400 space-y-1">
+                      <li>• Check exercises to link them together</li>
+                      <li>• Checked exercises = superset with the NEXT exercise</li>
+                      <li>• Chain multiple exercises by checking all of them</li>
+                      <li>• Example: Check Ex1 & Ex2 = Ex1→Ex2→Ex3 superset</li>
+                    </ul>
+                  </div>
                 </div>
 
-                <div className="overflow-y-auto max-h-[40vh] space-y-2 mb-4">
+                <div className="overflow-y-auto flex-1 space-y-2 mb-3 min-h-0">
                   {supersetSelections.map((selection, idx) => (
-                    <div key={selection.index} className="flex items-center gap-3 p-3 rounded-lg bg-gray-800/50 border border-gray-700">
+                    <div key={selection.index} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-gray-800/50 border border-gray-700 flex-shrink-0">
                       <input
                         type="checkbox"
                         checked={selection.selected}
                         onChange={() => toggleSupersetSelection(selection.index)}
                         disabled={idx === supersetSelections.length - 1}
-                        className="w-5 h-5 rounded border-gray-600 text-purple-500 focus:ring-purple-500"
+                        className="w-4 h-4 sm:w-5 sm:h-5 rounded border-gray-600 text-purple-500 focus:ring-purple-500 flex-shrink-0"
                       />
-                      <div className="flex-1">
-                        <div className="font-semibold text-white">{selection.name}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-white text-sm sm:text-base truncate">{selection.name}</div>
                         {selection.selected && idx < supersetSelections.length - 1 && (
                           <div className="text-xs text-purple-400 mt-1">→ Superset with next</div>
                         )}
@@ -1341,12 +1354,12 @@ export default function ActiveWorkout() {
                   ))}
                 </div>
 
-                <div className="flex gap-3">
-                  <Button onClick={applySupersets} className="flex-1 bg-purple-600 hover:bg-purple-700">
+                <div className="flex gap-2 sm:gap-3 flex-shrink-0">
+                  <Button onClick={applySupersets} className="flex-1 bg-purple-600 hover:bg-purple-700 min-h-[44px] text-sm sm:text-base">
                     <Check className="w-4 h-4 mr-2" />
                     Confirm
                   </Button>
-                  <Button onClick={() => setShowSupersetModal(false)} variant="outline" className="flex-1">
+                  <Button onClick={() => setShowSupersetModal(false)} variant="outline" className="flex-1 min-h-[44px] text-sm sm:text-base">
                     Cancel
                   </Button>
                 </div>
@@ -1363,29 +1376,29 @@ export default function ActiveWorkout() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
+            className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4"
             onClick={() => setShowSwapModal(false)}
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)', overflow: 'auto' }}
           >
-            <Card className="bg-gray-900 max-w-lg w-full border-gray-800 max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-              <CardContent className="p-4 sm:p-6">
-                <h3 className="text-xl font-bold mb-4 text-white">Swap Exercise</h3>
-                <p className="text-sm text-gray-400 mb-4">Choose a different exercise for this slot</p>
-                <div className="overflow-y-auto max-h-[50vh] space-y-2">
+            <Card className="bg-gray-900 w-full max-w-[95vw] sm:max-w-lg border-gray-800 max-h-[90vh] sm:max-h-[85vh] overflow-hidden my-auto" onClick={e => e.stopPropagation()}>
+              <CardContent className="p-3 sm:p-6 flex flex-col h-full max-h-[90vh]">
+                <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-white flex-shrink-0">Swap Exercise</h3>
+                <p className="text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4 flex-shrink-0">Choose a different exercise for this slot</p>
+                <div className="overflow-y-auto flex-1 space-y-2 min-h-0">
                   {allExercises
                     .filter(ex => ex.category === currentExercise.category || ex.category === 'full_body')
                     .map(exercise => (
                       <button
                         key={exercise.id}
                         onClick={() => swapExercise(exercise)}
-                        className="w-full text-left p-3 rounded-lg bg-gray-800/50 hover:bg-gray-700 transition-colors border border-gray-700 hover:border-brand-blue"
+                        className="w-full text-left p-2 sm:p-3 rounded-lg bg-gray-800/50 hover:bg-gray-700 transition-colors border border-gray-700 hover:border-brand-blue flex-shrink-0"
                       >
-                        <div className="font-semibold text-white">{exercise.name}</div>
+                        <div className="font-semibold text-white text-sm sm:text-base">{exercise.name}</div>
                         <div className="text-xs text-gray-400 mt-1">{exercise.description}</div>
                       </button>
                     ))}
                 </div>
-                <Button onClick={() => setShowSwapModal(false)} variant="outline" className="w-full mt-4">
+                <Button onClick={() => setShowSwapModal(false)} variant="outline" className="w-full mt-3 sm:mt-4 flex-shrink-0 min-h-[44px]">
                   Cancel
                 </Button>
               </CardContent>

@@ -11,6 +11,7 @@ import MealPlans from './pages/MealPlans';
 import Nutrition from './pages/Nutrition';
 import NutritionGoals from './pages/NutritionGoals';
 import NutritionHistory from './pages/NutritionHistory';
+import PresetPrograms from './pages/PresetPrograms';
 import Pricing from './pages/Pricing';
 import Programs from './pages/Programs';
 import Progress from './pages/Progress';
@@ -22,7 +23,6 @@ import Stretches from './pages/Stretches';
 import WorkoutBuilder from './pages/WorkoutBuilder';
 import WorkoutComplete from './pages/WorkoutComplete';
 import WorkoutDetail from './pages/WorkoutDetail';
-import PresetPrograms from './pages/PresetPrograms';
 import __Layout from './Layout.jsx';
 
 
@@ -40,6 +40,7 @@ export const PAGES = {
     "Nutrition": Nutrition,
     "NutritionGoals": NutritionGoals,
     "NutritionHistory": NutritionHistory,
+    "PresetPrograms": PresetPrograms,
     "Pricing": Pricing,
     "Programs": Programs,
     "Progress": Progress,
@@ -51,7 +52,6 @@ export const PAGES = {
     "WorkoutBuilder": WorkoutBuilder,
     "WorkoutComplete": WorkoutComplete,
     "WorkoutDetail": WorkoutDetail,
-    "PresetPrograms": PresetPrograms,
 }
 
 export const pagesConfig = {
