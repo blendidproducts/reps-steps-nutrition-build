@@ -1416,20 +1416,20 @@ export default function ActiveWorkout() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4"
+            className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
             onClick={() => setShowSupersetModal(false)}
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)', overflow: 'auto' }}
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
           >
-            <Card className="bg-gray-900 w-full max-w-[95vw] sm:max-w-lg border-gray-800 max-h-[90vh] sm:max-h-[85vh] overflow-hidden my-auto" onClick={e => e.stopPropagation()}>
-              <CardContent className="p-3 sm:p-6 flex flex-col h-full max-h-[90vh]">
-                <div className="flex-shrink-0">
+            <Card className="bg-gray-900 w-full max-w-lg border-gray-800 my-auto flex flex-col" style={{ maxHeight: 'calc(100vh - 4rem)' }} onClick={e => e.stopPropagation()}>
+              <CardContent className="p-4 sm:p-6 flex flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
+                <div className="flex-shrink-0 pb-3">
                   <h3 className="text-lg sm:text-xl font-bold mb-2 text-white flex items-center gap-2">
                     <LinkIcon className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
                     Configure Supersets
                   </h3>
                   <p className="text-xs sm:text-sm text-gray-400 mb-3">Select exercises to link together (no rest between them)</p>
 
-                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-2 sm:p-3 mb-3">
+                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-2 sm:p-3">
                     <p className="text-xs text-purple-400 mb-1">💡 <strong>How Supersets Work:</strong></p>
                     <ul className="text-xs text-gray-400 space-y-1">
                       <li>• Check exercises to link them together</li>
@@ -1440,7 +1440,7 @@ export default function ActiveWorkout() {
                   </div>
                 </div>
 
-                <div className="overflow-y-auto flex-1 space-y-2 mb-3 min-h-0">
+                <div className="overflow-y-auto flex-1 space-y-2 mb-3" style={{ minHeight: '200px', maxHeight: 'calc(100vh - 28rem)' }}>
                   {supersetSelections.map((selection, idx) => (
                     <div key={selection.index} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-gray-800/50 border border-gray-700 flex-shrink-0">
                       <input
@@ -1463,12 +1463,12 @@ export default function ActiveWorkout() {
                   ))}
                 </div>
 
-                <div className="flex gap-2 sm:gap-3 flex-shrink-0">
-                  <Button onClick={applySupersets} className="flex-1 bg-purple-600 hover:bg-purple-700 min-h-[44px] text-sm sm:text-base">
+                <div className="flex gap-2 sm:gap-3 flex-shrink-0 pt-3 border-t border-gray-700">
+                  <Button onClick={applySupersets} className="flex-1 bg-purple-600 hover:bg-purple-700 min-h-[48px] text-sm sm:text-base">
                     <Check className="w-4 h-4 mr-2" />
                     Confirm
                   </Button>
-                  <Button onClick={() => setShowSupersetModal(false)} variant="outline" className="flex-1 min-h-[44px] text-sm sm:text-base">
+                  <Button onClick={() => setShowSupersetModal(false)} variant="outline" className="flex-1 min-h-[48px] text-sm sm:text-base border-gray-600 hover:bg-gray-800">
                     Cancel
                   </Button>
                 </div>
@@ -1485,12 +1485,12 @@ export default function ActiveWorkout() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4"
+            className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
             onClick={() => setShowSwapModal(false)}
-            style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)', overflow: 'auto' }}
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
           >
-            <Card className="bg-gray-900 w-full max-w-[95vw] sm:max-w-lg border-gray-800 max-h-[90vh] sm:max-h-[85vh] overflow-hidden my-auto" onClick={e => e.stopPropagation()}>
-              <CardContent className="p-3 sm:p-6 flex flex-col h-full max-h-[90vh]">
+            <Card className="bg-gray-900 w-full max-w-lg border-gray-800 my-auto flex flex-col" style={{ maxHeight: 'calc(100vh - 4rem)' }} onClick={e => e.stopPropagation()}>
+              <CardContent className="p-4 sm:p-6 flex flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
                 <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-white flex-shrink-0">Swap Exercise</h3>
                 <p className="text-xs sm:text-sm text-gray-400 mb-2 flex-shrink-0">Search or choose from the list</p>
                 
@@ -1504,7 +1504,7 @@ export default function ActiveWorkout() {
                   />
                 </div>
 
-                <div className="overflow-y-auto flex-1 space-y-2 min-h-0">
+                <div className="overflow-y-auto flex-1 space-y-2" style={{ minHeight: '200px', maxHeight: 'calc(100vh - 24rem)' }}>
                   {allExercises
                     .filter(ex => ex.category === currentExercise.category || ex.category === 'full_body')
                     .filter(ex => !swapSearchQuery || ex.name.toLowerCase().includes(swapSearchQuery.toLowerCase()) || (ex.description && ex.description.toLowerCase().includes(swapSearchQuery.toLowerCase())))
@@ -1519,9 +1519,11 @@ export default function ActiveWorkout() {
                       </button>
                     ))}
                 </div>
-                <Button onClick={() => setShowSwapModal(false)} variant="outline" className="w-full mt-3 sm:mt-4 flex-shrink-0 min-h-[44px]">
-                  Cancel
-                </Button>
+                <div className="flex-shrink-0 pt-3 border-t border-gray-700">
+                  <Button onClick={() => setShowSwapModal(false)} variant="outline" className="w-full min-h-[48px] border-gray-600 hover:bg-gray-800">
+                    Cancel
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </motion.div>
