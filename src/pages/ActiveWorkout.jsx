@@ -70,6 +70,7 @@ export default function ActiveWorkout() {
   const [warmupTargetTime, setWarmupTargetTime] = useState(30);
   const [showSupersetModal, setShowSupersetModal] = useState(false);
   const [supersetSelections, setSupersetSelections] = useState([]);
+  const [isSupersetTransition, setIsSupersetTransition] = useState(false);
 
   useEffect(() => {
     loadWorkout();
@@ -178,12 +179,8 @@ export default function ActiveWorkout() {
     
     // If superset, move to next exercise in the superset chain (same set number)
     if (currentExercise.superset_with_next && currentExerciseIndex < workout.exercises.length - 1) {
-      // Move to next exercise but keep the same set number
-      setCurrentExerciseIndex(prev => prev + 1);
-      setCurrentReps(0);
-      setRepInput("");
-      setExerciseTimer(0);
-      // No rest for supersets
+      // Show superset transition with cardio options
+      setIsSupersetTransition(true);
       return;
     }
     
@@ -269,6 +266,14 @@ export default function ActiveWorkout() {
     setExtendedRestTime(0);
   };
 
+  const skipSupersetTransition = () => {
+    setIsSupersetTransition(false);
+    setCurrentExerciseIndex(prev => prev + 1);
+    setCurrentReps(0);
+    setRepInput("");
+    setExerciseTimer(0);
+  };
+
   const addRestTime = (seconds) => {
     setRestTimer(prev => prev + seconds);
     setExtendedRestTime(prev => prev + seconds);
@@ -300,6 +305,13 @@ export default function ActiveWorkout() {
       setCardioTimer(0);
       toast.success(`${activeCardio.type} completed: ${formatTime(cardioTimer)}`);
     }
+  };
+
+  const stopCardioAndContinueSuperset = () => {
+    if (activeCardio) {
+      stopCardio();
+    }
+    skipSupersetTransition();
   };
 
   const getTotalEstimatedReps = () => {
@@ -822,6 +834,100 @@ export default function ActiveWorkout() {
                       <p className="text-gray-500">Max HR ≈ 220 - your age</p>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Superset Transition Screen */}
+        <AnimatePresence>
+          {isSupersetTransition && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            >
+              <Card className="bg-gray-900/80 border-purple-500/30 text-white w-full max-w-sm">
+                <CardContent className="p-6 text-center">
+                  {!activeCardio ? (
+                    <>
+                      <h2 className="text-2xl font-bold mb-2 text-purple-400">SUPERSET TRANSITION</h2>
+                      <p className="text-sm text-gray-400 mb-4">Optional cardio before next exercise</p>
+
+                      {/* Next Exercise Preview */}
+                      {workout.exercises[currentExerciseIndex + 1] && (
+                        <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3 mb-4">
+                          <p className="text-xs text-purple-400 font-bold mb-2">▶ UP NEXT</p>
+                          <div className="w-full h-20 bg-gray-800 rounded mb-2 flex items-center justify-center overflow-hidden">
+                            {workout.exercises[currentExerciseIndex + 1].image_url ? (
+                              <img src={workout.exercises[currentExerciseIndex + 1].image_url} alt={workout.exercises[currentExerciseIndex + 1].exercise_name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Target className="w-8 h-8 text-gray-600" />
+                            )}
+                          </div>
+                          <p className="text-sm font-semibold text-white">{workout.exercises[currentExerciseIndex + 1].exercise_name}</p>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-3 gap-2 mb-4">
+                        <Button
+                          onClick={() => startCardio('walk')}
+                          className="flex flex-col items-center gap-2 h-auto py-4 bg-green-600/20 border-2 border-green-500 text-green-300 hover:bg-green-600/40"
+                        >
+                          <Footprints className="w-6 h-6" />
+                          <span className="text-xs font-bold">WALK</span>
+                        </Button>
+
+                        <Button
+                          onClick={() => startCardio('jog')}
+                          className="flex flex-col items-center gap-2 h-auto py-4 bg-yellow-600/20 border-2 border-yellow-500 text-yellow-300 hover:bg-yellow-600/40"
+                        >
+                          <Route className="w-6 h-6" />
+                          <span className="text-xs font-bold">JOG</span>
+                        </Button>
+
+                        <Button
+                          onClick={() => startCardio('sprint')}
+                          className="flex flex-col items-center gap-2 h-auto py-4 bg-red-600/20 border-2 border-red-500 text-red-300 hover:bg-red-600/40"
+                        >
+                          <Zap className="w-6 h-6" />
+                          <span className="text-xs font-bold">SPRINT</span>
+                        </Button>
+                      </div>
+
+                      <Button
+                        onClick={skipSupersetTransition}
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold"
+                      >
+                        SKIP - Continue Superset
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <h2 className="text-3xl font-bold mb-2 text-brand-blue uppercase">{activeCardio.type}ING</h2>
+                      <div className="text-7xl font-bold mb-4 text-brand-blue animate-pulse">{formatTime(cardioTimer)}</div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button
+                          onClick={stopCardio}
+                          size="lg"
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-6"
+                        >
+                          <Square className="w-5 h-5 mr-2" />
+                          STOP & SWITCH
+                        </Button>
+                        <Button
+                          onClick={stopCardioAndContinueSuperset}
+                          size="lg"
+                          className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-6"
+                        >
+                          DONE - Continue
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
