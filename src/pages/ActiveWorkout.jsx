@@ -25,7 +25,8 @@ import {
   Zap,
   RefreshCw,
   Link as LinkIcon,
-  Check
+  Check,
+  Search
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -53,6 +54,7 @@ export default function ActiveWorkout() {
   const [cardioIntervals, setCardioIntervals] = useState([]);
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [allExercises, setAllExercises] = useState([]);
+  const [swapSearchQuery, setSwapSearchQuery] = useState("");
   const [heartRate, setHeartRate] = useState("");
   const [showHRInput, setShowHRInput] = useState(false);
   const [activeCardio, setActiveCardio] = useState(null);
@@ -129,6 +131,7 @@ export default function ActiveWorkout() {
     setRepInput("");
     setExerciseTimer(0);
     setShowSwapModal(false);
+    setSwapSearchQuery("");
   };
 
   const openSupersetModal = () => {
@@ -1383,10 +1386,22 @@ export default function ActiveWorkout() {
             <Card className="bg-gray-900 w-full max-w-[95vw] sm:max-w-lg border-gray-800 max-h-[90vh] sm:max-h-[85vh] overflow-hidden my-auto" onClick={e => e.stopPropagation()}>
               <CardContent className="p-3 sm:p-6 flex flex-col h-full max-h-[90vh]">
                 <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-white flex-shrink-0">Swap Exercise</h3>
-                <p className="text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4 flex-shrink-0">Choose a different exercise for this slot</p>
+                <p className="text-xs sm:text-sm text-gray-400 mb-2 flex-shrink-0">Search or choose from the list</p>
+                
+                <div className="relative mb-3 sm:mb-4 flex-shrink-0">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search exercises..."
+                    value={swapSearchQuery}
+                    onChange={(e) => setSwapSearchQuery(e.target.value)}
+                    className="pl-10 bg-gray-800 border-gray-700 text-white"
+                  />
+                </div>
+
                 <div className="overflow-y-auto flex-1 space-y-2 min-h-0">
                   {allExercises
                     .filter(ex => ex.category === currentExercise.category || ex.category === 'full_body')
+                    .filter(ex => !swapSearchQuery || ex.name.toLowerCase().includes(swapSearchQuery.toLowerCase()) || (ex.description && ex.description.toLowerCase().includes(swapSearchQuery.toLowerCase())))
                     .map(exercise => (
                       <button
                         key={exercise.id}
