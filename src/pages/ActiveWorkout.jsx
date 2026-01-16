@@ -75,6 +75,9 @@ export default function ActiveWorkout() {
   const [currentGpsDistance, setCurrentGpsDistance] = useState(0);
   const [gpsWatchId, setGpsWatchId] = useState(null);
   const [gpsError, setGpsError] = useState(null);
+  const [bluetoothDevice, setBluetoothDevice] = useState(null);
+  const [isBluetoothConnected, setIsBluetoothConnected] = useState(false);
+  const [realtimeHR, setRealtimeHR] = useState(null);
 
   useEffect(() => {
     loadWorkout();
@@ -768,6 +771,48 @@ export default function ActiveWorkout() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const connectBluetoothHRM = async () => {
+    try {
+      if (!navigator.bluetooth) {
+        toast.error('Bluetooth not supported on this device');
+        return;
+      }
+
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [{ services: ['heart_rate'] }]
+      });
+
+      const server = await device.gatt.connect();
+      const service = await server.getPrimaryService('heart_rate');
+      const characteristic = await service.getCharacteristic('heart_rate_measurement');
+
+      await characteristic.startNotifications();
+      characteristic.addEventListener('characteristicvaluechanged', (event) => {
+        const value = event.target.value;
+        const hr = value.getUint8(1);
+        setRealtimeHR(hr);
+        setHeartRate(hr.toString());
+      });
+
+      setBluetoothDevice(device);
+      setIsBluetoothConnected(true);
+      toast.success('Heart rate monitor connected!');
+    } catch (error) {
+      console.error('Bluetooth connection failed:', error);
+      toast.error('Failed to connect heart rate monitor');
+    }
+  };
+
+  const disconnectBluetoothHRM = () => {
+    if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+      bluetoothDevice.gatt.disconnect();
+    }
+    setBluetoothDevice(null);
+    setIsBluetoothConnected(false);
+    setRealtimeHR(null);
+    toast.success('Heart rate monitor disconnected');
+  };
+
   if (!workout) {
     return (
       <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-6">
@@ -862,12 +907,15 @@ export default function ActiveWorkout() {
             </div>
             <button
               onClick={() => setShowHRInput(!showHRInput)}
-              className="flex items-center gap-1.5 text-red-400 hover:text-red-300 transition-colors"
+              className={`flex items-center gap-1.5 transition-colors ${
+                realtimeHR ? 'text-red-500 animate-pulse' : 'text-red-400 hover:text-red-300'
+              }`}
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
               </svg>
-              <span>{heartRate || "HR"}</span>
+              <span className="font-bold">{realtimeHR || heartRate || "HR"}</span>
+              {realtimeHR && <span className="text-xs">BPM</span>}
             </button>
           </div>
         </div>
@@ -892,15 +940,50 @@ export default function ActiveWorkout() {
             >
               <Card className="bg-red-500/10 border-red-500/30">
                 <CardContent className="p-4">
-                  <h3 className="text-sm font-semibold text-red-400 mb-2">Heart Rate Monitor</h3>
+                  <h3 className="text-sm font-semibold text-red-400 mb-2 flex items-center justify-between">
+                    Heart Rate Monitor
+                    {isBluetoothConnected && (
+                      <Badge className="bg-green-500 text-white text-xs">Connected</Badge>
+                    )}
+                  </h3>
                   <div className="space-y-3">
-                    <Input
-                      type="number"
-                      value={heartRate}
-                      onChange={(e) => setHeartRate(e.target.value)}
-                      placeholder="Enter BPM"
-                      className="bg-background border-red-500/50 text-white text-center text-lg"
-                    />
+                    {/* Bluetooth HRM Connection */}
+                    {!isBluetoothConnected ? (
+                      <Button
+                        onClick={connectBluetoothHRM}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        🔵 Connect Bluetooth HRM
+                      </Button>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-3 text-center">
+                          <p className="text-xs text-green-400 mb-1">Live Heart Rate</p>
+                          <p className="text-4xl font-bold text-green-400 animate-pulse">{realtimeHR || '--'}</p>
+                          <p className="text-xs text-green-300">BPM</p>
+                        </div>
+                        <Button
+                          onClick={disconnectBluetoothHRM}
+                          variant="outline"
+                          className="w-full border-red-500 text-red-400 hover:bg-red-500/20"
+                        >
+                          Disconnect
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Manual Input */}
+                    <div className="border-t border-red-500/30 pt-3">
+                      <p className="text-xs text-gray-400 mb-2">Or enter manually:</p>
+                      <Input
+                        type="number"
+                        value={heartRate}
+                        onChange={(e) => setHeartRate(e.target.value)}
+                        placeholder="Enter BPM"
+                        className="bg-background border-red-500/50 text-white text-center text-lg"
+                      />
+                    </div>
+
                     <div className="text-xs text-gray-400 space-y-1">
                       <p><strong>How to measure:</strong></p>
                       <p>1. Stop moving, find pulse on neck or wrist</p>
