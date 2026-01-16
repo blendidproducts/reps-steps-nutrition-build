@@ -774,38 +774,81 @@ export default function ActiveWorkout() {
   const connectBluetoothHRM = async () => {
     try {
       if (!navigator.bluetooth) {
+        console.error('❌ Bluetooth API not available');
         toast.error('Bluetooth not supported on this device');
         return;
       }
 
+      console.log('🔵 Requesting Bluetooth device...');
       const device = await navigator.bluetooth.requestDevice({
         filters: [{ services: ['heart_rate'] }]
       });
+      console.log('✅ Device selected:', device.name);
 
+      console.log('🔗 Connecting to GATT server...');
       const server = await device.gatt.connect();
+      console.log('✅ GATT server connected');
+
+      console.log('🔍 Getting heart rate service...');
       const service = await server.getPrimaryService('heart_rate');
+      console.log('✅ Heart rate service found');
+
+      console.log('📡 Getting heart rate measurement characteristic...');
       const characteristic = await service.getCharacteristic('heart_rate_measurement');
+      console.log('✅ Characteristic found');
 
       await characteristic.startNotifications();
+      console.log('✅ Notifications started');
+
       characteristic.addEventListener('characteristicvaluechanged', (event) => {
         const value = event.target.value;
+        // Heart rate is in the second byte (index 1)
         const hr = value.getUint8(1);
-        setRealtimeHR(hr);
-        setHeartRate(hr.toString());
+        
+        // Debug log with validation
+        console.log(`💓 HR Reading: ${hr} BPM`, {
+          timestamp: new Date().toLocaleTimeString(),
+          raw: Array.from(new Uint8Array(value.buffer)),
+          valid: hr >= 40 && hr <= 220
+        });
+
+        // Validate heart rate is in reasonable range
+        if (hr >= 40 && hr <= 220) {
+          setRealtimeHR(hr);
+          setHeartRate(hr.toString());
+        } else {
+          console.warn('⚠️ Invalid HR reading:', hr);
+        }
+      });
+
+      // Handle disconnection
+      device.addEventListener('gattserverdisconnected', () => {
+        console.log('❌ Device disconnected');
+        setIsBluetoothConnected(false);
+        setRealtimeHR(null);
+        toast.error('Heart rate monitor disconnected');
       });
 
       setBluetoothDevice(device);
       setIsBluetoothConnected(true);
-      toast.success('Heart rate monitor connected!');
+      toast.success(`Connected to ${device.name || 'HRM'}!`);
+      console.log('✅ Setup complete - receiving heart rate data');
     } catch (error) {
-      console.error('Bluetooth connection failed:', error);
-      toast.error('Failed to connect heart rate monitor');
+      console.error('❌ Bluetooth connection failed:', error);
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        code: error.code
+      });
+      toast.error(`Connection failed: ${error.message}`);
     }
   };
 
   const disconnectBluetoothHRM = () => {
+    console.log('🔌 Disconnecting heart rate monitor...');
     if (bluetoothDevice && bluetoothDevice.gatt.connected) {
       bluetoothDevice.gatt.disconnect();
+      console.log('✅ Disconnected');
     }
     setBluetoothDevice(null);
     setIsBluetoothConnected(false);
