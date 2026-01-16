@@ -71,6 +71,10 @@ export default function ActiveWorkout() {
   const [showSupersetModal, setShowSupersetModal] = useState(false);
   const [supersetSelections, setSupersetSelections] = useState([]);
   const [isSupersetTransition, setIsSupersetTransition] = useState(false);
+  const [gpsPositions, setGpsPositions] = useState([]);
+  const [currentGpsDistance, setCurrentGpsDistance] = useState(0);
+  const [gpsWatchId, setGpsWatchId] = useState(null);
+  const [gpsError, setGpsError] = useState(null);
 
   useEffect(() => {
     loadWorkout();
@@ -284,9 +288,68 @@ export default function ActiveWorkout() {
     return fourCountExercises.some(ex => exerciseName.toLowerCase().includes(ex));
   };
 
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    // Haversine formula to calculate distance between two GPS coordinates in miles
+    const R = 3958.8; // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
   const startCardio = (type) => {
     setActiveCardio({ type, startTime: Date.now() });
     setCardioTimer(0);
+    setCurrentGpsDistance(0);
+    setGpsPositions([]);
+    setGpsError(null);
+    
+    // Request GPS tracking
+    if ('geolocation' in navigator) {
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const newPos = {
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+            timestamp: Date.now()
+          };
+          
+          setGpsPositions(prev => {
+            const updated = [...prev, newPos];
+            
+            // Calculate cumulative distance
+            if (updated.length > 1) {
+              let totalDistance = 0;
+              for (let i = 1; i < updated.length; i++) {
+                const dist = calculateDistance(
+                  updated[i-1].lat, updated[i-1].lon,
+                  updated[i].lat, updated[i].lon
+                );
+                totalDistance += dist;
+              }
+              setCurrentGpsDistance(totalDistance);
+            }
+            
+            return updated;
+          });
+        },
+        (error) => {
+          console.error('GPS error:', error);
+          setGpsError('GPS unavailable');
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        }
+      );
+      setGpsWatchId(watchId);
+    } else {
+      setGpsError('GPS not supported');
+    }
   };
 
   const stopCardio = () => {
@@ -294,16 +357,23 @@ export default function ActiveWorkout() {
       const cardioEntry = {
         type: activeCardio.type,
         time: cardioTimer,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        gps_distance: currentGpsDistance
       };
       
       setCardioIntervals(prev => [...prev, cardioEntry]);
-      // restCardioTotal is already updated in real-time by the timer
       
-      // DO NOT add to workout exercises - just log for analytics
+      // Stop GPS tracking
+      if (gpsWatchId) {
+        navigator.geolocation.clearWatch(gpsWatchId);
+        setGpsWatchId(null);
+      }
+      
       setActiveCardio(null);
       setCardioTimer(0);
-      toast.success(`${activeCardio.type} completed: ${formatTime(cardioTimer)}`);
+      setCurrentGpsDistance(0);
+      setGpsPositions([]);
+      toast.success(`${activeCardio.type} completed: ${formatTime(cardioTimer)} • ${currentGpsDistance.toFixed(2)} mi`);
     }
   };
 
@@ -558,19 +628,25 @@ export default function ActiveWorkout() {
       const jogIntervals = cardioIntervals.filter(c => c.type === 'jog');
       const sprintIntervals = cardioIntervals.filter(c => c.type === 'sprint');
       
-      // Calculate steps and distance
+      // Calculate steps and distance (use GPS distance if available, fallback to estimates)
       // Walking: 110 steps/min, 3.5 mph
       // Jogging: 170 steps/min, 6 mph
       // Sprinting: 190 steps/min, 10 mph
       const walkSteps = Math.round(walkIntervals.reduce((sum, c) => sum + (c.time / 60) * 110, 0));
-      const walkDistance = walkIntervals.reduce((sum, c) => sum + (c.time / 3600) * 3.5, 0);
-      
+      const walkDistance = walkIntervals.reduce((sum, c) => {
+        return sum + (c.gps_distance || (c.time / 3600) * 3.5);
+      }, 0);
+
       const jogSteps = Math.round(jogIntervals.reduce((sum, c) => sum + (c.time / 60) * 170, 0));
-      const jogDistance = jogIntervals.reduce((sum, c) => sum + (c.time / 3600) * 6, 0);
-      
+      const jogDistance = jogIntervals.reduce((sum, c) => {
+        return sum + (c.gps_distance || (c.time / 3600) * 6);
+      }, 0);
+
       const sprintSteps = Math.round(sprintIntervals.reduce((sum, c) => sum + (c.time / 60) * 190, 0));
-      const sprintDistance = sprintIntervals.reduce((sum, c) => sum + (c.time / 3600) * 10, 0);
-      
+      const sprintDistance = sprintIntervals.reduce((sum, c) => {
+        return sum + (c.gps_distance || (c.time / 3600) * 10);
+      }, 0);
+
       const totalSteps = walkSteps + jogSteps + sprintSteps;
       const totalDistance = walkDistance + jogDistance + sprintDistance;
       
@@ -909,6 +985,21 @@ export default function ActiveWorkout() {
                       <h2 className="text-3xl font-bold mb-2 text-brand-blue uppercase">{activeCardio.type}ING</h2>
                       <div className="text-7xl font-bold mb-4 text-brand-blue animate-pulse">{formatTime(cardioTimer)}</div>
 
+                      {/* GPS Distance Display */}
+                      <div className="mb-4 space-y-2">
+                        <div className="flex items-center justify-center gap-2 text-white">
+                          <Route className="w-5 h-5" />
+                          <span className="text-3xl font-bold">{currentGpsDistance.toFixed(2)}</span>
+                          <span className="text-xl">mi</span>
+                        </div>
+                        {gpsError && (
+                          <p className="text-xs text-yellow-400">📍 {gpsError} - using estimates</p>
+                        )}
+                        {!gpsError && gpsPositions.length > 0 && (
+                          <p className="text-xs text-green-400">📍 GPS Active ({gpsPositions.length} points)</p>
+                        )}
+                      </div>
+
                       <div className="grid grid-cols-2 gap-3">
                         <Button
                           onClick={stopCardio}
@@ -1100,41 +1191,57 @@ export default function ActiveWorkout() {
                       </div>
                       </>
                       ) : (
-                    <>
-                      <h2 className="text-3xl font-bold mb-2 text-brand-blue uppercase">{activeCardio.type}ING</h2>
-                      <div className="text-7xl font-bold mb-4 text-brand-blue animate-pulse">{formatTime(cardioTimer)}</div>
-                      <div className="mb-4">
-                        <p className="text-sm text-gray-400">Total Cardio: {restCardioTotal}s / {workout.rest_time || 60}s</p>
-                        <Progress value={(restCardioTotal / (workout.rest_time || 60)) * 100} className="h-2 mt-2" />
-                        {restTimer <= 0 && restCardioTotal >= (workout.rest_time || 60) && (
-                          <p className="text-xs text-green-400 mt-1">✓ Rest complete!</p>
-                        )}
-                      </div>
+                        <>
+                          <h2 className="text-3xl font-bold mb-2 text-brand-blue uppercase">{activeCardio.type}ING</h2>
+                          <div className="text-7xl font-bold mb-4 text-brand-blue animate-pulse">{formatTime(cardioTimer)}</div>
 
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        <Button
-                          onClick={stopCardio}
-                          size="lg"
-                          className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-6"
-                        >
-                          <Square className="w-5 h-5 mr-2" />
-                          STOP & SWITCH
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            stopCardio();
-                            if (restCardioTotal >= (workout.rest_time || 60)) {
-                              setTimeout(() => skipRest(), 100);
-                            }
-                          }}
-                          size="lg"
-                          className="bg-green-500 hover:bg-green-600 text-white font-bold py-6"
-                        >
-                          DONE
-                        </Button>
-                      </div>
-                    </>
-                  )}
+                          {/* GPS Distance Display */}
+                          <div className="mb-3 space-y-2">
+                            <div className="flex items-center justify-center gap-2 text-white">
+                              <Route className="w-5 h-5" />
+                              <span className="text-3xl font-bold">{currentGpsDistance.toFixed(2)}</span>
+                              <span className="text-xl">mi</span>
+                            </div>
+                            {gpsError && (
+                              <p className="text-xs text-yellow-400">📍 {gpsError} - using estimates</p>
+                            )}
+                            {!gpsError && gpsPositions.length > 0 && (
+                              <p className="text-xs text-green-400">📍 GPS Active ({gpsPositions.length} points)</p>
+                            )}
+                          </div>
+
+                          <div className="mb-4">
+                            <p className="text-sm text-gray-400">Total Cardio: {restCardioTotal}s / {workout.rest_time || 60}s</p>
+                            <Progress value={(restCardioTotal / (workout.rest_time || 60)) * 100} className="h-2 mt-2" />
+                            {restTimer <= 0 && restCardioTotal >= (workout.rest_time || 60) && (
+                              <p className="text-xs text-green-400 mt-1">✓ Rest complete!</p>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 mb-4">
+                            <Button
+                              onClick={stopCardio}
+                              size="lg"
+                              className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-6"
+                            >
+                              <Square className="w-5 h-5 mr-2" />
+                              STOP & SWITCH
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                stopCardio();
+                                if (restCardioTotal >= (workout.rest_time || 60)) {
+                                  setTimeout(() => skipRest(), 100);
+                                }
+                              }}
+                              size="lg"
+                              className="bg-green-500 hover:bg-green-600 text-white font-bold py-6"
+                            >
+                              DONE
+                            </Button>
+                          </div>
+                        </>
+                      )}
                 </CardContent>
               </Card>
             </motion.div>
