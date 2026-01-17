@@ -72,19 +72,16 @@ export default function Home() {
               <img src={bannerUrl} alt="RepsAndSteps" className="h-6 sm:h-8 md:h-10 lg:h-12 xl:h-16 max-w-full px-4" />
             </div>
             
-            {/* Fat to Fit Transformation */}
+            {/* Hero Image */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
+              initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2, duration: 0.8 }}
               className="my-6 sm:my-8 md:my-10 lg:my-12 px-2 sm:px-4"
             >
-              <h3 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-brand-blue mb-3 sm:mb-4">
-                From Fat to FIT
-              </h3>
               <img 
-                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/ba6ad5e5a_RepsandSteps_FattoFit_Model.png" 
-                alt="Fat to Fit Transformation"
+                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/d8912cfd2_Jace_RepsandSteps_bluemodel_female1.png" 
+                alt="Fitness Models"
                 className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl mx-auto rounded-xl sm:rounded-2xl shadow-2xl"
               />
             </motion.div>
