@@ -176,11 +176,13 @@ export default function ActiveWorkout() {
   const nextExercise = () => {
     const currentExercise = workout.exercises[currentExerciseIndex];
     
-    // Save completed reps/time for this set before moving on
+    // CRITICAL: Save completed reps/time for this set before moving on
     const updatedExercises = [...workout.exercises];
-    if (updatedExercises[currentExerciseIndex]) {
+    if (updatedExercises[currentExerciseIndex] && currentExercise.metric === 'reps') {
       const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
-      updatedExercises[currentExerciseIndex].completed_reps = previousCompleted + currentReps;
+      const newTotal = previousCompleted + currentReps;
+      updatedExercises[currentExerciseIndex].completed_reps = newTotal;
+      console.log(`[REP TRACKING] Exercise: ${currentExercise.exercise_name}, Set ${currentSet}, Current Reps: ${currentReps}, Previous: ${previousCompleted}, New Total: ${newTotal}`);
       setWorkout({...workout, exercises: updatedExercises});
     }
     
@@ -626,6 +628,19 @@ export default function ActiveWorkout() {
 
   const stopWorkout = async () => {
     if (sessionStartTime) {
+      // CRITICAL: Calculate actual total reps from workout.exercises array, not from state
+      const calculatedTotalReps = workout.exercises
+        .filter(ex => ex.metric === 'reps')
+        .reduce((sum, ex) => sum + (ex.completed_reps || 0), 0);
+      
+      console.log('[REP TRACKING - FINAL] State totalReps:', totalReps);
+      console.log('[REP TRACKING - FINAL] Calculated from exercises:', calculatedTotalReps);
+      console.log('[REP TRACKING - FINAL] Exercise breakdown:', workout.exercises.map(ex => ({
+        name: ex.exercise_name,
+        metric: ex.metric,
+        completed_reps: ex.completed_reps || 0
+      })));
+      
       // Calculate cardio analytics with steps and distance
       const walkIntervals = cardioIntervals.filter(c => c.type === 'walk');
       const jogIntervals = cardioIntervals.filter(c => c.type === 'jog');
@@ -659,7 +674,7 @@ export default function ActiveWorkout() {
       // Cardio bonus: walk +2 cal/min, jog +5 cal/min, sprint +10 cal/min
       const activeMinutes = timer / 60;
       const baseCalories = activeMinutes * 5;
-      const repCalories = totalReps * 0.15;
+      const repCalories = calculatedTotalReps * 0.15;
       const cardioCalories = (
         (walkIntervals.reduce((sum, c) => sum + c.time, 0) / 60) * 2 +
         (jogIntervals.reduce((sum, c) => sum + c.time, 0) / 60) * 5 +
@@ -673,7 +688,7 @@ export default function ActiveWorkout() {
         start_time: sessionStartTime.toISOString(),
         end_time: new Date().toISOString(),
         duration: timer,
-        total_reps: totalReps,
+        total_reps: calculatedTotalReps,
         exercises_completed: workout.exercises.filter(ex => !ex.is_cardio_interval).map((ex) => ({
           exercise_name: ex.exercise_name,
           reps_completed: ex.metric === 'reps' ? (ex.completed_reps || 0) : 0,
@@ -735,7 +750,11 @@ export default function ActiveWorkout() {
   const addRep = () => {
     const newReps = currentReps + 1;
     setCurrentReps(newReps);
-    setTotalReps(prev => prev + 1);
+    setTotalReps(prev => {
+      const updated = prev + 1;
+      console.log(`[REP TRACKING] addRep - Current Reps: ${newReps}, Total Reps: ${updated}`);
+      return updated;
+    });
     updateWorkoutProgress(newReps, 'reps');
   };
 
@@ -751,7 +770,11 @@ export default function ActiveWorkout() {
   const setQuickReps = (reps) => {
     const difference = reps - currentReps;
     setCurrentReps(reps);
-    setTotalReps(prev => prev + difference);
+    setTotalReps(prev => {
+      const updated = prev + difference;
+      console.log(`[REP TRACKING] setQuickReps - Reps: ${reps}, Difference: ${difference}, Total Reps: ${updated}`);
+      return updated;
+    });
     setRepInput(reps.toString());
     updateWorkoutProgress(reps, 'reps');
   };
@@ -760,7 +783,11 @@ export default function ActiveWorkout() {
     const reps = parseInt(value) || 0;
     const difference = reps - currentReps; 
     setCurrentReps(reps);
-    setTotalReps(prev => prev + difference);
+    setTotalReps(prev => {
+      const updated = prev + difference;
+      console.log(`[REP TRACKING] handleRepInput - Input: ${value}, Reps: ${reps}, Difference: ${difference}, Total Reps: ${updated}`);
+      return updated;
+    });
     setRepInput(value);
     updateWorkoutProgress(reps, 'reps');
   };
