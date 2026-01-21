@@ -99,7 +99,8 @@ export default function PresetPrograms() {
           program_name: program.name,
           current_day: dayNumber,
           total_days: program.duration_days,
-          started_date: new Date().toISOString()
+          started_date: new Date().toISOString(),
+          completed_days: []
         }
       });
       
@@ -230,23 +231,32 @@ export default function PresetPrograms() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {selectedProgram.daily_plans.map((day, idx) => (
-                <div key={idx} className="border border-border rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h3 className="text-lg font-bold text-foreground">
-                        Day {day.day_number}: {day.day_name}
-                      </h3>
-                      {day.workout_name && (
-                        <p className="text-sm text-brand-blue">{day.workout_name}</p>
+              {selectedProgram.daily_plans.map((day, idx) => {
+                const isCompleted = false; // Will be updated when we track user progress
+                return (
+                  <div key={idx} className={`border rounded-lg p-4 ${isCompleted ? 'border-green-500 bg-green-500/10' : 'border-border'}`}>
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                          isCompleted ? 'bg-green-500 text-white' : 'bg-gray-700 text-gray-300'
+                        }`}>
+                          {isCompleted ? '✓' : day.day_number}
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-foreground">
+                            Day {day.day_number}: {day.day_name}
+                          </h3>
+                          {day.workout_name && (
+                            <p className="text-sm text-brand-blue">{day.workout_name}</p>
+                          )}
+                        </div>
+                      </div>
+                      {day.is_rest_day && (
+                        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                          Rest Day
+                        </Badge>
                       )}
                     </div>
-                    {day.is_rest_day && (
-                      <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-                        Rest Day
-                      </Badge>
-                    )}
-                  </div>
 
                   {!day.is_rest_day && day.exercises && (
                     <div className="space-y-2 mb-3">

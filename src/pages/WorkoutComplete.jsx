@@ -41,17 +41,26 @@ export default function WorkoutComplete() {
           const user = await base44.auth.me();
           
           if (user.active_program && user.active_program.program_id === workout.program_id) {
-            const nextDay = workout.program_day + 1;
+            const completedDays = user.active_program.completed_days || [];
+            const dayJustCompleted = workout.program_day;
+            
+            // Mark current day as completed if not already
+            if (!completedDays.includes(dayJustCompleted)) {
+              completedDays.push(dayJustCompleted);
+            }
+            
+            const nextDay = dayJustCompleted + 1;
             
             // Update to next day if not completed
             if (nextDay <= user.active_program.total_days) {
               await base44.auth.updateMe({
                 active_program: {
                   ...user.active_program,
-                  current_day: nextDay
+                  current_day: nextDay,
+                  completed_days: completedDays
                 }
               });
-              toast.success(`Day ${workout.program_day} complete! Day ${nextDay} is ready.`);
+              toast.success(`✓ Day ${dayJustCompleted} complete! Day ${nextDay} is ready.`);
             } else {
               // Program completed
               await base44.auth.updateMe({ active_program: null });

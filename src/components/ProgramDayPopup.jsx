@@ -73,12 +73,48 @@ export default function ProgramDayPopup({ program, onStart, onIgnore }) {
                 />
               </div>
 
+              {/* Status Summary */}
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="bg-white/10 backdrop-blur-sm rounded-lg p-4 mb-6"
+              >
+                <h3 className="text-white font-semibold mb-3">Program Status</h3>
+                <div className="grid grid-cols-5 gap-2">
+                  {Array.from({ length: program.total_days }, (_, i) => i + 1).map(day => {
+                    const isCompleted = program.completed_days?.includes(day);
+                    const isCurrent = day === program.current_day;
+                    return (
+                      <div
+                        key={day}
+                        className={`aspect-square rounded-lg flex flex-col items-center justify-center text-xs font-bold transition-all ${
+                          isCompleted
+                            ? 'bg-green-500 text-white'
+                            : isCurrent
+                            ? 'bg-yellow-400 text-black animate-pulse'
+                            : 'bg-white/20 text-white/60'
+                        }`}
+                      >
+                        <div>{day}</div>
+                        {isCompleted && <div className="text-lg">✓</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-between text-xs text-white/80 mt-3">
+                  <span>✓ Completed: {program.completed_days?.length || 0}</span>
+                  <span>⚡ Current: Day {program.current_day}</span>
+                  <span>📋 Remaining: {program.total_days - (program.completed_days?.length || 0)}</span>
+                </div>
+              </motion.div>
+
               {/* Message */}
               <motion.p
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="text-white/90 mb-8"
+                transition={{ delay: 0.5 }}
+                className="text-white/90 mb-6"
               >
                 Ready to continue your journey? Let's crush Day {program.current_day}! 💪
               </motion.p>
@@ -87,7 +123,7 @@ export default function ProgramDayPopup({ program, onStart, onIgnore }) {
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.5 }}
+                transition={{ delay: 0.6 }}
                 className="space-y-3"
               >
                 <Button
