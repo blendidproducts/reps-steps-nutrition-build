@@ -630,7 +630,7 @@ export default function ActiveWorkout() {
     if (sessionStartTime) {
       // CRITICAL: Calculate actual total reps from workout.exercises array, not from state
       const calculatedTotalReps = workout.exercises
-        .filter(ex => ex.metric === 'reps')
+        .filter(ex => ex.metric === 'reps' && ex.category !== 'warmup')
         .reduce((sum, ex) => sum + (ex.completed_reps || 0), 0);
       
       console.log('[REP TRACKING - FINAL] State totalReps:', totalReps);
