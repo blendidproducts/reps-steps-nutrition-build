@@ -689,7 +689,7 @@ export default function ActiveWorkout() {
         end_time: new Date().toISOString(),
         duration: timer,
         total_reps: calculatedTotalReps,
-        exercises_completed: workout.exercises.filter(ex => !ex.is_cardio_interval).map((ex) => ({
+        exercises_completed: workout.exercises.filter(ex => !ex.is_cardio_interval && ex.category !== 'warmup').map((ex) => ({
           exercise_name: ex.exercise_name,
           reps_completed: ex.metric === 'reps' ? (ex.completed_reps || 0) : 0,
           time_spent: ex.metric === 'time' ? (ex.completed_time || 0) : 0
