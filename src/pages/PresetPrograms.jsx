@@ -281,7 +281,8 @@ export default function PresetPrograms() {
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
 
               <Button 
                 onClick={() => startProgram(selectedProgram)}
