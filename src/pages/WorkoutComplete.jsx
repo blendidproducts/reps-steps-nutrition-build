@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
-import { Trophy, Target, Clock, TrendingUp, Share2, Home, RotateCcw, Trash2, Footprints } from "lucide-react";
+import { Trophy, Target, Clock, TrendingUp, Share2, Home, RotateCcw, Trash2, Footprints, Eye } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
@@ -13,6 +13,7 @@ export default function WorkoutComplete() {
   const [showConfetti, setShowConfetti] = useState(true);
   const [workoutStats, setWorkoutStats] = useState(null);
   const [newAchievements, setNewAchievements] = useState([]);
+  const [programInfo, setProgramInfo] = useState(null);
 
   useEffect(() => {
     // Auto-hide confetti after animation
@@ -50,6 +51,20 @@ export default function WorkoutComplete() {
             }
             
             const nextDay = dayJustCompleted + 1;
+            
+            // Fetch program details
+            const programs = await base44.entities.PresetProgram.filter({ id: workout.program_id });
+            const program = programs[0];
+            
+            // Set program info for UI display
+            setProgramInfo({
+              programName: user.active_program.program_name,
+              dayCompleted: dayJustCompleted,
+              nextDay: nextDay <= user.active_program.total_days ? nextDay : null,
+              totalDays: user.active_program.total_days,
+              nextDayPlan: nextDay <= user.active_program.total_days ? program?.daily_plans?.[nextDay - 1] : null,
+              programId: workout.program_id
+            });
             
             // Update to next day if not completed
             if (nextDay <= user.active_program.total_days) {
@@ -177,12 +192,28 @@ export default function WorkoutComplete() {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.6 }}
             >
-              <h1 className="text-3xl font-bold text-foreground mb-2">
-                Workout Complete!
-              </h1>
-              <p className="text-lg text-gray-400 mb-8">
-                Outstanding effort! You've just crushed another session. 🔥
-              </p>
+              {programInfo ? (
+                <>
+                  <h1 className="text-3xl font-bold text-foreground mb-2">
+                    Day {programInfo.dayCompleted} Complete!
+                  </h1>
+                  <p className="text-lg text-gray-400 mb-2">
+                    {programInfo.programName}
+                  </p>
+                  <p className="text-sm text-gray-500 mb-8">
+                    Outstanding effort! You've just crushed another session. 🔥
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h1 className="text-3xl font-bold text-foreground mb-2">
+                    Workout Complete!
+                  </h1>
+                  <p className="text-lg text-gray-400 mb-8">
+                    Outstanding effort! You've just crushed another session. 🔥
+                  </p>
+                </>
+              )}
             </motion.div>
 
             {/* Workout Stats */}
@@ -274,6 +305,48 @@ export default function WorkoutComplete() {
                 "Every rep counts, every workout matters. You're building the strongest version of yourself!"
               </p>
             </motion.div>
+
+            {/* Program Next Day Preview */}
+            {programInfo?.nextDay && programInfo.nextDayPlan && (
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.95, duration: 0.6 }}
+                className="mb-6 bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/50 rounded-xl p-5"
+              >
+                <h3 className="text-lg font-bold text-purple-400 mb-3 flex items-center justify-center gap-2">
+                  ▶ Next: Day {programInfo.nextDay}
+                </h3>
+                <div className="text-white font-semibold mb-2">{programInfo.nextDayPlan.workout_name}</div>
+                {programInfo.nextDayPlan.is_rest_day ? (
+                  <p className="text-sm text-gray-400 mb-3">Rest and recovery day</p>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-400 mb-2">
+                      {programInfo.nextDayPlan.total_reps} total reps
+                    </p>
+                    <div className="flex flex-wrap gap-1 justify-center mb-3">
+                      {programInfo.nextDayPlan.exercises?.slice(0, 4).map((ex, i) => (
+                        <span key={i} className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded">
+                          {ex.exercise_name}
+                        </span>
+                      ))}
+                      {programInfo.nextDayPlan.exercises?.length > 4 && (
+                        <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded">
+                          +{programInfo.nextDayPlan.exercises.length - 4} more
+                        </span>
+                      )}
+                    </div>
+                  </>
+                )}
+                <Button
+                  onClick={() => navigate(createPageUrl("PresetPrograms"))}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold"
+                >
+                  PREVIEW Day {programInfo.nextDay}
+                </Button>
+              </motion.div>
+            )}
 
             {/* Action Buttons */}
             <motion.div
