@@ -33,6 +33,32 @@ export default function WorkoutComplete() {
           duration: session.duration || 0,
           caloriesBurned: session.calories_burned || 0
         });
+
+        // Check if this was part of a program and advance to next day
+        const workouts = await base44.entities.Workout.filter({ id: session.workout_id });
+        if (workouts.length > 0 && workouts[0].program_id) {
+          const workout = workouts[0];
+          const user = await base44.auth.me();
+          
+          if (user.active_program && user.active_program.program_id === workout.program_id) {
+            const nextDay = workout.program_day + 1;
+            
+            // Update to next day if not completed
+            if (nextDay <= user.active_program.total_days) {
+              await base44.auth.updateMe({
+                active_program: {
+                  ...user.active_program,
+                  current_day: nextDay
+                }
+              });
+              toast.success(`Day ${workout.program_day} complete! Day ${nextDay} is ready.`);
+            } else {
+              // Program completed
+              await base44.auth.updateMe({ active_program: null });
+              toast.success(`🎉 Program "${user.active_program.program_name}" completed!`);
+            }
+          }
+        }
       }
 
       // Check for new achievements

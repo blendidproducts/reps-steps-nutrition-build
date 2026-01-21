@@ -2,6 +2,11 @@ import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { PresetProgram } from "@/entities/PresetProgram";
+import { Exercise } from "@/entities/Exercise";
+import { Workout } from "@/entities/Workout";
+import ProgramDayPopup from "@/components/ProgramDayPopup";
 import {
   Sidebar,
   SidebarContent,
@@ -38,6 +43,8 @@ export default function Layout({ children, currentPageName }) {
   const navigate = useNavigate();
   const [hasActiveWorkout, setHasActiveWorkout] = React.useState(false);
   const [workoutTimer, setWorkoutTimer] = React.useState(0);
+  const [showProgramPopup, setShowProgramPopup] = React.useState(false);
+  const [activeProgram, setActiveProgram] = React.useState(null);
   const logoUrl = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/d1545e30c_repsandsteps_main_logo_2.png";
   const bannerUrl = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/8866d855e_repsandSteps_name_banner.png";
 
@@ -53,7 +60,91 @@ export default function Layout({ children, currentPageName }) {
       document.head.appendChild(viewport);
     }
     viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+
+    // Check for active program on mount
+    checkActiveProgram();
   }, []);
+
+  const checkActiveProgram = async () => {
+    try {
+      const user = await base44.auth.me();
+      const popupShown = sessionStorage.getItem('programPopupShown');
+      
+      if (user.active_program && !popupShown) {
+        setActiveProgram(user.active_program);
+        setShowProgramPopup(true);
+        sessionStorage.setItem('programPopupShown', 'true');
+      }
+    } catch (error) {
+      console.log('No user logged in or no active program');
+    }
+  };
+
+  const startProgramDay = async () => {
+    try {
+      const programs = await PresetProgram.filter({ id: activeProgram.program_id });
+      if (programs.length === 0) return;
+      
+      const program = programs[0];
+      const day = program.daily_plans[activeProgram.current_day - 1];
+      
+      if (day.is_rest_day) {
+        alert(`Day ${activeProgram.current_day} is a rest day.`);
+        setShowProgramPopup(false);
+        return;
+      }
+
+      const allExercises = await Exercise.list();
+      const exercises = day.exercises.map(ex => {
+        const dbExercise = allExercises.find(e => e.name.toLowerCase() === ex.exercise_name.toLowerCase());
+        return {
+          exercise_id: dbExercise?.id || 'custom',
+          exercise_name: ex.exercise_name,
+          target_reps: ex.target_reps,
+          sets: ex.sets || 1,
+          completed_reps: 0,
+          completed_time: 0,
+          metric: 'reps',
+          category: dbExercise?.category || 'full_body',
+          image_url: dbExercise?.image_url,
+          instructions: dbExercise?.instructions
+        };
+      });
+
+      const warmupExercises = [
+        { id: 'warmup-1', name: 'Walk in Place', category: 'warmup', metric: 'time', target_time: 60 },
+        { id: 'warmup-2', name: 'Arm Circles Forward', category: 'warmup', metric: 'time', target_time: 15 },
+        { id: 'warmup-3', name: 'Hip Circles', category: 'warmup', metric: 'time', target_time: 20 }
+      ].map(ex => ({
+        exercise_id: ex.id,
+        exercise_name: ex.name,
+        target_reps: 0,
+        target_time: ex.target_time,
+        sets: 1,
+        completed_reps: 0,
+        completed_time: 0,
+        metric: 'time',
+        category: 'warmup'
+      }));
+
+      const workoutData = {
+        name: `${program.name} - Day ${activeProgram.current_day}`,
+        exercises: [...warmupExercises, ...exercises],
+        workout_type: "rep_based",
+        difficulty: program.difficulty,
+        rest_time: day.exercises[0]?.rest_after_circuit_seconds || 300,
+        program_id: program.id,
+        program_day: activeProgram.current_day
+      };
+
+      const workout = await Workout.create(workoutData);
+      setShowProgramPopup(false);
+      navigate(`${createPageUrl("ActiveWorkout")}?workoutId=${workout.id}`);
+    } catch (error) {
+      console.error('Failed to start program day:', error);
+      alert('Failed to start workout');
+    }
+  };
 
   // Check for active workout and update timer
   React.useEffect(() => {
@@ -208,6 +299,15 @@ export default function Layout({ children, currentPageName }) {
         </Sidebar>
 
         <main className="flex-1 flex flex-col" style={{ backgroundColor: '#0a0a0a' }}>
+          {/* Program Day Popup */}
+          {showProgramPopup && activeProgram && (
+            <ProgramDayPopup
+              program={activeProgram}
+              onStart={startProgramDay}
+              onIgnore={() => setShowProgramPopup(false)}
+            />
+          )}
+
           <header className="bg-card border-b border-border px-6 py-4 md:hidden">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="hover:bg-gray-700 p-2 rounded-lg transition-colors duration-200" />

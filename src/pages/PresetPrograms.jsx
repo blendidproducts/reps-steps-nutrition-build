@@ -11,6 +11,7 @@ import { createPageUrl } from "@/utils";
 import { Calendar, Target, Zap, Trophy, ArrowRight, Check } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { base44 } from "@/api/base44Client";
 
 export default function PresetPrograms() {
   const navigate = useNavigate();
@@ -29,12 +30,12 @@ export default function PresetPrograms() {
     setIsLoading(false);
   };
 
-  const startProgram = async (program) => {
-    // Start Day 1 workout
-    const day1 = program.daily_plans[0];
+  const startProgram = async (program, dayNumber = 1) => {
+    // Start specific day workout
+    const day = program.daily_plans[dayNumber - 1];
     
-    if (day1.is_rest_day) {
-      toast.error('Day 1 is a rest day. Check the program details.');
+    if (day.is_rest_day) {
+      toast.error(`Day ${dayNumber} is a rest day. Check the program details.`);
       return;
     }
 
@@ -44,8 +45,8 @@ export default function PresetPrograms() {
       // Get all exercises to map names to IDs
       const allExercises = await Exercise.list();
       
-      // Build workout from day 1 plan
-      const exercises = day1.exercises.map(ex => {
+      // Build workout from day plan
+      const exercises = day.exercises.map(ex => {
         const dbExercise = allExercises.find(e => e.name.toLowerCase() === ex.exercise_name.toLowerCase());
         return {
           exercise_id: dbExercise?.id || 'custom',
@@ -79,17 +80,31 @@ export default function PresetPrograms() {
       }));
 
       const workoutData = {
-        name: `${program.name} - Day 1`,
+        name: `${program.name} - Day ${dayNumber}`,
         exercises: [...warmupExercises, ...exercises],
         workout_type: "rep_based",
         difficulty: program.difficulty,
-        rest_time: day1.exercises[0]?.rest_after_circuit_seconds || 300
+        rest_time: day.exercises[0]?.rest_after_circuit_seconds || 300,
+        program_id: program.id,
+        program_day: dayNumber
       };
 
       const workout = await Workout.create(workoutData);
       
+      // Update user's active program
+      const user = await base44.auth.me();
+      await base44.auth.updateMe({
+        active_program: {
+          program_id: program.id,
+          program_name: program.name,
+          current_day: dayNumber,
+          total_days: program.duration_days,
+          started_date: new Date().toISOString()
+        }
+      });
+      
       toast.dismiss();
-      toast.success('Starting Day 1 of ' + program.name);
+      toast.success(`Starting Day ${dayNumber} of ${program.name}`);
       navigate(`${createPageUrl("ActiveWorkout")}?workoutId=${workout.id}`);
     } catch (error) {
       toast.dismiss();
