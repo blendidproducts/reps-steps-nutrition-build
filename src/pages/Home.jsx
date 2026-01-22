@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Play, Zap, Target, Trophy, TrendingUp, Star, Moon, Sun } from "lucide-react";
+import { Play, Zap, Target, Trophy, TrendingUp, Star, Moon, Sun, Dumbbell } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { User } from "@/entities/User";
 
@@ -90,38 +91,90 @@ export default function Home() {
               Your ultimate calisthenics companion to track every rep and count every step.
             </p>
 
-            {/* How It Works - Simple 3 Steps */}
+            {/* Choose Your Plan */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25, duration: 0.6 }}
-              className="mb-8 sm:mb-10 px-4 max-w-3xl mx-auto"
+              transition={{ delay: 0.25, duration: 0.8 }}
+              className="mb-8 sm:mb-10 px-4 max-w-4xl mx-auto"
             >
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 md:p-8">
-                <h3 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-brand-blue">🚀 Get Started in 3 Easy Steps</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 text-left">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-brand-blue text-white font-bold flex items-center justify-center flex-shrink-0 text-lg">1</div>
-                    <div>
-                      <h4 className="font-bold text-white mb-1">Choose Exercises</h4>
-                      <p className="text-sm text-gray-400">Pick from 50+ bodyweight exercises</p>
+              <h3 className="text-2xl sm:text-3xl font-bold text-center mb-2 text-white">Choose Your Plan</h3>
+              <p className="text-center text-gray-400 mb-6">AI Generator or Manual Builder</p>
+
+              {/* WorkoutGenie AI - Featured */}
+              <div className="mb-4">
+                <Link to={isPro ? createPageUrl("Exercises") : createPageUrl("Pricing")}>
+                  <div className={`relative bg-gradient-to-br from-yellow-500 via-orange-600 to-red-600 p-5 sm:p-6 rounded-xl border-4 ${
+                    isPro ? 'border-yellow-300 shadow-2xl shadow-yellow-500/30' : 'border-yellow-500/50 opacity-90'
+                  } hover:scale-[1.02] transition-transform cursor-pointer`}>
+                    {!isPro && (
+                      <div className="absolute top-3 right-3">
+                        <Badge className="bg-black text-yellow-400 font-bold border-2 border-yellow-400 text-xs px-2 py-0.5">⭐ PRO</Badge>
+                      </div>
+                    )}
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <Zap className="w-8 h-8 sm:w-10 sm:h-10 text-white flex-shrink-0 animate-pulse" />
+                      <div className="flex-1">
+                        <h4 className="text-xl sm:text-2xl font-black mb-2 text-white">🧞 WorkoutGenie AI</h4>
+                        <p className="text-white text-xs sm:text-sm mb-2 font-semibold">Just describe your workout - AI builds it instantly</p>
+                        <ul className="space-y-1 text-xs text-white/95 font-medium">
+                          <li>✨ Type in plain English - no complexity</li>
+                          <li>⚡ Instant workout generation in seconds</li>
+                          <li>🎯 Uses real exercises from our library</li>
+                          <li>🔥 Perfect for any fitness level</li>
+                        </ul>
+                        <div className="mt-3 bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20 inline-block">
+                          💬 "18 min low intensity upper & lower mix"
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-brand-blue text-white font-bold flex items-center justify-center flex-shrink-0 text-lg">2</div>
-                    <div>
-                      <h4 className="font-bold text-white mb-1">Build Your Workout</h4>
-                      <p className="text-sm text-gray-400">Set reps, sets, and rest times</p>
-                    </div>
+                </Link>
+              </div>
+
+              {/* AI Auto Mode & Manual Builder */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <Link to={isPro ? createPageUrl("AIWorkoutGenerator") : createPageUrl("Pricing")}>
+                  <div className={`relative bg-gradient-to-br from-purple-600 to-indigo-700 p-4 sm:p-5 rounded-xl border-2 ${
+                    isPro ? 'border-purple-300 shadow-xl shadow-purple-500/20' : 'border-purple-500/50 opacity-80'
+                  } hover:scale-[1.02] transition-transform cursor-pointer h-full`}>
+                    {!isPro && (
+                      <div className="absolute top-2 right-2">
+                        <Badge className="bg-yellow-400 text-black font-bold text-xs px-2 py-0.5">⭐ PRO</Badge>
+                      </div>
+                    )}
+                    <Zap className="w-7 h-7 sm:w-8 sm:h-8 mb-2 text-white" />
+                    <h4 className="text-base sm:text-lg font-bold mb-1 text-white">AI Auto Mode</h4>
+                    <p className="text-white/90 text-xs mb-2 font-medium">Smart AI creates complete workouts automatically</p>
+                    <ul className="space-y-1 text-xs text-white/85">
+                      <li>🎚️ Choose fitness level</li>
+                      <li>⏱️ Set duration & intensity</li>
+                      <li>🤖 AI picks exercises for you</li>
+                      <li>🚀 Instant workout generation</li>
+                    </ul>
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-brand-blue text-white font-bold flex items-center justify-center flex-shrink-0 text-lg">3</div>
-                    <div>
-                      <h4 className="font-bold text-white mb-1">Track & Crush It</h4>
-                      <p className="text-sm text-gray-400">Count reps, steps, and progress</p>
+                </Link>
+
+                <Link to={createPageUrl("Exercises")}>
+                  <div className="relative bg-gradient-to-br from-gray-700 to-gray-900 p-4 sm:p-5 rounded-xl border-2 border-green-500 hover:scale-[1.02] transition-transform cursor-pointer h-full shadow-xl shadow-green-500/10">
+                    <div className="absolute top-2 right-2">
+                      <Badge className="bg-green-500 text-white font-bold text-xs px-2 py-0.5">✓ FREE</Badge>
                     </div>
+                    <Dumbbell className="w-7 h-7 sm:w-8 sm:h-8 mb-2 text-green-400" />
+                    <h4 className="text-base sm:text-lg font-bold mb-1 text-white">Manual Builder</h4>
+                    <p className="text-white/90 text-xs mb-2 font-medium">Browse & select exercises yourself</p>
+                    <ul className="space-y-1 text-xs text-white/85">
+                      <li>📚 Browse 50+ exercises</li>
+                      <li>✋ Pick your favorites</li>
+                      <li>⚙️ Full control & customization</li>
+                      <li>🆓 100% Free forever</li>
+                    </ul>
                   </div>
-                </div>
+                </Link>
+              </div>
+
+              <div className="mt-4 text-center">
+                <p className="text-xs sm:text-sm text-green-400 font-semibold">👇 FREE USERS: Scroll down on Exercises page to manually build workouts</p>
               </div>
             </motion.div>
             
