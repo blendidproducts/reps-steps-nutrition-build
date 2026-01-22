@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Target, Flame, Clock, Moon, Sun, Award, Lock } from "lucide-react";
+import { Trophy, Target, Flame, Clock, Moon, Sun, Award, Lock, Zap } from "lucide-react";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 import { motion } from "framer-motion";
 
 const achievementDefinitions = [
@@ -221,7 +223,22 @@ export default function Achievements() {
       <div className="gradient-bg text-white py-8">
         <div className="container mx-auto px-4">
           <h1 className="text-3xl font-bold mb-2">Achievements & Streaks</h1>
-          <p className="text-white/90">Track your progress and unlock rewards</p>
+          <p className="text-white/90 mb-4">Track your progress and unlock rewards</p>
+
+          {/* 7-Day Trial CTA */}
+          <div className="max-w-2xl mx-auto mt-4">
+            <Link to={createPageUrl("Pricing")}>
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-4 rounded-xl border-2 border-green-300 shadow-xl hover:scale-105 transition-transform cursor-pointer">
+                <div className="flex items-center justify-center gap-3 flex-wrap">
+                  <Zap className="w-6 h-6 text-white animate-pulse" />
+                  <div className="text-center">
+                    <div className="text-white font-black text-lg">🔥 Unlock MORE Achievements with PRO Trial</div>
+                    <div className="text-green-100 text-sm font-semibold">7 Days Full Access - Only $3.99</div>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          </div>
         </div>
       </div>
 
