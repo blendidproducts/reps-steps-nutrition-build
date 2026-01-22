@@ -78,6 +78,8 @@ export default function ActiveWorkout() {
   const [bluetoothDevice, setBluetoothDevice] = useState(null);
   const [isBluetoothConnected, setIsBluetoothConnected] = useState(false);
   const [realtimeHR, setRealtimeHR] = useState(null);
+  const [totalWorkoutSteps, setTotalWorkoutSteps] = useState(0);
+  const [totalWorkoutDistance, setTotalWorkoutDistance] = useState(0);
 
   useEffect(() => {
     loadWorkout();
@@ -309,52 +311,6 @@ export default function ActiveWorkout() {
     setActiveCardio({ type, startTime: Date.now() });
     setCardioTimer(0);
     setCurrentGpsDistance(0);
-    setGpsPositions([]);
-    setGpsError(null);
-    
-    // Request GPS tracking
-    if ('geolocation' in navigator) {
-      const watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const newPos = {
-            lat: position.coords.latitude,
-            lon: position.coords.longitude,
-            timestamp: Date.now()
-          };
-          
-          setGpsPositions(prev => {
-            const updated = [...prev, newPos];
-            
-            // Calculate cumulative distance
-            if (updated.length > 1) {
-              let totalDistance = 0;
-              for (let i = 1; i < updated.length; i++) {
-                const dist = calculateDistance(
-                  updated[i-1].lat, updated[i-1].lon,
-                  updated[i].lat, updated[i].lon
-                );
-                totalDistance += dist;
-              }
-              setCurrentGpsDistance(totalDistance);
-            }
-            
-            return updated;
-          });
-        },
-        (error) => {
-          console.error('GPS error:', error);
-          setGpsError('GPS unavailable');
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 0
-        }
-      );
-      setGpsWatchId(watchId);
-    } else {
-      setGpsError('GPS not supported');
-    }
   };
 
   const stopCardio = () => {
@@ -367,18 +323,10 @@ export default function ActiveWorkout() {
       };
       
       setCardioIntervals(prev => [...prev, cardioEntry]);
-      
-      // Stop GPS tracking
-      if (gpsWatchId) {
-        navigator.geolocation.clearWatch(gpsWatchId);
-        setGpsWatchId(null);
-      }
-      
       setActiveCardio(null);
       setCardioTimer(0);
       setCurrentGpsDistance(0);
-      setGpsPositions([]);
-      toast.success(`${activeCardio.type} completed: ${formatTime(cardioTimer)} • ${currentGpsDistance.toFixed(2)} mi`);
+      toast.success(`${activeCardio.type} completed: ${formatTime(cardioTimer)}`);
     }
   };
 
@@ -622,11 +570,69 @@ export default function ActiveWorkout() {
     setSessionStartTime(new Date());
     timerStartTimeRef.current = Date.now();
     lastTickTimeRef.current = Date.now();
+    
+    // Start GPS tracking immediately when workout begins
+    startGlobalGPSTracking();
+  };
+
+  const startGlobalGPSTracking = () => {
+    if ('geolocation' in navigator) {
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const newPos = {
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+            timestamp: Date.now()
+          };
+          
+          setGpsPositions(prev => {
+            const updated = [...prev, newPos];
+            
+            // Calculate cumulative distance and steps for entire workout
+            if (updated.length > 1) {
+              let totalDistance = 0;
+              for (let i = 1; i < updated.length; i++) {
+                const dist = calculateDistance(
+                  updated[i-1].lat, updated[i-1].lon,
+                  updated[i].lat, updated[i].lon
+                );
+                totalDistance += dist;
+              }
+              setTotalWorkoutDistance(totalDistance);
+              
+              // Calculate steps: 2,100 steps per mile (average between 2,000-2,200)
+              const steps = Math.round(totalDistance * 2100);
+              setTotalWorkoutSteps(steps);
+            }
+            
+            return updated;
+          });
+        },
+        (error) => {
+          console.error('GPS error:', error);
+          setGpsError('GPS unavailable');
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        }
+      );
+      setGpsWatchId(watchId);
+    } else {
+      setGpsError('GPS not supported');
+    }
   };
 
   const pauseWorkout = () => setIsPaused(!isPaused);
 
   const stopWorkout = async () => {
+    // Stop GPS tracking
+    if (gpsWatchId) {
+      navigator.geolocation.clearWatch(gpsWatchId);
+      setGpsWatchId(null);
+    }
+    
     if (sessionStartTime) {
       // CRITICAL: Calculate actual total reps from workout.exercises array, not from state
       const calculatedTotalReps = workout.exercises
@@ -641,15 +647,16 @@ export default function ActiveWorkout() {
         completed_reps: ex.completed_reps || 0
       })));
       
+      // Use global workout tracking for steps and distance
+      const totalSteps = totalWorkoutSteps;
+      const totalDistance = totalWorkoutDistance;
+      
       // Calculate cardio analytics with steps and distance
       const walkIntervals = cardioIntervals.filter(c => c.type === 'walk');
       const jogIntervals = cardioIntervals.filter(c => c.type === 'jog');
       const sprintIntervals = cardioIntervals.filter(c => c.type === 'sprint');
       
-      // Calculate steps and distance (use GPS distance if available, fallback to estimates)
-      // Walking: 110 steps/min, 3.5 mph
-      // Jogging: 170 steps/min, 6 mph
-      // Sprinting: 190 steps/min, 10 mph
+      // Calculate individual cardio type analytics
       const walkSteps = Math.round(walkIntervals.reduce((sum, c) => sum + (c.time / 60) * 110, 0));
       const walkDistance = walkIntervals.reduce((sum, c) => {
         return sum + (c.gps_distance || (c.time / 3600) * 3.5);
@@ -664,9 +671,6 @@ export default function ActiveWorkout() {
       const sprintDistance = sprintIntervals.reduce((sum, c) => {
         return sum + (c.gps_distance || (c.time / 3600) * 10);
       }, 0);
-
-      const totalSteps = walkSteps + jogSteps + sprintSteps;
-      const totalDistance = walkDistance + jogDistance + sprintDistance;
       
       // Improved calorie calculation (more accurate formula)
       // Base: 5 calories per minute of active work
@@ -971,6 +975,13 @@ export default function ActiveWorkout() {
               </div>
               <span className="text-xs text-gray-400">Active Time</span>
             </div>
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-1.5">
+                <Footprints className="w-4 h-4 text-purple-400" />
+                <span className="font-bold">{totalWorkoutSteps.toLocaleString()}</span>
+              </div>
+              <span className="text-xs text-gray-400">{totalWorkoutDistance.toFixed(2)} mi</span>
+            </div>
             <div className="flex items-center gap-1.5">
               <Target className="w-4 h-4" />
               <span>{totalReps} / {getTotalEstimatedReps()} reps</span>
@@ -1137,21 +1148,6 @@ export default function ActiveWorkout() {
                     <>
                       <h2 className="text-3xl font-bold mb-2 text-brand-blue uppercase">{activeCardio.type}ING</h2>
                       <div className="text-7xl font-bold mb-4 text-brand-blue animate-pulse">{formatTime(cardioTimer)}</div>
-
-                      {/* GPS Distance Display */}
-                      <div className="mb-4 space-y-2">
-                        <div className="flex items-center justify-center gap-2 text-white">
-                          <Route className="w-5 h-5" />
-                          <span className="text-3xl font-bold">{currentGpsDistance.toFixed(2)}</span>
-                          <span className="text-xl">mi</span>
-                        </div>
-                        {gpsError && (
-                          <p className="text-xs text-yellow-400">📍 {gpsError} - using estimates</p>
-                        )}
-                        {!gpsError && gpsPositions.length > 0 && (
-                          <p className="text-xs text-green-400">📍 GPS Active ({gpsPositions.length} points)</p>
-                        )}
-                      </div>
 
                       <div className="grid grid-cols-2 gap-2 pb-2">
                         <Button
@@ -1345,21 +1341,6 @@ export default function ActiveWorkout() {
                         <>
                           <h2 className="text-3xl font-bold mb-2 text-brand-blue uppercase">{activeCardio.type}ING</h2>
                           <div className="text-7xl font-bold mb-4 text-brand-blue animate-pulse">{formatTime(cardioTimer)}</div>
-
-                          {/* GPS Distance Display */}
-                          <div className="mb-3 space-y-2">
-                            <div className="flex items-center justify-center gap-2 text-white">
-                              <Route className="w-5 h-5" />
-                              <span className="text-3xl font-bold">{currentGpsDistance.toFixed(2)}</span>
-                              <span className="text-xl">mi</span>
-                            </div>
-                            {gpsError && (
-                              <p className="text-xs text-yellow-400">📍 {gpsError} - using estimates</p>
-                            )}
-                            {!gpsError && gpsPositions.length > 0 && (
-                              <p className="text-xs text-green-400">📍 GPS Active ({gpsPositions.length} points)</p>
-                            )}
-                          </div>
 
                           <div className="mb-4">
                             <p className="text-sm text-gray-400">Total Cardio: {restCardioTotal}s / {workout.rest_time || 60}s</p>
