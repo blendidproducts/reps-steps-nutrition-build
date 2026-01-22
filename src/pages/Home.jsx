@@ -89,6 +89,41 @@ export default function Home() {
             <p className="text-base sm:text-lg md:text-xl lg:text-2xl mb-6 sm:mb-8 md:mb-10 text-gray-300 max-w-2xl mx-auto px-4">
               Your ultimate calisthenics companion to track every rep and count every step.
             </p>
+
+            {/* How It Works - Simple 3 Steps */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25, duration: 0.6 }}
+              className="mb-8 sm:mb-10 px-4 max-w-3xl mx-auto"
+            >
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 md:p-8">
+                <h3 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-brand-blue">🚀 Get Started in 3 Easy Steps</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 text-left">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-brand-blue text-white font-bold flex items-center justify-center flex-shrink-0 text-lg">1</div>
+                    <div>
+                      <h4 className="font-bold text-white mb-1">Choose Exercises</h4>
+                      <p className="text-sm text-gray-400">Pick from 50+ bodyweight exercises</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-brand-blue text-white font-bold flex items-center justify-center flex-shrink-0 text-lg">2</div>
+                    <div>
+                      <h4 className="font-bold text-white mb-1">Build Your Workout</h4>
+                      <p className="text-sm text-gray-400">Set reps, sets, and rest times</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-brand-blue text-white font-bold flex items-center justify-center flex-shrink-0 text-lg">3</div>
+                    <div>
+                      <h4 className="font-bold text-white mb-1">Track & Crush It</h4>
+                      <p className="text-sm text-gray-400">Count reps, steps, and progress</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
             
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -102,13 +137,69 @@ export default function Home() {
                   className="w-full sm:w-auto gradient-bg text-white hover:opacity-90 text-base sm:text-lg md:text-xl px-6 sm:px-8 md:px-12 py-3 sm:py-4 md:py-6 rounded-full font-bold shadow-lg hover:shadow-blue-500/30 transition-all duration-300 transform hover:scale-105 touch-manipulation"
                 >
                   <Play className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 mr-2 md:mr-3" />
-                  BEGIN WORKOUT
+                  START FREE WORKOUT NOW
                 </Button>
               </Link>
+              
+              {!isPro && !isLoading && (
+                <div className="text-sm text-gray-400">
+                  <p>Free Forever • No Credit Card Required</p>
+                  <Link to={createPageUrl("Pricing")} className="text-brand-blue hover:underline font-semibold">
+                    Or unlock PRO features with AI workouts & more →
+                  </Link>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         </div>
       </section>
+
+      {/* PRO Features Upgrade Banner */}
+      {!isPro && !isLoading && (
+        <section className="py-8 sm:py-12 md:py-16" style={{ backgroundColor: '#0a0a0a' }}>
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6 }}
+            >
+              <Card className="bg-gradient-to-br from-yellow-500/10 to-orange-600/10 border-2 border-yellow-500/30 shadow-xl">
+                <CardContent className="p-6 sm:p-8 md:p-10 text-center">
+                  <Star className="w-12 h-12 sm:w-16 sm:h-16 text-yellow-400 mx-auto mb-4" />
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 sm:mb-4">
+                    Unlock PRO Features
+                  </h2>
+                  <p className="text-base sm:text-lg text-gray-300 mb-6 sm:mb-8 max-w-2xl mx-auto">
+                    Get AI-powered workout generator, advanced analytics, preset programs, and unlimited saved workouts
+                  </p>
+                  
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
+                    <div className="text-center">
+                      <div className="text-3xl sm:text-4xl font-bold text-yellow-400">$4.99</div>
+                      <div className="text-sm text-gray-400">per month</div>
+                    </div>
+                    <div className="text-gray-500 hidden sm:block">or</div>
+                    <div className="text-center">
+                      <div className="text-3xl sm:text-4xl font-bold text-green-400">$39.99</div>
+                      <div className="text-sm text-gray-400">lifetime access</div>
+                    </div>
+                  </div>
+
+                  <Link to={createPageUrl("Pricing")}>
+                    <Button 
+                      size="lg" 
+                      className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black hover:opacity-90 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 rounded-full font-bold shadow-lg transform hover:scale-105 transition-all duration-300 touch-manipulation"
+                    >
+                      <Star className="w-5 h-5 mr-2" />
+                      UPGRADE TO PRO
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* Features Section */}
       <section className="py-8 sm:py-12 md:py-16 lg:py-20" style={{ backgroundColor: '#0a0a0a' }}>
@@ -120,7 +211,7 @@ export default function Home() {
             className="text-center mb-8 sm:mb-12 md:mb-16"
           >
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4 px-4">
-              Why Reps & Steps?
+              Everything You Need to Succeed
             </h2>
             <p className="text-base sm:text-lg md:text-xl text-gray-400 max-w-2xl mx-auto px-4">
               Built for athletes who want to track, improve, and dominate their fitness goals.
@@ -132,17 +223,20 @@ export default function Home() {
               {
                 icon: Target,
                 title: "Precision Tracking",
-                description: "Count every rep, time every set. Advanced tracking with accuracy you can trust.",
+                description: "Count every rep, time every set, track steps with GPS. Advanced tracking with accuracy you can trust.",
+                free: true
               },
               {
                 icon: Zap,
-                title: "Smart Workouts",
-                description: "Choose from our exercise library, create custom workouts, or let our AI randomizer challenge you.",
+                title: "AI Workout Generator",
+                description: "Let AI create perfect workouts based on your goals, time, and intensity preferences.",
+                free: false
               },
               {
                 icon: Trophy,
-                title: "Share Victories",
-                description: "Save your achievements and share your progress. Inspire others with your dedication.",
+                title: "Achievements & Progress",
+                description: "Save workouts, track streaks, earn badges, and share your victories with the community.",
+                free: true
               }
             ].map((feature, index) => {
               const Icon = feature.icon;
@@ -155,7 +249,12 @@ export default function Home() {
                   whileHover={{ y: -5 }}
                   className="px-4"
                 >
-                  <Card className="h-full bg-card border-border shadow-lg hover:shadow-blue-500/20 transition-all duration-300">
+                  <Card className="h-full bg-card border-border shadow-lg hover:shadow-blue-500/20 transition-all duration-300 relative">
+                    {!feature.free && (
+                      <div className="absolute top-3 right-3">
+                        <span className="bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded-full">PRO</span>
+                      </div>
+                    )}
                     <CardContent className="p-6 md:p-8 text-center">
                       <div className="w-14 h-14 md:w-16 md:h-16 gradient-bg rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6">
                         <Icon className="w-6 h-6 md:w-8 md:h-8 text-white" />
@@ -186,20 +285,35 @@ export default function Home() {
           >
             <TrendingUp className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 mx-auto mb-3 sm:mb-4 md:mb-6 text-white" />
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 md:mb-6 px-4">
-              Ready to Transform Your Training?
+              Start Your Transformation Today
             </h2>
             <p className="text-base sm:text-lg md:text-xl mb-6 sm:mb-8 md:mb-10 max-w-2xl mx-auto text-white/90 px-4">
-              Join thousands of athletes who trust Reps & Steps to track their calisthenics journey.
+              Free forever. No credit card. Start tracking reps and steps in under 60 seconds.
             </p>
             
-            <Link to={createPageUrl("Exercises")} className="inline-block">
-              <Button 
-                size="lg" 
-                className="w-full sm:w-auto bg-white text-black hover:bg-brand-blue hover:text-white text-base sm:text-lg md:text-xl px-6 sm:px-8 md:px-12 py-3 sm:py-4 md:py-6 rounded-full font-bold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 touch-manipulation"
-              >
-                START YOUR JOURNEY
-              </Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center px-4">
+              <Link to={createPageUrl("Exercises")}>
+                <Button 
+                  size="lg" 
+                  className="w-full sm:w-auto bg-white text-black hover:bg-gray-100 text-base sm:text-lg md:text-xl px-6 sm:px-8 md:px-12 py-3 sm:py-4 md:py-6 rounded-full font-bold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 touch-manipulation"
+                >
+                  <Play className="w-5 h-5 mr-2" />
+                  START FREE WORKOUT
+                </Button>
+              </Link>
+              
+              {!isPro && !isLoading && (
+                <Link to={createPageUrl("Pricing")}>
+                  <Button 
+                    size="lg" 
+                    className="w-full sm:w-auto bg-yellow-400 text-black hover:bg-yellow-300 text-base sm:text-lg md:text-xl px-6 sm:px-8 md:px-12 py-3 sm:py-4 md:py-6 rounded-full font-bold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 touch-manipulation"
+                  >
+                    <Star className="w-5 h-5 mr-2" />
+                    GO PRO
+                  </Button>
+                </Link>
+              )}
+            </div>
           </motion.div>
         </div>
       </section>
