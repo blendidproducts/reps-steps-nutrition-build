@@ -80,8 +80,8 @@ export default function Home() {
               className="my-6 sm:my-8 md:my-10 lg:my-12 px-2 sm:px-4"
             >
               <img 
-                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/c4751c957_Jace_RepsandSteps_bluemodel_female-Background.png" 
-                alt="Fitness Models"
+                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/da699ae1c_RnS_AppfrontScreen.png" 
+                alt="Reps and Steps App"
                 className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl"
               />
             </motion.div>
