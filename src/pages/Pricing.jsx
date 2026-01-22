@@ -53,9 +53,16 @@ export default function Pricing() {
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
       <div className="gradient-bg text-white py-12">
         <div className="container mx-auto px-6 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Upgrade to Pro</h1>
+          <div className="mb-8">
+            <img 
+              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/da699ae1c_RnS_AppfrontScreen.png" 
+              alt="Reps and Steps App"
+              className="w-full max-w-md mx-auto rounded-xl shadow-2xl"
+            />
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">This is what consistency unlocks</h1>
           <p className="text-xl md:text-2xl text-white/90">
-            Unlock advanced features and take your training to the next level
+            Build your strongest version — permanently
           </p>
         </div>
       </div>
@@ -121,7 +128,7 @@ export default function Pricing() {
                 <p className="text-gray-400">Flexible subscription</p>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold mb-2">$9.99<span className="text-lg font-normal text-gray-400">/month</span></div>
+                <div className="text-3xl font-bold mb-2">$4.99<span className="text-lg font-normal text-gray-400">/month</span></div>
                 <p className="text-sm text-green-400 mb-6">Cancel anytime</p>
                 <ul className="space-y-3 text-gray-300">
                   {proFeatures.map((feature, i) => (
@@ -171,8 +178,8 @@ export default function Pricing() {
                 <p className="text-gray-400">One payment, forever</p>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold mb-2">$199.99<span className="text-lg font-normal text-gray-400"> once</span></div>
-                <p className="text-sm text-green-400 mb-6">Save $120/year vs monthly!</p>
+                <div className="text-3xl font-bold mb-2">$39.99<span className="text-lg font-normal text-gray-400"> once</span></div>
+                <p className="text-sm text-green-400 mb-6">Best value - one payment forever!</p>
                 <ul className="space-y-3 text-gray-300">
                   {proFeatures.map((feature, i) => (
                     <li key={i} className="flex items-center gap-3 font-medium">
@@ -199,7 +206,7 @@ export default function Pricing() {
                       className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 hover:opacity-90 text-black font-bold"
                     >
                       <ExternalLink className="w-5 h-5 mr-2" />
-                      Get Lifetime Pro - $199.99
+                      Get Lifetime Pro - $39.99
                     </Button>
 
                     <p className="text-xs text-gray-500 text-center pt-2">
