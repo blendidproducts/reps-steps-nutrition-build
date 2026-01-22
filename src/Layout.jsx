@@ -52,14 +52,18 @@ export default function Layout({ children, currentPageName }) {
     document.documentElement.classList.add('dark');
     document.body.style.backgroundColor = '#0a0a0a';
     
-    // Set viewport meta tag for optimal mobile viewing
+    // Set viewport meta tag for optimal mobile viewing (including older iPhones)
     let viewport = document.querySelector('meta[name="viewport"]');
     if (!viewport) {
       viewport = document.createElement('meta');
       viewport.name = 'viewport';
       document.head.appendChild(viewport);
     }
-    viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+    viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, minimum-scale=1.0';
+
+    // Add safe area support for older devices
+    document.documentElement.style.setProperty('--safe-area-inset-top', 'env(safe-area-inset-top, 20px)');
+    document.documentElement.style.setProperty('--safe-area-inset-bottom', 'env(safe-area-inset-bottom, 20px)');
 
     // Check for active program on mount
     checkActiveProgram();

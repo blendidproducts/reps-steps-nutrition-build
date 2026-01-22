@@ -1076,10 +1076,10 @@ export default function ActiveWorkout() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+              className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto"
             >
-              <Card className="bg-gray-900/80 border-purple-500/30 text-white w-full max-w-sm">
-                <CardContent className="p-6 text-center">
+              <Card className="bg-gray-900/80 border-purple-500/30 text-white w-full max-w-sm my-auto" style={{ maxHeight: '95vh' }}>
+                <CardContent className="p-3 sm:p-6 text-center overflow-y-auto" style={{ maxHeight: 'calc(95vh - 2rem)' }}>
                   {!activeCardio ? (
                     <>
                       <h2 className="text-2xl font-bold mb-2 text-purple-400">SUPERSET TRANSITION</h2>
@@ -1128,7 +1128,7 @@ export default function ActiveWorkout() {
 
                       <Button
                         onClick={skipSupersetTransition}
-                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold"
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold touch-manipulation min-h-[48px] mb-2"
                       >
                         SKIP - Continue Superset
                       </Button>
@@ -1153,19 +1153,17 @@ export default function ActiveWorkout() {
                         )}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-2 pb-2">
                         <Button
                           onClick={stopCardio}
-                          size="lg"
-                          className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-6"
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold touch-manipulation min-h-[56px] text-sm"
                         >
-                          <Square className="w-5 h-5 mr-2" />
+                          <Square className="w-4 h-4 mr-1" />
                           STOP & SWITCH
                         </Button>
                         <Button
                           onClick={stopCardioAndContinueSuperset}
-                          size="lg"
-                          className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-6"
+                          className="bg-purple-500 hover:bg-purple-600 text-white font-bold touch-manipulation min-h-[56px] text-sm"
                         >
                           DONE - Continue
                         </Button>
@@ -1185,10 +1183,10 @@ export default function ActiveWorkout() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+              className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto"
             >
-              <Card className="bg-gray-900/80 border-brand-blue/30 text-white w-full max-w-sm">
-                <CardContent className="p-6 text-center">
+              <Card className="bg-gray-900/80 border-brand-blue/30 text-white w-full max-w-sm my-auto" style={{ maxHeight: '95vh', marginTop: 'auto', marginBottom: 'auto' }}>
+                <CardContent className="p-3 sm:p-6 text-center overflow-y-auto" style={{ maxHeight: 'calc(95vh - 2rem)' }}>
                   {!activeCardio ? (
                     <>
                       <h2 className="text-2xl font-bold mb-2 text-brand-blue">ACTIVE RECOVERY</h2>
@@ -1326,19 +1324,19 @@ export default function ActiveWorkout() {
                         </Button>
                       </div>
 
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 pb-2">
                         <Button
                           onClick={skipRest}
                           variant="outline"
-                          className="flex-1 border-gray-500 text-gray-300 hover:bg-gray-700"
+                          className="flex-1 border-gray-500 text-gray-300 hover:bg-gray-700 touch-manipulation min-h-[48px] text-xs sm:text-sm"
                         >
                           SKIP - JUST REST
                         </Button>
                         <Button
                           onClick={openSupersetModal}
-                          className="flex-1 bg-purple-600/20 border-2 border-purple-500 text-purple-300 hover:bg-purple-600/40"
+                          className="flex-1 bg-purple-600/20 border-2 border-purple-500 text-purple-300 hover:bg-purple-600/40 touch-manipulation min-h-[48px] text-xs sm:text-sm"
                         >
-                          <LinkIcon className="w-4 h-4 mr-2" />
+                          <LinkIcon className="w-4 h-4 mr-1" />
                           SUPERSET
                         </Button>
                       </div>
@@ -1371,28 +1369,26 @@ export default function ActiveWorkout() {
                             )}
                           </div>
 
-                          <div className="grid grid-cols-2 gap-3 mb-4">
-                            <Button
-                              onClick={stopCardio}
-                              size="lg"
-                              className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-6"
-                            >
-                              <Square className="w-5 h-5 mr-2" />
-                              STOP & SWITCH
-                            </Button>
-                            <Button
-                              onClick={() => {
-                                stopCardio();
-                                if (restCardioTotal >= (workout.rest_time || 60)) {
-                                  setTimeout(() => skipRest(), 100);
-                                }
-                              }}
-                              size="lg"
-                              className="bg-green-500 hover:bg-green-600 text-white font-bold py-6"
-                            >
-                              DONE
-                            </Button>
-                          </div>
+                          <div className="grid grid-cols-2 gap-2 mb-3 pb-2">
+                              <Button
+                                onClick={stopCardio}
+                                className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold touch-manipulation min-h-[56px] text-sm"
+                              >
+                                <Square className="w-4 h-4 mr-1" />
+                                STOP & SWITCH
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  stopCardio();
+                                  if (restCardioTotal >= (workout.rest_time || 60)) {
+                                    setTimeout(() => skipRest(), 100);
+                                  }
+                                }}
+                                className="bg-green-500 hover:bg-green-600 text-white font-bold touch-manipulation min-h-[56px] text-sm"
+                              >
+                                DONE
+                              </Button>
+                            </div>
                         </>
                       )}
                 </CardContent>
