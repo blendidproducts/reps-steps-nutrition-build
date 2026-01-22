@@ -211,7 +211,7 @@ Choose realistic exercises that match the body focus and intensity level.`,
             AI Generator or Manual Builder
           </p>
 
-          {/* AI Prompt Option - NEW PRO FEATURE */}
+          {/* 🧞 WorkoutGenie - PREMIUM AI FEATURE */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -226,83 +226,93 @@ Choose realistic exercises that match the body focus and intensity level.`,
                   navigate(createPageUrl("Pricing"));
                 }
               }}
-              className={`w-full relative bg-gradient-to-br from-yellow-500 to-orange-600 p-6 rounded-2xl border-2 ${
-                isPro ? 'border-yellow-400' : 'border-yellow-500/50 opacity-75'
+              className={`w-full relative bg-gradient-to-br from-yellow-500 via-orange-600 to-red-600 p-6 sm:p-8 rounded-2xl border-4 ${
+                isPro ? 'border-yellow-300 shadow-2xl shadow-yellow-500/50' : 'border-yellow-500/50 opacity-80'
               } hover:scale-105 transition-transform cursor-pointer text-left`}>
                 {!isPro && (
-                  <div className="absolute top-3 right-3">
-                    <Badge className="bg-black text-yellow-400 font-bold border border-yellow-400">PRO ONLY</Badge>
+                  <div className="absolute top-4 right-4">
+                    <Badge className="bg-black text-yellow-400 font-bold border-2 border-yellow-400 text-sm px-3 py-1">⭐ PRO ONLY</Badge>
                   </div>
                 )}
-                <Zap className="w-12 h-12 mb-3 text-white" />
-                <h3 className="text-2xl font-bold mb-2 text-white">🧞 WorkoutGenie</h3>
-                <p className="text-white/90 text-sm mb-4">
-                  Describe your workout idea - AI builds it from our exercise library
+                <Zap className="w-14 h-14 sm:w-16 sm:h-16 mb-3 text-white animate-pulse" />
+                <h3 className="text-3xl sm:text-4xl font-black mb-3 text-white drop-shadow-lg">🧞 WorkoutGenie AI</h3>
+                <p className="text-white text-base sm:text-lg mb-4 font-semibold">
+                  Just describe your workout - AI builds it instantly
                 </p>
-                <ul className="space-y-2 text-sm text-white/80">
-                  <li>✓ Just type what you want in plain English</li>
-                  <li>✓ Instant custom workout in seconds</li>
-                  <li>✓ Uses real exercises from our database</li>
+                <ul className="space-y-2 text-sm sm:text-base text-white/95 font-medium">
+                  <li>✨ Type in plain English - no complexity</li>
+                  <li>⚡ Instant workout generation in seconds</li>
+                  <li>🎯 Uses real exercises from our library</li>
+                  <li>🔥 Perfect for any fitness level</li>
                 </ul>
-                <div className="mt-4 inline-block bg-white/20 px-3 py-1 rounded-full text-xs font-bold">
-                  "18 min low intensity upper & lower mix" →
+                <div className="mt-5 bg-black/30 backdrop-blur-sm px-4 py-2 rounded-lg text-sm sm:text-base font-bold border border-white/20">
+                  💬 "18 min low intensity upper & lower mix"
                 </div>
               </button>
             </motion.div>
 
-          {/* Plan Selection Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-4xl">
-            {/* AI Workout Generator - PRO ONLY */}
+          {/* Main Workout Builder Options */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mb-6">
+            {/* AI Workout Generator (AUTO MODE) - PRO ONLY */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.6 }}
             >
               <Link to={isPro ? createPageUrl("AIWorkoutGenerator") : createPageUrl("Pricing")}>
-                <div className={`relative bg-gradient-to-br from-purple-600 to-blue-600 p-6 rounded-2xl border-2 ${
-                  isPro ? 'border-yellow-400' : 'border-purple-500/50 opacity-75'
-                } hover:scale-105 transition-transform cursor-pointer`}>
+                <div className={`relative bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-2xl border-3 ${
+                  isPro ? 'border-purple-300 shadow-xl shadow-purple-500/40' : 'border-purple-500/50 opacity-75'
+                } hover:scale-105 transition-transform cursor-pointer h-full`}>
                   {!isPro && (
-                    <div className="absolute top-3 right-3">
-                      <Badge className="bg-yellow-400 text-black font-bold">PRO ONLY</Badge>
+                    <div className="absolute top-3 right-3 z-10">
+                      <Badge className="bg-yellow-400 text-black font-bold text-xs">⭐ PRO</Badge>
                     </div>
                   )}
                   <Zap className="w-12 h-12 mb-3 text-white" />
-                  <h3 className="text-2xl font-bold mb-2">AI Workout Generator</h3>
-                  <p className="text-white/90 text-sm mb-4">
-                    Smart AI creates personalized workouts in seconds
+                  <h3 className="text-2xl font-bold mb-2 text-white">AI Auto Mode</h3>
+                  <p className="text-white/90 text-sm mb-4 font-medium">
+                    Smart AI creates complete workouts automatically
                   </p>
-                  <ul className="space-y-2 text-sm text-white/80">
-                    <li>✓ Choose your fitness level</li>
-                    <li>✓ Select body focus & duration</li>
-                    <li>✓ Auto-selected exercises</li>
+                  <ul className="space-y-2 text-sm text-white/85">
+                    <li>🎚️ Choose fitness level</li>
+                    <li>⏱️ Set duration & intensity</li>
+                    <li>🤖 AI picks exercises for you</li>
+                    <li>🚀 Instant workout generation</li>
                   </ul>
                 </div>
               </Link>
             </motion.div>
 
-            {/* Manual Builder - FREE */}
+            {/* Manual Builder - FREE FOREVER */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.6 }}
             >
-              <div className="relative bg-gradient-to-br from-gray-700 to-gray-800 p-6 rounded-2xl border-2 border-gray-600 hover:scale-105 transition-transform cursor-pointer">
+              <div className="relative bg-gradient-to-br from-gray-700 to-gray-900 p-6 rounded-2xl border-3 border-green-500 hover:scale-105 transition-transform cursor-pointer h-full shadow-xl shadow-green-500/20">
                 <div className="absolute top-3 right-3">
-                  <Badge className="bg-green-500 text-white font-bold">FREE</Badge>
+                  <Badge className="bg-green-500 text-white font-bold text-xs">✓ FREE</Badge>
                 </div>
-                <Dumbbell className="w-12 h-12 mb-3 text-white" />
-                <h3 className="text-2xl font-bold mb-2">Build Your Workout</h3>
-                <p className="text-white/90 text-sm mb-4">
-                  Manually select exercises & customize
+                <Dumbbell className="w-12 h-12 mb-3 text-green-400" />
+                <h3 className="text-2xl font-bold mb-2 text-white">Manual Builder</h3>
+                <p className="text-white/90 text-sm mb-4 font-medium">
+                  Browse & select exercises yourself (scroll down)
                 </p>
-                <ul className="space-y-2 text-sm text-white/80">
-                  <li>✓ Browse exercise library</li>
-                  <li>✓ Pick your favorites</li>
-                  <li>✓ Full control & flexibility</li>
+                <ul className="space-y-2 text-sm text-white/85">
+                  <li>📚 Browse 50+ exercises</li>
+                  <li>✋ Pick your favorites</li>
+                  <li>⚙️ Full control & customization</li>
+                  <li>🆓 100% Free forever</li>
                 </ul>
               </div>
             </motion.div>
+          </div>
+
+          {/* FREE Instructions */}
+          <div className="bg-green-500/10 border-2 border-green-500/30 rounded-xl p-4 mb-4 max-w-4xl">
+            <p className="text-green-400 font-bold text-center text-sm sm:text-base">
+              👇 FREE USERS: Scroll down to browse exercises and manually build your workout
+            </p>
           </div>
         </div>
       </div>
