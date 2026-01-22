@@ -307,9 +307,9 @@ export default function AIWorkoutGenerator() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <div className="bg-gradient-to-br from-purple-900 to-blue-900 text-white py-4 sm:py-6">
+      <div className="bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 text-white py-6 sm:py-10">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 mb-4">
             <Button
               variant="outline"
               size="icon"
@@ -319,10 +319,26 @@ export default function AIWorkoutGenerator() {
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold truncate flex items-center gap-2">
-                🧞 AI Workout Generator
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black truncate flex items-center gap-2">
+                🤖 AI AUTO MODE
               </h1>
-              <p className="text-xs sm:text-sm text-white/80">Smart workout creation in 3 steps</p>
+              <p className="text-sm sm:text-base text-white/90 font-medium">AI picks exercises automatically</p>
+            </div>
+          </div>
+
+          {/* PRO Features Highlight */}
+          <div className="bg-gradient-to-r from-yellow-500/20 via-orange-500/20 to-purple-500/20 backdrop-blur-sm border-2 border-yellow-400/30 rounded-xl p-4 sm:p-6 max-w-3xl mx-auto">
+            <div className="flex items-start gap-3">
+              <Zap className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-400 flex-shrink-0 animate-pulse" />
+              <div>
+                <h3 className="text-lg sm:text-xl font-bold text-white mb-2">⭐ PRO FEATURE</h3>
+                <ul className="space-y-1.5 text-sm sm:text-base text-white/90">
+                  <li>✨ <strong>Zero thinking required</strong> - AI does all the work</li>
+                  <li>🎯 <strong>Smart exercise selection</strong> based on your level</li>
+                  <li>⚡ <strong>Instant workout generation</strong> in 3 easy steps</li>
+                  <li>🔥 <strong>Optimized for your goals</strong> - time, intensity & focus</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
