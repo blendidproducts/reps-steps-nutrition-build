@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Calendar, Target, Zap, Trophy, ArrowRight, Check } from "lucide-react";
+import { Calendar, Target, Zap, Trophy, ArrowRight, Check, Eye } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
@@ -18,10 +18,29 @@ export default function PresetPrograms() {
   const [programs, setPrograms] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProgram, setSelectedProgram] = useState(null);
+  const [activeProgram, setActiveProgram] = useState(null);
+  const [activeProgramDetails, setActiveProgramDetails] = useState(null);
 
   useEffect(() => {
     loadPrograms();
+    loadActiveProgram();
   }, []);
+
+  const loadActiveProgram = async () => {
+    try {
+      const user = await base44.auth.me();
+      if (user.active_program) {
+        setActiveProgram(user.active_program);
+        // Fetch full program details
+        const programs = await PresetProgram.filter({ id: user.active_program.program_id });
+        if (programs.length > 0) {
+          setActiveProgramDetails(programs[0]);
+        }
+      }
+    } catch (error) {
+      console.log('No active program');
+    }
+  };
 
   const loadPrograms = async () => {
     setIsLoading(true);
@@ -131,6 +150,81 @@ export default function PresetPrograms() {
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+        {/* Active Program Section */}
+        {activeProgram && activeProgramDetails && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
+          >
+            <h2 className="text-2xl font-bold text-foreground mb-4">IN CURRENT PROGRAM</h2>
+            <Card className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-2 border-purple-500/50">
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row gap-6">
+                  {/* Program Info */}
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-bold text-foreground mb-2">{activeProgram.program_name}</h3>
+                    <div className="flex flex-wrap gap-3 mb-4">
+                      <Badge className="bg-green-500 text-white font-bold">
+                        ✓ Day {activeProgram.current_day - 1} Complete
+                      </Badge>
+                      <Badge className={difficultyColors[activeProgramDetails.difficulty]}>
+                        {activeProgramDetails.difficulty}
+                      </Badge>
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    <div className="mb-4">
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-gray-300">Progress</span>
+                        <span className="text-brand-blue font-bold">
+                          {activeProgram.current_day - 1} / {activeProgram.total_days} days
+                        </span>
+                      </div>
+                      <Progress 
+                        value={((activeProgram.current_day - 1) / activeProgram.total_days) * 100} 
+                        className="h-3"
+                      />
+                    </div>
+
+                    {/* Next Day Preview */}
+                    {activeProgram.current_day <= activeProgram.total_days && (
+                      <div className="bg-background/50 border border-brand-blue/30 rounded-lg p-4">
+                        <p className="text-sm font-semibold text-brand-blue mb-2">
+                          ▶ Next: Day {activeProgram.current_day}
+                        </p>
+                        {activeProgramDetails.daily_plans[activeProgram.current_day - 1] && (
+                          <>
+                            <p className="text-white font-medium mb-1">
+                              {activeProgramDetails.daily_plans[activeProgram.current_day - 1].workout_name}
+                            </p>
+                            {activeProgramDetails.daily_plans[activeProgram.current_day - 1].is_rest_day ? (
+                              <p className="text-sm text-gray-400">Rest and recovery day</p>
+                            ) : (
+                              <p className="text-sm text-gray-400">
+                                {activeProgramDetails.daily_plans[activeProgram.current_day - 1].total_reps} total reps
+                              </p>
+                            )}
+                          </>
+                        )}
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedProgram(activeProgramDetails);
+                          }}
+                          className="w-full mt-3 bg-brand-blue hover:bg-brand-blue-dark text-white font-bold"
+                        >
+                          PREVIEW Day {activeProgram.current_day}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array(3).fill(0).map((_, i) => (
