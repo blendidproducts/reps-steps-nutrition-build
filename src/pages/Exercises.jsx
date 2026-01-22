@@ -211,6 +211,29 @@ Choose realistic exercises that match the body focus and intensity level.`,
             AI Generator or Manual Builder
           </p>
 
+          {/* 🔥 7-Day Trial Banner */}
+          {!isPro && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.6 }}
+              className="mb-4"
+            >
+              <button
+                onClick={() => navigate(createPageUrl("Pricing"))}
+                className="w-full relative bg-gradient-to-r from-green-500 to-emerald-600 p-5 sm:p-6 rounded-2xl border-4 border-green-400 shadow-2xl hover:scale-[1.02] transition-transform cursor-pointer"
+              >
+                <div className="flex items-center gap-4 flex-wrap justify-center sm:justify-start">
+                  <Zap className="w-10 h-10 sm:w-12 sm:h-12 text-white animate-pulse flex-shrink-0" />
+                  <div className="text-center sm:text-left">
+                    <div className="text-white font-black text-xl sm:text-2xl mb-1">🔥 7-DAY PRO TRIAL - ONLY $3.99</div>
+                    <div className="text-green-100 text-sm sm:text-base font-semibold">Try WorkoutGenie AI, Auto Mode & ALL PRO features risk-free!</div>
+                  </div>
+                </div>
+              </button>
+            </motion.div>
+          )}
+
           {/* 🧞 WorkoutGenie - PREMIUM AI FEATURE */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}

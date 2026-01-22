@@ -184,6 +184,22 @@ export default function Home() {
               transition={{ delay: 0.3, duration: 0.6 }}
               className="px-4 space-y-4"
             >
+              {!isPro && !isLoading && (
+                <div className="mb-4 max-w-2xl mx-auto">
+                  <Link to={createPageUrl("Pricing")}>
+                    <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-4 rounded-xl border-2 border-green-400 shadow-xl hover:scale-105 transition-transform cursor-pointer">
+                      <div className="flex items-center justify-center gap-3 flex-wrap">
+                        <Zap className="w-6 h-6 text-white animate-pulse" />
+                        <div className="text-center">
+                          <div className="text-white font-black text-lg">🔥 7-DAY PRO TRIAL - ONLY $3.99</div>
+                          <div className="text-green-100 text-sm font-semibold">Try ALL AI features risk-free!</div>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                </div>
+              )}
+
               <Link to={createPageUrl("Exercises")} className="block">
                 <Button 
                   size="lg" 

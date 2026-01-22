@@ -90,6 +90,69 @@ export default function Pricing() {
           </div>
         )}
 
+        {/* 7-Day Trial Offer - Featured */}
+        <div className="max-w-3xl mx-auto mb-8">
+          <Card className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 border-4 border-green-500 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 bg-gradient-to-r from-green-400 to-emerald-500 text-black font-black text-sm px-4 py-2 rounded-bl-xl">
+              🔥 SPECIAL OFFER
+            </div>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-3xl flex items-center gap-2">
+                <Zap className="w-8 h-8 text-green-400" />
+                7-Day PRO Trial
+              </CardTitle>
+              <p className="text-gray-300 text-lg">Try ALL features risk-free</p>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center mb-6">
+                <div className="text-5xl font-black text-green-400 mb-2">$3.99</div>
+                <p className="text-xl text-green-300 font-bold">One-time • 7 Days Full Access</p>
+              </div>
+              <ul className="space-y-3 text-gray-200 mb-6">
+                <li className="flex items-center gap-3 font-medium">
+                  <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
+                  <span>🧞 WorkoutGenie AI - instant workout generation</span>
+                </li>
+                <li className="flex items-center gap-3 font-medium">
+                  <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
+                  <span>🤖 AI Auto Mode - smart exercise selection</span>
+                </li>
+                <li className="flex items-center gap-3 font-medium">
+                  <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
+                  <span>📅 Preset Programs - professional workout plans</span>
+                </li>
+                <li className="flex items-center gap-3 font-medium">
+                  <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
+                  <span>📊 Advanced Analytics & Progress Tracking</span>
+                </li>
+                <li className="flex items-center gap-3 font-medium">
+                  <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
+                  <span>💾 Unlimited Saved Workouts</span>
+                </li>
+              </ul>
+              {isPro ? (
+                <Button variant="outline" className="w-full" disabled>
+                  <Check className="w-5 h-5 mr-2" />
+                  You are a Pro Member!
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    onClick={() => window.open('https://buy.stripe.com/trial-link-here', '_blank')}
+                    className="w-full bg-gradient-to-r from-green-400 to-emerald-500 hover:opacity-90 text-black font-black text-xl py-7"
+                  >
+                    <Zap className="w-6 h-6 mr-2" />
+                    START 7-DAY TRIAL - $3.99
+                  </Button>
+                  <p className="text-xs text-gray-400 text-center mt-3">
+                    Trial starts immediately after payment • No auto-renewal • Upgrade to PRO anytime
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {/* Free Tier */}
           <motion.div whileHover={{ y: -5 }}>
