@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Calendar, Target, Zap, Trophy, ArrowRight, Check, Eye } from "lucide-react";
+import { Calendar, Target, Zap, Trophy, ArrowRight, Check, Eye, X, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
@@ -314,6 +314,22 @@ export default function PresetPrograms() {
             onClick={e => e.stopPropagation()}
           >
             <CardHeader>
+              <div className="flex justify-between items-start mb-2">
+                <Button
+                  onClick={() => setSelectedProgram(null)}
+                  variant="outline"
+                  className="border-gray-600 hover:bg-gray-800"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back
+                </Button>
+                <button
+                  onClick={() => setSelectedProgram(null)}
+                  className="w-8 h-8 rounded-full hover:bg-gray-800 flex items-center justify-center transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle className="text-2xl text-foreground mb-2">{selectedProgram.name}</CardTitle>
