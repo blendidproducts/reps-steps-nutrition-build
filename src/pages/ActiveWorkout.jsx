@@ -647,16 +647,19 @@ export default function ActiveWorkout() {
         completed_reps: ex.completed_reps || 0
       })));
       
-      // Use global workout tracking for steps and distance
+      // CRITICAL FIX: Use global GPS-tracked workout steps and distance
       const totalSteps = totalWorkoutSteps;
       const totalDistance = totalWorkoutDistance;
+      
+      console.log('[STEPS TRACKING - FINAL] GPS Total Steps:', totalSteps);
+      console.log('[STEPS TRACKING - FINAL] GPS Total Distance:', totalDistance);
       
       // Calculate cardio analytics with steps and distance
       const walkIntervals = cardioIntervals.filter(c => c.type === 'walk');
       const jogIntervals = cardioIntervals.filter(c => c.type === 'jog');
       const sprintIntervals = cardioIntervals.filter(c => c.type === 'sprint');
       
-      // Calculate individual cardio type analytics
+      // Calculate individual cardio type analytics (estimated from time)
       const walkSteps = Math.round(walkIntervals.reduce((sum, c) => sum + (c.time / 60) * 110, 0));
       const walkDistance = walkIntervals.reduce((sum, c) => {
         return sum + (c.gps_distance || (c.time / 3600) * 3.5);
@@ -729,6 +732,14 @@ export default function ActiveWorkout() {
           total_distance_miles: Math.round(totalDistance * 100) / 100
         }
       };
+      
+      console.log('[SESSION SAVE] Final session data:', {
+        total_reps: calculatedTotalReps,
+        total_steps: totalSteps,
+        total_distance: totalDistance,
+        cardio_analytics: sessionData.cardio_analytics
+      });
+      
       await WorkoutSession.create(sessionData);
     }
     setIsActive(false);
