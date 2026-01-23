@@ -186,17 +186,17 @@ export default function Home() {
             >
               {!isPro && !isLoading && (
                 <div className="mb-4 max-w-2xl mx-auto">
-                  <Link to={createPageUrl("Pricing")}>
+                  <a href="https://buy.stripe.com/aFa7sL4lM5muau82OpbQY0i" target="_blank" rel="noopener noreferrer">
                     <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-4 rounded-xl border-2 border-green-400 shadow-xl hover:scale-105 transition-transform cursor-pointer">
                       <div className="flex items-center justify-center gap-3 flex-wrap">
                         <Zap className="w-6 h-6 text-white animate-pulse" />
                         <div className="text-center">
-                          <div className="text-white font-black text-lg">🔥 7-DAY PRO TRIAL - ONLY $3.99</div>
-                          <div className="text-green-100 text-sm font-semibold">Try ALL AI features risk-free!</div>
+                          <div className="text-white font-black text-lg">🔥 7-DAY TRIAL - START TODAY!</div>
+                          <div className="text-green-100 text-sm font-semibold">Only $3.99 - Try ALL PRO features!</div>
                         </div>
                       </div>
                     </div>
-                  </Link>
+                  </a>
                 </div>
               )}
 
