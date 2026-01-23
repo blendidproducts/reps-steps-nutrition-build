@@ -368,19 +368,19 @@ Choose realistic exercises that match the body focus and intensity level.`,
             className="fixed bottom-0 left-0 right-0 z-20 p-4"
           >
             <div className="container mx-auto max-w-2xl">
-                <div className="flex justify-between items-center bg-card border border-brand-blue/50 rounded-xl shadow-2xl p-3">
+                <div className="flex justify-between items-center bg-blue-500/30 backdrop-blur-lg border border-brand-blue/50 rounded-xl shadow-2xl p-3">
                   <div>
-                    <span className="font-semibold text-foreground text-base"> {/* Changed from text-white to text-foreground */}
+                    <span className="font-semibold text-white text-base">
                       {selectedExercises.length} exercises selected
                     </span>
                     <div className="flex gap-1.5 mt-1 flex-wrap">
                       {selectedExercises.slice(0, 3).map(ex => (
-                        <Badge key={ex.id} variant="secondary" className="text-xs bg-gray-700 text-gray-300">
+                        <Badge key={ex.id} variant="secondary" className="text-xs bg-white/20 text-white font-semibold">
                           {ex.name}
                         </Badge>
                       ))}
                       {selectedExercises.length > 3 && (
-                        <Badge variant="secondary" className="text-xs bg-gray-700 text-gray-300">+{selectedExercises.length - 3} more</Badge>
+                        <Badge variant="secondary" className="text-xs bg-white/20 text-white font-semibold">+{selectedExercises.length - 3} more</Badge>
                       )}
                     </div>
                   </div>
