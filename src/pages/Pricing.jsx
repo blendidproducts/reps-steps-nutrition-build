@@ -241,7 +241,7 @@ export default function Pricing() {
                 <p className="text-gray-400">One payment, forever</p>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold mb-2">$39.99<span className="text-lg font-normal text-gray-400"> once</span></div>
+                <div className="text-3xl font-bold mb-2">$199.99<span className="text-lg font-normal text-gray-400"> once</span></div>
                 <p className="text-sm text-green-400 mb-6">Best value - one payment forever!</p>
                 <ul className="space-y-3 text-gray-300">
                   {proFeatures.map((feature, i) => (
@@ -269,7 +269,7 @@ export default function Pricing() {
                       className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 hover:opacity-90 text-black font-bold"
                     >
                       <ExternalLink className="w-5 h-5 mr-2" />
-                      Get Lifetime Pro - $39.99
+                      Get Lifetime Pro - $199.99
                     </Button>
 
                     <p className="text-xs text-gray-500 text-center pt-2">

@@ -812,7 +812,8 @@ export default function ActiveWorkout() {
 
       console.log('🔵 Requesting Bluetooth device...');
       const device = await navigator.bluetooth.requestDevice({
-        filters: [{ services: ['heart_rate'] }]
+        filters: [{ services: ['heart_rate'] }],
+        optionalServices: ['heart_rate']
       });
       console.log('✅ Device selected:', device.name);
 
@@ -831,34 +832,43 @@ export default function ActiveWorkout() {
       await characteristic.startNotifications();
       console.log('✅ Notifications started');
 
-      characteristic.addEventListener('characteristicvaluechanged', (event) => {
+      const handleHRChange = (event) => {
         const value = event.target.value;
-        // Heart rate is in the second byte (index 1)
-        const hr = value.getUint8(1);
-        
-        // Debug log with validation
+        const flags = value.getUint8(0);
+        const rate16Bits = flags & 0x1;
+        let hr;
+
+        if (rate16Bits) {
+          hr = value.getUint16(1, true);
+        } else {
+          hr = value.getUint8(1);
+        }
+
         console.log(`💓 HR Reading: ${hr} BPM`, {
           timestamp: new Date().toLocaleTimeString(),
-          raw: Array.from(new Uint8Array(value.buffer)),
+          flags,
+          rate16Bits,
           valid: hr >= 40 && hr <= 220
         });
 
-        // Validate heart rate is in reasonable range
         if (hr >= 40 && hr <= 220) {
           setRealtimeHR(hr);
           setHeartRate(hr.toString());
         } else {
           console.warn('⚠️ Invalid HR reading:', hr);
         }
-      });
+      };
 
-      // Handle disconnection
-      device.addEventListener('gattserverdisconnected', () => {
+      characteristic.addEventListener('characteristicvaluechanged', handleHRChange);
+
+      const handleDisconnect = () => {
         console.log('❌ Device disconnected');
         setIsBluetoothConnected(false);
         setRealtimeHR(null);
         toast.error('Heart rate monitor disconnected');
-      });
+      };
+
+      device.addEventListener('gattserverdisconnected', handleDisconnect);
 
       setBluetoothDevice(device);
       setIsBluetoothConnected(true);
@@ -871,7 +881,16 @@ export default function ActiveWorkout() {
         message: error.message,
         code: error.code
       });
-      toast.error(`Connection failed: ${error.message}`);
+
+      let errorMsg = 'Connection failed';
+      if (error.name === 'NotFoundError') {
+        errorMsg = 'No device selected';
+      } else if (error.name === 'SecurityError') {
+        errorMsg = 'Bluetooth permission denied';
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      toast.error(errorMsg);
     }
   };
 
