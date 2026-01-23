@@ -398,19 +398,19 @@ Choose realistic exercises that match the body focus and intensity level.`,
 
         {/* Exercise Grid */}
         {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-            {Array(12).fill(0).map((_, i) => (
-              <div key={i} className="bg-card rounded-xl p-3 sm:p-4 animate-pulse">
-                <div className="w-full h-20 sm:h-24 bg-gray-700 rounded-lg mb-3 sm:mb-4"></div>
-                <div className="h-3 sm:h-4 bg-gray-700 rounded mb-2 w-3/4"></div>
-                <div className="h-2 sm:h-3 bg-gray-700 rounded w-1/2"></div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2">
+            {Array(21).fill(0).map((_, i) => (
+              <div key={i} className="bg-card rounded-lg p-1.5 animate-pulse">
+                <div className="w-full h-12 bg-gray-700 rounded mb-1"></div>
+                <div className="h-2 bg-gray-700 rounded mb-1 w-3/4"></div>
+                <div className="h-2 bg-gray-700 rounded w-1/2"></div>
               </div>
             ))}
           </div>
         ) : (
           <motion.div 
             layout
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 pb-24 sm:pb-28"
+            className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 pb-24"
           >
             <AnimatePresence>
               {filteredExercises.map((exercise) => (
