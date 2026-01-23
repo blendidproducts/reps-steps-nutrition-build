@@ -315,7 +315,7 @@ export default function Layout({ children, currentPageName }) {
             />
           )}
 
-          <header className="bg-card border-b border-border px-4 py-3 md:hidden sticky top-0 z-50">
+          <header className="bg-card/80 backdrop-blur-lg border-b border-border px-4 py-3 md:hidden sticky top-0 z-50">
             <div className="flex items-center gap-3">
               <SidebarTrigger className="flex items-center gap-2 bg-brand-blue hover:bg-brand-blue-dark px-4 py-2.5 rounded-lg transition-colors duration-200 text-white font-semibold text-sm" >
                 <span>☰</span>
@@ -331,7 +331,7 @@ export default function Layout({ children, currentPageName }) {
           {hasActiveWorkout && !location.pathname.includes('/ActiveWorkout') && (
             <div 
               onClick={resumeWorkout}
-              className="bg-gradient-to-r from-brand-blue to-blue-600 text-white px-4 py-3 cursor-pointer hover:opacity-90 transition-opacity sticky top-0 z-50 border-b-2 border-blue-400"
+              className="bg-gradient-to-r from-brand-blue/95 to-blue-600/95 backdrop-blur-lg text-white px-4 py-3 cursor-pointer hover:opacity-90 transition-opacity sticky top-0 z-50 border-b-2 border-blue-400"
             >
               <div className="container mx-auto flex items-center justify-between">
                 <div className="flex items-center gap-3">

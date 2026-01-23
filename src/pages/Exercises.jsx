@@ -204,7 +204,7 @@ Choose realistic exercises that match the body focus and intensity level.`,
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb', paddingBottom: '100px' }}>
       {/* Header */}
-      <div className="gradient-bg text-white py-3 sm:py-4 md:py-6">
+      <div className="gradient-bg text-white py-3 sm:py-4 md:py-6 backdrop-blur-lg bg-gradient-to-r from-blue-600/90 to-blue-800/90">
         <div className="container mx-auto px-3 sm:px-4 lg:px-6 max-w-3xl">
           <h1 className="text-lg sm:text-xl md:text-2xl font-bold mb-1 sm:mb-2">Choose Your Plan</h1>
           <p className="text-xs sm:text-sm md:text-base text-white/90 mb-2 sm:mb-3">
@@ -338,7 +338,7 @@ Choose realistic exercises that match the body focus and intensity level.`,
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         {/* Search and Filters */}
-        <div className="bg-card rounded-xl shadow-lg p-3 sm:p-4 mb-4 sm:mb-6 sticky top-0 z-10">
+        <div className="bg-card/90 backdrop-blur-lg rounded-xl shadow-lg p-3 sm:p-4 mb-4 sm:mb-6 sticky top-0 z-10">
           <div className="flex flex-col gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
