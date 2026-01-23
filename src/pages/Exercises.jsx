@@ -204,10 +204,10 @@ Choose realistic exercises that match the body focus and intensity level.`,
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb', paddingBottom: '100px' }}>
       {/* Header */}
-      <div className="gradient-bg text-white py-4 sm:py-6 md:py-8">
-        <div className="container mx-auto px-3 sm:px-4 lg:px-6 max-w-4xl">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">Choose Your Plan</h1>
-          <p className="text-sm sm:text-base md:text-lg text-white/90 mb-3 sm:mb-4">
+      <div className="gradient-bg text-white py-3 sm:py-4 md:py-6">
+        <div className="container mx-auto px-3 sm:px-4 lg:px-6 max-w-3xl">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold mb-1 sm:mb-2">Choose Your Plan</h1>
+          <p className="text-xs sm:text-sm md:text-base text-white/90 mb-2 sm:mb-3">
             AI Generator or Manual Builder
           </p>
 
@@ -217,17 +217,17 @@ Choose realistic exercises that match the body focus and intensity level.`,
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.6 }}
-              className="mb-3"
+              className="mb-2 sm:mb-3"
             >
               <button
                 onClick={() => navigate(createPageUrl("Pricing"))}
-                className="w-full relative bg-gradient-to-r from-green-500 to-emerald-600 p-3 sm:p-4 rounded-xl border-2 border-green-400 shadow-xl hover:scale-[1.01] transition-transform cursor-pointer"
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 p-2.5 sm:p-3 rounded-lg border border-green-400 shadow-lg hover:scale-[1.01] transition-transform cursor-pointer"
               >
-                <div className="flex items-center gap-2 sm:gap-3 justify-center">
-                  <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-white animate-pulse flex-shrink-0" />
+                <div className="flex items-center gap-2 justify-center">
+                  <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-white animate-pulse flex-shrink-0" />
                   <div className="text-center">
-                    <div className="text-white font-black text-sm sm:text-base">🔥 7-DAY TRIAL - $3.99</div>
-                    <div className="text-green-100 text-xs sm:text-sm font-semibold">Try ALL PRO features!</div>
+                    <div className="text-white font-bold text-xs sm:text-sm">🔥 7-DAY TRIAL - $3.99</div>
+                    <div className="text-green-100 text-[10px] sm:text-xs font-semibold">Try ALL PRO features!</div>
                   </div>
                 </div>
               </button>
@@ -275,7 +275,7 @@ Choose realistic exercises that match the body focus and intensity level.`,
             </motion.div>
 
           {/* Main Workout Builder Options */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-4">
             {/* AI Workout Generator (AUTO MODE) - PRO ONLY */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -283,20 +283,20 @@ Choose realistic exercises that match the body focus and intensity level.`,
               transition={{ delay: 0.2, duration: 0.6 }}
             >
               <Link to={isPro ? createPageUrl("AIWorkoutGenerator") : createPageUrl("Pricing")}>
-                <div className={`relative bg-gradient-to-br from-purple-600 to-indigo-700 p-3 sm:p-4 rounded-xl border-2 ${
-                  isPro ? 'border-purple-300 shadow-lg shadow-purple-500/20' : 'border-purple-500/50 opacity-80'
-                } hover:scale-[1.01] transition-transform cursor-pointer h-full`}>
+                <div className={`relative bg-gradient-to-br from-purple-600 to-indigo-700 p-2.5 sm:p-3 md:p-4 rounded-lg border ${
+                  isPro ? 'border-purple-300 shadow-lg shadow-purple-500/20' : 'border-purple-500/50 opacity-85'
+                } hover:scale-[1.01] transition-transform cursor-pointer h-full min-h-[120px] sm:min-h-[140px]`}>
                   {!isPro && (
-                    <div className="absolute top-2 right-2 z-10">
-                      <Badge className="bg-yellow-400 text-black font-bold text-xs px-1.5 py-0.5">⭐ PRO</Badge>
+                    <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 z-10">
+                      <Badge className="bg-yellow-400 text-black font-bold text-[10px] sm:text-xs px-1.5 py-0.5">⭐ PRO</Badge>
                     </div>
                   )}
-                  <Zap className="w-6 h-6 sm:w-7 sm:h-7 mb-2 text-white" />
-                  <h3 className="text-sm sm:text-base font-bold mb-1 text-white">AI Auto Mode</h3>
-                  <p className="text-white/90 text-xs mb-2 font-medium">
+                  <Zap className="w-5 h-5 sm:w-6 sm:h-6 mb-1.5 sm:mb-2 text-white" />
+                  <h3 className="text-xs sm:text-sm md:text-base font-bold mb-0.5 sm:mb-1 text-white">AI Auto Mode</h3>
+                  <p className="text-white/90 text-[10px] sm:text-xs mb-1.5 sm:mb-2 font-medium">
                     AI creates workouts automatically
                   </p>
-                  <ul className="space-y-1 text-xs text-white/85">
+                  <ul className="space-y-0.5 sm:space-y-1 text-[10px] sm:text-xs text-white/85">
                     <li>🎚️ Choose fitness level</li>
                     <li>⏱️ Set duration & intensity</li>
                     <li>🤖 AI picks exercises</li>
@@ -311,16 +311,16 @@ Choose realistic exercises that match the body focus and intensity level.`,
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.6 }}
             >
-              <div className="relative bg-gradient-to-br from-gray-700 to-gray-900 p-3 sm:p-4 rounded-xl border-2 border-green-500 hover:scale-[1.01] transition-transform cursor-pointer h-full shadow-lg shadow-green-500/10">
-                <div className="absolute top-2 right-2">
-                  <Badge className="bg-green-500 text-white font-bold text-xs px-1.5 py-0.5">✓ FREE</Badge>
+              <div className="relative bg-gradient-to-br from-gray-700 to-gray-900 p-2.5 sm:p-3 md:p-4 rounded-lg border border-green-500 hover:scale-[1.01] transition-transform cursor-pointer h-full min-h-[120px] sm:min-h-[140px] shadow-lg shadow-green-500/10">
+                <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2">
+                  <Badge className="bg-green-500 text-white font-bold text-[10px] sm:text-xs px-1.5 py-0.5">✓ FREE</Badge>
                 </div>
-                <Dumbbell className="w-6 h-6 sm:w-7 sm:h-7 mb-2 text-green-400" />
-                <h3 className="text-sm sm:text-base font-bold mb-1 text-white">Manual Builder</h3>
-                <p className="text-white/90 text-xs mb-2 font-medium">
+                <Dumbbell className="w-5 h-5 sm:w-6 sm:h-6 mb-1.5 sm:mb-2 text-green-400" />
+                <h3 className="text-xs sm:text-sm md:text-base font-bold mb-0.5 sm:mb-1 text-white">Manual Builder</h3>
+                <p className="text-white/90 text-[10px] sm:text-xs mb-1.5 sm:mb-2 font-medium">
                   Browse & select exercises
                 </p>
-                <ul className="space-y-1 text-xs text-white/85">
+                <ul className="space-y-0.5 sm:space-y-1 text-[10px] sm:text-xs text-white/85">
                   <li>📚 Browse 50+ exercises</li>
                   <li>✋ Pick your favorites</li>
                   <li>🆓 100% Free forever</li>
@@ -330,8 +330,8 @@ Choose realistic exercises that match the body focus and intensity level.`,
           </div>
 
           {/* FREE Instructions */}
-          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-2 sm:p-3 mb-3">
-            <p className="text-green-400 font-bold text-center text-xs sm:text-sm">
+          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-2 mb-2 sm:mb-3">
+            <p className="text-green-400 font-bold text-center text-[11px] sm:text-xs">
               👇 FREE: Scroll to browse exercises
             </p>
           </div>
