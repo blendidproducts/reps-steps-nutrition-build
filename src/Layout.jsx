@@ -318,7 +318,9 @@ export default function Layout({ children, currentPageName }) {
                 <span>☰</span>
                 <span>MAIN MENU</span>
               </SidebarTrigger>
-              <img src={bannerUrl} alt="RepsAndSteps" className="h-5" />
+              <Link to={createPageUrl("Home")}>
+                <img src={bannerUrl} alt="RepsAndSteps" className="h-5 cursor-pointer hover:opacity-80 transition-opacity" />
+              </Link>
             </div>
           </header>
 
