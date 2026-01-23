@@ -239,7 +239,7 @@ Choose realistic exercises that match the body focus and intensity level.`,
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15, duration: 0.6 }}
-            className="mb-4"
+            className="mb-2 sm:mb-3"
           >
             <button
               onClick={() => {
@@ -249,27 +249,25 @@ Choose realistic exercises that match the body focus and intensity level.`,
                   navigate(createPageUrl("Pricing"));
                 }
               }}
-              className={`w-full relative bg-gradient-to-br from-yellow-500 via-orange-600 to-red-600 p-6 sm:p-8 rounded-2xl border-4 ${
-                isPro ? 'border-yellow-300 shadow-2xl shadow-yellow-500/50' : 'border-yellow-500/50 opacity-80'
-              } hover:scale-105 transition-transform cursor-pointer text-left`}>
+              className={`w-full relative bg-gradient-to-br from-yellow-500 via-orange-600 to-red-600 p-2.5 sm:p-3 md:p-4 rounded-lg border ${
+                isPro ? 'border-yellow-300 shadow-lg shadow-yellow-500/20' : 'border-yellow-500/50 opacity-90'
+              } hover:scale-[1.01] transition-transform cursor-pointer text-left`}>
                 {!isPro && (
-                  <div className="absolute top-4 right-4">
-                    <Badge className="bg-black text-yellow-400 font-bold border-2 border-yellow-400 text-sm px-3 py-1">⭐ PRO ONLY</Badge>
+                  <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2">
+                    <Badge className="bg-black text-yellow-400 font-bold border border-yellow-400 text-[10px] sm:text-xs px-1.5 py-0.5">⭐ PRO</Badge>
                   </div>
                 )}
-                <Zap className="w-14 h-14 sm:w-16 sm:h-16 mb-3 text-white animate-pulse" />
-                <h3 className="text-3xl sm:text-4xl font-black mb-3 text-white drop-shadow-lg">🧞 WorkoutGenie AI</h3>
-                <p className="text-white text-base sm:text-lg mb-4 font-semibold">
-                  Just describe your workout - AI builds it instantly
-                </p>
-                <ul className="space-y-2 text-sm sm:text-base text-white/95 font-medium">
-                  <li>✨ Type in plain English - no complexity</li>
-                  <li>⚡ Instant workout generation in seconds</li>
-                  <li>🎯 Uses real exercises from our library</li>
-                  <li>🔥 Perfect for any fitness level</li>
-                </ul>
-                <div className="mt-5 bg-black/30 backdrop-blur-sm px-4 py-2 rounded-lg text-sm sm:text-base font-bold border border-white/20">
-                  💬 "18 min low intensity upper & lower mix"
+                <div className="flex items-start gap-2">
+                  <Zap className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-white animate-pulse flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm sm:text-base md:text-lg font-black mb-0.5 sm:mb-1 text-white">🧞 WorkoutGenie AI</h3>
+                    <p className="text-white text-[11px] sm:text-xs md:text-sm mb-1.5 sm:mb-2 font-semibold">
+                      Describe your workout - AI builds it
+                    </p>
+                    <div className="bg-black/30 backdrop-blur-sm px-2 py-1 rounded text-[10px] sm:text-xs font-bold border border-white/20 inline-block break-words">
+                      💬 "18 min low intensity"
+                    </div>
+                  </div>
                 </div>
               </button>
             </motion.div>
