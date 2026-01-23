@@ -254,12 +254,15 @@ export default function Layout({ children, currentPageName }) {
       <div className="min-h-screen flex w-full dark" style={{ backgroundColor: '#0a0a0a', color: '#f9fafb' }}>
         <Sidebar className="border-r border-border bg-card">
           <SidebarHeader className="p-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 mb-2">
               <img src={logoUrl} alt="RepsAndSteps Logo" className="w-10 h-10 rounded-lg" />
               <div>
                 <img src={bannerUrl} alt="RepsAndSteps" className="h-5" />
               </div>
             </div>
+            <Link to={createPageUrl("Home")} className="text-xs text-gray-400 hover:text-brand-blue transition-colors text-center block">
+              ← Go to Home
+            </Link>
           </SidebarHeader>
           
           <SidebarContent className="p-2">
