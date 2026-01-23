@@ -91,6 +91,28 @@ export default function Home() {
               Your ultimate calisthenics companion to track every rep and count every step.
             </p>
 
+            {/* 7-Day Trial Offer - Prominent */}
+            {!isPro && !isLoading && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.6 }}
+                className="mb-6 sm:mb-8 max-w-2xl mx-auto px-4"
+              >
+                <a href="https://buy.stripe.com/aFa7sL4lM5muau82OpbQY0i" target="_blank" rel="noopener noreferrer">
+                  <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-4 sm:p-5 rounded-xl border-2 border-green-400 shadow-2xl hover:scale-105 transition-transform cursor-pointer">
+                    <div className="flex items-center justify-center gap-3 flex-wrap">
+                      <Zap className="w-7 h-7 sm:w-8 sm:h-8 text-white animate-pulse" />
+                      <div className="text-center">
+                        <div className="text-white font-black text-xl sm:text-2xl">🔥 7-DAY TRIAL - START TODAY!</div>
+                        <div className="text-green-100 text-sm sm:text-base font-bold">Only $3.99 - Try ALL PRO Features Risk-Free!</div>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              </motion.div>
+            )}
+
             {/* Choose Your Plan */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
