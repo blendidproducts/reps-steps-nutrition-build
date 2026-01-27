@@ -26,7 +26,8 @@ import {
   RefreshCw,
   Link as LinkIcon,
   Check,
-  Search
+  Search,
+  Trophy
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -80,10 +81,91 @@ export default function ActiveWorkout() {
   const [realtimeHR, setRealtimeHR] = useState(null);
   const [totalWorkoutSteps, setTotalWorkoutSteps] = useState(0);
   const [totalWorkoutDistance, setTotalWorkoutDistance] = useState(0);
+  const [achievementPopup, setAchievementPopup] = useState(null);
+  const [personalRecords, setPersonalRecords] = useState({});
+  const [showActiveRecovery, setShowActiveRecovery] = useState(false);
 
   useEffect(() => {
     loadWorkout();
+    loadPersonalRecords();
   }, []);
+
+  const loadPersonalRecords = async () => {
+    try {
+      const sessions = await WorkoutSession.list();
+      const records = {
+        mostPushups: 0,
+        longestSprint: 0,
+        mostSquats: 0,
+        longestPlank: 0,
+        mostBurpees: 0
+      };
+
+      sessions.forEach(session => {
+        session.exercises_completed?.forEach(ex => {
+          const name = ex.exercise_name.toLowerCase();
+          if (name.includes('push') && ex.reps_completed > records.mostPushups) {
+            records.mostPushups = ex.reps_completed;
+          }
+          if (name.includes('squat') && ex.reps_completed > records.mostSquats) {
+            records.mostSquats = ex.reps_completed;
+          }
+          if (name.includes('plank') && ex.time_spent > records.longestPlank) {
+            records.longestPlank = ex.time_spent;
+          }
+          if (name.includes('burpee') && ex.reps_completed > records.mostBurpees) {
+            records.mostBurpees = ex.reps_completed;
+          }
+        });
+
+        const sprints = session.cardio_intervals?.filter(c => c.type === 'sprint') || [];
+        sprints.forEach(sprint => {
+          if (sprint.time > records.longestSprint) {
+            records.longestSprint = sprint.time;
+          }
+        });
+      });
+
+      setPersonalRecords(records);
+    } catch (error) {
+      console.error('Failed to load records:', error);
+    }
+  };
+
+  const checkAchievement = (type, value, exerciseName) => {
+    const name = exerciseName.toLowerCase();
+    let newRecord = false;
+
+    if (type === 'pushups' && name.includes('push') && value > personalRecords.mostPushups) {
+      setAchievementPopup({
+        title: '🔥 NEW RECORD!',
+        message: `Most Push-ups in a Set: ${value}`,
+        prevRecord: personalRecords.mostPushups
+      });
+      setPersonalRecords(prev => ({...prev, mostPushups: value}));
+      newRecord = true;
+    } else if (type === 'squats' && name.includes('squat') && value > personalRecords.mostSquats) {
+      setAchievementPopup({
+        title: '🔥 NEW RECORD!',
+        message: `Most Squats in a Set: ${value}`,
+        prevRecord: personalRecords.mostSquats
+      });
+      setPersonalRecords(prev => ({...prev, mostSquats: value}));
+      newRecord = true;
+    } else if (type === 'burpees' && name.includes('burpee') && value > personalRecords.mostBurpees) {
+      setAchievementPopup({
+        title: '🔥 NEW RECORD!',
+        message: `Most Burpees in a Set: ${value}`,
+        prevRecord: personalRecords.mostBurpees
+      });
+      setPersonalRecords(prev => ({...prev, mostBurpees: value}));
+      newRecord = true;
+    }
+
+    if (newRecord) {
+      setTimeout(() => setAchievementPopup(null), 4000);
+    }
+  };
 
   // Auto-start warmup and time-based exercises
   useEffect(() => {
@@ -186,6 +268,14 @@ export default function ActiveWorkout() {
       updatedExercises[currentExerciseIndex].completed_reps = newTotal;
       console.log(`[REP TRACKING] Exercise: ${currentExercise.exercise_name}, Set ${currentSet}, Current Reps: ${currentReps}, Previous: ${previousCompleted}, New Total: ${newTotal}`);
       setWorkout({...workout, exercises: updatedExercises});
+      
+      // Check for achievements
+      if (currentReps > 0) {
+        const name = currentExercise.exercise_name.toLowerCase();
+        if (name.includes('push')) checkAchievement('pushups', currentReps, currentExercise.exercise_name);
+        if (name.includes('squat')) checkAchievement('squats', currentReps, currentExercise.exercise_name);
+        if (name.includes('burpee')) checkAchievement('burpees', currentReps, currentExercise.exercise_name);
+      }
     }
     
     // If superset, move to next exercise in the superset chain (same set number)
@@ -275,6 +365,13 @@ export default function ActiveWorkout() {
     setRestTimer(0);
     setRestCardioTotal(0);
     setExtendedRestTime(0);
+    setShowActiveRecovery(false);
+  };
+
+  const startActiveRecovery = () => {
+    setShowActiveRecovery(true);
+    setRestTimer(workout.rest_time || 60);
+    setRestCardioTotal(0);
   };
 
   const skipSupersetTransition = () => {
@@ -321,6 +418,17 @@ export default function ActiveWorkout() {
         timestamp: new Date().toISOString(),
         gps_distance: currentGpsDistance
       };
+      
+      // Check for sprint achievement
+      if (activeCardio.type === 'sprint' && cardioTimer > personalRecords.longestSprint) {
+        setAchievementPopup({
+          title: '🔥 NEW RECORD!',
+          message: `Longest Sprint: ${formatTime(cardioTimer)}`,
+          prevRecord: personalRecords.longestSprint
+        });
+        setPersonalRecords(prev => ({...prev, longestSprint: cardioTimer}));
+        setTimeout(() => setAchievementPopup(null), 4000);
+      }
       
       setCardioIntervals(prev => [...prev, cardioEntry]);
       setActiveCardio(null);
@@ -1202,6 +1310,148 @@ export default function ActiveWorkout() {
           )}
         </AnimatePresence>
 
+        {/* Achievement Pop-up */}
+        <AnimatePresence>
+          {achievementPopup && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.5, y: -100 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.5, y: -100 }}
+              className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[10000] px-4"
+            >
+              <Card className="bg-gradient-to-br from-yellow-400 to-orange-500 border-4 border-yellow-300 shadow-2xl">
+                <CardContent className="p-6 text-center min-w-[280px]">
+                  <motion.div
+                    animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.2, 1] }}
+                    transition={{ duration: 0.5, repeat: 2 }}
+                  >
+                    <Trophy className="w-16 h-16 text-white mx-auto mb-3" />
+                  </motion.div>
+                  <h3 className="text-2xl font-black text-white mb-2">{achievementPopup.title}</h3>
+                  <p className="text-lg font-bold text-black mb-1">{achievementPopup.message}</p>
+                  {achievementPopup.prevRecord > 0 && (
+                    <p className="text-sm text-white/80">Previous: {achievementPopup.prevRecord}</p>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Active Recovery Screen (can be triggered anytime) */}
+        <AnimatePresence>
+          {showActiveRecovery && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto"
+            >
+              <Card className="bg-gray-900/80 border-cyan-500/30 text-white w-full max-w-sm my-auto" style={{ maxHeight: '95vh' }}>
+                <CardContent className="p-3 sm:p-6 text-center overflow-y-auto" style={{ maxHeight: 'calc(95vh - 2rem)' }}>
+                  {!activeCardio ? (
+                    <>
+                      <h2 className="text-2xl font-bold mb-2 text-cyan-400">ACTIVE RECOVERY</h2>
+                      <div className="flex items-center justify-center gap-3 mb-4">
+                        <div className="flex flex-col gap-2">
+                          <button
+                            onClick={() => addRestTime(-15)}
+                            className="w-10 h-10 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
+                            disabled={restTimer <= 5}
+                          >
+                            <Minus className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => addRestTime(-30)}
+                            className="w-10 h-10 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors text-xs font-bold"
+                            disabled={restTimer <= 30}
+                          >
+                            -30
+                          </button>
+                        </div>
+                        <div className="text-6xl font-bold">{restTimer}s</div>
+                        <div className="flex flex-col gap-2">
+                          <button
+                            onClick={() => addRestTime(15)}
+                            className="w-10 h-10 bg-cyan-600/50 hover:bg-cyan-600 rounded-full flex items-center justify-center transition-colors"
+                          >
+                            <Plus className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => addRestTime(30)}
+                            className="w-10 h-10 bg-cyan-600/50 hover:bg-cyan-600 rounded-full flex items-center justify-center transition-colors text-xs font-bold"
+                          >
+                            +30
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <p className="text-sm text-gray-400 mb-3">Choose cardio activity</p>
+
+                      <div className="grid grid-cols-3 gap-2 mb-4">
+                        <Button
+                          onClick={() => startCardio('walk')}
+                          className="flex flex-col items-center gap-2 h-auto py-4 bg-green-600/20 border-2 border-green-500 text-green-300 hover:bg-green-600/40"
+                        >
+                          <Footprints className="w-6 h-6" />
+                          <span className="text-xs font-bold">WALK</span>
+                        </Button>
+
+                        <Button
+                          onClick={() => startCardio('jog')}
+                          className="flex flex-col items-center gap-2 h-auto py-4 bg-yellow-600/20 border-2 border-yellow-500 text-yellow-300 hover:bg-yellow-600/40"
+                        >
+                          <Route className="w-6 h-6" />
+                          <span className="text-xs font-bold">JOG</span>
+                        </Button>
+
+                        <Button
+                          onClick={() => startCardio('sprint')}
+                          className="flex flex-col items-center gap-2 h-auto py-4 bg-red-600/20 border-2 border-red-500 text-red-300 hover:bg-red-600/40"
+                        >
+                          <Zap className="w-6 h-6" />
+                          <span className="text-xs font-bold">SPRINT</span>
+                        </Button>
+                      </div>
+
+                      <Button
+                        onClick={() => setShowActiveRecovery(false)}
+                        className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold touch-manipulation min-h-[48px]"
+                      >
+                        DONE - Continue Workout
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <h2 className="text-3xl font-bold mb-2 text-brand-blue uppercase">{activeCardio.type}ING</h2>
+                      <div className="text-7xl font-bold mb-4 text-brand-blue animate-pulse">{formatTime(cardioTimer)}</div>
+
+                      <div className="grid grid-cols-2 gap-2 pb-2">
+                        <Button
+                          onClick={stopCardio}
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold touch-manipulation min-h-[56px] text-sm"
+                        >
+                          <Square className="w-4 h-4 mr-1" />
+                          STOP & SWITCH
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            stopCardio();
+                            setShowActiveRecovery(false);
+                          }}
+                          className="bg-green-500 hover:bg-green-600 text-white font-bold touch-manipulation min-h-[56px] text-sm"
+                        >
+                          DONE
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Rest/Cardio Screen */}
         <AnimatePresence>
           {isResting && (
@@ -1605,6 +1855,45 @@ export default function ActiveWorkout() {
             </>
           )}
         </div>
+
+        {/* Active Recovery Button - Always Available During Workout */}
+        {isActive && !isResting && !isSupersetTransition && (
+          <div className="flex justify-center mb-4 px-2">
+            <Button
+              onClick={startActiveRecovery}
+              variant="outline"
+              className="bg-cyan-500/20 border-cyan-400 text-cyan-300 hover:bg-cyan-500/30 px-4 py-2 touch-manipulation min-h-[44px] text-xs sm:text-sm font-bold"
+            >
+              <Timer className="w-4 h-4 mr-2" />
+              ACTIVE RECOVERY
+            </Button>
+          </div>
+        )}
+
+        {/* Split Sets Button - Only for Rep-Based Exercises */}
+        {isActive && !isResting && !isSupersetTransition && !isTimeBased && currentExercise.target_reps > 20 && (
+          <div className="flex justify-center mb-4 px-2">
+            <Button
+              onClick={() => {
+                const updatedExercises = [...workout.exercises];
+                const targetReps = updatedExercises[currentExerciseIndex].target_reps;
+                const newReps = Math.ceil(targetReps / 2);
+                const newSets = updatedExercises[currentExerciseIndex].sets * 2;
+                
+                updatedExercises[currentExerciseIndex].target_reps = newReps;
+                updatedExercises[currentExerciseIndex].sets = newSets;
+                
+                setWorkout({...workout, exercises: updatedExercises});
+                toast.success(`Split into ${newSets} sets of ${newReps} reps each`);
+              }}
+              variant="outline"
+              className="bg-orange-500/20 border-orange-400 text-orange-300 hover:bg-orange-500/30 px-4 py-2 touch-manipulation min-h-[44px] text-xs sm:text-sm font-bold"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              SPLIT SETS ({currentExercise.target_reps} → {Math.ceil(currentExercise.target_reps / 2)} x 2)
+            </Button>
+          </div>
+        )}
 
         {/* Exercise List */}
         <Card className="bg-card border-border mx-2 mb-4">
