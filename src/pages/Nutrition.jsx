@@ -79,7 +79,7 @@ export default function Nutrition() {
                   Goals
                 </Button>
               </Link>
-              <Link to={createPageUrl("MealPlans")}>
+              <Link to={createPageUrl("NutritionPrograms")}>
                 <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
                   <Calendar className="w-4 h-4 mr-2" />
                   Plans
@@ -113,7 +113,7 @@ export default function Nutrition() {
               <span>Food Database</span>
             </Button>
           </Link>
-          <Link to={createPageUrl("MealPlans")} className="block">
+          <Link to={createPageUrl("NutritionPrograms")} className="block">
             <Button variant="outline" className="w-full h-auto py-4 flex flex-col items-center gap-2 border-border hover:bg-card">
               <Utensils className="w-6 h-6" />
               <span>Meal Plans</span>
