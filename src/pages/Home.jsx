@@ -78,12 +78,12 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2, duration: 0.8 }}
-              className="my-6 sm:my-8 md:my-10 lg:my-12 px-2 sm:px-4"
+              className="my-4 sm:my-6 md:my-8 lg:my-10 px-2 sm:px-4 w-full"
             >
               <img 
                 src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/da699ae1c_RnS_AppfrontScreen.png" 
                 alt="Reps and Steps App"
-                className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl"
+                className="w-full max-w-[280px] sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl"
               />
             </motion.div>
 
@@ -124,28 +124,28 @@ export default function Home() {
               <p className="text-center text-gray-400 mb-6">AI Generator or Manual Builder</p>
 
               {/* WorkoutGenie AI - Featured */}
-              <div className="mb-4">
+              <div className="mb-3 sm:mb-4">
                 <Link to={isPro ? createPageUrl("Exercises") : createPageUrl("Pricing")}>
-                  <div className={`relative bg-gradient-to-br from-yellow-500 via-orange-600 to-red-600 p-5 sm:p-6 rounded-xl border-4 ${
+                  <div className={`relative bg-gradient-to-br from-yellow-500 via-orange-600 to-red-600 p-3 sm:p-4 md:p-5 lg:p-6 rounded-xl border-2 sm:border-4 ${
                     isPro ? 'border-yellow-300 shadow-2xl shadow-yellow-500/30' : 'border-yellow-500/50 opacity-90'
                   } hover:scale-[1.02] transition-transform cursor-pointer`}>
                     {!isPro && (
-                      <div className="absolute top-3 right-3">
-                        <Badge className="bg-black text-yellow-400 font-bold border-2 border-yellow-400 text-xs px-2 py-0.5">⭐ PRO</Badge>
+                      <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
+                        <Badge className="bg-black text-yellow-400 font-bold border border-yellow-400 sm:border-2 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5">⭐ PRO</Badge>
                       </div>
                     )}
-                    <div className="flex items-start gap-3 sm:gap-4">
-                      <Zap className="w-8 h-8 sm:w-10 sm:h-10 text-white flex-shrink-0 animate-pulse" />
-                      <div className="flex-1">
-                        <h4 className="text-xl sm:text-2xl font-black mb-2 text-white">🧞 WorkoutGenie AI</h4>
-                        <p className="text-white text-xs sm:text-sm mb-2 font-semibold">Just describe your workout - AI builds it instantly</p>
-                        <ul className="space-y-1 text-xs text-white/95 font-medium">
+                    <div className="flex items-start gap-2 sm:gap-3 md:gap-4">
+                      <Zap className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-white flex-shrink-0 animate-pulse" />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-base sm:text-lg md:text-xl lg:text-2xl font-black mb-1 sm:mb-2 text-white">🧞 WorkoutGenie AI</h4>
+                        <p className="text-white text-[11px] sm:text-xs md:text-sm mb-1 sm:mb-2 font-semibold">Just describe your workout - AI builds it instantly</p>
+                        <ul className="space-y-0.5 sm:space-y-1 text-[10px] sm:text-xs text-white/95 font-medium">
                           <li>✨ Type in plain English - no complexity</li>
                           <li>⚡ Instant workout generation in seconds</li>
                           <li>🎯 Uses real exercises from our library</li>
                           <li>🔥 Perfect for any fitness level</li>
                         </ul>
-                        <div className="mt-3 bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs font-bold border border-white/20 inline-block">
+                        <div className="mt-2 sm:mt-3 bg-black/30 backdrop-blur-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold border border-white/20 inline-block break-words max-w-full">
                           💬 "18 min low intensity upper & lower mix"
                         </div>
                       </div>
@@ -155,20 +155,20 @@ export default function Home() {
               </div>
 
               {/* AI Auto Mode & Manual Builder */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
                 <Link to={isPro ? createPageUrl("AIWorkoutGenerator") : createPageUrl("Pricing")}>
-                  <div className={`relative bg-gradient-to-br from-purple-600 to-indigo-700 p-4 sm:p-5 rounded-xl border-2 ${
+                  <div className={`relative bg-gradient-to-br from-purple-600 to-indigo-700 p-3 sm:p-4 md:p-5 rounded-xl border-2 ${
                     isPro ? 'border-purple-300 shadow-xl shadow-purple-500/20' : 'border-purple-500/50 opacity-80'
-                  } hover:scale-[1.02] transition-transform cursor-pointer h-full`}>
+                  } hover:scale-[1.02] transition-transform cursor-pointer h-full min-h-[140px] sm:min-h-[160px]`}>
                     {!isPro && (
-                      <div className="absolute top-2 right-2">
-                        <Badge className="bg-yellow-400 text-black font-bold text-xs px-2 py-0.5">⭐ PRO</Badge>
+                      <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2">
+                        <Badge className="bg-yellow-400 text-black font-bold text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5">⭐ PRO</Badge>
                       </div>
                     )}
-                    <Zap className="w-7 h-7 sm:w-8 sm:h-8 mb-2 text-white" />
-                    <h4 className="text-base sm:text-lg font-bold mb-1 text-white">AI Auto Mode</h4>
-                    <p className="text-white/90 text-xs mb-2 font-medium">Smart AI creates complete workouts automatically</p>
-                    <ul className="space-y-1 text-xs text-white/85">
+                    <Zap className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 mb-1.5 sm:mb-2 text-white" />
+                    <h4 className="text-sm sm:text-base md:text-lg font-bold mb-1 text-white">AI Auto Mode</h4>
+                    <p className="text-white/90 text-[10px] sm:text-xs mb-1.5 sm:mb-2 font-medium">Smart AI creates complete workouts automatically</p>
+                    <ul className="space-y-0.5 sm:space-y-1 text-[10px] sm:text-xs text-white/85">
                       <li>🎚️ Choose fitness level</li>
                       <li>⏱️ Set duration & intensity</li>
                       <li>🤖 AI picks exercises for you</li>
@@ -178,14 +178,14 @@ export default function Home() {
                 </Link>
 
                 <Link to={createPageUrl("Exercises")}>
-                  <div className="relative bg-gradient-to-br from-gray-700 to-gray-900 p-4 sm:p-5 rounded-xl border-2 border-green-500 hover:scale-[1.02] transition-transform cursor-pointer h-full shadow-xl shadow-green-500/10">
-                    <div className="absolute top-2 right-2">
-                      <Badge className="bg-green-500 text-white font-bold text-xs px-2 py-0.5">✓ FREE</Badge>
+                  <div className="relative bg-gradient-to-br from-gray-700 to-gray-900 p-3 sm:p-4 md:p-5 rounded-xl border-2 border-green-500 hover:scale-[1.02] transition-transform cursor-pointer h-full min-h-[140px] sm:min-h-[160px] shadow-xl shadow-green-500/10">
+                    <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2">
+                      <Badge className="bg-green-500 text-white font-bold text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5">✓ FREE</Badge>
                     </div>
-                    <Dumbbell className="w-7 h-7 sm:w-8 sm:h-8 mb-2 text-green-400" />
-                    <h4 className="text-base sm:text-lg font-bold mb-1 text-white">Manual Builder</h4>
-                    <p className="text-white/90 text-xs mb-2 font-medium">Browse & select exercises yourself</p>
-                    <ul className="space-y-1 text-xs text-white/85">
+                    <Dumbbell className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 mb-1.5 sm:mb-2 text-green-400" />
+                    <h4 className="text-sm sm:text-base md:text-lg font-bold mb-1 text-white">Manual Builder</h4>
+                    <p className="text-white/90 text-[10px] sm:text-xs mb-1.5 sm:mb-2 font-medium">Browse & select exercises yourself</p>
+                    <ul className="space-y-0.5 sm:space-y-1 text-[10px] sm:text-xs text-white/85">
                       <li>📚 Browse 50+ exercises</li>
                       <li>✋ Pick your favorites</li>
                       <li>⚙️ Full control & customization</li>
@@ -195,8 +195,8 @@ export default function Home() {
                 </Link>
               </div>
 
-              <div className="mt-4 text-center">
-                <p className="text-xs sm:text-sm text-green-400 font-semibold">👇 FREE USERS: Scroll down on Exercises page to manually build workouts</p>
+              <div className="mt-3 sm:mt-4 text-center px-2">
+                <p className="text-[11px] sm:text-xs md:text-sm text-green-400 font-semibold">👇 FREE USERS: Scroll down on Exercises page to manually build workouts</p>
               </div>
             </motion.div>
             
@@ -204,17 +204,17 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3, duration: 0.6 }}
-              className="px-4 space-y-4"
+              className="px-3 sm:px-4 space-y-3 sm:space-y-4 w-full"
             >
               {!isPro && !isLoading && (
-                <div className="mb-4 max-w-2xl mx-auto">
+                <div className="mb-3 sm:mb-4 max-w-2xl mx-auto w-full">
                   <a href="https://buy.stripe.com/aFa7sL4lM5muau82OpbQY0i" target="_blank" rel="noopener noreferrer">
-                    <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-4 rounded-xl border-2 border-green-400 shadow-xl hover:scale-105 transition-transform cursor-pointer">
-                      <div className="flex items-center justify-center gap-3 flex-wrap">
-                        <Zap className="w-6 h-6 text-white animate-pulse" />
+                    <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-3 sm:p-4 rounded-xl border-2 border-green-400 shadow-xl hover:scale-105 transition-transform cursor-pointer">
+                      <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+                        <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-white animate-pulse flex-shrink-0" />
                         <div className="text-center">
-                          <div className="text-white font-black text-lg">🔥 7-DAY TRIAL - START TODAY!</div>
-                          <div className="text-green-100 text-sm font-semibold">Only $3.99 - Try ALL PRO features!</div>
+                          <div className="text-white font-black text-sm sm:text-base md:text-lg">🔥 7-DAY TRIAL - START TODAY!</div>
+                          <div className="text-green-100 text-xs sm:text-sm font-semibold">Only $3.99 - Try ALL PRO features!</div>
                         </div>
                       </div>
                     </div>

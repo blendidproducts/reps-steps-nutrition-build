@@ -1080,12 +1080,12 @@ export default function ActiveWorkout() {
 
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
-      <div className="container mx-auto px-2 py-4 md:px-4 md:py-6 max-w-md" style={{ paddingBottom: '120px' }}>
+      <div className="container mx-auto px-2 sm:px-3 md:px-4 py-3 sm:py-4 md:py-6 max-w-md" style={{ paddingBottom: '100px' }}>
         {/* Header */}
-        <div className="text-center mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex-1"></div>
-            <h1 className="text-xl md:text-2xl font-bold px-2 leading-tight truncate flex-1">{workout.name}</h1>
+        <div className="text-center mb-3 sm:mb-4">
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <div className="flex-1 min-w-0"></div>
+            <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold px-1 sm:px-2 leading-tight truncate flex-1 min-w-0">{workout.name}</h1>
             {isActive && (
               <div className="flex-1 flex justify-end">
                 <Button
@@ -1098,31 +1098,31 @@ export default function ActiveWorkout() {
               </div>
             )}
           </div>
-          <div className="flex justify-center gap-3 text-sm md:text-base flex-wrap">
-            <div className="flex flex-col items-center">
-              <div className="flex items-center gap-1.5">
-                <Timer className="w-4 h-4 text-brand-blue" />
-                <span className="font-bold">{formatTime(elapsedTimer)}</span>
+          <div className="flex justify-center gap-2 sm:gap-3 text-xs sm:text-sm md:text-base flex-wrap px-1">
+            <div className="flex flex-col items-center min-w-0">
+              <div className="flex items-center gap-1">
+                <Timer className="w-3 h-3 sm:w-4 sm:h-4 text-brand-blue flex-shrink-0" />
+                <span className="font-bold text-xs sm:text-sm">{formatTime(elapsedTimer)}</span>
               </div>
-              <span className="text-xs text-gray-400">Total Time</span>
+              <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap">Total Time</span>
             </div>
-            <div className="flex flex-col items-center">
-              <div className="flex items-center gap-1.5">
-                <Zap className="w-4 h-4 text-green-400" />
-                <span className="font-bold">{formatTime(timer)}</span>
+            <div className="flex flex-col items-center min-w-0">
+              <div className="flex items-center gap-1">
+                <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-green-400 flex-shrink-0" />
+                <span className="font-bold text-xs sm:text-sm">{formatTime(timer)}</span>
               </div>
-              <span className="text-xs text-gray-400">Active Time</span>
+              <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap">Active Time</span>
             </div>
-            <div className="flex flex-col items-center">
-              <div className="flex items-center gap-1.5">
-                <Footprints className="w-4 h-4 text-purple-400" />
-                <span className="font-bold">{totalWorkoutSteps.toLocaleString()}</span>
+            <div className="flex flex-col items-center min-w-0">
+              <div className="flex items-center gap-1">
+                <Footprints className="w-3 h-3 sm:w-4 sm:h-4 text-purple-400 flex-shrink-0" />
+                <span className="font-bold text-xs sm:text-sm">{totalWorkoutSteps.toLocaleString()}</span>
               </div>
-              <span className="text-xs text-gray-400">{totalWorkoutDistance.toFixed(2)} mi</span>
+              <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap">{totalWorkoutDistance.toFixed(2)} mi</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <Target className="w-4 h-4" />
-              <span>{totalReps} / {getTotalEstimatedReps()} reps</span>
+            <div className="flex items-center gap-1 min-w-0">
+              <Target className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span className="text-xs sm:text-sm">{totalReps} / {getTotalEstimatedReps()}</span>
             </div>
             <button
               onClick={() => setShowHRInput(!showHRInput)}
@@ -1140,12 +1140,12 @@ export default function ActiveWorkout() {
         </div>
 
         {/* Progress Bar */}
-        <div className="mb-4 px-2">
-          <div className="flex justify-between text-xs mb-1 text-gray-400">
+        <div className="mb-3 sm:mb-4 px-2">
+          <div className="flex justify-between text-[10px] sm:text-xs mb-1 text-gray-400">
             <span>Overall Progress</span>
             <span>{Math.round(progress)}%</span>
           </div>
-          <Progress value={progress} className="h-2" />
+          <Progress value={progress} className="h-1.5 sm:h-2" />
         </div>
 
         {/* Heart Rate Input */}
@@ -1664,10 +1664,10 @@ export default function ActiveWorkout() {
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -50 }}
-          className="text-center mb-4 px-2"
+          className="text-center mb-3 sm:mb-4 px-2"
         >
           <Card className="bg-card backdrop-blur-sm border-border text-white">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex justify-between items-start mb-3">
                 <Badge variant="outline" className="border-brand-blue/50 text-brand-blue">
                   Set {currentSet} of {currentExercise.sets || 1}
@@ -1702,7 +1702,7 @@ export default function ActiveWorkout() {
                 </div>
               </div>
 
-              <h2 className="text-2xl md:text-3xl font-bold mb-4 leading-tight">{currentExercise.exercise_name}</h2>
+              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-3 sm:mb-4 leading-tight">{currentExercise.exercise_name}</h2>
               
               {/* Set Progress Badge */}
               <div className="mb-3">
