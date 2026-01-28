@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { PresetProgram } from "@/entities/PresetProgram";
+import { NutritionProgram } from "@/entities/NutritionProgram";
 import { Workout } from "@/entities/Workout";
 import { Exercise } from "@/entities/Exercise";
+import { User } from "@/entities/User";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Calendar, Target, Zap, Trophy, ArrowRight, Check, Eye, X, ArrowLeft } from "lucide-react";
+import { Calendar, Target, Zap, Trophy, ArrowRight, Check, Eye, X, ArrowLeft, Play, Clock, Flame, Apple, Utensils } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
@@ -16,10 +18,14 @@ import { base44 } from "@/api/base44Client";
 export default function PresetPrograms() {
   const navigate = useNavigate();
   const [programs, setPrograms] = useState([]);
+  const [nutritionPrograms, setNutritionPrograms] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProgram, setSelectedProgram] = useState(null);
+  const [selectedNutritionProgram, setSelectedNutritionProgram] = useState(null);
   const [activeProgram, setActiveProgram] = useState(null);
+  const [activeNutritionProgram, setActiveNutritionProgram] = useState(null);
   const [activeProgramDetails, setActiveProgramDetails] = useState(null);
+  const [activeTab, setActiveTab] = useState('workout');
 
   useEffect(() => {
     loadPrograms();
@@ -31,11 +37,13 @@ export default function PresetPrograms() {
       const user = await base44.auth.me();
       if (user.active_program) {
         setActiveProgram(user.active_program);
-        // Fetch full program details
         const programs = await PresetProgram.filter({ id: user.active_program.program_id });
         if (programs.length > 0) {
           setActiveProgramDetails(programs[0]);
         }
+      }
+      if (user.active_nutrition_program) {
+        setActiveNutritionProgram(user.active_nutrition_program);
       }
     } catch (error) {
       console.log('No active program');
@@ -44,13 +52,16 @@ export default function PresetPrograms() {
 
   const loadPrograms = async () => {
     setIsLoading(true);
-    const data = await PresetProgram.filter({ is_preset: true });
-    setPrograms(data);
+    const [workoutPrograms, nutritionProgramsList] = await Promise.all([
+      PresetProgram.filter({ is_preset: true }),
+      NutritionProgram.list()
+    ]);
+    setPrograms(workoutPrograms);
+    setNutritionPrograms(nutritionProgramsList);
     setIsLoading(false);
   };
 
   const startProgram = async (program, dayNumber = 1) => {
-    // Start specific day workout
     const day = program.daily_plans[dayNumber - 1];
     
     if (day.is_rest_day) {
@@ -61,10 +72,7 @@ export default function PresetPrograms() {
     try {
       toast.loading('Creating workout...');
       
-      // Get all exercises to map names to IDs
       const allExercises = await Exercise.list();
-      
-      // Build workout from day plan
       const exercises = day.exercises.map(ex => {
         const dbExercise = allExercises.find(e => e.name.toLowerCase() === ex.exercise_name.toLowerCase());
         return {
@@ -81,7 +89,6 @@ export default function PresetPrograms() {
         };
       });
 
-      // Add warmup
       const warmupExercises = [
         { id: 'warmup-1', name: 'Walk in Place', category: 'warmup', metric: 'time', target_time: 60 },
         { id: 'warmup-2', name: 'Arm Circles Forward', category: 'warmup', metric: 'time', target_time: 15 },
@@ -110,8 +117,6 @@ export default function PresetPrograms() {
 
       const workout = await Workout.create(workoutData);
       
-      // Update user's active program
-      const user = await base44.auth.me();
       await base44.auth.updateMe({
         active_program: {
           program_id: program.id,
@@ -145,13 +150,37 @@ export default function PresetPrograms() {
       <div className="gradient-bg text-white py-8 md:py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Preset Programs</h1>
-          <p className="text-lg text-white/90">Structured multi-day workout programs</p>
+          <p className="text-lg text-white/90">Structured workout & nutrition programs</p>
         </div>
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
-        {/* Active Program Section */}
-        {activeProgram && activeProgramDetails && (
+        {/* Tabs */}
+        <div className="flex gap-4 mb-8 border-b border-gray-700">
+          <button
+            onClick={() => setActiveTab('workout')}
+            className={`pb-3 px-4 font-semibold transition-colors text-base sm:text-lg ${
+              activeTab === 'workout' 
+                ? 'text-brand-blue border-b-2 border-brand-blue' 
+                : 'text-gray-400 hover:text-gray-300'
+            }`}
+          >
+            Workout Programs
+          </button>
+          <button
+            onClick={() => setActiveTab('nutrition')}
+            className={`pb-3 px-4 font-semibold transition-colors text-base sm:text-lg ${
+              activeTab === 'nutrition' 
+                ? 'text-brand-blue border-b-2 border-brand-blue' 
+                : 'text-gray-400 hover:text-gray-300'
+            }`}
+          >
+            Nutrition Programs
+          </button>
+        </div>
+
+        {/* Active Workout Program */}
+        {activeTab === 'workout' && activeProgram && activeProgramDetails && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -161,7 +190,6 @@ export default function PresetPrograms() {
             <Card className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-2 border-purple-500/50">
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row gap-6">
-                  {/* Program Info */}
                   <div className="flex-1">
                     <h3 className="text-2xl font-bold text-foreground mb-2">{activeProgram.program_name}</h3>
                     <div className="flex flex-wrap gap-3 mb-4">
@@ -173,7 +201,6 @@ export default function PresetPrograms() {
                       </Badge>
                     </div>
                     
-                    {/* Progress Bar */}
                     <div className="mb-4">
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-gray-300">Progress</span>
@@ -187,7 +214,6 @@ export default function PresetPrograms() {
                       />
                     </div>
 
-                    {/* Next Day Preview */}
                     {activeProgram.current_day <= activeProgram.total_days && (
                       <div className="bg-background/50 border border-brand-blue/30 rounded-lg p-4">
                         <p className="text-sm font-semibold text-brand-blue mb-2">
@@ -225,75 +251,171 @@ export default function PresetPrograms() {
           </motion.div>
         )}
 
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array(3).fill(0).map((_, i) => (
-              <Card key={i} className="bg-card animate-pulse">
-                <div className="h-48 bg-gray-700 rounded-t-xl"></div>
-                <CardHeader>
-                  <div className="h-6 bg-gray-700 rounded w-3/4 mb-2"></div>
-                  <div className="h-4 bg-gray-700 rounded w-1/2"></div>
-                </CardHeader>
+        {/* Active Nutrition Program */}
+        {activeTab === 'nutrition' && activeNutritionProgram && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
+          >
+            <h2 className="text-2xl font-bold mb-4">ACTIVE NUTRITION PROGRAM</h2>
+            <Card className="bg-gradient-to-r from-green-600/20 to-emerald-600/20 border-2 border-green-500/50">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-2xl font-bold mb-1">{activeNutritionProgram.program_name}</h3>
+                    <p className="text-gray-400">Day {activeNutritionProgram.current_day} of {activeNutritionProgram.total_days}</p>
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      await User.updateMe({ active_nutrition_program: null });
+                      setActiveNutritionProgram(null);
+                      toast.success('Nutrition program deactivated');
+                    }}
+                    variant="outline"
+                    className="border-red-500 text-red-400 hover:bg-red-500/20"
+                  >
+                    Deactivate
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <div className="bg-gray-800/50 rounded-lg p-4">
+                    <p className="text-sm text-gray-400 mb-1">Daily Calories</p>
+                    <p className="text-2xl font-bold">{activeNutritionProgram.daily_calories}</p>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-lg p-4">
+                    <p className="text-sm text-gray-400 mb-1">Progress</p>
+                    <p className="text-2xl font-bold">{Math.round(((activeNutritionProgram.current_day - 1) / activeNutritionProgram.total_days) * 100)}%</p>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-lg p-4">
+                    <p className="text-sm text-gray-400 mb-1">Days Left</p>
+                    <p className="text-2xl font-bold">{activeNutritionProgram.total_days - activeNutritionProgram.current_day + 1}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Workout Programs Grid */}
+        {activeTab === 'workout' && (
+          <>
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array(3).fill(0).map((_, i) => (
+                  <Card key={i} className="bg-card animate-pulse">
+                    <div className="h-48 bg-gray-700 rounded-t-xl"></div>
+                    <CardHeader>
+                      <div className="h-6 bg-gray-700 rounded w-3/4 mb-2"></div>
+                      <div className="h-4 bg-gray-700 rounded w-1/2"></div>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            ) : programs.length === 0 ? (
+              <Card className="bg-card text-center p-12">
+                <Trophy className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-foreground mb-2">No Programs Yet</h3>
+                <p className="text-muted-foreground">Preset programs will appear here</p>
               </Card>
-            ))}
-          </div>
-        ) : programs.length === 0 ? (
-          <Card className="bg-card text-center p-12">
-            <Trophy className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-foreground mb-2">No Programs Yet</h3>
-            <p className="text-muted-foreground">Preset programs will appear here</p>
-          </Card>
-        ) : (
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {programs.map((program, idx) => (
+                  <motion.div
+                    key={program.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                  >
+                    <Card 
+                      className="bg-card hover:shadow-xl transition-all duration-300 cursor-pointer border-2 hover:border-brand-blue"
+                      onClick={() => setSelectedProgram(program)}
+                    >
+                      {program.thumbnail_url && (
+                        <div className="h-48 overflow-hidden rounded-t-xl">
+                          <img src={program.thumbnail_url} alt={program.name} className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                      <CardHeader>
+                        <div className="flex justify-between items-start mb-2">
+                          <CardTitle className="text-xl text-foreground">{program.name}</CardTitle>
+                          <Badge className={difficultyColors[program.difficulty]}>
+                            {program.difficulty}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{program.description}</p>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Calendar className="w-4 h-4" />
+                            <span>{program.duration_days} days</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Target className="w-4 h-4" />
+                            <span>{program.daily_plans[0]?.total_reps || 0} reps per day</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Zap className="w-4 h-4" />
+                            <span>{program.category}</span>
+                          </div>
+                        </div>
+                        <Button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startProgram(program);
+                          }}
+                          className="w-full mt-4 gradient-bg text-white hover:opacity-90"
+                        >
+                          Start Day 1
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Nutrition Programs Grid */}
+        {activeTab === 'nutrition' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {programs.map((program, idx) => (
+            {nutritionPrograms.map((program, index) => (
               <motion.div
                 key={program.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
+                transition={{ delay: index * 0.1 }}
               >
-                <Card 
-                  className="bg-card hover:shadow-xl transition-all duration-300 cursor-pointer border-2 hover:border-brand-blue"
-                  onClick={() => setSelectedProgram(program)}
-                >
-                  {program.thumbnail_url && (
-                    <div className="h-48 overflow-hidden rounded-t-xl">
-                      <img src={program.thumbnail_url} alt={program.name} className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                  <CardHeader>
-                    <div className="flex justify-between items-start mb-2">
-                      <CardTitle className="text-xl text-foreground">{program.name}</CardTitle>
-                      <Badge className={difficultyColors[program.difficulty]}>
-                        {program.difficulty}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{program.description}</p>
+                <Card className="bg-card border-border hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+                  onClick={() => setSelectedNutritionProgram(program)}>
+                  <CardHeader className={`bg-gradient-to-br ${
+                    program.program_type === 'weight_loss' ? 'from-red-600 to-orange-600' :
+                    program.program_type === 'muscle_gain' ? 'from-blue-600 to-purple-600' :
+                    'from-green-600 to-emerald-600'
+                  } text-white rounded-t-xl p-6`}>
+                    <CardTitle className="text-2xl font-bold">{program.name}</CardTitle>
+                    <CardDescription className="text-white/90 mt-2">{program.description}</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Calendar className="w-4 h-4" />
-                        <span>{program.duration_days} days</span>
+                  <CardContent className="p-6">
+                    <div className="space-y-3 mb-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-400">Duration</span>
+                        <span className="font-semibold">{program.duration_days} Days</span>
                       </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Target className="w-4 h-4" />
-                        <span>{program.daily_plans[0]?.total_reps || 0} reps per day</span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-400">Daily Calories</span>
+                        <span className="font-semibold">{program.daily_calories_target} cal</span>
                       </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Zap className="w-4 h-4" />
-                        <span>{program.category}</span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-400">Protein</span>
+                        <span className="font-semibold">{program.daily_protein_grams}g</span>
                       </div>
                     </div>
-                    <Button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startProgram(program);
-                      }}
-                      className="w-full mt-4 gradient-bg text-white hover:opacity-90"
-                    >
-                      Start Day 1
-                      <ArrowRight className="w-4 h-4 ml-2" />
+                    <Button className="w-full bg-brand-blue hover:bg-brand-blue-dark">
+                      View Details
                     </Button>
                   </CardContent>
                 </Card>
@@ -321,7 +443,7 @@ export default function PresetPrograms() {
               } text-white p-6`}>
                 <div className="flex items-start justify-between">
                   <div>
-                    <CardTitle className="text-3xl font-bold mb-2">{selectedNutritionProgram.name}</CardTitle>
+                    <CardTitle className="text-2xl sm:text-3xl font-bold mb-2">{selectedNutritionProgram.name}</CardTitle>
                     <CardDescription className="text-white/90">{selectedNutritionProgram.description}</CardDescription>
                   </div>
                   <button 
@@ -332,7 +454,7 @@ export default function PresetPrograms() {
                   </button>
                 </div>
               </CardHeader>
-              <CardContent className="p-6">
+              <CardContent className="p-6 max-h-[70vh] overflow-y-auto">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                   <div className="bg-gray-800/50 rounded-lg p-4 text-center">
                     <Clock className="w-6 h-6 mx-auto mb-2 text-brand-blue" />
@@ -352,7 +474,7 @@ export default function PresetPrograms() {
                   <div className="bg-gray-800/50 rounded-lg p-4 text-center">
                     <Utensils className="w-6 h-6 mx-auto mb-2 text-purple-400" />
                     <p className="text-2xl font-bold">{selectedNutritionProgram.daily_meal_plans?.length || 0}</p>
-                    <p className="text-xs text-gray-400">Days</p>
+                    <p className="text-xs text-gray-400">Meal Plans</p>
                   </div>
                 </div>
 
@@ -378,29 +500,61 @@ export default function PresetPrograms() {
                     setSelectedNutritionProgram(null);
                     toast.success('Nutrition program activated!');
                   }}
-                  className="w-full bg-brand-blue hover:bg-brand-blue-dark mb-4"
+                  className="w-full bg-brand-blue hover:bg-brand-blue-dark mb-6"
                   size="lg"
                 >
                   <Play className="w-5 h-5 mr-2" />
-                  Start This Program
+                  Activate This Program
                 </Button>
 
-                <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {selectedNutritionProgram.daily_meal_plans?.slice(0, 3).map((day, i) => (
-                    <div key={i} className="bg-gray-800/30 rounded-lg p-4">
-                      <h4 className="font-bold mb-2">{day.day_name}</h4>
-                      <div className="space-y-2">
-                        {day.meals?.map((meal, j) => (
-                          <div key={j} className="text-sm">
-                            <span className="font-semibold capitalize">{meal.meal_type}:</span> {meal.meal_name} ({meal.calories} cal)
-                          </div>
+                {/* Tips Section */}
+                {selectedNutritionProgram.tips && selectedNutritionProgram.tips.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-xl font-bold mb-3">Program Tips</h3>
+                    <div className="bg-gray-800/50 rounded-lg p-4">
+                      <ul className="space-y-2">
+                        {selectedNutritionProgram.tips.map((tip, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-brand-blue mt-1">•</span>
+                            <span className="text-gray-300">{tip}</span>
+                          </li>
                         ))}
-                      </div>
+                      </ul>
                     </div>
-                  ))}
-                  {selectedNutritionProgram.daily_meal_plans?.length > 3 && (
-                    <p className="text-center text-gray-400 text-sm">+ {selectedNutritionProgram.daily_meal_plans.length - 3} more days</p>
-                  )}
+                  </div>
+                )}
+
+                {/* Sample Days Preview */}
+                <div>
+                  <h3 className="text-xl font-bold mb-4">Sample Daily Meal Plans</h3>
+                  <div className="space-y-4">
+                    {selectedNutritionProgram.daily_meal_plans?.slice(0, 2).map((day, i) => (
+                      <div key={i} className="bg-gray-800/30 rounded-lg p-4 border border-gray-700">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-bold text-lg">{day.day_name}</h4>
+                          <Badge className="bg-brand-blue">{day.total_calories} cal</Badge>
+                        </div>
+                        <div className="grid gap-2">
+                          {day.meals?.map((meal, j) => (
+                            <div key={j} className="bg-gray-900/50 rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-semibold capitalize text-sm">{meal.meal_type}: {meal.meal_name}</span>
+                                <span className="text-xs text-gray-400">{meal.calories} cal</span>
+                              </div>
+                              <div className="flex gap-3 text-xs text-gray-500">
+                                <span>P: {meal.protein}g</span>
+                                <span>C: {meal.carbs}g</span>
+                                <span>F: {meal.fat}g</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    {selectedNutritionProgram.daily_meal_plans?.length > 2 && (
+                      <p className="text-center text-gray-400 text-sm">+ {selectedNutritionProgram.daily_meal_plans.length - 2} more days of meal plans</p>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -447,7 +601,7 @@ export default function PresetPrograms() {
             </CardHeader>
             <CardContent className="space-y-6">
               {selectedProgram.daily_plans.map((day, idx) => {
-                const isCompleted = false; // Will be updated when we track user progress
+                const isCompleted = false;
                 return (
                   <div key={idx} className={`border rounded-lg p-4 ${isCompleted ? 'border-green-500 bg-green-500/10' : 'border-border'}`}>
                     <div className="flex justify-between items-start mb-3">
