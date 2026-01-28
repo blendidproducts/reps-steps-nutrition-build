@@ -72,6 +72,7 @@ import Stretches from './pages/Stretches';
 import WorkoutBuilder from './pages/WorkoutBuilder';
 import WorkoutComplete from './pages/WorkoutComplete';
 import WorkoutDetail from './pages/WorkoutDetail';
+import NutritionPrograms from './pages/NutritionPrograms';
 import __Layout from './Layout.jsx';
 
 
@@ -101,6 +102,7 @@ export const PAGES = {
     "WorkoutBuilder": WorkoutBuilder,
     "WorkoutComplete": WorkoutComplete,
     "WorkoutDetail": WorkoutDetail,
+    "NutritionPrograms": NutritionPrograms,
 }
 
 export const pagesConfig = {
