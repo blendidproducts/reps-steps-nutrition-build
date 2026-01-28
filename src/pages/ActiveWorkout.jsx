@@ -260,22 +260,12 @@ export default function ActiveWorkout() {
   const nextExercise = () => {
     const currentExercise = workout.exercises[currentExerciseIndex];
     
-    // CRITICAL: Save completed reps/time for this set before moving on
-    const updatedExercises = [...workout.exercises];
-    if (updatedExercises[currentExerciseIndex] && currentExercise.metric === 'reps') {
-      const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
-      const newTotal = previousCompleted + currentReps;
-      updatedExercises[currentExerciseIndex].completed_reps = newTotal;
-      console.log(`[REP TRACKING] Exercise: ${currentExercise.exercise_name}, Set ${currentSet}, Current Reps: ${currentReps}, Previous: ${previousCompleted}, New Total: ${newTotal}`);
-      setWorkout({...workout, exercises: updatedExercises});
-      
-      // Check for achievements
-      if (currentReps > 0) {
-        const name = currentExercise.exercise_name.toLowerCase();
-        if (name.includes('push')) checkAchievement('pushups', currentReps, currentExercise.exercise_name);
-        if (name.includes('squat')) checkAchievement('squats', currentReps, currentExercise.exercise_name);
-        if (name.includes('burpee')) checkAchievement('burpees', currentReps, currentExercise.exercise_name);
-      }
+    // Check for achievements before moving to next exercise
+    if (currentExercise.metric === 'reps' && currentReps > 0) {
+      const name = currentExercise.exercise_name.toLowerCase();
+      if (name.includes('push')) checkAchievement('pushups', currentReps, currentExercise.exercise_name);
+      if (name.includes('squat')) checkAchievement('squats', currentReps, currentExercise.exercise_name);
+      if (name.includes('burpee')) checkAchievement('burpees', currentReps, currentExercise.exercise_name);
     }
     
     // If superset, move to next exercise in the superset chain (same set number)
@@ -873,11 +863,14 @@ export default function ActiveWorkout() {
   const addRep = () => {
     const newReps = currentReps + 1;
     setCurrentReps(newReps);
-    setTotalReps(prev => {
-      const updated = prev + 1;
-      console.log(`[REP TRACKING] addRep - Current Reps: ${newReps}, Total Reps: ${updated}`);
-      return updated;
-    });
+    setTotalReps(prev => prev + 1);
+    
+    // Update completed_reps in real-time
+    const updatedExercises = [...workout.exercises];
+    const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
+    updatedExercises[currentExerciseIndex].completed_reps = previousCompleted + 1;
+    setWorkout({...workout, exercises: updatedExercises});
+    
     updateWorkoutProgress(newReps, 'reps');
   };
 
@@ -886,6 +879,15 @@ export default function ActiveWorkout() {
       const newReps = currentReps - 1;
       setCurrentReps(newReps);
       setTotalReps(prev => prev - 1);
+      
+      // Update completed_reps in real-time
+      const updatedExercises = [...workout.exercises];
+      const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
+      if (previousCompleted > 0) {
+        updatedExercises[currentExerciseIndex].completed_reps = previousCompleted - 1;
+        setWorkout({...workout, exercises: updatedExercises});
+      }
+      
       updateWorkoutProgress(newReps, 'reps');
     }
   };
@@ -893,11 +895,14 @@ export default function ActiveWorkout() {
   const setQuickReps = (reps) => {
     const difference = reps - currentReps;
     setCurrentReps(reps);
-    setTotalReps(prev => {
-      const updated = prev + difference;
-      console.log(`[REP TRACKING] setQuickReps - Reps: ${reps}, Difference: ${difference}, Total Reps: ${updated}`);
-      return updated;
-    });
+    setTotalReps(prev => prev + difference);
+    
+    // Update completed_reps in real-time
+    const updatedExercises = [...workout.exercises];
+    const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
+    updatedExercises[currentExerciseIndex].completed_reps = previousCompleted + difference;
+    setWorkout({...workout, exercises: updatedExercises});
+    
     setRepInput(reps.toString());
     updateWorkoutProgress(reps, 'reps');
   };
@@ -906,11 +911,14 @@ export default function ActiveWorkout() {
     const reps = parseInt(value) || 0;
     const difference = reps - currentReps; 
     setCurrentReps(reps);
-    setTotalReps(prev => {
-      const updated = prev + difference;
-      console.log(`[REP TRACKING] handleRepInput - Input: ${value}, Reps: ${reps}, Difference: ${difference}, Total Reps: ${updated}`);
-      return updated;
-    });
+    setTotalReps(prev => prev + difference);
+    
+    // Update completed_reps in real-time
+    const updatedExercises = [...workout.exercises];
+    const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
+    updatedExercises[currentExerciseIndex].completed_reps = previousCompleted + difference;
+    setWorkout({...workout, exercises: updatedExercises});
+    
     setRepInput(value);
     updateWorkoutProgress(reps, 'reps');
   };
