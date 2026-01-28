@@ -15,11 +15,18 @@ export default function Home() {
   const logoUrl = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/d1545e30c_repsandsteps_main_logo_2.png";
   const bannerUrl = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/8866d855e_repsandSteps_name_banner.png";
 
+  const [activeProgram, setActiveProgram] = React.useState(null);
+
   React.useEffect(() => {
     const checkUserStatus = async () => {
       try {
         const user = await User.me();
         setIsPro(user.subscription_status === 'pro');
+        
+        // Check for active program
+        if (user.active_program) {
+          setActiveProgram(user.active_program);
+        }
       } catch (error) {
         console.error("Failed to fetch user status:", error);
         setIsPro(false);
@@ -73,6 +80,36 @@ export default function Home() {
               <img src={bannerUrl} alt="RepsAndSteps" className="h-6 sm:h-8 md:h-10 lg:h-12 xl:h-16 max-w-full px-4" />
             </div>
             
+            {/* Continue Program Banner */}
+            {activeProgram && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15, duration: 0.6 }}
+                className="mb-4 sm:mb-6 px-2 sm:px-4"
+              >
+                <Link to={createPageUrl("PresetPrograms")}>
+                  <Card className="bg-gradient-to-r from-green-600 to-emerald-600 border-2 border-green-400 shadow-2xl hover:scale-[1.02] transition-transform cursor-pointer">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex items-center gap-4">
+                        <div className="bg-white/20 p-3 rounded-full">
+                          <Play className="w-8 h-8 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-xl sm:text-2xl font-black text-white mb-1">CONTINUE PROGRAM</h3>
+                          <p className="text-green-100 font-semibold">Day {activeProgram.current_day} of {activeProgram.total_days} - {activeProgram.program_name}</p>
+                        </div>
+                        <div className="bg-white/20 px-4 py-2 rounded-lg">
+                          <p className="text-white font-bold text-2xl">{activeProgram.current_day}</p>
+                          <p className="text-green-100 text-xs">DAY</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+            )}
+
             {/* Hero Image */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -81,7 +118,7 @@ export default function Home() {
               className="my-4 sm:my-6 md:my-8 lg:my-10 px-2 sm:px-4 w-full"
             >
               <img 
-                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/da699ae1c_RnS_AppfrontScreen.png" 
+                src="https://qtrypzkcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/da699ae1c_RnS_AppfrontScreen.png" 
                 alt="Reps and Steps App"
                 className="w-full max-w-[280px] sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl"
               />
