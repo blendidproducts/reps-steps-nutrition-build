@@ -303,7 +303,112 @@ export default function PresetPrograms() {
         )}
       </div>
 
-      {/* Program Detail Modal */}
+      {/* Nutrition Program Detail Modal */}
+      {selectedNutritionProgram && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto"
+          onClick={() => setSelectedNutritionProgram(null)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-4xl my-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Card className="bg-card border-border">
+              <CardHeader className={`bg-gradient-to-br ${
+                selectedNutritionProgram.program_type === 'weight_loss' ? 'from-red-600 to-orange-600' :
+                selectedNutritionProgram.program_type === 'muscle_gain' ? 'from-blue-600 to-purple-600' :
+                'from-green-600 to-emerald-600'
+              } text-white p-6`}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-3xl font-bold mb-2">{selectedNutritionProgram.name}</CardTitle>
+                    <CardDescription className="text-white/90">{selectedNutritionProgram.description}</CardDescription>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedNutritionProgram(null)}
+                    className="text-white hover:bg-white/20 rounded-full p-2 transition-colors text-2xl"
+                  >
+                    ×
+                  </button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-gray-800/50 rounded-lg p-4 text-center">
+                    <Clock className="w-6 h-6 mx-auto mb-2 text-brand-blue" />
+                    <p className="text-2xl font-bold">{selectedNutritionProgram.duration_days}</p>
+                    <p className="text-xs text-gray-400">Days</p>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-lg p-4 text-center">
+                    <Flame className="w-6 h-6 mx-auto mb-2 text-orange-400" />
+                    <p className="text-2xl font-bold">{selectedNutritionProgram.daily_calories_target}</p>
+                    <p className="text-xs text-gray-400">Calories</p>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-lg p-4 text-center">
+                    <Apple className="w-6 h-6 mx-auto mb-2 text-green-400" />
+                    <p className="text-2xl font-bold">{selectedNutritionProgram.daily_protein_grams}g</p>
+                    <p className="text-xs text-gray-400">Protein</p>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-lg p-4 text-center">
+                    <Utensils className="w-6 h-6 mx-auto mb-2 text-purple-400" />
+                    <p className="text-2xl font-bold">{selectedNutritionProgram.daily_meal_plans?.length || 0}</p>
+                    <p className="text-xs text-gray-400">Days</p>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={async () => {
+                    await User.updateMe({ 
+                      active_nutrition_program: {
+                        program_id: selectedNutritionProgram.id,
+                        program_name: selectedNutritionProgram.name,
+                        current_day: 1,
+                        total_days: selectedNutritionProgram.duration_days,
+                        daily_calories: selectedNutritionProgram.daily_calories_target,
+                        start_date: new Date().toISOString()
+                      }
+                    });
+                    setActiveNutritionProgram({
+                      program_id: selectedNutritionProgram.id,
+                      program_name: selectedNutritionProgram.name,
+                      current_day: 1,
+                      total_days: selectedNutritionProgram.duration_days,
+                      daily_calories: selectedNutritionProgram.daily_calories_target
+                    });
+                    setSelectedNutritionProgram(null);
+                    toast.success('Nutrition program activated!');
+                  }}
+                  className="w-full bg-brand-blue hover:bg-brand-blue-dark mb-4"
+                  size="lg"
+                >
+                  <Play className="w-5 h-5 mr-2" />
+                  Start This Program
+                </Button>
+
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {selectedNutritionProgram.daily_meal_plans?.slice(0, 3).map((day, i) => (
+                    <div key={i} className="bg-gray-800/30 rounded-lg p-4">
+                      <h4 className="font-bold mb-2">{day.day_name}</h4>
+                      <div className="space-y-2">
+                        {day.meals?.map((meal, j) => (
+                          <div key={j} className="text-sm">
+                            <span className="font-semibold capitalize">{meal.meal_type}:</span> {meal.meal_name} ({meal.calories} cal)
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {selectedNutritionProgram.daily_meal_plans?.length > 3 && (
+                    <p className="text-center text-gray-400 text-sm">+ {selectedNutritionProgram.daily_meal_plans.length - 3} more days</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Workout Program Detail Modal */}
       {selectedProgram && (
         <div 
           className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
