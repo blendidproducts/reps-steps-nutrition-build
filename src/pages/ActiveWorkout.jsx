@@ -19,7 +19,6 @@ import {
   Timer,
   Target,
   PlayCircle,
-  HelpCircle,
   Footprints,
   Route,
   Zap,
@@ -27,7 +26,8 @@ import {
   Link as LinkIcon,
   Check,
   Search,
-  Trophy
+  Trophy,
+  Box
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -84,6 +84,8 @@ export default function ActiveWorkout() {
   const [achievementPopup, setAchievementPopup] = useState(null);
   const [personalRecords, setPersonalRecords] = useState({});
   const [showActiveRecovery, setShowActiveRecovery] = useState(false);
+  const [showHowTo, setShowHowTo] = useState(false);
+  const [show3DView, setShow3DView] = useState(false);
 
   useEffect(() => {
     loadWorkout();
@@ -929,6 +931,32 @@ export default function ActiveWorkout() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const getYouTubeVideoId = (exerciseName) => {
+    // Map exercise names to YouTube video IDs for tutorials
+    const videoMap = {
+      'push': 'IODxDxX7oi4', // Push-ups tutorial
+      'squat': '9cYEuFbBLSY', // Squat tutorial
+      'plank': 'pSHjTRCQxIw', // Plank tutorial
+      'lunge': 'QOVaHwm-Q6U', // Lunges tutorial
+      'burpee': 'dZgVxmf6jkA', // Burpees tutorial
+      'pull': 'eGo4IYlbE5g', // Pull-ups tutorial
+      'dip': 'yN6Q1UI_xkE', // Dips tutorial
+      'mountain climber': 'nmwgirgXLYM', // Mountain climbers
+      'jumping jack': 'c4DAnQ6DtF8', // Jumping jacks
+      'crunch': '5ER5Of4EISE', // Crunches
+    };
+
+    // Find matching video based on exercise name keywords
+    const name = exerciseName.toLowerCase();
+    for (const [key, videoId] of Object.entries(videoMap)) {
+      if (name.includes(key)) {
+        return videoId;
+      }
+    }
+    // Default generic calisthenics tutorial
+    return 'g_tea8ZNk5A'; // Calisthenics basics
+  };
+
   const connectBluetoothHRM = async () => {
     try {
       if (!navigator.bluetooth) {
@@ -1677,40 +1705,48 @@ export default function ActiveWorkout() {
           <Card className="bg-card backdrop-blur-sm border-border text-white">
             <CardContent className="p-3 sm:p-4">
               <div className="flex justify-between items-start mb-3">
-                <Badge variant="outline" className="border-brand-blue/50 text-brand-blue">
+                <Badge variant="outline" className="border-brand-blue/50 text-brand-blue text-xs">
                   Set {currentSet} of {currentExercise.sets || 1}
                 </Badge>
-                <div className="flex gap-2">
+                <div className="flex gap-1">
                   <button
                     onClick={openSupersetModal}
-                    className="w-8 h-8 bg-purple-600/50 hover:bg-purple-600 rounded-full flex items-center justify-center transition-colors"
-                    title="Configure Supersets"
+                    className="w-7 h-7 bg-purple-600/50 hover:bg-purple-600 rounded-full flex items-center justify-center transition-colors"
+                    title="Supersets"
                   >
-                    <LinkIcon className="w-4 h-4" />
+                    <LinkIcon className="w-3 h-3" />
                   </button>
                   <button
                     onClick={() => setShowSwapModal(true)}
-                    className="w-8 h-8 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors"
-                    title="Swap Exercise"
+                    className="w-7 h-7 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors"
+                    title="Swap"
                   >
-                    <RefreshCw className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setShowVideoHelp(true)}
-                    className="w-8 h-8 bg-gray-700/50 hover:bg-gray-700 rounded-full flex items-center justify-center transition-colors"
-                  >
-                    <PlayCircle className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setShowVideoHelp(true)}
-                    className="w-8 h-8 bg-gray-700/50 hover:bg-gray-700 rounded-full flex items-center justify-center transition-colors"
-                  >
-                    <HelpCircle className="w-4 h-4" />
+                    <RefreshCw className="w-3 h-3" />
                   </button>
                 </div>
               </div>
 
-              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-3 sm:mb-4 leading-tight">{currentExercise.exercise_name}</h2>
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-2 leading-tight">{currentExercise.exercise_name}</h2>
+              
+              {/* HOW TO Section */}
+              <div className="flex justify-center gap-2 mb-3">
+                <Button
+                  onClick={() => setShowHowTo(true)}
+                  size="sm"
+                  className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-1 px-3"
+                >
+                  <Play className="w-3 h-3" />
+                  <span className="text-xs font-bold">VIDEO</span>
+                </Button>
+                <Button
+                  onClick={() => setShow3DView(true)}
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1 px-3"
+                >
+                  <Box className="w-3 h-3" />
+                  <span className="text-xs font-bold">3D</span>
+                </Button>
+              </div>
               
               {/* Set Progress Badge */}
               <div className="mb-3">
@@ -1729,21 +1765,18 @@ export default function ActiveWorkout() {
                 </div>
               )}
               
-              <div className="w-full h-32 md:h-40 bg-background rounded-lg flex items-center justify-center mb-4 relative overflow-hidden">
+              <div className="w-full h-28 sm:h-32 bg-background rounded-lg flex items-center justify-center mb-3 relative overflow-hidden">
                 {currentExercise.image_url ? (
                   <img src={currentExercise.image_url} alt={currentExercise.exercise_name} className="w-full h-full object-contain" />
                 ) : (
-                  <Target className="w-12 h-12 md:w-16 md:h-16 text-brand-blue/50" />
+                  <Target className="w-10 h-10 sm:w-12 sm:h-12 text-brand-blue/50" />
                 )}
-                <div className="absolute bottom-2 right-2 bg-black/60 text-white px-2 py-1 rounded text-xs">
-                  Exercise Demo
-                </div>
               </div>
 
               {isTimeBased ? (
                 // UI for Time-Based Exercises
-                <div className="text-center mb-6">
-                   <div className="text-4xl md:text-6xl font-bold mb-2">{formatTime(exerciseTimer)}</div>
+                <div className="text-center mb-4">
+                   <div className="text-3xl sm:text-4xl font-bold mb-2">{formatTime(exerciseTimer)}</div>
                    <div className="flex items-center justify-center gap-3 mb-4">
                      <p className="text-sm md:text-base text-gray-400">
                        Target: {formatTime(currentExercise.target_time)}
@@ -1777,8 +1810,8 @@ export default function ActiveWorkout() {
                 </div>
               ) : (
                 // UI for Rep-Based Exercises
-                <div className="text-center mb-6">
-                  <div className="text-4xl md:text-6xl font-bold mb-2">{currentReps}</div>
+                <div className="text-center mb-4">
+                  <div className="text-3xl sm:text-4xl font-bold mb-2">{currentReps}</div>
                   <p className="text-sm md:text-base text-gray-400 mb-4">
                     Target: {currentExercise.target_reps || 'As many as possible'}
                   </p>
@@ -1939,33 +1972,78 @@ export default function ActiveWorkout() {
         </Card>
       </div>
 
+      {/* YouTube Video Modal */}
       <AnimatePresence>
-              {showVideoHelp && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4"
-                  onClick={() => setShowVideoHelp(false)}
-                  style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)', overflow: 'auto' }}
-                >
-                  <Card className="bg-gray-900 w-full max-w-[95vw] sm:max-w-md border-gray-800 max-h-[90vh] overflow-auto my-auto" onClick={e => e.stopPropagation()}>
-                    <CardContent className="p-3 sm:p-6">
-                <h3 className="text-xl font-bold mb-4 text-white">{currentExercise.exercise_name} - How To</h3>
-                <div className="w-full h-48 bg-background rounded-lg flex items-center justify-center mb-4">
+        {showHowTo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center z-[9999] p-2"
+            onClick={() => setShowHowTo(false)}
+          >
+            <Card className="bg-gray-900 w-full max-w-2xl border-gray-800 max-h-[95vh] overflow-auto" onClick={e => e.stopPropagation()}>
+              <CardContent className="p-3 sm:p-4">
+                <h3 className="text-lg font-bold mb-3 text-white">{currentExercise.exercise_name}</h3>
+                
+                {/* YouTube Video Embed */}
+                <div className="w-full aspect-video bg-black rounded-lg mb-3 overflow-hidden">
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    src={`https://www.youtube.com/embed/${getYouTubeVideoId(currentExercise.exercise_name)}?rel=0`}
+                    title={currentExercise.exercise_name}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="w-full h-full"
+                  ></iframe>
+                </div>
+
+                {/* Instructions */}
+                {currentExercise.instructions?.length > 0 && (
+                  <div className="bg-gray-800/50 rounded-lg p-3 mb-3">
+                    <h4 className="font-semibold mb-2 text-white text-sm">Instructions:</h4>
+                    <ol className="list-decimal list-inside space-y-1 text-xs text-gray-300">
+                      {currentExercise.instructions.map((inst, i) => <li key={i}>{inst}</li>)}
+                    </ol>
+                  </div>
+                )}
+
+                <Button onClick={() => setShowHowTo(false)} className="w-full gradient-bg text-white">
+                  Got It!
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 3D View Modal */}
+      <AnimatePresence>
+        {show3DView && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center z-[9999] p-2"
+            onClick={() => setShow3DView(false)}
+          >
+            <Card className="bg-gray-900 w-full max-w-2xl border-gray-800 max-h-[95vh] overflow-auto" onClick={e => e.stopPropagation()}>
+              <CardContent className="p-3 sm:p-4">
+                <h3 className="text-lg font-bold mb-3 text-white">{currentExercise.exercise_name} - 3D View</h3>
+                
+                {/* 3D Viewer */}
+                <div className="w-full aspect-square bg-black rounded-lg mb-3 flex items-center justify-center">
                   <div className="text-center">
-                    <PlayCircle className="w-12 h-12 text-gray-600 mx-auto mb-2" />
-                    <p className="text-gray-500">Exercise demo video</p>
+                    <div className="text-6xl mb-2">🏋️</div>
+                    <p className="text-gray-400 text-sm">3D Exercise Viewer</p>
+                    <p className="text-gray-500 text-xs mt-1">Interactive 3D model coming soon</p>
                   </div>
                 </div>
-                <div className="text-gray-300 mb-4">
-                  <h4 className="font-semibold mb-2 text-white">Instructions:</h4>
-                  <ol className="list-decimal list-inside space-y-1 text-sm">
-                    {currentExercise.instructions?.length > 0 ? currentExercise.instructions.map((inst, i) => <li key={i}>{inst}</li>) : <li>No instructions available.</li>}
-                  </ol>
-                </div>
-                <Button onClick={() => setShowVideoHelp(false)} className="w-full gradient-bg text-white">
-                  Got It!
+
+                <Button onClick={() => setShow3DView(false)} className="w-full gradient-bg text-white">
+                  Close
                 </Button>
               </CardContent>
             </Card>
