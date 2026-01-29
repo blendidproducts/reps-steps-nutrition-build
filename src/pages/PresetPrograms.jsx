@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Calendar, Target, Zap, Trophy, ArrowRight, Check, Eye, X, ArrowLeft, Play, Clock, Flame, Apple, Utensils } from "lucide-react";
+import { Calendar, Target, Zap, Trophy, ArrowRight, Check, Eye, X, ArrowLeft, Play, Clock, Flame, Apple, Utensils, PlayCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
@@ -272,15 +272,29 @@ export default function PresetPrograms() {
                             )}
                           </>
                         )}
-                        <Button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedProgram(activeProgramDetails);
-                          }}
-                          className="w-full mt-3 bg-brand-blue hover:bg-brand-blue-dark text-white font-bold"
-                        >
-                          PREVIEW Day {activeProgram.current_day}
-                        </Button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedProgram(activeProgramDetails);
+                            }}
+                            variant="outline"
+                            className="mt-3 border-brand-blue text-brand-blue hover:bg-brand-blue/20"
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            PREVIEW
+                          </Button>
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startProgram(activeProgramDetails, activeProgram.current_day);
+                            }}
+                            className="mt-3 bg-green-600 hover:bg-green-700 text-white font-bold"
+                          >
+                            <Play className="w-4 h-4 mr-2" />
+                            START
+                          </Button>
+                        </div>
                       </div>
                     )}
                     
