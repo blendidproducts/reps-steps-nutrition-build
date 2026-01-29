@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
+import { ProgramEnrollment } from "@/entities/ProgramEnrollment";
+import { Achievement } from "@/entities/Achievement";
 import { Trophy, Target, Clock, TrendingUp, Share2, Home, RotateCcw, Trash2, Footprints, Eye } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -66,6 +68,27 @@ export default function WorkoutComplete() {
               programId: workout.program_id
             });
             
+            // Update enrollment record
+            const enrollments = await ProgramEnrollment.filter({ 
+              program_id: workout.program_id,
+              status: 'active'
+            });
+            
+            if (enrollments.length > 0) {
+              const enrollment = enrollments[0];
+              const updatedCompletedDays = [...(enrollment.completed_days || []), dayJustCompleted];
+              const daysCompletedCount = updatedCompletedDays.length;
+              const completionPercentage = (daysCompletedCount / enrollment.total_days) * 100;
+              
+              await ProgramEnrollment.update(enrollment.id, {
+                completed_days: updatedCompletedDays,
+                days_completed_count: daysCompletedCount,
+                completion_percentage: completionPercentage,
+                last_activity_date: new Date().toISOString(),
+                current_day: nextDay
+              });
+            }
+            
             // Update to next day if not completed
             if (nextDay <= user.active_program.total_days) {
               await base44.auth.updateMe({
@@ -77,7 +100,25 @@ export default function WorkoutComplete() {
               });
               toast.success(`✓ Day ${dayJustCompleted} complete! Day ${nextDay} is ready.`);
             } else {
-              // Program completed
+              // Program completed - award achievement and update enrollment
+              if (enrollments.length > 0) {
+                await ProgramEnrollment.update(enrollments[0].id, {
+                  status: 'completed',
+                  end_date: new Date().toISOString(),
+                  completion_percentage: 100,
+                  achievement_earned: true
+                });
+                
+                // Award program completion achievement
+                await Achievement.create({
+                  achievement_type: `program_${workout.program_id}_completed`,
+                  title: `${user.active_program.program_name} Champion`,
+                  description: `Completed all ${user.active_program.total_days} days of ${user.active_program.program_name}`,
+                  icon: '🏆',
+                  earned_date: new Date().toISOString()
+                });
+              }
+              
               await base44.auth.updateMe({ active_program: null });
               toast.success(`🎉 Program "${user.active_program.program_name}" completed!`);
             }
