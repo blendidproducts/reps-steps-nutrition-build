@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { PresetProgram } from "@/entities/PresetProgram";
 import { NutritionProgram } from "@/entities/NutritionProgram";
+import { ProgramEnrollment } from "@/entities/ProgramEnrollment";
+import { Achievement } from "@/entities/Achievement";
 import { Workout } from "@/entities/Workout";
 import { Exercise } from "@/entities/Exercise";
 import { User } from "@/entities/User";
@@ -117,6 +119,19 @@ export default function PresetPrograms() {
 
       const workout = await Workout.create(workoutData);
       
+      // Create enrollment record if starting fresh
+      if (dayNumber === 1) {
+        await ProgramEnrollment.create({
+          program_id: program.id,
+          program_name: program.name,
+          program_type: 'workout',
+          start_date: new Date().toISOString(),
+          current_day: dayNumber,
+          total_days: program.duration_days,
+          status: 'active'
+        });
+      }
+      
       await base44.auth.updateMe({
         active_program: {
           program_id: program.id,
@@ -135,6 +150,30 @@ export default function PresetPrograms() {
       toast.dismiss();
       console.error('Failed to start program:', error);
       toast.error('Failed to start program');
+    }
+  };
+
+  const removeFromProgram = async () => {
+    try {
+      const enrollments = await ProgramEnrollment.filter({ 
+        program_id: activeProgram.program_id,
+        status: 'active'
+      });
+      
+      if (enrollments.length > 0) {
+        await ProgramEnrollment.update(enrollments[0].id, {
+          status: 'cancelled',
+          end_date: new Date().toISOString()
+        });
+      }
+      
+      await base44.auth.updateMe({ active_program: null });
+      setActiveProgram(null);
+      setActiveProgramDetails(null);
+      toast.success('Removed from program');
+    } catch (error) {
+      console.error('Failed to remove program:', error);
+      toast.error('Failed to remove from program');
     }
   };
 
@@ -244,6 +283,16 @@ export default function PresetPrograms() {
                         </Button>
                       </div>
                     )}
+                    
+                    {/* Remove from Program Button */}
+                    <Button
+                      onClick={removeFromProgram}
+                      variant="outline"
+                      className="w-full mt-4 border-red-500 text-red-400 hover:bg-red-500/20"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Remove from Program
+                    </Button>
                   </div>
                 </div>
               </CardContent>
