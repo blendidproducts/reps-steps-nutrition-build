@@ -17,7 +17,11 @@ import {
   Video,
   ChevronDown,
   ChevronRight,
-  TrendingUp
+  TrendingUp,
+  Mic,
+  Bluetooth,
+  Shield,
+  Volume2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -29,6 +33,19 @@ export default function Help() {
     message: ''
   });
   const [isSending, setIsSending] = useState(false);
+  
+  // Check if we need to scroll to VCFS section
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('section') === 'vcfs') {
+      setTimeout(() => {
+        const element = document.getElementById('vcfs-section');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  }, []);
 
   const faqs = [
     {
@@ -108,10 +125,17 @@ ${feedbackForm.message}
 
       <div className="container mx-auto px-6 py-8 max-w-4xl">
         <Tabs defaultValue="getting-started" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-card border-border">
+          <TabsList className="grid w-full grid-cols-5 bg-card border-border">
             <TabsTrigger value="getting-started" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground text-gray-400 hover:text-foreground">
               <Play className="w-4 h-4" />
-              Getting Started
+              <span className="hidden sm:inline">Getting Started</span>
+              <span className="sm:hidden">Start</span>
+            </TabsTrigger>
+            <TabsTrigger value="vcfs" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground text-gray-400 hover:text-foreground relative">
+              <Mic className="w-4 h-4" />
+              <span className="hidden sm:inline">VCFS™</span>
+              <span className="sm:hidden">Voice</span>
+              <span className="absolute -top-1 -right-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[8px] font-bold px-1 rounded-full">NEW</span>
             </TabsTrigger>
             <TabsTrigger value="faq" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground text-gray-400 hover:text-foreground">
               <HelpCircle className="w-4 h-4" />
@@ -119,13 +143,224 @@ ${feedbackForm.message}
             </TabsTrigger>
             <TabsTrigger value="exercises" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground text-gray-400 hover:text-foreground">
               <BookOpen className="w-4 h-4" />
-              Exercise Guide
+              <span className="hidden sm:inline">Exercise Guide</span>
+              <span className="sm:hidden">Guide</span>
             </TabsTrigger>
             <TabsTrigger value="feedback" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground text-gray-400 hover:text-foreground">
               <MessageSquare className="w-4 h-4" />
-              Feedback
+              <span className="hidden sm:inline">Feedback</span>
+              <span className="sm:hidden">Feed</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* VCFS - Voice Control Fitness System */}
+          <TabsContent value="vcfs" id="vcfs-section">
+            <div className="space-y-6">
+              {/* Hero Card */}
+              <Card className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 border-purple-500/50">
+                <CardContent className="p-8">
+                  <div className="text-center mb-6">
+                    <div className="inline-block p-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full mb-4">
+                      <Mic className="w-12 h-12 text-white" />
+                    </div>
+                    <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                      Voice Control Fitness System™
+                    </h2>
+                    <p className="text-lg text-gray-300">Truly hands-free workouts powered by AI voice technology</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* What is VCFS */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <Target className="w-6 h-6 text-purple-400" />
+                    What is VCFS™?
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-gray-300">
+                    VCFS™ is our revolutionary AI-powered voice control system that lets you track workouts completely hands-free. No need to touch your phone during exercises - just speak your commands and your AI coach responds with audio guidance.
+                  </p>
+                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+                    <h4 className="font-bold text-purple-300 mb-2">Perfect for:</h4>
+                    <ul className="text-gray-300 space-y-1">
+                      <li>• Outdoor workouts and runs</li>
+                      <li>• Intense exercises where you can't touch your phone</li>
+                      <li>• Bluetooth headphone users</li>
+                      <li>• Anyone who wants a more natural workout experience</li>
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* How to Use VCFS */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <Play className="w-6 h-6 text-purple-400" />
+                    How to Use VCFS™
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {[
+                      {
+                        step: 1,
+                        title: "Enable Permissions",
+                        description: "First time setup requires microphone access. Tap 'Allow' when prompted by your browser.",
+                        icon: Shield,
+                        tips: ["Required: Microphone permission", "Optional: Bluetooth for wireless audio"]
+                      },
+                      {
+                        step: 2,
+                        title: "Activate Voice Control",
+                        description: "In your active workout, tap the purple AI button in the top stats bar. You'll see a 'NEW AI' badge.",
+                        icon: Mic,
+                        tips: ["Look for the purple gradient button", "Status banner shows when active"]
+                      },
+                      {
+                        step: 3,
+                        title: "Say the Wake Command",
+                        description: "Speak clearly: \"RNS reps and steps\" or \"R-N-S reps and steps\"",
+                        icon: Volume2,
+                        tips: ["Your AI coach will respond immediately", "Timer starts automatically", "Exercise name and target announced"]
+                      },
+                      {
+                        step: 4,
+                        title: "Complete & Record",
+                        description: "When finished, say: \"[number] reps completed\" - Example: \"15 reps completed\"",
+                        icon: Target,
+                        tips: ["Reps auto-recorded instantly", "AI confirms your count", "No need to touch your phone"]
+                      }
+                    ].map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <div key={item.step} className="flex gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-white font-bold">{item.step}</span>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                              <Icon className="w-5 h-5 text-purple-400" />
+                              {item.title}
+                            </h3>
+                            <p className="text-gray-400 mb-2">{item.description}</p>
+                            <div className="bg-gray-800/50 rounded-lg p-3">
+                              <p className="text-xs font-semibold text-purple-300 mb-1">Tips:</p>
+                              <ul className="text-xs text-gray-400 space-y-1">
+                                {item.tips.map((tip, idx) => (
+                                  <li key={idx}>• {tip}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Permissions & Setup */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <Settings className="w-6 h-6 text-purple-400" />
+                    Permissions & Setup
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="border border-border rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <Shield className="w-6 h-6 text-green-400 flex-shrink-0 mt-1" />
+                      <div>
+                        <h4 className="font-bold text-green-400 mb-2">Microphone Access (Required)</h4>
+                        <p className="text-sm text-gray-400 mb-2">
+                          VCFS™ needs microphone permission to hear your voice commands. This is secure and only used during workouts.
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          If denied: Go to browser settings → Site permissions → Microphone → Allow for this site
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border border-border rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <Bluetooth className="w-6 h-6 text-blue-400 flex-shrink-0 mt-1" />
+                      <div>
+                        <h4 className="font-bold text-blue-400 mb-2">Bluetooth Headphones (Optional)</h4>
+                        <p className="text-sm text-gray-400 mb-2">
+                          For the best experience, connect Bluetooth headphones before starting. Your AI coach's audio will play directly in your ears.
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Setup: Settings → Bluetooth → Pair your device → Start workout
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Voice Commands Reference */}
+              <Card className="bg-gradient-to-br from-pink-900/20 to-purple-900/20 border-pink-500/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <Volume2 className="w-6 h-6 text-pink-400" />
+                    Voice Commands Reference
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="bg-gray-900/50 rounded-lg p-4">
+                      <p className="font-bold text-pink-300 mb-2">Wake Command:</p>
+                      <p className="text-white text-lg font-mono">"RNS reps and steps"</p>
+                      <p className="text-xs text-gray-400 mt-1">Triggers AI coach guidance for current exercise</p>
+                    </div>
+                    <div className="bg-gray-900/50 rounded-lg p-4">
+                      <p className="font-bold text-pink-300 mb-2">Record Completion:</p>
+                      <p className="text-white text-lg font-mono">"[number] reps completed"</p>
+                      <p className="text-xs text-gray-400 mt-1">Examples: "10 reps completed", "25 reps completed"</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Troubleshooting */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <HelpCircle className="w-6 h-6 text-purple-400" />
+                    Troubleshooting
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="border-l-4 border-yellow-500 bg-yellow-500/10 p-4 rounded">
+                      <p className="font-bold text-yellow-300 mb-1">AI not responding?</p>
+                      <p className="text-sm text-gray-400">• Speak clearly and at normal volume</p>
+                      <p className="text-sm text-gray-400">• Reduce background noise</p>
+                      <p className="text-sm text-gray-400">• Check microphone permissions are enabled</p>
+                    </div>
+                    <div className="border-l-4 border-yellow-500 bg-yellow-500/10 p-4 rounded">
+                      <p className="font-bold text-yellow-300 mb-1">Voice not recognized?</p>
+                      <p className="text-sm text-gray-400">• Say the exact wake phrase: "RNS reps and steps"</p>
+                      <p className="text-sm text-gray-400">• Pause briefly between words</p>
+                      <p className="text-sm text-gray-400">• Try "R-N-S reps and steps" (spell out R-N-S)</p>
+                    </div>
+                    <div className="border-l-4 border-yellow-500 bg-yellow-500/10 p-4 rounded">
+                      <p className="font-bold text-yellow-300 mb-1">Can't hear AI coach?</p>
+                      <p className="text-sm text-gray-400">• Check device volume is up</p>
+                      <p className="text-sm text-gray-400">• Verify Bluetooth connection if using headphones</p>
+                      <p className="text-sm text-gray-400">• Make sure browser has audio permission</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
           {/* Getting Started */}
           <TabsContent value="getting-started">
