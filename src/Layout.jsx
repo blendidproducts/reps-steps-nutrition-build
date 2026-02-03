@@ -320,9 +320,9 @@ export default function Layout({ children, currentPageName }) {
               <SidebarTrigger className="w-10 h-10 flex items-center justify-center text-white text-xl hover:bg-gray-800 rounded transition-colors">
                 <span>☰</span>
               </SidebarTrigger>
-              <Link to={createPageUrl("Home")} className="flex items-center gap-3">
+              <Link to={createPageUrl("Home")} className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
                 <img src={logoUrl} alt="RepsAndSteps Logo" className="w-8 h-8 rounded-lg" />
-                <img src={bannerUrl} alt="RepsAndSteps" className="h-4 cursor-pointer hover:opacity-80 transition-opacity" />
+                <img src={bannerUrl} alt="RepsAndSteps" className="h-4" />
               </Link>
             </div>
           </header>
