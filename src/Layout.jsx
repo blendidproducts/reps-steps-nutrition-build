@@ -316,13 +316,13 @@ export default function Layout({ children, currentPageName }) {
           )}
 
           <header className="bg-card/80 backdrop-blur-lg border-b border-border px-4 py-3 md:hidden sticky top-0 z-50">
-            <div className="flex items-center gap-3">
-              <SidebarTrigger className="flex items-center gap-2 bg-brand-blue hover:bg-brand-blue-dark px-4 py-2.5 rounded-lg transition-colors duration-200 text-white font-semibold text-sm" >
+            <div className="flex items-center gap-4">
+              <SidebarTrigger className="w-10 h-10 flex items-center justify-center text-white text-xl hover:bg-gray-800 rounded transition-colors">
                 <span>☰</span>
-                <span>MAIN MENU</span>
               </SidebarTrigger>
-              <Link to={createPageUrl("Home")}>
-                <img src={bannerUrl} alt="RepsAndSteps" className="h-5 cursor-pointer hover:opacity-80 transition-opacity" />
+              <Link to={createPageUrl("Home")} className="flex items-center gap-3">
+                <img src={logoUrl} alt="RepsAndSteps Logo" className="w-8 h-8 rounded-lg" />
+                <img src={bannerUrl} alt="RepsAndSteps" className="h-4 cursor-pointer hover:opacity-80 transition-opacity" />
               </Link>
             </div>
           </header>
