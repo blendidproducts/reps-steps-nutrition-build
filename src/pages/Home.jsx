@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { PresetProgram } from "@/entities/PresetProgram";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight } from "lucide-react";
+import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Mic } from "lucide-react";
 import { motion } from "framer-motion";
 import FitnessQuiz from "@/components/FitnessQuiz";
 
@@ -225,6 +225,35 @@ export default function Home() {
                       </div>
                     </div>
                     <ArrowRight className="w-5 h-5 md:w-10 md:h-10 text-emerald-400" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Voice Control Fitness System (VCFS) */}
+              <Card 
+                className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-2 border-purple-500/50 cursor-pointer hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/30 transition-all backdrop-blur-sm relative overflow-hidden"
+                onClick={() => navigate(createPageUrl("Help") + "?section=vcfs")}
+              >
+                <div className="absolute top-2 right-2 z-10">
+                  <span className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+                    NEW AI
+                  </span>
+                </div>
+                <CardContent className="p-4 md:p-8">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 md:gap-6">
+                      <div className="w-12 h-12 md:w-20 md:h-20 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg shadow-purple-600/50">
+                        <svg className="w-6 h-6 md:w-10 md:h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                          <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <h3 className="text-lg md:text-3xl font-bold text-white mb-0 md:mb-2">VCFS™</h3>
+                        <p className="text-gray-300 text-xs md:text-base">Voice Control Fitness</p>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-5 h-5 md:w-10 md:h-10 text-purple-400" />
                   </div>
                 </CardContent>
               </Card>

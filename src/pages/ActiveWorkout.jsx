@@ -575,7 +575,7 @@ export default function ActiveWorkout() {
     setVoiceRecognition(recognition);
   };
 
-  const toggleVoiceControl = () => {
+  const toggleVoiceControl = async () => {
     if (!voiceRecognition) {
       toast.error('Voice control not available on this device');
       return;
@@ -583,13 +583,21 @@ export default function ActiveWorkout() {
 
     if (!isVoiceActive) {
       try {
+        // Request microphone permission
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop()); // Stop immediately, we just needed permission
+        
         voiceRecognition.start();
         setIsVoiceActive(true);
         speak('Voice control activated. Say RNS reps and steps to begin.');
         toast.success('🎤 Voice control ON - Say "RNS reps and steps" to start');
       } catch (error) {
         console.error('Failed to start voice control:', error);
-        toast.error('Failed to start voice control');
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          toast.error('Microphone permission denied. Please enable in settings.');
+        } else {
+          toast.error('Failed to start voice control');
+        }
       }
     } else {
       try {
