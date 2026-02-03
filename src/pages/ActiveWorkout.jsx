@@ -89,6 +89,7 @@ export default function ActiveWorkout() {
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [voiceRecognition, setVoiceRecognition] = useState(null);
   const [isListening, setIsListening] = useState(false);
+  const [showVoiceHelp, setShowVoiceHelp] = useState(false);
   const speechSynthRef = useRef(null);
 
   useEffect(() => {
@@ -461,8 +462,16 @@ export default function ActiveWorkout() {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.1;
-        utterance.pitch = 1;
+        
+        // Select an energetic, clear voice (prefer female US English for fitness coaching)
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(v => 
+          (v.name.includes('Samantha') || v.name.includes('Karen') || v.name.includes('Google US English')) && v.lang.includes('en')
+        ) || voices.find(v => v.lang.includes('en-US')) || voices[0];
+        
+        utterance.voice = preferredVoice;
+        utterance.rate = 1.15; // Slightly faster, energetic pace
+        utterance.pitch = 1.1; // Slightly higher, enthusiastic tone
         utterance.volume = 1;
         window.speechSynthesis.speak(utterance);
       }
@@ -1321,19 +1330,16 @@ export default function ActiveWorkout() {
               {realtimeHR && <span className="text-xs">BPM</span>}
             </button>
             <button
-              onClick={toggleVoiceControl}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all ${
-                isVoiceActive 
-                  ? 'bg-green-500 text-white animate-pulse' 
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-              title={isVoiceActive ? 'Voice control ON' : 'Voice control OFF'}
+              onClick={() => setShowVoiceHelp(true)}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg"
+              title="AI Voice Coach - NEW!"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
                 <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
               </svg>
-              <span className="text-xs font-bold">{isVoiceActive ? 'ON' : 'OFF'}</span>
+              <span className="text-xs font-bold">AI</span>
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold px-1 rounded-full">NEW</span>
             </button>
           </div>
         </div>
@@ -2060,27 +2066,38 @@ export default function ActiveWorkout() {
           )}
         </div>
 
-        {/* Voice Control Help */}
+        {/* Voice Control Status Banner */}
         {isVoiceActive && (
-          <div className="mb-4 px-2">
-            <Card className="bg-green-500/10 border-green-500/30">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 px-2"
+          >
+            <Card className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-purple-500/50 shadow-lg">
               <CardContent className="p-3">
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0">
-                    <svg className="w-6 h-6 text-green-400 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6 text-purple-400 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
                       <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <h4 className="text-sm font-bold text-green-400 mb-1">🎤 Voice Control Active</h4>
-                    <p className="text-xs text-gray-300 mb-2">Say <strong>"RNS reps and steps"</strong> to start guidance</p>
-                    <p className="text-xs text-gray-400">Then say <strong>"15 reps completed"</strong> to auto-record</p>
+                    <h4 className="text-sm font-bold text-purple-300 mb-1">🎤 AI Voice Coach Active</h4>
+                    <p className="text-xs text-gray-300">Listening for commands... Hands-free mode ON</p>
                   </div>
+                  <Button
+                    onClick={toggleVoiceControl}
+                    size="sm"
+                    variant="outline"
+                    className="border-purple-500 text-purple-300 hover:bg-purple-500/20"
+                  >
+                    OFF
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </motion.div>
         )}
 
         {/* Active Recovery Button - Always Available During Workout */}
@@ -2199,6 +2216,96 @@ export default function ActiveWorkout() {
                 <Button onClick={() => setShowHowTo(false)} className="w-full gradient-bg text-white">
                   Got It!
                 </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* AI Voice Coach Help Modal */}
+      <AnimatePresence>
+        {showVoiceHelp && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
+            onClick={() => setShowVoiceHelp(false)}
+          >
+            <Card className="bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 w-full max-w-md border-purple-500/50 shadow-2xl" onClick={e => e.stopPropagation()}>
+              <CardContent className="p-6">
+                <div className="text-center mb-4">
+                  <div className="inline-block p-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full mb-3">
+                    <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                      <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                    </svg>
+                  </div>
+                  <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                    AI Voice Coach™
+                  </h2>
+                  <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white mb-2">
+                    🚀 NEW HI-TECH FEATURE
+                  </Badge>
+                  <p className="text-sm text-gray-400">Truly hands-free workouts with AI-powered voice guidance</p>
+                </div>
+
+                <div className="space-y-4 mb-6">
+                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+                    <h3 className="font-bold text-purple-300 mb-2 flex items-center gap-2">
+                      <span className="text-lg">🎯</span> How It Works
+                    </h3>
+                    <ol className="text-sm text-gray-300 space-y-2">
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-purple-400">1.</span>
+                        <span>Tap the <strong className="text-purple-300">AI button</strong> to activate voice control</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-purple-400">2.</span>
+                        <span>Say <strong className="text-pink-300">"RNS reps and steps"</strong> to trigger guidance</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-purple-400">3.</span>
+                        <span>Your AI coach will announce the exercise and start your timer</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold text-purple-400">4.</span>
+                        <span>When done, say <strong className="text-pink-300">"15 reps completed"</strong> to auto-record</span>
+                      </li>
+                    </ol>
+                  </div>
+
+                  <div className="bg-pink-500/10 border border-pink-500/30 rounded-lg p-4">
+                    <h3 className="font-bold text-pink-300 mb-2 flex items-center gap-2">
+                      <span className="text-lg">💡</span> Pro Tips
+                    </h3>
+                    <ul className="text-sm text-gray-300 space-y-1">
+                      <li>• Connect Bluetooth headphones for best experience</li>
+                      <li>• Works even when phone is in your pocket</li>
+                      <li>• Perfect for outdoor runs and intense workouts</li>
+                      <li>• AI coach voice: Energetic & motivating</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => {
+                      setShowVoiceHelp(false);
+                      toggleVoiceControl();
+                    }}
+                    className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold"
+                  >
+                    🎤 Activate Now
+                  </Button>
+                  <Button
+                    onClick={() => setShowVoiceHelp(false)}
+                    variant="outline"
+                    className="flex-1 border-gray-600 hover:bg-gray-800"
+                  >
+                    Later
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </motion.div>
