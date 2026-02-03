@@ -256,17 +256,15 @@ export default function Layout({ children, currentPageName }) {
         `}
       </style>
       <div className="min-h-screen flex w-full dark" style={{ backgroundColor: 'transparent', color: '#f9fafb' }}>
-        <Sidebar className="border-r border-[#1e3a5f]/50 bg-[#0a1628]">
-          <SidebarHeader className="p-4 border-b border-[#1e3a5f]/30">
-            <div className="flex items-center gap-3 mb-3">
-              <img src={logoUrl} alt="RepsAndSteps Logo" className="w-10 h-10 rounded-lg" />
-              <div>
-                <img src={bannerUrl} alt="RepsAndSteps" className="h-5" />
-              </div>
+        <Sidebar className="border-r border-[#0a0e1a] bg-[#0a0e1a]">
+          <SidebarHeader className="p-4 border-b border-gray-800/50">
+            <div className="flex items-center gap-3">
+              <img src={logoUrl} alt="RepsAndSteps Logo" className="w-9 h-9" />
+              <img src={bannerUrl} alt="RepsAndSteps" className="h-4" />
             </div>
           </SidebarHeader>
           
-          <SidebarContent className="p-2">
+          <SidebarContent className="py-2">
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
@@ -274,13 +272,13 @@ export default function Layout({ children, currentPageName }) {
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton 
                         asChild 
-                        className={`hover:bg-[#1e3a5f]/50 transition-all duration-200 rounded-none mb-0 ${
-                          location.pathname === item.url ? 'bg-brand-blue text-white' : 'text-gray-300'
+                        className={`hover:bg-gray-800/50 transition-all duration-200 rounded-none mb-0 border-0 ${
+                          location.pathname === item.url ? 'bg-[#0066cc] text-white' : 'text-gray-300'
                         }`}
                       >
-                        <Link to={item.url} className="flex items-center gap-3 px-4 py-3">
-                          <item.icon className="w-5 h-5" />
-                          <span className="font-medium text-sm">{item.title}</span>
+                        <Link to={item.url} className="flex items-center gap-3 px-5 py-3">
+                          <item.icon className="w-4 h-4" />
+                          <span className="font-normal text-sm">{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -289,9 +287,9 @@ export default function Layout({ children, currentPageName }) {
               </SidebarGroupContent>
             </SidebarGroup>
 
-            <div className="px-2 mt-4">
+            <div className="px-3 mt-4">
               <Link to={createPageUrl("Pricing")}>
-                <Button className="w-full bg-brand-blue hover:bg-brand-blue-dark text-white font-bold shadow-lg shadow-brand-blue/50">
+                <Button className="w-full bg-[#0066cc] hover:bg-[#0052a3] text-white font-semibold py-2 rounded-md">
                   <Star className="w-4 h-4 mr-2" />
                   Go Pro
                 </Button>
@@ -299,8 +297,8 @@ export default function Layout({ children, currentPageName }) {
             </div>
           </SidebarContent>
 
-          <SidebarFooter className="border-t border-[#1e3a5f]/30 p-4">
-            <div className="text-center text-xs text-gray-400">
+          <SidebarFooter className="border-t border-gray-800/50 p-4">
+            <div className="text-center text-xs text-gray-500">
               Push your limits 💪
             </div>
           </SidebarFooter>
