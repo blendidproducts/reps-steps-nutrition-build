@@ -71,26 +71,26 @@ export default function Nutrition() {
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
       {/* Header */}
-      <div className="gradient-bg text-white py-8">
+      <div className="gradient-bg text-white py-4 md:py-8">
         <div className="container mx-auto px-4">
-          <div className="flex justify-between items-start">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Nutrition</h1>
-              <p className="text-white/80">{format(new Date(), 'EEEE, MMMM d')}</p>
+              <h1 className="text-2xl md:text-3xl font-bold mb-1">Nutrition</h1>
+              <p className="text-white/80 text-sm">{format(new Date(), 'EEEE, MMMM d')}</p>
             </div>
-            <div className="flex gap-3">
-              <Link to={createPageUrl("NutritionGoals")}>
-                <Button variant="outline" className="border-white/30 text-white hover:bg-white/10 h-auto py-3 px-4 flex flex-col items-center gap-1">
-                  <Target className="w-7 h-7" />
-                  <span className="font-bold text-base">Goals</span>
-                  <span className="text-xs opacity-80">CLICK HERE</span>
+            <div className="flex gap-2 w-full md:w-auto">
+              <Link to={createPageUrl("NutritionGoals")} className="flex-1 md:flex-none">
+                <Button variant="outline" className="w-full border-white/30 text-white hover:bg-white/10 h-auto py-2 px-3 flex flex-col items-center gap-0.5">
+                  <Target className="w-4 h-4" />
+                  <span className="font-bold text-xs">Goals</span>
+                  <span className="text-[10px] opacity-80">CLICK HERE</span>
                 </Button>
               </Link>
-              <Link to={createPageUrl("NutritionPrograms")}>
-                <Button variant="outline" className="border-white/30 text-white hover:bg-white/10 h-auto py-3 px-4 flex flex-col items-center gap-1">
-                  <Calendar className="w-7 h-7" />
-                  <span className="font-bold text-base">Plans</span>
-                  <span className="text-xs opacity-80">CLICK HERE</span>
+              <Link to={createPageUrl("NutritionPrograms")} className="flex-1 md:flex-none">
+                <Button variant="outline" className="w-full border-white/30 text-white hover:bg-white/10 h-auto py-2 px-3 flex flex-col items-center gap-0.5">
+                  <Calendar className="w-4 h-4" />
+                  <span className="font-bold text-xs">Plans</span>
+                  <span className="text-[10px] opacity-80">CLICK HERE</span>
                 </Button>
               </Link>
             </div>
@@ -107,24 +107,24 @@ export default function Nutrition() {
         />
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-3 gap-2 mb-6">
           <Button 
             onClick={() => setShowQuickAdd(true)}
-            className="gradient-bg text-white h-auto py-4 flex flex-col items-center gap-2"
+            className="gradient-bg text-white h-auto py-3 flex flex-col items-center gap-1"
           >
-            <Plus className="w-6 h-6" />
-            <span>Log Food</span>
+            <Plus className="w-5 h-5" />
+            <span className="text-xs">Log Food</span>
           </Button>
           <Link to={createPageUrl("FoodDatabase")} className="block">
-            <Button variant="outline" className="w-full h-auto py-4 flex flex-col items-center gap-2 border-border hover:bg-card">
-              <Apple className="w-6 h-6" />
-              <span>Food Database</span>
+            <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-1 border-border hover:bg-card">
+              <Apple className="w-5 h-5" />
+              <span className="text-xs">Database</span>
             </Button>
           </Link>
           <Link to={createPageUrl("NutritionHistory")} className="block">
-            <Button variant="outline" className="w-full h-auto py-4 flex flex-col items-center gap-2 border-border hover:bg-card">
-              <TrendingUp className="w-6 h-6" />
-              <span>History</span>
+            <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-1 border-border hover:bg-card">
+              <TrendingUp className="w-5 h-5" />
+              <span className="text-xs">History</span>
             </Button>
           </Link>
         </div>

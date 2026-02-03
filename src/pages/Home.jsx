@@ -89,15 +89,15 @@ export default function Home() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="mb-12"
+              className="mb-8 md:mb-12"
             >
-              <div className="flex justify-center mb-6">
-                <img src={logoUrl} alt="RepsAndSteps Logo" className="w-32 h-32 drop-shadow-2xl" />
+              <div className="flex justify-center mb-4 md:mb-6">
+                <img src={logoUrl} alt="RepsAndSteps Logo" className="w-20 h-20 md:w-32 md:h-32 drop-shadow-2xl" />
               </div>
-              <h1 className="text-5xl md:text-6xl font-bold mb-4">
+              <h1 className="text-2xl md:text-5xl lg:text-6xl font-bold mb-3 md:mb-4">
                 Welcome to <span className="text-brand-blue">REPSANDSTEPS</span>
               </h1>
-              <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+              <p className="text-sm md:text-xl text-gray-300 max-w-3xl mx-auto px-4">
                 Your ultimate calisthenics companion to track every rep and count every step.
               </p>
             </motion.div>
@@ -164,25 +164,25 @@ export default function Home() {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.6 }}
-              className="grid gap-6 mb-8"
+              className="grid gap-3 md:gap-6 mb-6 md:mb-8"
             >
               {/* AI Workouts */}
               <Card 
                 className="bg-gradient-to-r from-brand-blue/20 to-blue-600/20 border-2 border-brand-blue/50 cursor-pointer hover:border-brand-blue hover:shadow-lg hover:shadow-brand-blue/30 transition-all backdrop-blur-sm"
                 onClick={() => navigate(createPageUrl("AIWorkoutGenerator"))}
               >
-                <CardContent className="p-8">
+                <CardContent className="p-4 md:p-8">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-6">
-                      <div className="w-20 h-20 bg-brand-blue rounded-2xl flex items-center justify-center shadow-lg shadow-brand-blue/50">
-                        <Zap className="w-10 h-10 text-white" />
+                    <div className="flex items-center gap-3 md:gap-6">
+                      <div className="w-12 h-12 md:w-20 md:h-20 bg-brand-blue rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg shadow-brand-blue/50">
+                        <Zap className="w-6 h-6 md:w-10 md:h-10 text-white" />
                       </div>
                       <div className="text-left">
-                        <h3 className="text-3xl font-bold text-white mb-2">AI Workouts</h3>
-                        <p className="text-gray-300 text-base">Generate custom workouts instantly</p>
+                        <h3 className="text-lg md:text-3xl font-bold text-white mb-0 md:mb-2">AI Workouts</h3>
+                        <p className="text-gray-300 text-xs md:text-base">Generate custom workouts</p>
                       </div>
                     </div>
-                    <ArrowRight className="w-10 h-10 text-brand-blue" />
+                    <ArrowRight className="w-5 h-5 md:w-10 md:h-10 text-brand-blue" />
                   </div>
                 </CardContent>
               </Card>
@@ -192,18 +192,18 @@ export default function Home() {
                 className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-2 border-blue-500/50 cursor-pointer hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/30 transition-all backdrop-blur-sm"
                 onClick={() => navigate(createPageUrl("PresetPrograms"))}
               >
-                <CardContent className="p-8">
+                <CardContent className="p-4 md:p-8">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-6">
-                      <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/50">
-                        <Calendar className="w-10 h-10 text-white" />
+                    <div className="flex items-center gap-3 md:gap-6">
+                      <div className="w-12 h-12 md:w-20 md:h-20 bg-blue-600 rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/50">
+                        <Calendar className="w-6 h-6 md:w-10 md:h-10 text-white" />
                       </div>
                       <div className="text-left">
-                        <h3 className="text-3xl font-bold text-white mb-2">Programs</h3>
-                        <p className="text-gray-300 text-base">Structured workout plans</p>
+                        <h3 className="text-lg md:text-3xl font-bold text-white mb-0 md:mb-2">Programs</h3>
+                        <p className="text-gray-300 text-xs md:text-base">Structured plans</p>
                       </div>
                     </div>
-                    <ArrowRight className="w-10 h-10 text-blue-400" />
+                    <ArrowRight className="w-5 h-5 md:w-10 md:h-10 text-blue-400" />
                   </div>
                 </CardContent>
               </Card>
@@ -213,18 +213,18 @@ export default function Home() {
                 className="bg-gradient-to-r from-emerald-600/20 to-teal-600/20 border-2 border-emerald-500/50 cursor-pointer hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/30 transition-all backdrop-blur-sm"
                 onClick={() => navigate(createPageUrl("Nutrition"))}
               >
-                <CardContent className="p-8">
+                <CardContent className="p-4 md:p-8">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-6">
-                      <div className="w-20 h-20 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-600/50">
-                        <Apple className="w-10 h-10 text-white" />
+                    <div className="flex items-center gap-3 md:gap-6">
+                      <div className="w-12 h-12 md:w-20 md:h-20 bg-emerald-600 rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-600/50">
+                        <Apple className="w-6 h-6 md:w-10 md:h-10 text-white" />
                       </div>
                       <div className="text-left">
-                        <h3 className="text-3xl font-bold text-white mb-2">Nutrition</h3>
-                        <p className="text-gray-300 text-base">Track meals & calories</p>
+                        <h3 className="text-lg md:text-3xl font-bold text-white mb-0 md:mb-2">Nutrition</h3>
+                        <p className="text-gray-300 text-xs md:text-base">Track meals & calories</p>
                       </div>
                     </div>
-                    <ArrowRight className="w-10 h-10 text-emerald-400" />
+                    <ArrowRight className="w-5 h-5 md:w-10 md:h-10 text-emerald-400" />
                   </div>
                 </CardContent>
               </Card>
@@ -236,13 +236,13 @@ export default function Home() {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.6, duration: 0.6 }}
-                className="mb-8"
+                className="mb-6 md:mb-8"
               >
                 <Button
                   onClick={() => setShowQuiz(true)}
-                  className="w-full gradient-bg text-white font-bold h-16 text-xl rounded-2xl"
+                  className="w-full gradient-bg text-white font-bold h-12 md:h-16 text-base md:text-xl rounded-xl md:rounded-2xl"
                 >
-                  <Target className="w-6 h-6 mr-3" />
+                  <Target className="w-5 h-5 md:w-6 md:h-6 mr-2 md:mr-3" />
                   START HERE - Take Fitness Quiz
                 </Button>
               </motion.div>
@@ -254,16 +254,16 @@ export default function Home() {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.7, duration: 0.6 }}
-                className="mb-8"
+                className="mb-6 md:mb-8"
               >
                 <Card className="gradient-bg border-2 border-yellow-500/50 shadow-lg shadow-yellow-500/30">
-                  <CardContent className="p-8 text-center">
-                    <Star className="w-16 h-16 text-yellow-400 mx-auto mb-4 drop-shadow-lg" />
-                    <h3 className="text-3xl font-bold text-white mb-3">Unlock Pro Features</h3>
-                    <p className="text-white/90 mb-6 text-lg">Get unlimited AI workouts, all programs, and more</p>
+                  <CardContent className="p-4 md:p-8 text-center">
+                    <Star className="w-10 h-10 md:w-16 md:h-16 text-yellow-400 mx-auto mb-3 md:mb-4 drop-shadow-lg" />
+                    <h3 className="text-xl md:text-3xl font-bold text-white mb-2 md:mb-3">Unlock Pro Features</h3>
+                    <p className="text-white/90 mb-4 md:mb-6 text-sm md:text-lg">Get unlimited AI workouts, all programs, and more</p>
                     <Button
                       onClick={() => navigate(createPageUrl("Pricing"))}
-                      className="bg-white text-brand-blue hover:bg-gray-100 font-bold px-10 py-6 text-lg shadow-lg"
+                      className="bg-white text-brand-blue hover:bg-gray-100 font-bold px-6 md:px-10 py-4 md:py-6 text-base md:text-lg shadow-lg"
                     >
                       View Pricing
                     </Button>
