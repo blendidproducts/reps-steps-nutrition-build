@@ -78,17 +78,19 @@ export default function Nutrition() {
               <h1 className="text-3xl font-bold mb-2">Nutrition</h1>
               <p className="text-white/80">{format(new Date(), 'EEEE, MMMM d')}</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <Link to={createPageUrl("NutritionGoals")}>
-                <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
-                  <Target className="w-4 h-4 mr-2" />
-                  Goals
+                <Button variant="outline" className="border-white/30 text-white hover:bg-white/10 h-auto py-3 px-4 flex flex-col items-center gap-1">
+                  <Target className="w-7 h-7" />
+                  <span className="font-bold text-base">Goals</span>
+                  <span className="text-xs opacity-80">CLICK HERE</span>
                 </Button>
               </Link>
               <Link to={createPageUrl("NutritionPrograms")}>
-                <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Plans
+                <Button variant="outline" className="border-white/30 text-white hover:bg-white/10 h-auto py-3 px-4 flex flex-col items-center gap-1">
+                  <Calendar className="w-7 h-7" />
+                  <span className="font-bold text-base">Plans</span>
+                  <span className="text-xs opacity-80">CLICK HERE</span>
                 </Button>
               </Link>
             </div>
