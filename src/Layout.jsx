@@ -50,7 +50,11 @@ export default function Layout({ children, currentPageName }) {
 
   React.useEffect(() => {
     document.documentElement.classList.add('dark');
-    document.body.style.backgroundColor = '#0a0a0a';
+    document.body.style.backgroundColor = '#020817';
+    document.body.style.backgroundImage = 'url(https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/1e7ad6a4e_RnS_HomePage_Concept_bg.png)';
+    document.body.style.backgroundSize = 'cover';
+    document.body.style.backgroundPosition = 'center';
+    document.body.style.backgroundAttachment = 'fixed';
     
     // Set viewport meta tag for optimal mobile viewing (including older iPhones)
     let viewport = document.querySelector('meta[name="viewport"]');
@@ -206,39 +210,39 @@ export default function Layout({ children, currentPageName }) {
           }
           
           html, body {
-            background-color: #0a0a0a !important;
+            background-color: #020817 !important;
             color: #f9fafb !important;
           }
           
           :root {
             --brand-blue: #00a9ff;
             --brand-blue-dark: #007fbf;
-            --background: #0a0a0a;
+            --background: #020817;
             --foreground: #f9fafb;
-            --card: #1a1a1a;
+            --card: rgba(10, 20, 40, 0.8);
             --card-foreground: #f9fafb;
             --primary-gradient: linear-gradient(135deg, #00a9ff 0%, #005c8a 100%);
           }
           
           .dark {
-            --background: #0a0a0a;
+            --background: #020817;
             --foreground: #f9fafb;
-            --card: #1a1a1a;
+            --card: rgba(10, 20, 40, 0.8);
             --card-foreground: #f9fafb;
-            --popover: #1a1a1a;
+            --popover: rgba(10, 20, 40, 0.95);
             --popover-foreground: #f9fafb;
             --primary: #00a9ff;
             --primary-foreground: #ffffff;
-            --secondary: #27272a;
+            --secondary: #1e3a5f;
             --secondary-foreground: #ffffff;
-            --muted: #27272a;
+            --muted: #1e3a5f;
             --muted-foreground: #d1d5db;
-            --accent: #27272a;
+            --accent: #1e3a5f;
             --accent-foreground: #ffffff;
             --destructive: #ef4444;
             --destructive-foreground: #ffffff;
-            --border: #27272a;
-            --input: #27272a;
+            --border: rgba(0, 169, 255, 0.3);
+            --input: rgba(10, 20, 40, 0.8);
             --ring: #00a9ff;
           }
           
@@ -251,18 +255,15 @@ export default function Layout({ children, currentPageName }) {
           }
         `}
       </style>
-      <div className="min-h-screen flex w-full dark" style={{ backgroundColor: '#0a0a0a', color: '#f9fafb' }}>
-        <Sidebar className="border-r border-border bg-card">
-          <SidebarHeader className="p-4">
-            <div className="flex items-center gap-3 mb-2">
+      <div className="min-h-screen flex w-full dark" style={{ backgroundColor: 'transparent', color: '#f9fafb' }}>
+        <Sidebar className="border-r border-brand-blue/30 bg-[#0a1628]/95 backdrop-blur-md">
+          <SidebarHeader className="p-4 border-b border-brand-blue/20">
+            <div className="flex items-center gap-3 mb-3">
               <img src={logoUrl} alt="RepsAndSteps Logo" className="w-10 h-10 rounded-lg" />
               <div>
                 <img src={bannerUrl} alt="RepsAndSteps" className="h-5" />
               </div>
             </div>
-            <Link to={createPageUrl("Home")} className="text-xs text-gray-400 hover:text-brand-blue transition-colors text-center block">
-              ← Go to Home
-            </Link>
           </SidebarHeader>
           
           <SidebarContent className="p-2">
@@ -273,13 +274,13 @@ export default function Layout({ children, currentPageName }) {
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton 
                         asChild 
-                        className={`hover:bg-gray-700/50 hover:text-brand transition-colors duration-200 rounded-lg mb-1 ${
-                          location.pathname === item.url ? 'bg-gray-700 text-brand' : 'text-gray-300'
+                        className={`hover:bg-brand-blue/20 hover:text-brand-blue transition-all duration-200 rounded-lg mb-1 ${
+                          location.pathname === item.url ? 'bg-brand-blue/30 text-brand-blue border-l-2 border-brand-blue' : 'text-gray-300'
                         }`}
                       >
-                        <Link to={item.url} className="flex items-center gap-3 px-3 py-2">
+                        <Link to={item.url} className="flex items-center gap-3 px-3 py-2.5">
                           <item.icon className="w-5 h-5" />
-                          <span className="font-medium">{item.title}</span>
+                          <span className="font-medium text-sm">{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -290,7 +291,7 @@ export default function Layout({ children, currentPageName }) {
 
             <div className="px-2 mt-4">
               <Link to={createPageUrl("Pricing")}>
-                <Button className="w-full gradient-bg text-white font-bold hover:opacity-90">
+                <Button className="w-full bg-brand-blue hover:bg-brand-blue-dark text-white font-bold shadow-lg shadow-brand-blue/50">
                   <Star className="w-4 h-4 mr-2" />
                   Go Pro
                 </Button>
@@ -298,14 +299,14 @@ export default function Layout({ children, currentPageName }) {
             </div>
           </SidebarContent>
 
-          <SidebarFooter className="border-t border-border p-4">
-            <div className="text-center text-xs text-gray-500">
+          <SidebarFooter className="border-t border-brand-blue/20 p-4">
+            <div className="text-center text-xs text-gray-400">
               Push your limits 💪
             </div>
           </SidebarFooter>
         </Sidebar>
 
-        <main className="flex-1 flex flex-col" style={{ backgroundColor: '#0a0a0a' }}>
+        <main className="flex-1 flex flex-col" style={{ backgroundColor: 'transparent' }}>
           {/* Program Day Popup */}
           {showProgramPopup && activeProgram && (
             <ProgramDayPopup
@@ -315,9 +316,9 @@ export default function Layout({ children, currentPageName }) {
             />
           )}
 
-          <header className="bg-card/80 backdrop-blur-lg border-b border-border px-4 py-3 md:hidden sticky top-0 z-50">
+          <header className="bg-[#0a1628]/90 backdrop-blur-lg border-b border-brand-blue/30 px-4 py-3 md:hidden sticky top-0 z-50">
             <div className="flex items-center gap-4">
-              <SidebarTrigger className="w-10 h-10 flex items-center justify-center text-white text-xl hover:bg-gray-800 rounded transition-colors">
+              <SidebarTrigger className="w-10 h-10 flex items-center justify-center text-brand-blue text-xl hover:bg-brand-blue/20 rounded transition-colors">
                 <span>☰</span>
               </SidebarTrigger>
               <Link to={createPageUrl("Home")} className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
@@ -351,7 +352,7 @@ export default function Layout({ children, currentPageName }) {
             </div>
           )}
 
-          <div className="flex-1 overflow-auto" style={{ backgroundColor: '#0a0a0a' }}>
+          <div className="flex-1 overflow-auto" style={{ backgroundColor: 'transparent' }}>
             {children}
           </div>
         </main>

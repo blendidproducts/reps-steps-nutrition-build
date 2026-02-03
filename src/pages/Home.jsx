@@ -76,28 +76,28 @@ export default function Home() {
   };
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
+    <div style={{ backgroundColor: 'transparent', minHeight: '100vh', color: '#f9fafb' }}>
       {/* Fitness Quiz Modal */}
       {showQuiz && <FitnessQuiz onComplete={handleQuizComplete} />}
 
       {/* Hero Section */}
-      <section style={{ backgroundColor: '#0a0a0a' }} className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-brand-blue/10 to-transparent pointer-events-none" />
-        
-        <div className="relative z-10 container mx-auto px-4 py-12">
-          <div className="max-w-4xl mx-auto text-center">
+      <section className="relative overflow-hidden">
+        <div className="relative z-10 container mx-auto px-4 py-16">
+          <div className="max-w-5xl mx-auto text-center">
             {/* Logo and Title */}
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="mb-8"
+              className="mb-12"
             >
-              <div className="flex justify-center mb-4">
-                <img src={logoUrl} alt="RepsAndSteps Logo" className="w-24 h-24" />
+              <div className="flex justify-center mb-6">
+                <img src={logoUrl} alt="RepsAndSteps Logo" className="w-32 h-32 drop-shadow-2xl" />
               </div>
-              <img src={bannerUrl} alt="RepsAndSteps" className="h-10 mx-auto mb-4" />
-              <p className="text-lg text-gray-400 max-w-2xl mx-auto">
+              <h1 className="text-5xl md:text-6xl font-bold mb-4">
+                Welcome to <span className="text-brand-blue">REPSANDSTEPS</span>
+              </h1>
+              <p className="text-xl text-gray-300 max-w-3xl mx-auto">
                 Your ultimate calisthenics companion to track every rep and count every step.
               </p>
             </motion.div>
@@ -111,7 +111,7 @@ export default function Home() {
                 onClick={() => navigate(createPageUrl("PresetPrograms"))}
                 className="mb-8 cursor-pointer"
               >
-                <Card className="gradient-bg border-none hover:opacity-90 transition-opacity">
+                <Card className="gradient-bg border-2 border-brand-blue/50 hover:border-brand-blue transition-all shadow-lg shadow-brand-blue/30">
                   <CardContent className="p-6 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
@@ -164,67 +164,67 @@ export default function Home() {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.6 }}
-              className="grid gap-4 mb-8"
+              className="grid gap-6 mb-8"
             >
               {/* AI Workouts */}
               <Card 
-                className="bg-gradient-to-br from-orange-600/20 to-red-600/20 border-orange-500/30 cursor-pointer hover:scale-105 transition-transform"
+                className="bg-gradient-to-r from-brand-blue/20 to-blue-600/20 border-2 border-brand-blue/50 cursor-pointer hover:border-brand-blue hover:shadow-lg hover:shadow-brand-blue/30 transition-all backdrop-blur-sm"
                 onClick={() => navigate(createPageUrl("AIWorkoutGenerator"))}
               >
                 <CardContent className="p-8">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 gradient-bg rounded-2xl flex items-center justify-center">
-                        <Zap className="w-8 h-8 text-white" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                      <div className="w-20 h-20 bg-brand-blue rounded-2xl flex items-center justify-center shadow-lg shadow-brand-blue/50">
+                        <Zap className="w-10 h-10 text-white" />
                       </div>
                       <div className="text-left">
-                        <h3 className="text-2xl font-bold text-white mb-1">AI Workouts</h3>
-                        <p className="text-gray-300 text-sm">Generate custom workouts instantly</p>
+                        <h3 className="text-3xl font-bold text-white mb-2">AI Workouts</h3>
+                        <p className="text-gray-300 text-base">Generate custom workouts instantly</p>
                       </div>
                     </div>
-                    <ArrowRight className="w-8 h-8 text-white/50" />
+                    <ArrowRight className="w-10 h-10 text-brand-blue" />
                   </div>
                 </CardContent>
               </Card>
 
               {/* Programs */}
               <Card 
-                className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 border-blue-500/30 cursor-pointer hover:scale-105 transition-transform"
+                className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-2 border-blue-500/50 cursor-pointer hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/30 transition-all backdrop-blur-sm"
                 onClick={() => navigate(createPageUrl("PresetPrograms"))}
               >
                 <CardContent className="p-8">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center">
-                        <Calendar className="w-8 h-8 text-white" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                      <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/50">
+                        <Calendar className="w-10 h-10 text-white" />
                       </div>
                       <div className="text-left">
-                        <h3 className="text-2xl font-bold text-white mb-1">Programs</h3>
-                        <p className="text-gray-300 text-sm">Structured workout plans</p>
+                        <h3 className="text-3xl font-bold text-white mb-2">Programs</h3>
+                        <p className="text-gray-300 text-base">Structured workout plans</p>
                       </div>
                     </div>
-                    <ArrowRight className="w-8 h-8 text-white/50" />
+                    <ArrowRight className="w-10 h-10 text-blue-400" />
                   </div>
                 </CardContent>
               </Card>
 
               {/* Nutrition */}
               <Card 
-                className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 border-green-500/30 cursor-pointer hover:scale-105 transition-transform"
+                className="bg-gradient-to-r from-emerald-600/20 to-teal-600/20 border-2 border-emerald-500/50 cursor-pointer hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/30 transition-all backdrop-blur-sm"
                 onClick={() => navigate(createPageUrl("Nutrition"))}
               >
                 <CardContent className="p-8">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center">
-                        <Apple className="w-8 h-8 text-white" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                      <div className="w-20 h-20 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-600/50">
+                        <Apple className="w-10 h-10 text-white" />
                       </div>
                       <div className="text-left">
-                        <h3 className="text-2xl font-bold text-white mb-1">Nutrition</h3>
-                        <p className="text-gray-300 text-sm">Track meals & calories</p>
+                        <h3 className="text-3xl font-bold text-white mb-2">Nutrition</h3>
+                        <p className="text-gray-300 text-base">Track meals & calories</p>
                       </div>
                     </div>
-                    <ArrowRight className="w-8 h-8 text-white/50" />
+                    <ArrowRight className="w-10 h-10 text-emerald-400" />
                   </div>
                 </CardContent>
               </Card>
@@ -256,14 +256,14 @@ export default function Home() {
                 transition={{ delay: 0.7, duration: 0.6 }}
                 className="mb-8"
               >
-                <Card className="gradient-bg border-none">
-                  <CardContent className="p-6 text-center">
-                    <Star className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
-                    <h3 className="text-2xl font-bold text-white mb-2">Unlock Pro Features</h3>
-                    <p className="text-white/80 mb-4">Get unlimited AI workouts, all programs, and more</p>
+                <Card className="gradient-bg border-2 border-yellow-500/50 shadow-lg shadow-yellow-500/30">
+                  <CardContent className="p-8 text-center">
+                    <Star className="w-16 h-16 text-yellow-400 mx-auto mb-4 drop-shadow-lg" />
+                    <h3 className="text-3xl font-bold text-white mb-3">Unlock Pro Features</h3>
+                    <p className="text-white/90 mb-6 text-lg">Get unlimited AI workouts, all programs, and more</p>
                     <Button
                       onClick={() => navigate(createPageUrl("Pricing"))}
-                      className="bg-white text-brand-blue hover:bg-gray-100 font-bold px-8"
+                      className="bg-white text-brand-blue hover:bg-gray-100 font-bold px-10 py-6 text-lg shadow-lg"
                     >
                       View Pricing
                     </Button>
