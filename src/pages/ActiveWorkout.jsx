@@ -86,10 +86,20 @@ export default function ActiveWorkout() {
   const [showActiveRecovery, setShowActiveRecovery] = useState(false);
   const [showHowTo, setShowHowTo] = useState(false);
   const [show3DView, setShow3DView] = useState(false);
+  const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const [voiceRecognition, setVoiceRecognition] = useState(null);
+  const [isListening, setIsListening] = useState(false);
+  const speechSynthRef = useRef(null);
 
   useEffect(() => {
     loadWorkout();
     loadPersonalRecords();
+    initVoiceControl();
+    return () => {
+      if (voiceRecognition) {
+        voiceRecognition.stop();
+      }
+    };
   }, []);
 
   const loadPersonalRecords = async () => {
@@ -445,6 +455,144 @@ export default function ActiveWorkout() {
   };
   
 
+
+  const speak = (text) => {
+    try {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.1;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+        window.speechSynthesis.speak(utterance);
+      }
+    } catch (error) {
+      console.error('Speech synthesis failed:', error);
+    }
+  };
+
+  const initVoiceControl = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      console.log('Voice control not supported');
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      console.log('Voice control started');
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      if (isVoiceActive && isActive) {
+        setTimeout(() => recognition.start(), 100);
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error('Voice recognition error:', event.error);
+      if (event.error === 'no-speech' || event.error === 'audio-capture') {
+        if (isVoiceActive && isActive) {
+          setTimeout(() => recognition.start(), 500);
+        }
+      }
+    };
+
+    recognition.onresult = (event) => {
+      const last = event.results.length - 1;
+      const transcript = event.results[last][0].transcript.toLowerCase().trim();
+      
+      console.log('Voice detected:', transcript);
+
+      if (transcript.includes('rns') || transcript.includes('reps and steps')) {
+        playBeep(true);
+        
+        if (isResting || isSupersetTransition) {
+          speak('Currently resting. Please wait.');
+          return;
+        }
+
+        const exerciseName = currentExercise?.exercise_name || 'exercise';
+        const targetReps = currentExercise?.target_reps || 'as many as possible';
+        
+        if (currentExercise?.metric === 'time') {
+          const timeLeft = currentExercise.target_time - exerciseTimer;
+          speak(`${exerciseName}. ${timeLeft} seconds remaining. Timer is running.`);
+        } else {
+          speak(`${exerciseName}. Target: ${targetReps} reps. Let's begin. Timer starts now. Go!`);
+          if (!isActive) {
+            startWorkout();
+          }
+        }
+        
+        setTimeout(() => {
+          const checkForReps = new Promise((resolve) => {
+            const handler = (e) => {
+              const last = e.results.length - 1;
+              const text = e.results[last][0].transcript.toLowerCase().trim();
+              
+              const completedMatch = text.match(/(\d+)\s*(reps?\s*)?(completed|done|finished)/i);
+              
+              if (completedMatch) {
+                const reps = parseInt(completedMatch[1]);
+                if (reps > 0 && reps <= 500) {
+                  playBeep(true);
+                  setQuickReps(reps);
+                  speak(`${reps} reps recorded. Great work!`);
+                  recognition.removeEventListener('result', handler);
+                  resolve();
+                }
+              }
+            };
+            
+            recognition.addEventListener('result', handler);
+            
+            setTimeout(() => {
+              recognition.removeEventListener('result', handler);
+              resolve();
+            }, 30000);
+          });
+        }, 1000);
+      }
+    };
+
+    setVoiceRecognition(recognition);
+  };
+
+  const toggleVoiceControl = () => {
+    if (!voiceRecognition) {
+      toast.error('Voice control not available on this device');
+      return;
+    }
+
+    if (!isVoiceActive) {
+      try {
+        voiceRecognition.start();
+        setIsVoiceActive(true);
+        speak('Voice control activated. Say RNS reps and steps to begin.');
+        toast.success('🎤 Voice control ON - Say "RNS reps and steps" to start');
+      } catch (error) {
+        console.error('Failed to start voice control:', error);
+        toast.error('Failed to start voice control');
+      }
+    } else {
+      try {
+        voiceRecognition.stop();
+        setIsVoiceActive(false);
+        speak('Voice control deactivated.');
+        toast.success('Voice control OFF');
+      } catch (error) {
+        console.error('Failed to stop voice control:', error);
+      }
+    }
+  };
 
   const playBeep = (isLong = false) => {
     const settings = JSON.parse(localStorage.getItem('appSettings') || '{}');
@@ -1172,6 +1320,21 @@ export default function ActiveWorkout() {
               <span className="font-bold">{realtimeHR || heartRate || "HR"}</span>
               {realtimeHR && <span className="text-xs">BPM</span>}
             </button>
+            <button
+              onClick={toggleVoiceControl}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all ${
+                isVoiceActive 
+                  ? 'bg-green-500 text-white animate-pulse' 
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+              title={isVoiceActive ? 'Voice control ON' : 'Voice control OFF'}
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+              </svg>
+              <span className="text-xs font-bold">{isVoiceActive ? 'ON' : 'OFF'}</span>
+            </button>
           </div>
         </div>
 
@@ -1896,6 +2059,29 @@ export default function ActiveWorkout() {
             </>
           )}
         </div>
+
+        {/* Voice Control Help */}
+        {isVoiceActive && (
+          <div className="mb-4 px-2">
+            <Card className="bg-green-500/10 border-green-500/30">
+              <CardContent className="p-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <svg className="w-6 h-6 text-green-400 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                      <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-bold text-green-400 mb-1">🎤 Voice Control Active</h4>
+                    <p className="text-xs text-gray-300 mb-2">Say <strong>"RNS reps and steps"</strong> to start guidance</p>
+                    <p className="text-xs text-gray-400">Then say <strong>"15 reps completed"</strong> to auto-record</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Active Recovery Button - Always Available During Workout */}
         {isActive && !isResting && !isSupersetTransition && (
