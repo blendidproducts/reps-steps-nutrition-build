@@ -138,7 +138,7 @@ export default function Pricing() {
               ) : (
                 <>
                   <Button
-                    onClick={() => window.open('https://buy.stripe.com/trial-link-here', '_blank')}
+                    onClick={() => window.open('https://buy.stripe.com/aFa7sL4lM5muau82OpbQY0i', '_blank')}
                     className="w-full bg-gradient-to-r from-green-400 to-emerald-500 hover:opacity-90 text-black font-black text-xl py-7"
                   >
                     <Zap className="w-6 h-6 mr-2" />
