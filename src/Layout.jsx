@@ -256,8 +256,8 @@ export default function Layout({ children, currentPageName }) {
         `}
       </style>
       <div className="min-h-screen flex w-full dark" style={{ backgroundColor: 'transparent', color: '#f9fafb' }}>
-        <Sidebar className="border-r border-brand-blue/30 bg-[#0a1628]/95 backdrop-blur-md">
-          <SidebarHeader className="p-4 border-b border-brand-blue/20">
+        <Sidebar className="border-r border-[#1e3a5f]/50 bg-[#0a1628]">
+          <SidebarHeader className="p-4 border-b border-[#1e3a5f]/30">
             <div className="flex items-center gap-3 mb-3">
               <img src={logoUrl} alt="RepsAndSteps Logo" className="w-10 h-10 rounded-lg" />
               <div>
@@ -274,11 +274,11 @@ export default function Layout({ children, currentPageName }) {
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton 
                         asChild 
-                        className={`hover:bg-brand-blue/20 hover:text-brand-blue transition-all duration-200 rounded-lg mb-1 ${
-                          location.pathname === item.url ? 'bg-brand-blue/30 text-brand-blue border-l-2 border-brand-blue' : 'text-gray-300'
+                        className={`hover:bg-[#1e3a5f]/50 transition-all duration-200 rounded-none mb-0 ${
+                          location.pathname === item.url ? 'bg-brand-blue text-white' : 'text-gray-300'
                         }`}
                       >
-                        <Link to={item.url} className="flex items-center gap-3 px-3 py-2.5">
+                        <Link to={item.url} className="flex items-center gap-3 px-4 py-3">
                           <item.icon className="w-5 h-5" />
                           <span className="font-medium text-sm">{item.title}</span>
                         </Link>
@@ -299,7 +299,7 @@ export default function Layout({ children, currentPageName }) {
             </div>
           </SidebarContent>
 
-          <SidebarFooter className="border-t border-brand-blue/20 p-4">
+          <SidebarFooter className="border-t border-[#1e3a5f]/30 p-4">
             <div className="text-center text-xs text-gray-400">
               Push your limits 💪
             </div>
