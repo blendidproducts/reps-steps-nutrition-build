@@ -39,6 +39,15 @@ export default function Exercise3DViewer({ modelUrl, exerciseName }) {
     mountRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
+    // Controls for interaction
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.screenSpacePanning = false;
+    controls.minDistance = 1;
+    controls.maxDistance = 10;
+    controls.target.set(0, 1, 0);
+
     // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
