@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 export default function Exercise3DViewer({ modelUrl, exerciseName }) {
   const mountRef = useRef(null);
@@ -29,6 +30,15 @@ export default function Exercise3DViewer({ modelUrl, exerciseName }) {
     );
     camera.position.set(0, 1.5, 3);
     camera.lookAt(0, 1, 0);
+
+    // Controls for interaction
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.screenSpacePanning = false;
+    controls.minDistance = 1;
+    controls.maxDistance = 10;
+    controls.target.set(0, 1, 0);
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -112,11 +122,7 @@ export default function Exercise3DViewer({ modelUrl, exerciseName }) {
         mixerRef.current.update(delta);
       }
 
-      // Rotate model slowly
-      if (scene.children.length > 3) {
-        scene.children[3].rotation.y += 0.005;
-      }
-
+      controls.update();
       renderer.render(scene, camera);
     };
     animate();
