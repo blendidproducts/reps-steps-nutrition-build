@@ -520,55 +520,82 @@ export default function ActiveWorkout() {
       
       console.log('Voice detected:', transcript);
 
-      if (transcript.includes('rns') || transcript.includes('reps and steps')) {
+      // Check for wake phrase "reps and steps" or "RNS"
+      if (transcript.includes('reps and steps') || transcript.includes('rns')) {
         playBeep(true);
         
-        if (isResting || isSupersetTransition) {
-          speak('Currently resting. Please wait.');
-          return;
-        }
-
-        const exerciseName = currentExercise?.exercise_name || 'exercise';
-        const targetReps = currentExercise?.target_reps || 'as many as possible';
+        // Extract command after wake phrase
+        const commandMatch = transcript.match(/(?:reps and steps|rns)\s+(.+)/i);
+        const command = commandMatch ? commandMatch[1].trim() : '';
         
-        if (currentExercise?.metric === 'time') {
-          const timeLeft = currentExercise.target_time - exerciseTimer;
-          speak(`${exerciseName}. ${timeLeft} seconds remaining. Timer is running.`);
-        } else {
-          speak(`${exerciseName}. Target: ${targetReps} reps. Let's begin. Timer starts now. Go!`);
+        // Handle different commands
+        if (command.includes('begin') || command.includes('start')) {
           if (!isActive) {
+            speak('Begin workout!');
             startWorkout();
+          } else {
+            const exerciseName = currentExercise?.exercise_name || 'exercise';
+            const targetReps = currentExercise?.target_reps || 'as many as possible';
+            speak(`${exerciseName}. Target: ${targetReps} reps. Go!`);
           }
+        } else if (command.match(/(\d+)\s*(reps?\s*)?(completed|done)/i)) {
+          const repsMatch = command.match(/(\d+)/);
+          if (repsMatch) {
+            const reps = parseInt(repsMatch[1]);
+            if (reps > 0 && reps <= 500) {
+              setQuickReps(reps);
+              speak(`${reps} reps recorded. Great work!`);
+              playBeep(true);
+            }
+          }
+        } else if (command.includes('walk completed') || command.includes('walk complete')) {
+          if (activeCardio?.type === 'walk') {
+            stopCardio();
+            speak('Walk completed. Active recovery or skip?');
+          } else if (isResting) {
+            speak('Active recovery or skip?');
+          }
+        } else if (command.includes('jog completed') || command.includes('jog complete')) {
+          if (activeCardio?.type === 'jog') {
+            stopCardio();
+            speak('Jog completed. Great pace! Continue workout?');
+          }
+        } else if (command.includes('sprint completed') || command.includes('sprint complete') || command.includes('run completed')) {
+          if (activeCardio?.type === 'sprint') {
+            stopCardio();
+            speak('Sprint completed. Excellent effort!');
+          }
+        } else if (command.includes('skip')) {
+          if (isResting) {
+            skipRest();
+            speak('Skipping rest. Next exercise starting now.');
+          }
+        } else if (command.includes('walk')) {
+          startCardio('walk');
+          speak('Walking. Stay steady.');
+        } else if (command.includes('jog')) {
+          startCardio('jog');
+          speak('Jogging. Good pace!');
+        } else if (command.includes('sprint') || command.includes('run')) {
+          startCardio('sprint');
+          speak('Sprinting. Push hard!');
+        } else if (command.includes('stop')) {
+          if (activeCardio) {
+            stopCardio();
+            speak('Cardio stopped.');
+          } else {
+            speak('Pausing workout.');
+            pauseWorkout();
+          }
+        } else if (command.includes('next')) {
+          nextExercise();
+          speak('Moving to next exercise.');
+        } else {
+          // Default: announce current exercise
+          const exerciseName = currentExercise?.exercise_name || 'exercise';
+          const targetReps = currentExercise?.target_reps || 'as many as possible';
+          speak(`${exerciseName}. Target: ${targetReps} reps. Begin!`);
         }
-        
-        setTimeout(() => {
-          const checkForReps = new Promise((resolve) => {
-            const handler = (e) => {
-              const last = e.results.length - 1;
-              const text = e.results[last][0].transcript.toLowerCase().trim();
-              
-              const completedMatch = text.match(/(\d+)\s*(reps?\s*)?(completed|done|finished)/i);
-              
-              if (completedMatch) {
-                const reps = parseInt(completedMatch[1]);
-                if (reps > 0 && reps <= 500) {
-                  playBeep(true);
-                  setQuickReps(reps);
-                  speak(`${reps} reps recorded. Great work!`);
-                  recognition.removeEventListener('result', handler);
-                  resolve();
-                }
-              }
-            };
-            
-            recognition.addEventListener('result', handler);
-            
-            setTimeout(() => {
-              recognition.removeEventListener('result', handler);
-              resolve();
-            }, 30000);
-          });
-        }, 1000);
       }
     };
 
@@ -835,6 +862,12 @@ export default function ActiveWorkout() {
     setSessionStartTime(new Date());
     timerStartTimeRef.current = Date.now();
     lastTickTimeRef.current = Date.now();
+    
+    // Voice announcement when workout starts
+    if (isVoiceActive) {
+      const firstExercise = workout.exercises[0];
+      speak(`Begin workout! ${firstExercise.exercise_name}. Target: ${firstExercise.target_reps || firstExercise.target_time + ' seconds'}. Go!`);
+    }
     
     // Start GPS tracking immediately when workout begins
     startGlobalGPSTracking();
@@ -2259,39 +2292,63 @@ export default function ActiveWorkout() {
                 </div>
 
                 <div className="space-y-4 mb-6">
-                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
-                    <h3 className="font-bold text-purple-300 mb-2 flex items-center gap-2">
-                      <span className="text-lg">🎯</span> How It Works
-                    </h3>
-                    <ol className="text-sm text-gray-300 space-y-2">
-                      <li className="flex items-start gap-2">
-                        <span className="font-bold text-purple-400">1.</span>
-                        <span>Tap the <strong className="text-purple-300">AI button</strong> to activate voice control</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="font-bold text-purple-400">2.</span>
-                        <span>Say <strong className="text-pink-300">"RNS reps and steps"</strong> to trigger guidance</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="font-bold text-purple-400">3.</span>
-                        <span>Your AI coach will announce the exercise and start your timer</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="font-bold text-purple-400">4.</span>
-                        <span>When done, say <strong className="text-pink-300">"15 reps completed"</strong> to auto-record</span>
-                      </li>
-                    </ol>
-                  </div>
+                <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+                  <h3 className="font-bold text-purple-300 mb-2 flex items-center gap-2">
+                    <span className="text-lg">🎯</span> How It Works
+                  </h3>
+                  <ol className="text-sm text-gray-300 space-y-2">
+                    <li className="flex items-start gap-2">
+                      <span className="font-bold text-purple-400">1.</span>
+                      <span>Tap <strong className="text-purple-300">START</strong> button, voice says "Begin workout"</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="font-bold text-purple-400">2.</span>
+                      <span>Say <strong className="text-pink-300">"Reps and steps"</strong> then your command</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="font-bold text-purple-400">3.</span>
+                      <span>Say <strong className="text-pink-300">"Reps and steps 15 reps completed"</strong></span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="font-bold text-purple-400">4.</span>
+                      <span>Voice announces next: <strong className="text-pink-300">"Active recovery or skip"</strong></span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="font-bold text-purple-400">5.</span>
+                      <span>Say <strong className="text-pink-300">"Reps and steps walk"</strong> or "jog" or "sprint" or "skip"</span>
+                    </li>
+                  </ol>
+                </div>
 
                   <div className="bg-pink-500/10 border border-pink-500/30 rounded-lg p-4">
                     <h3 className="font-bold text-pink-300 mb-2 flex items-center gap-2">
+                      <span className="text-lg">🎤</span> Voice Commands
+                    </h3>
+                    <div className="text-xs text-gray-300 space-y-2">
+                      <p className="font-semibold text-pink-300">Say "Reps and steps" + command:</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>• "begin" / "start"</div>
+                        <div>• "15 reps completed"</div>
+                        <div>• "walk completed"</div>
+                        <div>• "jog completed"</div>
+                        <div>• "sprint completed"</div>
+                        <div>• "walk" / "jog" / "sprint"</div>
+                        <div>• "skip"</div>
+                        <div>• "next"</div>
+                        <div>• "stop"</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                    <h3 className="font-bold text-green-300 mb-2 flex items-center gap-2">
                       <span className="text-lg">💡</span> Pro Tips
                     </h3>
                     <ul className="text-sm text-gray-300 space-y-1">
                       <li>• Connect Bluetooth headphones for best experience</li>
                       <li>• Works even when phone is in your pocket</li>
                       <li>• Perfect for outdoor runs and intense workouts</li>
-                      <li>• AI coach voice: Energetic & motivating</li>
+                      <li>• Say commands clearly with wake phrase each time</li>
                     </ul>
                   </div>
                 </div>
