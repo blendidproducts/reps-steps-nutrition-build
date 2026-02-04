@@ -75,12 +75,20 @@ export default function Exercise3DViewer({ modelUrl, exerciseName }) {
 
         // Setup animations
         if (gltf.animations && gltf.animations.length > 0) {
+          console.log(`✅ Found ${gltf.animations.length} animations:`, gltf.animations.map(a => a.name || 'unnamed'));
           const mixer = new THREE.AnimationMixer(model);
           mixerRef.current = mixer;
           
-          // Play first animation
-          const action = mixer.clipAction(gltf.animations[0]);
+          // Play first animation on loop
+          const clip = gltf.animations[0];
+          const action = mixer.clipAction(clip);
+          action.setLoop(THREE.LoopRepeat, Infinity);
+          action.clampWhenFinished = false;
           action.play();
+          
+          console.log('🎬 Animation playing:', clip.name || 'Animation', 'Duration:', clip.duration + 's');
+        } else {
+          console.warn('⚠️ No animations found in GLB file');
         }
 
         setLoading(false);
