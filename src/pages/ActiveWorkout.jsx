@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import Exercise3DViewer from "@/components/Exercise3DViewer";
 
 
 
@@ -2392,13 +2393,32 @@ export default function ActiveWorkout() {
                 <h3 className="text-lg font-bold mb-3 text-white">{currentExercise.exercise_name} - 3D View</h3>
                 
                 {/* 3D Viewer */}
-                <div className="w-full aspect-square bg-black rounded-lg mb-3 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-6xl mb-2">🏋️</div>
-                    <p className="text-gray-400 text-sm">3D Exercise Viewer</p>
-                    <p className="text-gray-500 text-xs mt-1">Interactive 3D model coming soon</p>
-                  </div>
+                <div className="w-full aspect-square bg-black rounded-lg mb-3 overflow-hidden">
+                  {currentExercise.model_url ? (
+                    <Exercise3DViewer 
+                      modelUrl={currentExercise.model_url} 
+                      exerciseName={currentExercise.exercise_name}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="text-6xl mb-2">🏋️</div>
+                        <p className="text-gray-400 text-sm">No 3D model available</p>
+                        <p className="text-gray-500 text-xs mt-1">Upload a GLB file to see animated guide</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* Instructions */}
+                {currentExercise.instructions?.length > 0 && (
+                  <div className="bg-gray-800/50 rounded-lg p-3 mb-3">
+                    <h4 className="font-semibold mb-2 text-white text-sm">Instructions:</h4>
+                    <ol className="list-decimal list-inside space-y-1 text-xs text-gray-300">
+                      {currentExercise.instructions.map((inst, i) => <li key={i}>{inst}</li>)}
+                    </ol>
+                  </div>
+                )}
 
                 <Button onClick={() => setShow3DView(false)} className="w-full gradient-bg text-white">
                   Close
