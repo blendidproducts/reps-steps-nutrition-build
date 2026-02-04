@@ -34,6 +34,7 @@ const navigationItems = [
   { title: "Achievements", url: createPageUrl("Achievements"), icon: Trophy },
   { title: "Measurements", url: createPageUrl("BodyMeasurements"), icon: Ruler },
   { title: "Referrals", url: createPageUrl("Referrals"), icon: Gift },
+  { title: "Upload 3D Models", url: createPageUrl("Upload3DModels"), icon: Box },
   { title: "Help", url: createPageUrl("Help"), icon: HelpCircle },
   { title: "Settings", url: createPageUrl("Settings"), icon: Settings },
 ];
