@@ -70,10 +70,10 @@ import Referrals from './pages/Referrals';
 import SavedWorkouts from './pages/SavedWorkouts';
 import Settings from './pages/Settings';
 import Stretches from './pages/Stretches';
+import Upload3DModels from './pages/Upload3DModels';
 import WorkoutBuilder from './pages/WorkoutBuilder';
 import WorkoutComplete from './pages/WorkoutComplete';
 import WorkoutDetail from './pages/WorkoutDetail';
-import Upload3DModels from './pages/Upload3DModels';
 import __Layout from './Layout.jsx';
 
 
@@ -101,10 +101,10 @@ export const PAGES = {
     "SavedWorkouts": SavedWorkouts,
     "Settings": Settings,
     "Stretches": Stretches,
+    "Upload3DModels": Upload3DModels,
     "WorkoutBuilder": WorkoutBuilder,
     "WorkoutComplete": WorkoutComplete,
     "WorkoutDetail": WorkoutDetail,
-    "Upload3DModels": Upload3DModels,
 }
 
 export const pagesConfig = {

@@ -837,7 +837,8 @@ export default function ActiveWorkout() {
           image_url: exerciseDetails?.image_url,
           instructions: exerciseDetails?.instructions,
           metric: exerciseDetails?.metric || workoutEx.metric || 'reps',
-          category: workoutEx.category || exerciseDetails?.category || 'full_body'
+          category: workoutEx.category || exerciseDetails?.category || 'full_body',
+          model_url: exerciseDetails?.model_url
         };
       });
       
