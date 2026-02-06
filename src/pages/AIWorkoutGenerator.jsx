@@ -308,7 +308,7 @@ export default function AIWorkoutGenerator() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <div className="bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 text-white py-6 sm:py-10">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto px-3 sm:px-6 lg:px-8 max-w-full overflow-hidden">
           <div className="flex items-center gap-3 sm:gap-4 mb-4">
             <Button
               variant="outline"
@@ -346,7 +346,7 @@ export default function AIWorkoutGenerator() {
 
       {/* Progress Steps */}
       <div className="bg-gray-900/50 border-b border-gray-800">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+        <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4 max-w-full overflow-hidden">
           <div className="flex items-center justify-between max-w-3xl mx-auto">
             <div className="flex items-center gap-1 sm:gap-2">
               <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-sm ${
@@ -388,7 +388,7 @@ export default function AIWorkoutGenerator() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8 pb-32 sm:pb-40 max-w-4xl">
+      <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8 pb-32 sm:pb-40 max-w-4xl overflow-hidden">
         {/* Step 1: Choose Level */}
         {currentStep === 1 && (
           <motion.div
@@ -932,8 +932,8 @@ export default function AIWorkoutGenerator() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-20 sm:bottom-0 left-0 right-0 bg-gradient-to-t from-gray-900 via-gray-900 to-gray-900/95 border-t-2 border-brand-blue/30 p-4 sm:p-6 shadow-2xl z-50">
-        <div className="container mx-auto max-w-3xl">
+      <div className="fixed bottom-20 sm:bottom-0 left-0 right-0 bg-gradient-to-t from-gray-900 via-gray-900 to-gray-900/95 border-t-2 border-brand-blue/30 p-3 sm:p-6 shadow-2xl z-50">
+        <div className="container mx-auto max-w-3xl px-2 sm:px-0">
           <div className="flex justify-between items-center gap-3 sm:gap-4">
             {currentStep > 1 ? (
               <Button
