@@ -327,16 +327,16 @@ export default function AIWorkoutGenerator() {
           </div>
 
           {/* PRO Features Highlight */}
-          <div className="bg-gradient-to-r from-yellow-500/20 via-orange-500/20 to-purple-500/20 backdrop-blur-sm border-2 border-yellow-400/30 rounded-xl p-4 sm:p-6 max-w-3xl mx-auto">
-            <div className="flex items-start gap-3">
-              <Zap className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-400 flex-shrink-0 animate-pulse" />
-              <div>
-                <h3 className="text-lg sm:text-xl font-bold text-white mb-2">⭐ PRO FEATURE</h3>
-                <ul className="space-y-1.5 text-sm sm:text-base text-white/90">
-                  <li>✨ <strong>Zero thinking required</strong> - AI does all the work</li>
-                  <li>🎯 <strong>Smart exercise selection</strong> based on your level</li>
-                  <li>⚡ <strong>Instant workout generation</strong> in 3 easy steps</li>
-                  <li>🔥 <strong>Optimized for your goals</strong> - time, intensity & focus</li>
+          <div className="bg-gradient-to-r from-yellow-500/20 via-orange-500/20 to-purple-500/20 backdrop-blur-sm border-2 border-yellow-400/30 rounded-xl p-3 sm:p-6 max-w-3xl mx-auto">
+            <div className="flex items-start gap-2 sm:gap-3">
+              <Zap className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-yellow-400 flex-shrink-0 animate-pulse mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base sm:text-lg md:text-xl font-bold text-white mb-1 sm:mb-2">⭐ PRO FEATURE</h3>
+                <ul className="space-y-1 sm:space-y-1.5 text-xs sm:text-sm md:text-base text-white/90">
+                  <li className="leading-tight">✨ <strong>Zero thinking required</strong> - AI does all the work</li>
+                  <li className="leading-tight">🎯 <strong>Smart exercise selection</strong> based on your level</li>
+                  <li className="leading-tight">⚡ <strong>Instant workout generation</strong> in 3 easy steps</li>
+                  <li className="leading-tight">🔥 <strong>Optimized for your goals</strong> - time, intensity & focus</li>
                 </ul>
               </div>
             </div>
@@ -407,55 +407,55 @@ export default function AIWorkoutGenerator() {
               <CardContent className="space-y-4">
                 <button
                   onClick={() => setWorkoutLevel('beginner')}
-                  className={`w-full p-6 sm:p-8 rounded-xl border-2 transition-all text-left ${
+                  className={`w-full p-4 sm:p-6 md:p-8 rounded-xl border-2 transition-all text-left ${
                     workoutLevel === 'beginner'
                       ? 'bg-green-600/20 border-green-500 text-white'
                       : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-green-500/50'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-2xl sm:text-3xl font-bold mb-2">🌱 Beginner</div>
-                      <div className="text-sm sm:text-base text-gray-400">New to fitness or just starting out</div>
-                      <div className="text-xs sm:text-sm text-gray-500 mt-1">Lower intensity, fewer sets</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 sm:mb-2">🌱 Beginner</div>
+                      <div className="text-xs sm:text-sm md:text-base text-gray-400 leading-tight">New to fitness or just starting out</div>
+                      <div className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1 leading-tight">Lower intensity, fewer sets</div>
                     </div>
-                    {workoutLevel === 'beginner' && <Check className="w-6 h-6 sm:w-8 sm:h-8 text-green-500" />}
+                    {workoutLevel === 'beginner' && <Check className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-green-500 flex-shrink-0" />}
                   </div>
                 </button>
 
                 <button
                   onClick={() => setWorkoutLevel('intermediate')}
-                  className={`w-full p-6 sm:p-8 rounded-xl border-2 transition-all text-left ${
+                  className={`w-full p-4 sm:p-6 md:p-8 rounded-xl border-2 transition-all text-left ${
                     workoutLevel === 'intermediate'
                       ? 'bg-yellow-600/20 border-yellow-500 text-white'
                       : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-yellow-500/50'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-2xl sm:text-3xl font-bold mb-2">💪 Intermediate</div>
-                      <div className="text-sm sm:text-base text-gray-400">Regular training, good form</div>
-                      <div className="text-xs sm:text-sm text-gray-500 mt-1">Moderate intensity, balanced sets</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 sm:mb-2">💪 Intermediate</div>
+                      <div className="text-xs sm:text-sm md:text-base text-gray-400 leading-tight">Regular training, good form</div>
+                      <div className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1 leading-tight">Moderate intensity, balanced sets</div>
                     </div>
-                    {workoutLevel === 'intermediate' && <Check className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500" />}
+                    {workoutLevel === 'intermediate' && <Check className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-yellow-500 flex-shrink-0" />}
                   </div>
                 </button>
 
                 <button
                   onClick={() => setWorkoutLevel('advanced')}
-                  className={`w-full p-6 sm:p-8 rounded-xl border-2 transition-all text-left ${
+                  className={`w-full p-4 sm:p-6 md:p-8 rounded-xl border-2 transition-all text-left ${
                     workoutLevel === 'advanced'
                       ? 'bg-red-600/20 border-red-500 text-white'
                       : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-red-500/50'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-2xl sm:text-3xl font-bold mb-2">🔥 Advanced</div>
-                      <div className="text-sm sm:text-base text-gray-400">Experienced athlete, high endurance</div>
-                      <div className="text-xs sm:text-sm text-gray-500 mt-1">High intensity, maximum sets</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 sm:mb-2">🔥 Advanced</div>
+                      <div className="text-xs sm:text-sm md:text-base text-gray-400 leading-tight">Experienced athlete, high endurance</div>
+                      <div className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1 leading-tight">High intensity, maximum sets</div>
                     </div>
-                    {workoutLevel === 'advanced' && <Check className="w-6 h-6 sm:w-8 sm:h-8 text-red-500" />}
+                    {workoutLevel === 'advanced' && <Check className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-red-500 flex-shrink-0" />}
                   </div>
                 </button>
               </CardContent>
@@ -486,41 +486,41 @@ export default function AIWorkoutGenerator() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <button
                       onClick={() => setSelectedCategory('upper')}
-                      className={`p-4 sm:p-6 rounded-xl border-2 transition-all ${
+                      className={`p-3 sm:p-4 md:p-6 rounded-xl border-2 transition-all ${
                         selectedCategory === 'upper'
                           ? 'bg-blue-600/20 border-blue-500 text-white'
                           : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-blue-500/50'
                       }`}
                     >
-                      <div className="text-3xl sm:text-4xl mb-2">💪</div>
-                      <div className="font-bold text-sm sm:text-base">UPPER BODY</div>
-                      <div className="text-xs text-gray-400 mt-1">Chest, Arms, Back</div>
+                      <div className="text-2xl sm:text-3xl md:text-4xl mb-1 sm:mb-2">💪</div>
+                      <div className="font-bold text-xs sm:text-sm md:text-base">UPPER BODY</div>
+                      <div className="text-xs text-gray-400 mt-0.5 sm:mt-1 leading-tight">Chest, Arms, Back</div>
                     </button>
 
                     <button
                       onClick={() => setSelectedCategory('lower')}
-                      className={`p-4 sm:p-6 rounded-xl border-2 transition-all ${
+                      className={`p-3 sm:p-4 md:p-6 rounded-xl border-2 transition-all ${
                         selectedCategory === 'lower'
                           ? 'bg-green-600/20 border-green-500 text-white'
                           : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-green-500/50'
                       }`}
                     >
-                      <div className="text-3xl sm:text-4xl mb-2">🦵</div>
-                      <div className="font-bold text-sm sm:text-base">LOWER BODY</div>
-                      <div className="text-xs text-gray-400 mt-1">Legs, Glutes, Calves</div>
+                      <div className="text-2xl sm:text-3xl md:text-4xl mb-1 sm:mb-2">🦵</div>
+                      <div className="font-bold text-xs sm:text-sm md:text-base">LOWER BODY</div>
+                      <div className="text-xs text-gray-400 mt-0.5 sm:mt-1 leading-tight">Legs, Glutes, Calves</div>
                     </button>
 
                     <button
                       onClick={() => setSelectedCategory('mix')}
-                      className={`p-4 sm:p-6 rounded-xl border-2 transition-all ${
+                      className={`p-3 sm:p-4 md:p-6 rounded-xl border-2 transition-all ${
                         selectedCategory === 'mix'
                           ? 'bg-purple-600/20 border-purple-500 text-white'
                           : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-purple-500/50'
                       }`}
                     >
-                      <div className="text-3xl sm:text-4xl mb-2">🔥</div>
-                      <div className="font-bold text-sm sm:text-base">MIXED</div>
-                      <div className="text-xs text-gray-400 mt-1">Full Body Balance</div>
+                      <div className="text-2xl sm:text-3xl md:text-4xl mb-1 sm:mb-2">🔥</div>
+                      <div className="font-bold text-xs sm:text-sm md:text-base">MIXED</div>
+                      <div className="text-xs text-gray-400 mt-0.5 sm:mt-1 leading-tight">Full Body Balance</div>
                     </button>
                   </div>
                 </div>
@@ -528,7 +528,7 @@ export default function AIWorkoutGenerator() {
                 {/* Duration */}
                 <div>
                   <Label className="text-white text-base sm:text-lg font-semibold mb-3 block">Workout Duration</Label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4">
                     {[15, 30, 45, 60].map(minutes => (
                       <button
                         key={minutes}
@@ -537,15 +537,15 @@ export default function AIWorkoutGenerator() {
                           setIsFreeTime(false);
                           setCustomTime("");
                         }}
-                        className={`p-4 sm:p-6 rounded-xl border-2 transition-all ${
+                        className={`p-3 sm:p-4 md:p-6 rounded-xl border-2 transition-all ${
                           selectedTime === minutes && !isFreeTime
                             ? 'bg-brand-blue/20 border-brand-blue text-white'
                             : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-brand-blue/50'
                         }`}
                       >
-                        <Timer className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2" />
-                        <div className="text-2xl sm:text-3xl font-bold">{minutes}</div>
-                        <div className="text-xs sm:text-sm">MINUTES</div>
+                        <Timer className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 mx-auto mb-1 sm:mb-2" />
+                        <div className="text-xl sm:text-2xl md:text-3xl font-bold">{minutes}</div>
+                        <div className="text-xs sm:text-sm leading-tight">MINUTES</div>
                       </button>
                     ))}
                   </div>
@@ -622,7 +622,7 @@ export default function AIWorkoutGenerator() {
 
                   <div>
                     <p className="text-white font-medium mb-3 text-sm sm:text-base">Or manually set total reps:</p>
-                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3 mb-4">
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
                       {[100, 150, 200, 250, 300].map(reps => (
                         <button
                           key={reps}
@@ -631,14 +631,14 @@ export default function AIWorkoutGenerator() {
                             setAutoReps(false);
                             setCustomReps("");
                           }}
-                          className={`p-3 sm:p-4 rounded-xl border-2 transition-all ${
+                          className={`p-2 sm:p-3 md:p-4 rounded-xl border-2 transition-all ${
                             selectedReps === reps && !autoReps && !customReps
                               ? 'bg-brand-blue/20 border-brand-blue text-white'
                               : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-brand-blue/50'
                           }`}
                         >
-                          <div className="text-xl sm:text-2xl font-bold">{reps}</div>
-                          <div className="text-xs">REPS</div>
+                          <div className="text-lg sm:text-xl md:text-2xl font-bold leading-tight">{reps}</div>
+                          <div className="text-xs leading-tight">REPS</div>
                         </button>
                       ))}
                     </div>
