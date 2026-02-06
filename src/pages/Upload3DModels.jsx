@@ -23,7 +23,17 @@ export default function Upload3DModels() {
   const loadExercises = async () => {
     setIsLoading(true);
     const data = await Exercise.list();
-    setExercises(data.sort((a, b) => a.name.localeCompare(b.name)));
+    
+    // Remove duplicates by name (keep first occurrence)
+    const uniqueExercises = data.reduce((acc, current) => {
+      const exists = acc.find(ex => ex.name === current.name);
+      if (!exists) {
+        acc.push(current);
+      }
+      return acc;
+    }, []);
+    
+    setExercises(uniqueExercises.sort((a, b) => a.name.localeCompare(b.name)));
     setIsLoading(false);
   };
 
