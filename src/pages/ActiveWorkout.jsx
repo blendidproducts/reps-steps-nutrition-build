@@ -274,8 +274,23 @@ export default function ActiveWorkout() {
   const nextExercise = () => {
     const currentExercise = workout.exercises[currentExerciseIndex];
     
-    // Check for achievements before moving to next exercise
+    // CRITICAL FIX: Finalize current reps before moving on
     if (currentExercise.metric === 'reps' && currentReps > 0) {
+      const updatedExercises = [...workout.exercises];
+      const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
+      const difference = currentReps - (updatedExercises[currentExerciseIndex].current_set_reps || 0);
+      updatedExercises[currentExerciseIndex].completed_reps = previousCompleted + difference;
+      updatedExercises[currentExerciseIndex].current_set_reps = currentReps;
+      setWorkout({...workout, exercises: updatedExercises});
+      
+      console.log('[REP TRACKING] Finalized set reps:', {
+        exercise: currentExercise.exercise_name,
+        set: currentSet,
+        current_reps: currentReps,
+        total_completed: previousCompleted + difference
+      });
+      
+      // Check achievements
       const name = currentExercise.exercise_name.toLowerCase();
       if (name.includes('push')) checkAchievement('pushups', currentReps, currentExercise.exercise_name);
       if (name.includes('squat')) checkAchievement('squats', currentReps, currentExercise.exercise_name);
@@ -379,6 +394,23 @@ export default function ActiveWorkout() {
   };
 
   const skipSupersetTransition = () => {
+    // CRITICAL FIX: Finalize current reps before moving to next in superset
+    const currentExercise = workout.exercises[currentExerciseIndex];
+    if (currentExercise.metric === 'reps' && currentReps > 0) {
+      const updatedExercises = [...workout.exercises];
+      const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
+      const difference = currentReps - (updatedExercises[currentExerciseIndex].current_set_reps || 0);
+      updatedExercises[currentExerciseIndex].completed_reps = previousCompleted + difference;
+      updatedExercises[currentExerciseIndex].current_set_reps = currentReps;
+      setWorkout({...workout, exercises: updatedExercises});
+      
+      console.log('[REP TRACKING - SUPERSET] Finalized before transition:', {
+        exercise: currentExercise.exercise_name,
+        current_reps: currentReps,
+        total_completed: previousCompleted + difference
+      });
+    }
+    
     setIsSupersetTransition(false);
     setCurrentExerciseIndex(prev => prev + 1);
     setCurrentReps(0);
@@ -2044,7 +2076,18 @@ export default function ActiveWorkout() {
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        onClick={() => setCurrentReps(Math.max(0, currentReps - 5))} 
+                        onClick={() => {
+                          const newReps = Math.max(0, currentReps - 5);
+                          const difference = newReps - currentReps;
+                          setCurrentReps(newReps);
+                          setTotalReps(prev => prev + difference);
+                          
+                          // Update completed_reps
+                          const updatedExercises = [...workout.exercises];
+                          const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
+                          updatedExercises[currentExerciseIndex].completed_reps = Math.max(0, previousCompleted + difference);
+                          setWorkout({...workout, exercises: updatedExercises});
+                        }} 
                         className="w-10 h-8 bg-gray-800 border-gray-700 text-xs"
                         title="Subtract 5"
                       >
@@ -2063,7 +2106,17 @@ export default function ActiveWorkout() {
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        onClick={() => setCurrentReps(currentReps + 5)} 
+                        onClick={() => {
+                          const newReps = currentReps + 5;
+                          setCurrentReps(newReps);
+                          setTotalReps(prev => prev + 5);
+                          
+                          // Update completed_reps
+                          const updatedExercises = [...workout.exercises];
+                          const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
+                          updatedExercises[currentExerciseIndex].completed_reps = previousCompleted + 5;
+                          setWorkout({...workout, exercises: updatedExercises});
+                        }} 
                         className="w-10 h-8 bg-gray-800 border-gray-700 text-xs"
                         title="Add 5"
                       >
@@ -2074,7 +2127,17 @@ export default function ActiveWorkout() {
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        onClick={() => setCurrentReps(currentReps + 10)} 
+                        onClick={() => {
+                          const newReps = currentReps + 10;
+                          setCurrentReps(newReps);
+                          setTotalReps(prev => prev + 10);
+                          
+                          // Update completed_reps
+                          const updatedExercises = [...workout.exercises];
+                          const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
+                          updatedExercises[currentExerciseIndex].completed_reps = previousCompleted + 10;
+                          setWorkout({...workout, exercises: updatedExercises});
+                        }} 
                         className="w-14 h-14 rounded-full bg-green-700/50 border-green-600 text-white font-bold"
                         title="Add 10"
                       >
