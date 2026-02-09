@@ -42,6 +42,19 @@ const navigationItems = [
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const contentRef = React.useRef(null);
+
+  // Prevent scroll to top on navigation
+  React.useEffect(() => {
+    const mainContent = document.getElementById('main-content');
+    if (mainContent && location.state?.preventScroll !== true) {
+      // Only reset scroll if it's a new navigation (not a back button)
+      const isNavigatingForward = !location.state?.fromBack;
+      if (isNavigatingForward) {
+        mainContent.scrollTop = 0;
+      }
+    }
+  }, [location.pathname]);
   const [hasActiveWorkout, setHasActiveWorkout] = React.useState(false);
   const [workoutTimer, setWorkoutTimer] = React.useState(0);
   const [showProgramPopup, setShowProgramPopup] = React.useState(false);
@@ -351,7 +364,7 @@ export default function Layout({ children, currentPageName }) {
             </div>
           )}
 
-          <div className="flex-1 overflow-auto" style={{ backgroundColor: 'transparent' }}>
+          <div className="flex-1 overflow-auto" style={{ backgroundColor: 'transparent' }} id="main-content">
             {children}
           </div>
         </main>

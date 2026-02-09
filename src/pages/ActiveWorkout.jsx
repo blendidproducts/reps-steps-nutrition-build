@@ -1348,9 +1348,9 @@ export default function ActiveWorkout() {
 
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
-      <div className="container mx-auto px-2 sm:px-3 md:px-4 py-3 sm:py-4 md:py-6 max-w-md" style={{ paddingBottom: '100px' }}>
+      <div className="container mx-auto px-2 sm:px-3 py-2 sm:py-3 max-w-2xl" style={{ paddingBottom: '80px' }}>
         {/* Header */}
-        <div className="text-center mb-3 sm:mb-4">
+        <div className="text-center mb-2 sm:mb-3">
           <div className="flex items-center justify-between mb-2 gap-2">
             <div className="flex-1 min-w-0"></div>
             <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold px-1 sm:px-2 leading-tight truncate flex-1 min-w-0">{workout.name}</h1>
@@ -1420,12 +1420,12 @@ export default function ActiveWorkout() {
         </div>
 
         {/* Progress Bar */}
-        <div className="mb-3 sm:mb-4 px-2">
+        <div className="mb-2 px-2">
           <div className="flex justify-between text-[10px] sm:text-xs mb-1 text-gray-400">
             <span>Overall Progress</span>
             <span>{Math.round(progress)}%</span>
           </div>
-          <Progress value={progress} className="h-1.5 sm:h-2" />
+          <Progress value={progress} className="h-1.5" />
         </div>
 
         {/* Heart Rate Input */}
@@ -1938,17 +1938,18 @@ export default function ActiveWorkout() {
           )}
         </AnimatePresence>
 
-        {/* Current Exercise */}
+        {/* Current Exercise - NEW LAYOUT */}
         <motion.div
           key={`${currentExerciseIndex}-${currentSet}`}
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -50 }}
-          className="text-center mb-3 sm:mb-4 px-2"
+          className="mb-2 px-2"
         >
           <Card className="bg-card backdrop-blur-sm border-border text-white">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex justify-between items-start mb-3">
+            <CardContent className="p-2 sm:p-3">
+              {/* Header Row */}
+              <div className="flex justify-between items-start mb-2">
                 <Badge variant="outline" className="border-brand-blue/50 text-brand-blue text-xs">
                   Set {currentSet} of {currentExercise.sets || 1}
                 </Badge>
@@ -1970,14 +1971,14 @@ export default function ActiveWorkout() {
                 </div>
               </div>
 
-              <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-2 leading-tight">{currentExercise.exercise_name}</h2>
+              <h2 className="text-lg sm:text-xl font-bold mb-2 leading-tight">{currentExercise.exercise_name}</h2>
               
               {/* HOW TO Section */}
-              <div className="flex justify-center gap-2 mb-3">
+              <div className="flex justify-center gap-2 mb-2">
                 <Button
                   onClick={() => setShowHowTo(true)}
                   size="sm"
-                  className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-1 px-3"
+                  className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-1 px-3 py-1 h-8"
                 >
                   <Play className="w-3 h-3" />
                   <span className="text-xs font-bold">VIDEO</span>
@@ -1985,7 +1986,7 @@ export default function ActiveWorkout() {
                 <Button
                   onClick={() => setShow3DView(true)}
                   size="sm"
-                  className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1 px-3"
+                  className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1 px-3 py-1 h-8"
                 >
                   <Box className="w-3 h-3" />
                   <span className="text-xs font-bold">3D</span>
@@ -1993,8 +1994,8 @@ export default function ActiveWorkout() {
               </div>
               
               {/* Set Progress Badge */}
-              <div className="mb-3">
-                <Badge variant="outline" className="border-brand-blue/50 text-brand-blue text-sm">
+              <div className="mb-2">
+                <Badge variant="outline" className="border-brand-blue/50 text-brand-blue text-[10px] sm:text-xs leading-tight">
                   {currentSet < (currentExercise.sets || 1) 
                     ? `Set ${currentSet} of ${currentExercise.sets || 1} → Next: Set ${currentSet + 1}`
                     : currentExerciseIndex < workout.exercises.length - 1
@@ -2004,75 +2005,53 @@ export default function ActiveWorkout() {
               </div>
               
               {!isTimeBased && isFourCountExercise(currentExercise.exercise_name) && (
-                <div className="mb-3 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <div className="mb-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                   <p className="text-yellow-400 text-xs font-semibold">⚠️ 4-COUNT EXERCISE: 1...2...3...4 = 1 REP</p>
                 </div>
               )}
               
-              <div className="w-full h-28 sm:h-32 bg-background rounded-lg flex items-center justify-center mb-3 relative overflow-hidden">
-                {currentExercise.image_url ? (
-                  <img src={currentExercise.image_url} alt={currentExercise.exercise_name} className="w-full h-full object-contain" />
-                ) : (
-                  <Target className="w-10 h-10 sm:w-12 sm:h-12 text-brand-blue/50" />
-                )}
-              </div>
-
-              {isTimeBased ? (
-                // UI for Time-Based Exercises
-                <div className="text-center mb-4">
-                   <div className="text-3xl sm:text-4xl font-bold mb-2">{formatTime(exerciseTimer)}</div>
-                   <div className="flex items-center justify-center gap-3 mb-4">
-                     <p className="text-sm md:text-base text-gray-400">
-                       Target: {formatTime(currentExercise.target_time)}
-                     </p>
-                     <div className="flex items-center gap-2">
-                       <button
-                         onClick={() => {
-                           const newTime = Math.max(5, currentExercise.target_time - 5);
-                           const updatedExercises = [...workout.exercises];
-                           updatedExercises[currentExerciseIndex].target_time = newTime;
-                           setWorkout({...workout, exercises: updatedExercises});
-                         }}
-                         className="w-8 h-8 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
-                       >
-                         <Minus className="w-4 h-4" />
-                       </button>
-                       <button
-                         onClick={() => {
-                           const newTime = Math.min(300, currentExercise.target_time + 5);
-                           const updatedExercises = [...workout.exercises];
-                           updatedExercises[currentExerciseIndex].target_time = newTime;
-                           setWorkout({...workout, exercises: updatedExercises});
-                         }}
-                         className="w-8 h-8 bg-green-600/50 hover:bg-green-600 rounded-full flex items-center justify-center transition-colors"
-                       >
-                         <Plus className="w-4 h-4" />
-                       </button>
-                     </div>
-                   </div>
-                   <Progress value={timeProgress} className="h-2" />
+              {/* MAIN CONTENT - Side by Side Layout */}
+              <div className="flex gap-3 mb-2">
+                {/* Large Exercise Image */}
+                <div className="flex-1 bg-background rounded-lg flex items-center justify-center overflow-hidden" style={{ minHeight: '280px', maxHeight: '400px' }}>
+                  {currentExercise.image_url ? (
+                    <img src={currentExercise.image_url} alt={currentExercise.exercise_name} className="w-full h-full object-cover rounded-lg" />
+                  ) : (
+                    <Target className="w-16 h-16 text-brand-blue/50" />
+                  )}
                 </div>
-              ) : (
-                // UI for Rep-Based Exercises
-                <div className="text-center mb-4">
-                  <div className="text-3xl sm:text-4xl font-bold mb-2">{currentReps}</div>
-                  <p className="text-sm md:text-base text-gray-400 mb-4">
-                    Target: {currentExercise.target_reps || 'As many as possible'}
-                  </p>
-                  
-                  <div className="flex justify-center gap-2 mb-4 flex-wrap">
-                    {[5, 10, 15, currentExercise.target_reps].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i && v > 0).sort((a,b) => a-b).map(reps => (
-                      <Button key={reps} variant="outline" size="sm" onClick={() => setQuickReps(reps)} className="bg-gray-800 border-gray-700 text-white">
-                        {reps}
-                      </Button>
-                    ))}
-                  </div>
 
-                  <div className="flex justify-center items-center gap-2 mb-4 mx-auto max-w-sm pl-4">
-                    <div className="flex flex-col gap-1 items-center">
-                      <Button size="icon" variant="outline" onClick={subtractRep} className="w-10 h-10 rounded-full bg-gray-800 border-gray-700">
-                        <Minus className="w-5 h-5" />
+                {/* Rep Counter Side Panel */}
+                {!isTimeBased ? (
+                  <div className="flex flex-col items-center justify-center bg-gray-900/50 rounded-lg p-3" style={{ minWidth: '180px' }}>
+                    <div className="text-5xl font-bold mb-2 text-brand-blue">{currentReps}</div>
+                    <p className="text-xs text-gray-400 mb-3">
+                      Target:<br/>{currentExercise.target_reps || 'As many as possible'}
+                    </p>
+                    
+                    <div className="flex flex-col gap-2 w-full">
+                      {[5, 10, 15, currentExercise.target_reps].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i && v > 0).sort((a,b) => a-b).slice(0, 3).map(reps => (
+                        <Button key={reps} variant="outline" size="sm" onClick={() => setQuickReps(reps)} className="w-full bg-gray-800 border-gray-700 text-white h-8 text-xs">
+                          {reps}
+                        </Button>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-2 mt-3 w-full">
+                      <Button size="sm" variant="outline" onClick={subtractRep} className="flex-1 h-12 rounded-lg bg-gray-800 border-gray-700 text-white text-xs">
+                        -1
                       </Button>
+                      <Input
+                        type="number" value={repInput} onChange={(e) => handleRepInput(e.target.value)}
+                        placeholder="Reps"
+                        className="w-16 bg-gray-800 border-gray-700 text-white text-center text-sm placeholder:text-gray-500"
+                      />
+                      <Button size="sm" variant="outline" onClick={addRep} className="flex-1 h-12 rounded-lg bg-gray-800 border-gray-700 text-white text-xs">
+                        +1
+                      </Button>
+                    </div>
+                    
+                    <div className="flex gap-2 mt-2 w-full">
                       <Button 
                         size="sm" 
                         variant="outline" 
@@ -2081,27 +2060,14 @@ export default function ActiveWorkout() {
                           const difference = newReps - currentReps;
                           setCurrentReps(newReps);
                           setTotalReps(prev => prev + difference);
-                          
-                          // Update completed_reps
                           const updatedExercises = [...workout.exercises];
                           const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
                           updatedExercises[currentExerciseIndex].completed_reps = Math.max(0, previousCompleted + difference);
                           setWorkout({...workout, exercises: updatedExercises});
                         }} 
-                        className="w-10 h-8 bg-gray-800 border-gray-700 text-xs"
-                        title="Subtract 5"
+                        className="flex-1 h-10 bg-gray-800 border-gray-700 text-xs"
                       >
                         -5
-                      </Button>
-                    </div>
-                    <Input
-                      type="number" value={repInput} onChange={(e) => handleRepInput(e.target.value)}
-                      placeholder="Reps"
-                      className="w-20 bg-gray-800 border-gray-700 text-white text-center text-lg placeholder:text-gray-500"
-                    />
-                    <div className="flex flex-col gap-1 items-center">
-                      <Button size="icon" variant="outline" onClick={addRep} className="w-10 h-10 rounded-full bg-gray-800 border-gray-700">
-                        <Plus className="w-5 h-5" />
                       </Button>
                       <Button 
                         size="sm" 
@@ -2110,49 +2076,74 @@ export default function ActiveWorkout() {
                           const newReps = currentReps + 5;
                           setCurrentReps(newReps);
                           setTotalReps(prev => prev + 5);
-                          
-                          // Update completed_reps
                           const updatedExercises = [...workout.exercises];
                           const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
                           updatedExercises[currentExerciseIndex].completed_reps = previousCompleted + 5;
                           setWorkout({...workout, exercises: updatedExercises});
                         }} 
-                        className="w-10 h-8 bg-gray-800 border-gray-700 text-xs"
-                        title="Add 5"
+                        className="flex-1 h-10 bg-gray-800 border-gray-700 text-xs"
                       >
                         +5
                       </Button>
                     </div>
-                    <div className="flex items-center">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => {
-                          const newReps = currentReps + 10;
-                          setCurrentReps(newReps);
-                          setTotalReps(prev => prev + 10);
-                          
-                          // Update completed_reps
-                          const updatedExercises = [...workout.exercises];
-                          const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
-                          updatedExercises[currentExerciseIndex].completed_reps = previousCompleted + 10;
-                          setWorkout({...workout, exercises: updatedExercises});
-                        }} 
-                        className="w-14 h-14 rounded-full bg-green-700/50 border-green-600 text-white font-bold"
-                        title="Add 10"
-                      >
-                        +10
-                      </Button>
-                    </div>
+                    
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => {
+                        const newReps = currentReps + 10;
+                        setCurrentReps(newReps);
+                        setTotalReps(prev => prev + 10);
+                        const updatedExercises = [...workout.exercises];
+                        const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
+                        updatedExercises[currentExerciseIndex].completed_reps = previousCompleted + 10;
+                        setWorkout({...workout, exercises: updatedExercises});
+                      }} 
+                      className="w-full mt-2 h-12 rounded-lg bg-green-700/50 border-green-600 text-white font-bold"
+                    >
+                      +10
+                    </Button>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="flex flex-col items-center justify-center bg-gray-900/50 rounded-lg p-3" style={{ minWidth: '180px' }}>
+                    <div className="text-5xl font-bold mb-2 text-brand-blue">{formatTime(exerciseTimer)}</div>
+                    <p className="text-xs text-gray-400 mb-3">
+                      Target:<br/>{formatTime(currentExercise.target_time)}
+                    </p>
+                    <div className="flex items-center gap-2 mb-3">
+                      <button
+                        onClick={() => {
+                          const newTime = Math.max(5, currentExercise.target_time - 5);
+                          const updatedExercises = [...workout.exercises];
+                          updatedExercises[currentExerciseIndex].target_time = newTime;
+                          setWorkout({...workout, exercises: updatedExercises});
+                        }}
+                        className="w-8 h-8 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          const newTime = Math.min(300, currentExercise.target_time + 5);
+                          const updatedExercises = [...workout.exercises];
+                          updatedExercises[currentExerciseIndex].target_time = newTime;
+                          setWorkout({...workout, exercises: updatedExercises});
+                        }}
+                        className="w-8 h-8 bg-green-600/50 hover:bg-green-600 rounded-full flex items-center justify-center transition-colors"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <Progress value={timeProgress} className="h-2 w-full" />
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </motion.div>
 
         {/* Control Buttons */}
-        <div className="flex justify-center gap-2 mb-4 px-2">
+        <div className="flex justify-center gap-2 mb-2 px-2">
           {!isActive ? (
             <Button size="lg" onClick={startWorkout} className="gradient-bg text-white px-6 py-3 text-base sm:text-lg font-bold rounded-full flex-1 max-w-xs touch-manipulation min-h-[48px]">
               <Play className="w-5 h-5 mr-2" /> START
@@ -2246,8 +2237,8 @@ export default function ActiveWorkout() {
         )}
 
         {/* Exercise List */}
-        <Card className="bg-card border-border mx-2 mb-4">
-          <CardContent className="p-3">
+        <Card className="bg-card border-border mx-2 mb-2">
+          <CardContent className="p-2">
             <h3 className="text-sm sm:text-base font-semibold mb-3 text-white">Workout Plan</h3>
             <div className="space-y-2 max-h-40 overflow-y-auto touch-manipulation">
               {workout.exercises.filter(ex => !ex.is_cardio_interval).map((exercise, index) => (
