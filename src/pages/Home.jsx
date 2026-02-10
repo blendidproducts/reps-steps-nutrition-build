@@ -169,7 +169,7 @@ export default function Home() {
               {/* AI Workouts */}
               <Card 
                 className="bg-gradient-to-r from-brand-blue/20 to-blue-600/20 border-2 border-brand-blue/50 cursor-pointer hover:border-brand-blue hover:shadow-lg hover:shadow-brand-blue/30 transition-all backdrop-blur-sm"
-                onClick={() => navigate(createPageUrl("Pricing"))}
+                onClick={() => navigate(createPageUrl("Exercises"))}
               >
                 <CardContent className="p-4 md:p-8">
                   <div className="flex items-center justify-between">
