@@ -1347,8 +1347,8 @@ export default function ActiveWorkout() {
   const timeProgress = isTimeBased && currentExercise.target_time ? (exerciseTimer / currentExercise.target_time) * 100 : 0;
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
-      <div className="container mx-auto px-2 sm:px-3 py-2 sm:py-3 max-w-2xl" style={{ paddingBottom: '80px' }}>
+    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="overflow-x-hidden">
+      <div className="container mx-auto px-2 sm:px-3 py-2 sm:py-3 max-w-2xl pb-20 sm:pb-24">
         {/* Header */}
         <div className="text-center mb-2 sm:mb-3">
           <div className="flex items-center justify-between mb-2 gap-2">
@@ -1627,8 +1627,8 @@ export default function ActiveWorkout() {
               exit={{ opacity: 0, scale: 0.9 }}
               className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto"
             >
-              <Card className="bg-gray-900/80 border-cyan-500/30 text-white w-full max-w-sm my-auto" style={{ maxHeight: '95vh' }}>
-                <CardContent className="p-3 sm:p-6 text-center overflow-y-auto" style={{ maxHeight: 'calc(95vh - 2rem)' }}>
+              <Card className="bg-gray-900/80 border-cyan-500/30 text-white w-full max-w-sm my-auto max-h-[90vh] overflow-hidden flex flex-col">
+                <CardContent className="p-3 sm:p-4 text-center overflow-y-auto flex-1">
                   {!activeCardio ? (
                     <>
                       <h2 className="text-2xl font-bold mb-2 text-cyan-400">ACTIVE RECOVERY</h2>
@@ -1741,8 +1741,8 @@ export default function ActiveWorkout() {
               exit={{ opacity: 0, scale: 0.9 }}
               className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto"
             >
-              <Card className="bg-gray-900/80 border-brand-blue/30 text-white w-full max-w-sm my-auto" style={{ maxHeight: '95vh', marginTop: 'auto', marginBottom: 'auto' }}>
-                <CardContent className="p-3 sm:p-6 text-center overflow-y-auto" style={{ maxHeight: 'calc(95vh - 2rem)' }}>
+              <Card className="bg-gray-900/80 border-brand-blue/30 text-white w-full max-w-sm my-auto max-h-[90vh] overflow-hidden flex flex-col">
+                <CardContent className="p-3 sm:p-4 text-center overflow-y-auto flex-1">
                   {!activeCardio ? (
                     <>
                       <h2 className="text-2xl font-bold mb-2 text-brand-blue">ACTIVE RECOVERY</h2>
@@ -1805,34 +1805,34 @@ export default function ActiveWorkout() {
                       </div>
 
                       {/* Exercise Preview Cards */}
-                      <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="grid grid-cols-2 gap-2 mb-3">
                         {/* Just Completed */}
                         {currentExerciseIndex > 0 && (
-                          <div className="bg-green-600/10 border border-green-500/30 rounded-lg p-3">
-                            <p className="text-xs text-green-400 font-bold mb-2">✓ COMPLETED</p>
-                            <div className="w-full h-20 bg-gray-800 rounded mb-2 flex items-center justify-center overflow-hidden">
+                          <div className="bg-green-600/10 border border-green-500/30 rounded-lg p-2">
+                            <p className="text-[10px] text-green-400 font-bold mb-1">✓ COMPLETED</p>
+                            <div className="w-full h-16 bg-gray-800 rounded mb-1 flex items-center justify-center overflow-hidden">
                               {workout.exercises[currentExerciseIndex - 1]?.image_url ? (
                                 <img src={workout.exercises[currentExerciseIndex - 1].image_url} alt={workout.exercises[currentExerciseIndex - 1].exercise_name} className="w-full h-full object-cover" />
                               ) : (
-                                <Target className="w-8 h-8 text-gray-600" />
+                                <Target className="w-6 h-6 text-gray-600" />
                               )}
                             </div>
-                            <p className="text-xs font-semibold text-white">{workout.exercises[currentExerciseIndex - 1]?.exercise_name}</p>
+                            <p className="text-[10px] font-semibold text-white line-clamp-2">{workout.exercises[currentExerciseIndex - 1]?.exercise_name}</p>
                           </div>
                         )}
 
                         {/* Coming Up Next */}
-                        <div className="bg-brand-blue/10 border border-brand-blue/30 rounded-lg p-3">
-                          <p className="text-xs text-brand-blue font-bold mb-2">▶ UP NEXT</p>
-                          <div className="w-full h-20 bg-gray-800 rounded mb-2 flex items-center justify-center overflow-hidden">
+                        <div className="bg-brand-blue/10 border border-brand-blue/30 rounded-lg p-2">
+                          <p className="text-[10px] text-brand-blue font-bold mb-1">▶ UP NEXT</p>
+                          <div className="w-full h-16 bg-gray-800 rounded mb-1 flex items-center justify-center overflow-hidden">
                             {currentExercise?.image_url ? (
                               <img src={currentExercise.image_url} alt={currentExercise.exercise_name} className="w-full h-full object-cover" />
                             ) : (
-                              <Target className="w-8 h-8 text-gray-600" />
+                              <Target className="w-6 h-6 text-gray-600" />
                             )}
                           </div>
-                          <p className="text-xs font-semibold text-white">{currentExercise?.exercise_name}</p>
-                          <p className="text-xs text-gray-400 mt-1">
+                          <p className="text-[10px] font-semibold text-white line-clamp-2">{currentExercise?.exercise_name}</p>
+                          <p className="text-[10px] text-gray-400">
                             {currentExercise?.metric === 'time' 
                               ? `${currentExercise?.target_time}s` 
                               : `${currentExercise?.target_reps} reps`}
@@ -1842,19 +1842,19 @@ export default function ActiveWorkout() {
 
                       {/* Quick instructions for next exercise */}
                       {currentExercise?.instructions && (
-                        <div className="bg-gray-800/50 rounded-lg p-3 mb-4 max-h-32 overflow-y-auto">
-                          <p className="text-xs text-brand-blue font-semibold mb-1">How to:</p>
-                          <ul className="text-xs text-gray-300 space-y-1">
-                            {currentExercise.instructions.map((instruction, i) => (
-                              <li key={i}>• {instruction}</li>
+                        <div className="bg-gray-800/50 rounded-lg p-2 mb-3 max-h-24 overflow-y-auto">
+                          <p className="text-[10px] text-brand-blue font-semibold mb-1">How to:</p>
+                          <ul className="text-[10px] text-gray-300 space-y-0.5">
+                            {currentExercise.instructions.slice(0, 3).map((instruction, i) => (
+                              <li key={i} className="line-clamp-1">• {instruction}</li>
                             ))}
                           </ul>
                         </div>
                       )}
 
-                      <p className="text-sm text-gray-400 mb-3">Choose cardio activity or skip to rest</p>
+                      <p className="text-xs text-gray-400 mb-2">Choose cardio or skip</p>
 
-                      <div className="grid grid-cols-3 gap-2 mb-4">
+                      <div className="grid grid-cols-3 gap-2 mb-3">
                         <Button
                           onClick={() => startCardio('walk')}
                           className="flex flex-col items-center gap-2 h-auto py-4 bg-green-600/20 border-2 border-green-500 text-green-300 hover:bg-green-600/40"
@@ -1880,19 +1880,19 @@ export default function ActiveWorkout() {
                         </Button>
                       </div>
 
-                      <div className="flex gap-2 pb-2">
+                      <div className="grid grid-cols-2 gap-2">
                         <Button
                           onClick={skipRest}
                           variant="outline"
-                          className="flex-1 border-gray-500 text-gray-300 hover:bg-gray-700 touch-manipulation min-h-[48px] text-xs sm:text-sm"
+                          className="border-gray-500 text-gray-300 hover:bg-gray-700 touch-manipulation h-12 text-xs"
                         >
-                          SKIP - JUST REST
+                          SKIP REST
                         </Button>
                         <Button
                           onClick={openSupersetModal}
-                          className="flex-1 bg-purple-600/20 border-2 border-purple-500 text-purple-300 hover:bg-purple-600/40 touch-manipulation min-h-[48px] text-xs sm:text-sm"
+                          className="bg-purple-600/20 border-2 border-purple-500 text-purple-300 hover:bg-purple-600/40 touch-manipulation h-12 text-xs"
                         >
-                          <LinkIcon className="w-4 h-4 mr-1" />
+                          <LinkIcon className="w-3 h-3 mr-1" />
                           SUPERSET
                         </Button>
                       </div>
@@ -2011,9 +2011,9 @@ export default function ActiveWorkout() {
               )}
               
               {/* MAIN CONTENT - Side by Side Layout */}
-              <div className="flex gap-3 mb-2">
+              <div className="flex flex-col sm:flex-row gap-3 mb-2">
                 {/* Large Exercise Image */}
-                <div className="flex-1 bg-background rounded-lg flex items-center justify-center overflow-hidden" style={{ minHeight: '280px', maxHeight: '400px' }}>
+                <div className="flex-1 bg-background rounded-lg flex items-center justify-center overflow-hidden min-h-[200px] sm:min-h-[280px] max-h-[300px] sm:max-h-[400px]">
                   {currentExercise.image_url ? (
                     <img src={currentExercise.image_url} alt={currentExercise.exercise_name} className="w-full h-full object-cover rounded-lg" />
                   ) : (
@@ -2023,7 +2023,7 @@ export default function ActiveWorkout() {
 
                 {/* Rep Counter Side Panel */}
                 {!isTimeBased ? (
-                  <div className="flex flex-col items-center justify-center bg-gray-900/50 rounded-lg p-3" style={{ minWidth: '180px' }}>
+                  <div className="flex flex-col items-center justify-center bg-gray-900/50 rounded-lg p-3 w-full sm:w-auto sm:min-w-[180px]">
                     <div className="text-5xl font-bold mb-2 text-brand-blue">{currentReps}</div>
                     <p className="text-xs text-gray-400 mb-3">
                       Target:<br/>{currentExercise.target_reps || 'As many as possible'}
@@ -2105,7 +2105,7 @@ export default function ActiveWorkout() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center bg-gray-900/50 rounded-lg p-3" style={{ minWidth: '180px' }}>
+                  <div className="flex flex-col items-center justify-center bg-gray-900/50 rounded-lg p-3 w-full sm:w-auto sm:min-w-[180px]">
                     <div className="text-5xl font-bold mb-2 text-brand-blue">{formatTime(exerciseTimer)}</div>
                     <p className="text-xs text-gray-400 mb-3">
                       Target:<br/>{formatTime(currentExercise.target_time)}
