@@ -959,6 +959,25 @@ export default function ActiveWorkout() {
   const pauseWorkout = () => setIsPaused(!isPaused);
 
   const stopWorkout = async () => {
+    // CRITICAL FIX: Finalize current exercise reps before stopping
+    const currentExercise = workout.exercises[currentExerciseIndex];
+    if (currentExercise && currentExercise.metric === 'reps' && currentReps > 0) {
+      const updatedExercises = [...workout.exercises];
+      const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
+      const difference = currentReps - (updatedExercises[currentExerciseIndex].current_set_reps || 0);
+      updatedExercises[currentExerciseIndex].completed_reps = previousCompleted + difference;
+      
+      console.log('[REP TRACKING - STOP] Finalizing current exercise:', {
+        exercise: currentExercise.exercise_name,
+        current_reps: currentReps,
+        previous_completed: previousCompleted,
+        final_completed: previousCompleted + difference
+      });
+      
+      // Update workout state with finalized reps
+      workout.exercises = updatedExercises;
+    }
+    
     // Stop GPS tracking
     if (gpsWatchId) {
       navigator.geolocation.clearWatch(gpsWatchId);
