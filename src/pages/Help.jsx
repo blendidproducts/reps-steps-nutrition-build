@@ -156,6 +156,29 @@ ${feedbackForm.message}
           {/* VCFS - Voice Control Fitness System */}
           <TabsContent value="vcfs" id="vcfs-section">
             <div className="space-y-6">
+              {/* Prominent Enable Button at Top */}
+              <Card className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 border-2 border-purple-400 shadow-xl">
+                <CardContent className="p-6 text-center">
+                  <div className="inline-block p-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full mb-3">
+                    <Mic className="w-8 h-8 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white mb-2">🎤 Enable Voice Control</h2>
+                  <p className="text-gray-300 text-sm mb-4">
+                    Start any workout and tap the purple microphone button to activate
+                  </p>
+                  <Button
+                    onClick={() => navigate(createPageUrl("Exercises"))}
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-lg px-8 py-6 rounded-xl shadow-2xl select-none"
+                  >
+                    <Mic className="w-6 h-6 mr-3" />
+                    Start Workout & Enable Voice
+                  </Button>
+                  <p className="text-xs text-gray-400 mt-3">
+                    Look for the purple AI microphone button at the top of the workout screen
+                  </p>
+                </CardContent>
+              </Card>
+
               {/* Hero Card */}
               <Card className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 border-purple-500/50">
                 <CardContent className="p-8">
