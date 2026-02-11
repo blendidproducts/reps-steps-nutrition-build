@@ -7,6 +7,8 @@ import { PresetProgram } from "@/entities/PresetProgram";
 import { Exercise } from "@/entities/Exercise";
 import { Workout } from "@/entities/Workout";
 import ProgramDayPopup from "@/components/ProgramDayPopup";
+import MobileHeader from "@/components/MobileHeader";
+import MobileRouteTransition from "@/components/MobileRouteTransition";
 import {
   Sidebar,
   SidebarContent,
@@ -328,17 +330,8 @@ export default function Layout({ children, currentPageName }) {
             />
           )}
 
-          <header className="bg-[#0a1628]/90 backdrop-blur-lg border-b border-brand-blue/30 px-4 py-3 md:hidden sticky top-0 z-50">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger className="w-10 h-10 flex items-center justify-center text-brand-blue text-xl hover:bg-brand-blue/20 rounded transition-colors">
-                <span>☰</span>
-              </SidebarTrigger>
-              <Link to={createPageUrl("Home")} className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
-                <img src={logoUrl} alt="RepsAndSteps Logo" className="w-8 h-8 rounded-lg" />
-                <img src={bannerUrl} alt="RepsAndSteps" className="h-4" />
-              </Link>
-            </div>
-          </header>
+          {/* Mobile Header with Smart Back Button */}
+          <MobileHeader currentPageName={currentPageName} />
 
           {/* Active Workout Banner */}
           {hasActiveWorkout && !location.pathname.includes('/ActiveWorkout') && (
@@ -373,7 +366,16 @@ export default function Layout({ children, currentPageName }) {
             }} 
             id="main-content"
           >
-            {children}
+            {/* Mobile: Animated route transitions */}
+            <div className="md:hidden">
+              <MobileRouteTransition>
+                {children}
+              </MobileRouteTransition>
+            </div>
+            {/* Desktop: No animation */}
+            <div className="hidden md:block">
+              {children}
+            </div>
           </div>
 
           {/* Bottom Navigation Bar - Mobile Only */}

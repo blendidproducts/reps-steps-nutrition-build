@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import MobileDrawerSelect from "@/components/MobileDrawerSelect";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { ArrowLeft, Target, Calculator, Save, Zap } from "lucide-react";
@@ -221,18 +222,35 @@ export default function NutritionGoals() {
 
             <div>
               <Label>Activity Level</Label>
-              <Select value={formData.activity_level} onValueChange={(v) => setFormData({...formData, activity_level: v})}>
-                <SelectTrigger className="bg-background border-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(activityLevels).map(([key, level]) => (
-                    <SelectItem key={key} value={key}>
-                      {level.label} - {level.description}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Mobile: Drawer */}
+              <div className="md:hidden">
+                <MobileDrawerSelect
+                  value={formData.activity_level}
+                  onValueChange={(v) => setFormData({...formData, activity_level: v})}
+                  options={Object.entries(activityLevels).map(([key, level]) => ({
+                    value: key,
+                    label: level.label,
+                    description: level.description
+                  }))}
+                  placeholder="Select activity level"
+                  label="Activity Level"
+                />
+              </div>
+              {/* Desktop: Standard Select */}
+              <div className="hidden md:block">
+                <Select value={formData.activity_level} onValueChange={(v) => setFormData({...formData, activity_level: v})}>
+                  <SelectTrigger className="bg-background border-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(activityLevels).map(([key, level]) => (
+                      <SelectItem key={key} value={key}>
+                        {level.label} - {level.description}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <Button onClick={calculateMacros} variant="outline" className="w-full">

@@ -229,18 +229,20 @@ export default function Home() {
                 </CardContent>
               </Card>
 
-              {/* Voice Control Fitness System (VCFS) - Compact Button */}
-              <div className="flex justify-center">
+              {/* Voice Control Fitness System (VCFS) - Small Bonus Feature Button */}
+              <div className="flex justify-center mt-4">
                 <Button
                   onClick={() => navigate(createPageUrl("Help") + "?section=vcfs")}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold px-6 py-3 rounded-lg shadow-lg hover:shadow-purple-500/50 transition-all relative select-none"
+                  size="sm"
+                  variant="outline"
+                  className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/50 hover:border-purple-400 text-white font-medium px-4 py-2 rounded-lg shadow transition-all relative select-none text-sm"
                 >
-                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
                     <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
                   </svg>
-                  <span>VCFS™ Voice Control</span>
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">NEW</span>
+                  <span>🎤 Voice Control</span>
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold px-1 py-0.5 rounded-full">NEW</span>
                 </Button>
               </div>
             </motion.div>
