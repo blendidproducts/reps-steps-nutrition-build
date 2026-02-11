@@ -908,51 +908,110 @@ export default function ActiveWorkout() {
   };
 
   const startGlobalGPSTracking = () => {
+    // Try to use device step counter API first (more accurate for steps)
+    if ('Accelerometer' in window || 'LinearAccelerationSensor' in window) {
+      console.log('🚶 Device motion sensors available for step counting');
+    }
+    
     if ('geolocation' in navigator) {
-      const watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const newPos = {
-            lat: position.coords.latitude,
-            lon: position.coords.longitude,
-            timestamp: Date.now()
-          };
-          
-          setGpsPositions(prev => {
-            const updated = [...prev, newPos];
+      let gpsRetries = 0;
+      const maxRetries = 3;
+      
+      const startWatching = () => {
+        const watchId = navigator.geolocation.watchPosition(
+          (position) => {
+            // Clear any previous errors
+            setGpsError(null);
+            gpsRetries = 0; // Reset retry count on success
             
-            // Calculate cumulative distance and steps for entire workout
-            if (updated.length > 1) {
-              let totalDistance = 0;
-              for (let i = 1; i < updated.length; i++) {
-                const dist = calculateDistance(
-                  updated[i-1].lat, updated[i-1].lon,
-                  updated[i].lat, updated[i].lon
-                );
-                totalDistance += dist;
-              }
-              setTotalWorkoutDistance(totalDistance);
+            const newPos = {
+              lat: position.coords.latitude,
+              lon: position.coords.longitude,
+              timestamp: Date.now(),
+              accuracy: position.coords.accuracy
+            };
+            
+            console.log('📍 GPS Update:', {
+              lat: newPos.lat.toFixed(6),
+              lon: newPos.lon.toFixed(6),
+              accuracy: newPos.accuracy.toFixed(1) + 'm'
+            });
+            
+            setGpsPositions(prev => {
+              const updated = [...prev, newPos];
               
-              // Calculate steps: 2,100 steps per mile (average between 2,000-2,200)
-              const steps = Math.round(totalDistance * 2100);
-              setTotalWorkoutSteps(steps);
-            }
+              // Calculate cumulative distance and steps for entire workout
+              if (updated.length > 1) {
+                let totalDistance = 0;
+                
+                // Only count movement if accuracy is reasonable (< 50 meters)
+                for (let i = 1; i < updated.length; i++) {
+                  if (updated[i].accuracy < 50) {
+                    const dist = calculateDistance(
+                      updated[i-1].lat, updated[i-1].lon,
+                      updated[i].lat, updated[i].lon
+                    );
+                    // Filter out GPS jitter (ignore tiny movements < 0.001 miles / ~5 feet)
+                    if (dist > 0.001) {
+                      totalDistance += dist;
+                    }
+                  }
+                }
+                
+                setTotalWorkoutDistance(totalDistance);
+                
+                // Calculate steps: 2,100 steps per mile (average between 2,000-2,200)
+                const steps = Math.round(totalDistance * 2100);
+                setTotalWorkoutSteps(steps);
+                
+                console.log('🚶 Steps Update:', {
+                  distance: totalDistance.toFixed(3) + ' mi',
+                  steps: steps
+                });
+              }
+              
+              return updated;
+            });
+          },
+          (error) => {
+            console.error('❌ GPS error:', error.code, error.message);
             
-            return updated;
-          });
-        },
-        (error) => {
-          console.error('GPS error:', error);
-          setGpsError('GPS unavailable');
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 0
-        }
-      );
-      setGpsWatchId(watchId);
+            if (error.code === 1) {
+              setGpsError('GPS permission denied - Steps may be inaccurate');
+            } else if (error.code === 2) {
+              setGpsError('GPS unavailable - Retrying...');
+              
+              // Retry logic for temporary GPS issues
+              if (gpsRetries < maxRetries) {
+                gpsRetries++;
+                console.log(`🔄 Retrying GPS (${gpsRetries}/${maxRetries})...`);
+                setTimeout(() => {
+                  if (gpsWatchId) {
+                    navigator.geolocation.clearWatch(gpsWatchId);
+                  }
+                  startWatching();
+                }, 2000);
+              } else {
+                setGpsError('GPS signal lost - Steps from GPS unavailable');
+              }
+            } else if (error.code === 3) {
+              setGpsError('GPS timeout - Check location settings');
+            }
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000, // Increased from 5s to 10s
+            maximumAge: 1000 // Allow cached position up to 1 second old
+          }
+        );
+        setGpsWatchId(watchId);
+        console.log('✅ GPS tracking started');
+      };
+      
+      startWatching();
     } else {
-      setGpsError('GPS not supported');
+      setGpsError('GPS not supported on this device');
+      console.warn('⚠️ GPS not supported');
     }
   };
 
