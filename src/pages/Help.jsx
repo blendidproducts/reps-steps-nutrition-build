@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 import { 
   HelpCircle, 
   Play, 
@@ -26,6 +28,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Help() {
+  const navigate = useNavigate();
   const [expandedFaq, setExpandedFaq] = useState(null);
   const [feedbackForm, setFeedbackForm] = useState({
     name: '',
