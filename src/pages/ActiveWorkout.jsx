@@ -1486,16 +1486,20 @@ export default function ActiveWorkout() {
               {realtimeHR && <span className="text-xs">BPM</span>}
             </button>
             <button
-              onClick={() => setShowVoiceHelp(true)}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg"
-              title="AI Voice Coach - NEW!"
+              onClick={toggleVoiceControl}
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-all shadow-lg select-none ${
+                isVoiceActive 
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white' 
+                  : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500'
+              }`}
+              title={isVoiceActive ? "Voice Active - Tap to disable" : "Tap to enable AI Voice Coach"}
             >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-4 h-4 ${isVoiceActive ? 'animate-pulse' : ''}`} fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
                 <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
               </svg>
-              <span className="text-xs font-bold">AI</span>
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold px-1 rounded-full">NEW</span>
+              <span className="text-xs font-bold">{isVoiceActive ? 'ON' : 'AI'}</span>
+              {!isVoiceActive && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold px-1 rounded-full">NEW</span>}
             </button>
           </div>
         </div>
@@ -2412,7 +2416,7 @@ export default function ActiveWorkout() {
           >
             <Card className="bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 w-full max-w-md border-purple-500/50 shadow-2xl" onClick={e => e.stopPropagation()}>
               <CardContent className="p-6">
-                <div className="text-center mb-4">
+                <div className="text-center mb-6">
                   <div className="inline-block p-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full mb-3">
                     <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
@@ -2422,9 +2426,22 @@ export default function ActiveWorkout() {
                   <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                     AI Voice Coach™
                   </h2>
-                  <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white mb-2">
+                  <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white mb-3">
                     🚀 NEW HI-TECH FEATURE
                   </Badge>
+                  
+                  {/* Status indicator */}
+                  <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mb-3 ${
+                    isVoiceActive 
+                      ? 'bg-green-500/20 border border-green-500' 
+                      : 'bg-gray-800/50 border border-gray-600'
+                  }`}>
+                    <div className={`w-2 h-2 rounded-full ${isVoiceActive ? 'bg-green-400 animate-pulse' : 'bg-gray-500'}`}></div>
+                    <span className={`text-sm font-bold ${isVoiceActive ? 'text-green-400' : 'text-gray-400'}`}>
+                      {isVoiceActive ? '🎤 Voice Active' : 'Voice Inactive'}
+                    </span>
+                  </div>
+                  
                   <p className="text-sm text-gray-400">Truly hands-free workouts with AI-powered voice guidance</p>
                 </div>
 
@@ -2494,18 +2511,20 @@ export default function ActiveWorkout() {
                   <Button
                     onClick={() => {
                       setShowVoiceHelp(false);
-                      toggleVoiceControl();
+                      if (!isVoiceActive) {
+                        toggleVoiceControl();
+                      }
                     }}
-                    className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold"
+                    className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold select-none"
                   >
-                    🎤 Activate Now
+                    🎤 {isVoiceActive ? 'Voice Active!' : 'Activate Now'}
                   </Button>
                   <Button
                     onClick={() => setShowVoiceHelp(false)}
                     variant="outline"
-                    className="flex-1 border-gray-600 hover:bg-gray-800"
+                    className="flex-1 border-gray-600 hover:bg-gray-800 select-none"
                   >
-                    Later
+                    Close
                   </Button>
                 </div>
               </CardContent>

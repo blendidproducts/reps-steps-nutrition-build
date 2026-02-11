@@ -229,34 +229,20 @@ export default function Home() {
                 </CardContent>
               </Card>
 
-              {/* Voice Control Fitness System (VCFS) */}
-              <Card 
-                className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-2 border-purple-500/50 cursor-pointer hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/30 transition-all backdrop-blur-sm relative overflow-hidden"
-                onClick={() => navigate(createPageUrl("Help") + "?section=vcfs")}
-              >
-                <div className="absolute top-2 right-2 z-10">
-                  <span className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
-                    NEW AI
-                  </span>
-                </div>
-                <CardContent className="p-4 md:p-8">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 md:gap-6">
-                      <div className="w-12 h-12 md:w-20 md:h-20 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg shadow-purple-600/50">
-                        <svg className="w-6 h-6 md:w-10 md:h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                          <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-                        </svg>
-                      </div>
-                      <div className="text-left">
-                        <h3 className="text-lg md:text-3xl font-bold text-white mb-0 md:mb-2">VCFS™</h3>
-                        <p className="text-gray-300 text-xs md:text-base">Voice Control Fitness</p>
-                      </div>
-                    </div>
-                    <ArrowRight className="w-5 h-5 md:w-10 md:h-10 text-purple-400" />
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Voice Control Fitness System (VCFS) - Compact Button */}
+              <div className="flex justify-center">
+                <Button
+                  onClick={() => navigate(createPageUrl("Help") + "?section=vcfs")}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold px-6 py-3 rounded-lg shadow-lg hover:shadow-purple-500/50 transition-all relative select-none"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                  </svg>
+                  <span>VCFS™ Voice Control</span>
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">NEW</span>
+                </Button>
+              </div>
             </motion.div>
 
             {/* Start Here Button */}
