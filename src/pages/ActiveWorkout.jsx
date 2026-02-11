@@ -2109,36 +2109,37 @@ export default function ActiveWorkout() {
                 {/* Rep Counter Side Panel */}
                 {!isTimeBased ? (
                   <div className="flex flex-col items-center justify-center bg-gray-900/50 rounded-lg p-3 w-full sm:w-auto sm:min-w-[180px]">
-                    <div className="text-5xl font-bold mb-2 text-brand-blue">{currentReps}</div>
-                    <p className="text-xs text-gray-400 mb-3">
-                      Target:<br/>{currentExercise.target_reps || 'As many as possible'}
+                    <div className="text-6xl sm:text-7xl font-bold mb-2 text-brand-blue">{currentReps}</div>
+                    <p className="text-sm sm:text-base text-gray-300 font-bold mb-4">
+                      Target: {currentExercise.target_reps || 'As many as possible'}
                     </p>
                     
-                    <div className="flex flex-col gap-2 w-full">
-                      {[5, 10, 15, currentExercise.target_reps].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i && v > 0).sort((a,b) => a-b).slice(0, 3).map(reps => (
-                        <Button key={reps} variant="outline" size="sm" onClick={() => setQuickReps(reps)} className="w-full bg-gray-800 border-gray-700 text-white h-8 text-xs">
+                    <div className="flex flex-col gap-3 w-full">
+                      {/* Only show "5" and target reps button */}
+                      {[5, currentExercise.target_reps].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i && v > 0).sort((a,b) => a-b).map(reps => (
+                        <Button key={reps} variant="outline" size="lg" onClick={() => setQuickReps(reps)} className="w-full bg-gray-800 border-gray-700 text-white h-12 text-base font-bold">
                           {reps}
                         </Button>
                       ))}
                     </div>
 
-                    <div className="flex gap-2 mt-3 w-full">
-                      <Button size="sm" variant="outline" onClick={subtractRep} className="flex-1 h-12 rounded-lg bg-gray-800 border-gray-700 text-white text-xs">
+                    <div className="flex gap-2 mt-4 w-full">
+                      <Button size="lg" variant="outline" onClick={subtractRep} className="flex-1 h-14 rounded-lg bg-gray-800 border-gray-700 text-white text-base font-bold">
                         -1
                       </Button>
                       <Input
                         type="number" value={repInput} onChange={(e) => handleRepInput(e.target.value)}
                         placeholder="Reps"
-                        className="w-16 bg-gray-800 border-gray-700 text-white text-center text-sm placeholder:text-gray-500"
+                        className="w-24 bg-gray-800 border-gray-700 text-white text-center text-lg font-bold placeholder:text-gray-500 h-14"
                       />
-                      <Button size="sm" variant="outline" onClick={addRep} className="flex-1 h-12 rounded-lg bg-gray-800 border-gray-700 text-white text-xs">
+                      <Button size="lg" variant="outline" onClick={addRep} className="flex-1 h-14 rounded-lg bg-gray-800 border-gray-700 text-white text-base font-bold">
                         +1
                       </Button>
                     </div>
                     
-                    <div className="flex gap-2 mt-2 w-full">
+                    <div className="flex gap-2 mt-3 w-full">
                       <Button 
-                        size="sm" 
+                        size="lg" 
                         variant="outline" 
                         onClick={() => {
                           const newReps = Math.max(0, currentReps - 5);
@@ -2150,12 +2151,12 @@ export default function ActiveWorkout() {
                           updatedExercises[currentExerciseIndex].completed_reps = Math.max(0, previousCompleted + difference);
                           setWorkout({...workout, exercises: updatedExercises});
                         }} 
-                        className="flex-1 h-10 bg-gray-800 border-gray-700 text-xs"
+                        className="flex-1 h-12 bg-gray-800 border-gray-700 text-base font-bold"
                       >
                         -5
                       </Button>
                       <Button 
-                        size="sm" 
+                        size="lg" 
                         variant="outline" 
                         onClick={() => {
                           const newReps = currentReps + 5;
@@ -2166,28 +2167,11 @@ export default function ActiveWorkout() {
                           updatedExercises[currentExerciseIndex].completed_reps = previousCompleted + 5;
                           setWorkout({...workout, exercises: updatedExercises});
                         }} 
-                        className="flex-1 h-10 bg-gray-800 border-gray-700 text-xs"
+                        className="flex-1 h-12 bg-gray-800 border-gray-700 text-base font-bold"
                       >
                         +5
                       </Button>
                     </div>
-                    
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => {
-                        const newReps = currentReps + 10;
-                        setCurrentReps(newReps);
-                        setTotalReps(prev => prev + 10);
-                        const updatedExercises = [...workout.exercises];
-                        const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
-                        updatedExercises[currentExerciseIndex].completed_reps = previousCompleted + 10;
-                        setWorkout({...workout, exercises: updatedExercises});
-                      }} 
-                      className="w-full mt-2 h-12 rounded-lg bg-green-700/50 border-green-600 text-white font-bold"
-                    >
-                      +10
-                    </Button>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center bg-gray-900/50 rounded-lg p-3 w-full sm:w-auto sm:min-w-[180px]">
