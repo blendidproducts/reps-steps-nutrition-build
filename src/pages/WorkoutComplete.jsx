@@ -177,7 +177,7 @@ export default function WorkoutComplete() {
   };
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
+    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-4 sm:p-6 pb-32 relative overflow-hidden">
       {/* Animated Background Elements */}
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none">
