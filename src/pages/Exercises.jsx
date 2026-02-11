@@ -337,8 +337,8 @@ Choose realistic exercises that match the body focus and intensity level.`,
         </div>
       </div>
 
+      <PullToRefresh onRefresh={loadExercises}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        <PullToRefresh onRefresh={loadExercises}>
         {/* Search and Filters */}
         <div className="bg-card/90 backdrop-blur-lg rounded-xl shadow-lg p-3 sm:p-4 mb-4 sm:mb-6 sticky top-0 z-10 select-none">
           <div className="flex flex-col gap-4">
@@ -435,6 +435,7 @@ Choose realistic exercises that match the body focus and intensity level.`,
           </div>
         )}
       </div>
+      </PullToRefresh>
 
       <ExerciseModal
         exercise={currentExercise}
@@ -508,7 +509,6 @@ Choose realistic exercises that match the body focus and intensity level.`,
           </motion.div>
         )}
       </AnimatePresence>
-      </PullToRefresh>
     </div>
   );
 }
