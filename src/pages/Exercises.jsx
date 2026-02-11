@@ -15,6 +15,7 @@ import { User } from "@/entities/User";
 import ExerciseCard from "../components/exercises/ExerciseCard";
 import CategoryFilter from "../components/exercises/CategoryFilter";
 import ExerciseModal from "../components/exercises/ExerciseModal";
+import PullToRefresh from "@/components/PullToRefresh";
 
 export default function Exercises() {
   const navigate = useNavigate();
@@ -337,8 +338,9 @@ Choose realistic exercises that match the body focus and intensity level.`,
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <PullToRefresh onRefresh={loadExercises}>
         {/* Search and Filters */}
-        <div className="bg-card/90 backdrop-blur-lg rounded-xl shadow-lg p-3 sm:p-4 mb-4 sm:mb-6 sticky top-0 z-10">
+        <div className="bg-card/90 backdrop-blur-lg rounded-xl shadow-lg p-3 sm:p-4 mb-4 sm:mb-6 sticky top-0 z-10 select-none">
           <div className="flex flex-col gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -506,6 +508,7 @@ Choose realistic exercises that match the body focus and intensity level.`,
           </motion.div>
         )}
       </AnimatePresence>
+      </PullToRefresh>
     </div>
   );
 }

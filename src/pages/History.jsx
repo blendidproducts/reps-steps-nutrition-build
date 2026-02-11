@@ -10,6 +10,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
+import PullToRefresh from "@/components/PullToRefresh";
 
 export default function History() {
   const [sessions, setSessions] = useState([]);
@@ -132,7 +133,7 @@ export default function History() {
   };
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
+    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb', paddingBottom: '80px' }}>
       <div className="gradient-bg text-white py-8">
         <div className="container mx-auto px-4">
           <h1 className="text-3xl font-bold mb-2">Workout History</h1>
@@ -142,6 +143,7 @@ export default function History() {
         </div>
       </div>
 
+      <PullToRefresh onRefresh={loadHistory}>
       <div className="container mx-auto px-4 py-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
@@ -307,6 +309,7 @@ export default function History() {
           )}
         </div>
       </div>
+      </PullToRefresh>
     </div>
   );
 }
