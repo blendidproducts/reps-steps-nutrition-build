@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Ruler, TrendingUp, Plus, Calendar, Trash2 } from "lucide-react";
+import { Ruler, TrendingUp, Plus, Calendar, Trash2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -115,9 +115,27 @@ export default function BodyMeasurements() {
   const latestMeasurement = measurements[0];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="gradient-bg text-white py-8">
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
+      {/* Mobile Header with Back Button */}
+      <div className="md:hidden sticky top-0 z-40 bg-[#0a1628]/95 backdrop-blur-lg border-b border-brand-blue/30 px-4 py-3 select-none">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => window.history.back()}
+            className="text-white hover:text-brand-blue flex-shrink-0"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base font-bold truncate">Body Measurements</h1>
+            <p className="text-xs text-white/70">Track your progress</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Header */}
+      <div className="hidden md:block gradient-bg text-white py-8">
         <div className="container mx-auto px-4">
           <h1 className="text-3xl font-bold mb-2">Body Measurements</h1>
           <p className="text-white/90">Track your physical progress over time</p>

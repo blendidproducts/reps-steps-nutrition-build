@@ -531,16 +531,34 @@ Make it realistic and achievable.`,
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white py-4 sm:py-6">
+    <div className="min-h-screen bg-background text-foreground pb-24 md:pb-0">
+      {/* Mobile Header with Back Button */}
+      <div className="md:hidden sticky top-0 z-40 bg-[#0a1628]/95 backdrop-blur-lg border-b border-brand-blue/30 px-4 py-3 select-none">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+            className="text-white hover:text-brand-blue flex-shrink-0"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base font-bold truncate">Build Workout</h1>
+            <p className="text-xs text-white/70">Step {currentStep} of 2</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Header */}
+      <div className="hidden md:block bg-gradient-to-br from-gray-900 to-gray-800 text-white py-4 sm:py-6">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3 sm:gap-4">
             <Button
               variant="outline"
               size="icon"
               onClick={() => navigate(createPageUrl("Exercises"))}
-              className="bg-white/10 text-white border-white/20 hover:bg-white/20 rounded-lg flex-shrink-0"
+              className="bg-white/10 text-white border-white/20 hover:bg-white/20 rounded-lg flex-shrink-0 select-none"
             >
               <ArrowLeft className="w-4 h-4" />
             </Button>

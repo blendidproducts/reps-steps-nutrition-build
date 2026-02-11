@@ -364,9 +364,43 @@ export default function Layout({ children, currentPageName }) {
             </div>
           )}
 
-          <div className="flex-1 overflow-auto" style={{ backgroundColor: 'transparent' }} id="main-content">
+          <div 
+            className="flex-1 overflow-auto" 
+            style={{ 
+              backgroundColor: 'transparent',
+              overscrollBehaviorY: 'none',
+              WebkitOverflowScrolling: 'touch'
+            }} 
+            id="main-content"
+          >
             {children}
           </div>
+
+          {/* Bottom Navigation Bar - Mobile Only */}
+          <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0a1628]/95 backdrop-blur-lg border-t border-brand-blue/30 z-50 select-none" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+            <div className="flex items-center justify-around px-2 py-2">
+              <Link to={createPageUrl("Home")} className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("Home") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}>
+                <Home className="w-5 h-5" />
+                <span className="text-[10px] font-medium">Home</span>
+              </Link>
+              <Link to={createPageUrl("Exercises")} className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("Exercises") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}>
+                <Dumbbell className="w-5 h-5" />
+                <span className="text-[10px] font-medium">Exercises</span>
+              </Link>
+              <Link to={createPageUrl("Nutrition")} className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("Nutrition") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}>
+                <Apple className="w-5 h-5" />
+                <span className="text-[10px] font-medium">Nutrition</span>
+              </Link>
+              <Link to={createPageUrl("History")} className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("History") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}>
+                <History className="w-5 h-5" />
+                <span className="text-[10px] font-medium">History</span>
+              </Link>
+              <Link to={createPageUrl("Settings")} className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("Settings") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}>
+                <Settings className="w-5 h-5" />
+                <span className="text-[10px] font-medium">Settings</span>
+              </Link>
+            </div>
+          </nav>
         </main>
       </div>
     </SidebarProvider>

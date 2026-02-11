@@ -57,13 +57,34 @@ export default function WorkoutDetail() {
   }
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
-      <div className="gradient-bg text-white py-8">
+    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb', paddingBottom: '80px' }}>
+      {/* Mobile Header with Back Button */}
+      <div className="md:hidden sticky top-0 z-40 bg-[#0a1628]/95 backdrop-blur-lg border-b border-brand-blue/30 px-4 py-3 select-none">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+            className="text-white hover:text-brand-blue flex-shrink-0"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base font-bold truncate">Workout Details</h1>
+            <p className="text-xs text-white/70 truncate">
+              {format(new Date(session.start_time), 'MMM d, yyyy')}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Header */}
+      <div className="hidden md:block gradient-bg text-white py-8">
         <div className="container mx-auto px-4">
           <Button
             variant="ghost"
             onClick={() => navigate(createPageUrl("History"))}
-            className="mb-4 text-white hover:text-brand-blue"
+            className="mb-4 text-white hover:text-brand-blue select-none"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to History

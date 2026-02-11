@@ -13,7 +13,9 @@ import {
   Bell,
   Lock,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
@@ -275,6 +277,45 @@ export default function Settings() {
                     </Button>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Delete Account Section */}
+          {!isLoadingUser && user && (
+            <Card className="bg-card border-red-500/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-red-500">
+                  <AlertTriangle className="w-5 h-5" />
+                  Danger Zone
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="p-4 bg-red-500/5 rounded-lg border border-red-500/20">
+                  <h3 className="font-semibold text-red-400 mb-2">Delete Account</h3>
+                  <p className="text-sm text-gray-400 mb-4">
+                    This action is permanent and cannot be undone. All your data, workouts, progress, and achievements will be permanently deleted.
+                  </p>
+                  <Button
+                    onClick={() => {
+                      if (confirm('⚠️ WARNING: This will permanently delete your account and all associated data. This action cannot be undone.\n\nAre you absolutely sure?')) {
+                        if (confirm('This is your final confirmation. Type DELETE in the next prompt to confirm.\n\nProceed with account deletion?')) {
+                          const confirmText = prompt('Type DELETE in capital letters to confirm account deletion:');
+                          if (confirmText === 'DELETE') {
+                            toast.success('Account deletion requested. Please contact support to complete this process.');
+                          } else {
+                            toast.error('Account deletion cancelled - confirmation text did not match.');
+                          }
+                        }
+                      }
+                    }}
+                    variant="outline"
+                    className="w-full bg-red-500/10 border-red-500 text-red-500 hover:bg-red-500/20 select-none"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete My Account
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}
