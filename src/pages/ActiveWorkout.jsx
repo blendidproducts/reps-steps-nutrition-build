@@ -1461,10 +1461,13 @@ export default function ActiveWorkout() {
             </div>
             <div className="flex flex-col items-center min-w-0">
               <div className="flex items-center gap-1">
-                <Footprints className="w-3 h-3 sm:w-4 sm:h-4 text-purple-400 flex-shrink-0" />
+                <Footprints className={`w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 ${gpsError ? 'text-red-400' : 'text-purple-400'}`} />
                 <span className="font-bold text-xs sm:text-sm">{totalWorkoutSteps.toLocaleString()}</span>
               </div>
-              <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap">{totalWorkoutDistance.toFixed(2)} mi</span>
+              <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap">
+                {totalWorkoutDistance.toFixed(2)} mi
+                {gpsError && <span className="text-red-400 ml-1">⚠️</span>}
+              </span>
             </div>
             <div className="flex items-center gap-1 min-w-0">
               <Target className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
