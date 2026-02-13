@@ -908,16 +908,16 @@ export default function ActiveWorkout() {
   };
 
   const startGlobalGPSTracking = () => {
-    // Try to use device step counter API first (more accurate for steps)
-    if ('Accelerometer' in window || 'LinearAccelerationSensor' in window) {
-      console.log('🚶 Device motion sensors available for step counting');
-    }
+    console.log('🎯 [GPS] Starting GPS tracking for workout');
     
     if ('geolocation' in navigator) {
       let gpsRetries = 0;
-      const maxRetries = 3;
+      const maxRetries = 5; // Increased retries
+      let lastValidPosition = null;
       
       const startWatching = () => {
+        console.log('🔍 [GPS] Requesting location permission...');
+        
         const watchId = navigator.geolocation.watchPosition(
           (position) => {
             // Clear any previous errors
@@ -928,13 +928,17 @@ export default function ActiveWorkout() {
               lat: position.coords.latitude,
               lon: position.coords.longitude,
               timestamp: Date.now(),
-              accuracy: position.coords.accuracy
+              accuracy: position.coords.accuracy,
+              speed: position.coords.speed || 0
             };
             
-            console.log('📍 GPS Update:', {
+            lastValidPosition = newPos;
+            
+            console.log('✅ [GPS] Position update:', {
               lat: newPos.lat.toFixed(6),
               lon: newPos.lon.toFixed(6),
-              accuracy: newPos.accuracy.toFixed(1) + 'm'
+              accuracy: newPos.accuracy.toFixed(1) + 'm',
+              speed: newPos.speed ? newPos.speed.toFixed(2) + 'm/s' : 'N/A'
             });
             
             setGpsPositions(prev => {
@@ -944,29 +948,39 @@ export default function ActiveWorkout() {
               if (updated.length > 1) {
                 let totalDistance = 0;
                 
-                // Only count movement if accuracy is reasonable (< 50 meters)
+                // IMPROVED: More lenient accuracy threshold and better filtering
                 for (let i = 1; i < updated.length; i++) {
-                  if (updated[i].accuracy < 50) {
+                  const curr = updated[i];
+                  const last = updated[i-1];
+                  
+                  // Only use positions with reasonable accuracy (< 100m)
+                  if (curr.accuracy < 100 && last.accuracy < 100) {
                     const dist = calculateDistance(
-                      updated[i-1].lat, updated[i-1].lon,
-                      updated[i].lat, updated[i].lon
+                      last.lat, last.lon,
+                      curr.lat, curr.lon
                     );
-                    // Filter out GPS jitter (ignore tiny movements < 0.001 miles / ~5 feet)
-                    if (dist > 0.001) {
+                    
+                    // IMPROVED: Filter unrealistic jumps (> 0.1 miles in single update)
+                    // but allow small movements (> 0.0005 miles / ~2.6 feet)
+                    if (dist > 0.0005 && dist < 0.1) {
                       totalDistance += dist;
+                      console.log(`📏 [GPS] Segment ${i}: +${dist.toFixed(4)} mi`);
+                    } else if (dist >= 0.1) {
+                      console.warn(`⚠️ [GPS] Ignoring unrealistic jump: ${dist.toFixed(4)} mi`);
                     }
                   }
                 }
                 
                 setTotalWorkoutDistance(totalDistance);
                 
-                // Calculate steps: 2,100 steps per mile (average between 2,000-2,200)
+                // Calculate steps: 2,100 steps per mile (average)
                 const steps = Math.round(totalDistance * 2100);
                 setTotalWorkoutSteps(steps);
                 
-                console.log('🚶 Steps Update:', {
-                  distance: totalDistance.toFixed(3) + ' mi',
-                  steps: steps
+                console.log('🚶 [STEPS] Total:', {
+                  distance: totalDistance.toFixed(4) + ' mi',
+                  steps: steps,
+                  positions: updated.length
                 });
               }
               
@@ -974,44 +988,78 @@ export default function ActiveWorkout() {
             });
           },
           (error) => {
-            console.error('❌ GPS error:', error.code, error.message);
+            console.error('❌ [GPS] Error:', {
+              code: error.code,
+              message: error.message
+            });
             
             if (error.code === 1) {
-              setGpsError('GPS permission denied - Steps may be inaccurate');
+              setGpsError('📍 GPS permission denied - Please enable location in settings');
+              toast.error('Location permission needed for step tracking');
             } else if (error.code === 2) {
-              setGpsError('GPS unavailable - Retrying...');
+              setGpsError('📡 GPS signal weak - Retrying...');
               
               // Retry logic for temporary GPS issues
               if (gpsRetries < maxRetries) {
                 gpsRetries++;
-                console.log(`🔄 Retrying GPS (${gpsRetries}/${maxRetries})...`);
+                console.log(`🔄 [GPS] Retry ${gpsRetries}/${maxRetries}`);
                 setTimeout(() => {
-                  if (gpsWatchId) {
-                    navigator.geolocation.clearWatch(gpsWatchId);
+                  if (gpsWatchId !== null) {
+                    try {
+                      navigator.geolocation.clearWatch(gpsWatchId);
+                    } catch (e) {
+                      console.error('Error clearing watch:', e);
+                    }
                   }
                   startWatching();
-                }, 2000);
+                }, 3000); // Longer retry delay
               } else {
-                setGpsError('GPS signal lost - Steps from GPS unavailable');
+                setGpsError('📡 GPS unavailable - Steps may be estimated');
+                console.warn('⚠️ [GPS] Max retries reached');
               }
             } else if (error.code === 3) {
-              setGpsError('GPS timeout - Check location settings');
+              setGpsError('⏱️ GPS timeout - Retrying...');
+              console.warn('⚠️ [GPS] Timeout');
+              
+              // Auto-retry on timeout
+              if (gpsRetries < maxRetries) {
+                gpsRetries++;
+                setTimeout(() => startWatching(), 2000);
+              }
             }
           },
           {
             enableHighAccuracy: true,
-            timeout: 10000, // Increased from 5s to 10s
-            maximumAge: 1000 // Allow cached position up to 1 second old
+            timeout: 15000, // Increased to 15s for better stability
+            maximumAge: 2000 // Allow 2s cached position
           }
         );
+        
         setGpsWatchId(watchId);
-        console.log('✅ GPS tracking started');
+        console.log('✅ [GPS] Watch ID:', watchId);
       };
       
-      startWatching();
+      // Request permission first
+      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+        console.log('🔐 [GPS] Permission status:', result.state);
+        if (result.state === 'granted') {
+          startWatching();
+        } else if (result.state === 'prompt') {
+          // Will prompt user
+          startWatching();
+        } else {
+          setGpsError('Location permission denied');
+          toast.error('Please enable location in your device settings');
+        }
+      }).catch(() => {
+        // Fallback if permissions API not supported
+        console.log('⚠️ [GPS] Permissions API not supported, requesting directly');
+        startWatching();
+      });
     } else {
       setGpsError('GPS not supported on this device');
-      console.warn('⚠️ GPS not supported');
+      console.error('❌ [GPS] Geolocation API not available');
+      toast.error('GPS not supported on this device');
     }
   };
 
@@ -1177,11 +1225,18 @@ export default function ActiveWorkout() {
     setCurrentReps(newReps);
     setTotalReps(prev => prev + 1);
     
-    // Update completed_reps in real-time
+    // CRITICAL FIX: Update completed_reps in real-time
     const updatedExercises = [...workout.exercises];
     const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
     updatedExercises[currentExerciseIndex].completed_reps = previousCompleted + 1;
     setWorkout({...workout, exercises: updatedExercises});
+    
+    console.log('[REP COUNT] Added rep:', {
+      exercise: currentExercise.exercise_name,
+      currentReps: newReps,
+      totalReps: totalReps + 1,
+      completed_reps: previousCompleted + 1
+    });
     
     updateWorkoutProgress(newReps, 'reps');
   };
@@ -1192,13 +1247,20 @@ export default function ActiveWorkout() {
       setCurrentReps(newReps);
       setTotalReps(prev => prev - 1);
       
-      // Update completed_reps in real-time
+      // CRITICAL FIX: Update completed_reps in real-time
       const updatedExercises = [...workout.exercises];
       const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
       if (previousCompleted > 0) {
         updatedExercises[currentExerciseIndex].completed_reps = previousCompleted - 1;
         setWorkout({...workout, exercises: updatedExercises});
       }
+      
+      console.log('[REP COUNT] Subtracted rep:', {
+        exercise: currentExercise.exercise_name,
+        currentReps: newReps,
+        totalReps: totalReps - 1,
+        completed_reps: Math.max(0, previousCompleted - 1)
+      });
       
       updateWorkoutProgress(newReps, 'reps');
     }
@@ -1209,11 +1271,19 @@ export default function ActiveWorkout() {
     setCurrentReps(reps);
     setTotalReps(prev => prev + difference);
     
-    // Update completed_reps in real-time
+    // CRITICAL FIX: Update completed_reps in real-time
     const updatedExercises = [...workout.exercises];
     const previousCompleted = updatedExercises[currentExerciseIndex].completed_reps || 0;
     updatedExercises[currentExerciseIndex].completed_reps = previousCompleted + difference;
     setWorkout({...workout, exercises: updatedExercises});
+    
+    console.log('[REP COUNT] Quick set reps:', {
+      exercise: currentExercise.exercise_name,
+      reps: reps,
+      difference: difference,
+      totalReps: totalReps + difference,
+      completed_reps: previousCompleted + difference
+    });
     
     setRepInput(reps.toString());
     updateWorkoutProgress(reps, 'reps');
