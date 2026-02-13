@@ -1821,9 +1821,10 @@ export default function ActiveWorkout() {
                         </div>
                       </div>
                       
-                      <p className="text-sm text-gray-400 mb-3">Choose cardio activity</p>
+                      <div className="flex-1 overflow-y-auto min-h-0" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+                        <p className="text-sm text-gray-400 mb-3">Choose cardio activity</p>
 
-                      <div className="grid grid-cols-3 gap-2 mb-4">
+                        <div className="grid grid-cols-3 gap-2 mb-4">
                         <Button
                           onClick={() => startCardio('walk')}
                           className="flex flex-col items-center gap-2 h-auto py-4 bg-green-600/20 border-2 border-green-500 text-green-300 hover:bg-green-600/40"
@@ -1848,13 +1849,16 @@ export default function ActiveWorkout() {
                           <span className="text-xs font-bold">SPRINT</span>
                         </Button>
                       </div>
+                      </div>
 
+                      <div className="flex-shrink-0 pt-2">
                       <Button
                         onClick={() => setShowActiveRecovery(false)}
                         className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold touch-manipulation min-h-[48px]"
                       >
                         DONE - Continue Workout
                       </Button>
+                      </div>
                     </>
                   ) : (
                     <>
@@ -2650,7 +2654,7 @@ export default function ActiveWorkout() {
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
           >
             <Card className="bg-gray-900 w-full max-w-lg border-gray-800 my-auto flex flex-col" style={{ maxHeight: 'calc(100vh - 4rem)' }} onClick={e => e.stopPropagation()}>
-              <CardContent className="p-4 sm:p-6 flex flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
+              <CardContent className="p-4 sm:p-6 flex flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 4rem)', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
                 <div className="flex-shrink-0 pb-3">
                   <h3 className="text-lg sm:text-xl font-bold mb-2 text-white flex items-center gap-2">
                     <LinkIcon className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
@@ -2719,7 +2723,7 @@ export default function ActiveWorkout() {
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
           >
             <Card className="bg-gray-900 w-full max-w-lg border-gray-800 my-auto flex flex-col" style={{ maxHeight: 'calc(100vh - 4rem)' }} onClick={e => e.stopPropagation()}>
-              <CardContent className="p-4 sm:p-6 flex flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
+              <CardContent className="p-4 sm:p-6 flex flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 4rem)', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
                 <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-white flex-shrink-0">Swap Exercise</h3>
                 <p className="text-xs sm:text-sm text-gray-400 mb-2 flex-shrink-0">Search or choose from the list</p>
                 
