@@ -1896,8 +1896,8 @@ export default function ActiveWorkout() {
               exit={{ opacity: 0, scale: 0.9 }}
               className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto"
             >
-              <Card className="bg-gray-900/80 border-brand-blue/30 text-white w-full max-w-sm my-auto max-h-[90vh] overflow-hidden flex flex-col">
-                <CardContent className="p-3 sm:p-4 text-center overflow-y-auto flex-1">
+              <Card className="bg-gray-900/80 border-brand-blue/30 text-white w-full max-w-sm my-auto max-h-[85vh] overflow-hidden flex flex-col">
+                <CardContent className="p-3 flex flex-col h-full" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
                   {!activeCardio ? (
                     <>
                       <h2 className="text-2xl font-bold mb-2 text-brand-blue">ACTIVE RECOVERY</h2>
@@ -2669,7 +2669,7 @@ export default function ActiveWorkout() {
                   </div>
                 </div>
 
-                <div className="overflow-y-auto flex-1 space-y-2 mb-3" style={{ minHeight: '200px', maxHeight: 'calc(100vh - 28rem)' }}>
+                <div className="overflow-y-auto flex-1 space-y-2 mb-3" style={{ minHeight: '200px', maxHeight: 'calc(100vh - 28rem)', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
                   {supersetSelections.map((selection, idx) => (
                     <div key={selection.index} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-gray-800/50 border border-gray-700 flex-shrink-0">
                       <input
@@ -2733,7 +2733,7 @@ export default function ActiveWorkout() {
                   />
                 </div>
 
-                <div className="overflow-y-auto flex-1 space-y-2" style={{ minHeight: '200px', maxHeight: 'calc(100vh - 24rem)' }}>
+                <div className="overflow-y-auto flex-1 space-y-2" style={{ minHeight: '200px', maxHeight: 'calc(100vh - 24rem)', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
                   {allExercises
                     .filter(ex => ex.category === currentExercise.category || ex.category === 'full_body')
                     .filter(ex => !swapSearchQuery || ex.name.toLowerCase().includes(swapSearchQuery.toLowerCase()) || (ex.description && ex.description.toLowerCase().includes(swapSearchQuery.toLowerCase())))
