@@ -18,6 +18,10 @@ export default function WorkoutComplete() {
   const [programInfo, setProgramInfo] = useState(null);
 
   useEffect(() => {
+    // CRITICAL: Clear active workout state immediately on mount
+    console.log('[WorkoutComplete] Clearing activeWorkoutState');
+    localStorage.removeItem('activeWorkoutState');
+    
     // Auto-hide confetti after animation
     const timer = setTimeout(() => setShowConfetti(false), 3000);
     loadWorkoutStats();
@@ -158,15 +162,28 @@ export default function WorkoutComplete() {
   const deleteWorkout = async () => {
     if (confirm('Are you sure you want to delete this workout session? This cannot be undone.')) {
       try {
-        const savedState = localStorage.getItem('activeWorkoutState');
-        if (savedState) {
-          const state = JSON.parse(savedState);
-          const workoutId = state.workout?.id;
-          if (workoutId) {
-            await base44.entities.Workout.delete(workoutId);
+        // Get the most recent session to delete
+        const sessions = await base44.entities.WorkoutSession.list('-created_date', 1);
+        if (sessions.length > 0) {
+          const session = sessions[0];
+          
+          // Delete the workout session
+          await base44.entities.WorkoutSession.delete(session.id);
+          
+          // Delete the associated workout if it exists
+          if (session.workout_id) {
+            try {
+              await base44.entities.Workout.delete(session.workout_id);
+            } catch (error) {
+              console.log('Workout already deleted or not found');
+            }
           }
         }
+        
+        // CRITICAL: Clear localStorage
         localStorage.removeItem('activeWorkoutState');
+        console.log('[WorkoutComplete] Deleted workout and cleared state');
+        
         toast.success('Workout deleted');
         navigate(createPageUrl("Home"));
       } catch (error) {
