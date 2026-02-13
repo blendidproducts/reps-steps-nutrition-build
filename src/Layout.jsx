@@ -339,6 +339,22 @@ export default function Layout({ children, currentPageName }) {
             />
           )}
 
+          {/* Mobile Menu Trigger - Enhanced for better clickability */}
+          <div className="md:hidden sticky top-0 z-50 bg-[#0a1628]/95 backdrop-blur-lg border-b border-brand-blue/30 flex items-center justify-between px-4 py-3">
+            <SidebarTrigger className="text-white hover:text-brand-blue transition-colors touch-manipulation">
+              <div className="flex flex-col gap-1.5 p-2">
+                <div className="w-7 h-0.5 bg-current rounded-full"></div>
+                <div className="w-7 h-0.5 bg-current rounded-full"></div>
+                <div className="w-7 h-0.5 bg-current rounded-full"></div>
+              </div>
+            </SidebarTrigger>
+            <div className="flex items-center gap-2">
+              <img src={logoUrl} alt="Logo" className="w-8 h-8" />
+              <img src={bannerUrl} alt="RepsAndSteps" className="h-3.5" />
+            </div>
+            <div className="w-11"></div>
+          </div>
+
           {/* Mobile Header with Smart Back Button */}
           <MobileHeader currentPageName={currentPageName} />
 
