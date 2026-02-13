@@ -177,10 +177,19 @@ export default function Layout({ children, currentPageName }) {
       if (savedState) {
         try {
           const state = JSON.parse(savedState);
-          setHasActiveWorkout(true);
-          setWorkoutTimer(state.timer || 0);
+          // Validate the state has required data
+          if (state.workout && state.isActive !== false) {
+            setHasActiveWorkout(true);
+            setWorkoutTimer(state.timer || 0);
+          } else {
+            // Invalid or ended workout state
+            setHasActiveWorkout(false);
+            localStorage.removeItem('activeWorkoutState');
+          }
         } catch (error) {
+          console.error('[Layout] Invalid workout state, clearing:', error);
           setHasActiveWorkout(false);
+          localStorage.removeItem('activeWorkoutState');
         }
       } else {
         setHasActiveWorkout(false);

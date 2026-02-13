@@ -1066,6 +1066,12 @@ export default function ActiveWorkout() {
   const pauseWorkout = () => setIsPaused(!isPaused);
 
   const stopWorkout = async () => {
+    console.log('[WORKOUT END] Stopping workout and cleaning up...');
+    
+    // CRITICAL: Clear localStorage FIRST to prevent race conditions
+    localStorage.removeItem('activeWorkoutState');
+    console.log('[WORKOUT END] Cleared activeWorkoutState from localStorage');
+    
     // CRITICAL FIX: Finalize current exercise reps before stopping
     const currentExercise = workout.exercises[currentExerciseIndex];
     if (currentExercise && currentExercise.metric === 'reps' && currentReps > 0) {
@@ -1089,6 +1095,18 @@ export default function ActiveWorkout() {
     if (gpsWatchId) {
       navigator.geolocation.clearWatch(gpsWatchId);
       setGpsWatchId(null);
+      console.log('[WORKOUT END] Stopped GPS tracking');
+    }
+    
+    // Stop voice control
+    if (voiceRecognition && isVoiceActive) {
+      try {
+        voiceRecognition.stop();
+        setIsVoiceActive(false);
+        console.log('[WORKOUT END] Stopped voice control');
+      } catch (e) {
+        console.error('[WORKOUT END] Error stopping voice:', e);
+      }
     }
     
     if (sessionStartTime) {
@@ -1199,10 +1217,21 @@ export default function ActiveWorkout() {
       });
       
       await WorkoutSession.create(sessionData);
+      console.log('[WORKOUT END] Session saved to database');
     }
+    
     setIsActive(false);
+    console.log('[WORKOUT END] Set isActive to false');
+    
+    // Double-check localStorage is cleared
     localStorage.removeItem('activeWorkoutState');
-    navigate(createPageUrl("WorkoutComplete"));
+    console.log('[WORKOUT END] Final localStorage clear');
+    
+    // Small delay to ensure state propagates
+    setTimeout(() => {
+      console.log('[WORKOUT END] Navigating to WorkoutComplete');
+      navigate(createPageUrl("WorkoutComplete"));
+    }, 100);
   };
   
   const updateWorkoutProgress = (value, metric) => {
