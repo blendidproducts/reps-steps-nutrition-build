@@ -339,24 +339,25 @@ export default function Layout({ children, currentPageName }) {
             />
           )}
 
-          {/* Mobile Menu Trigger - Enhanced for better clickability */}
-          <div className="md:hidden sticky top-0 z-50 bg-[#0a1628]/95 backdrop-blur-lg border-b border-brand-blue/30 flex items-center justify-between px-4 py-3">
-            <SidebarTrigger className="text-white hover:text-brand-blue transition-colors touch-manipulation">
-              <div className="flex flex-col gap-1.5 p-2">
-                <div className="w-7 h-0.5 bg-current rounded-full"></div>
-                <div className="w-7 h-0.5 bg-current rounded-full"></div>
-                <div className="w-7 h-0.5 bg-current rounded-full"></div>
-              </div>
-            </SidebarTrigger>
-            <div className="flex items-center gap-2">
-              <img src={logoUrl} alt="Logo" className="w-8 h-8" />
-              <img src={bannerUrl} alt="RepsAndSteps" className="h-3.5" />
+          {/* Mobile Menu Bar - Single unified banner */}
+          <div className="md:hidden sticky top-0 z-50 bg-[#0a1628]/95 backdrop-blur-lg border-b-2 border-brand-blue/40 shadow-lg">
+            <div className="flex items-center justify-between px-3 py-3">
+              {/* Hamburger Menu - Extra large clickable area */}
+              <SidebarTrigger className="text-white hover:bg-brand-blue/20 rounded-lg transition-all touch-manipulation active:scale-95 -ml-2">
+                <div className="flex flex-col gap-2 p-4">
+                  <div className="w-8 h-1 bg-current rounded-full"></div>
+                  <div className="w-8 h-1 bg-current rounded-full"></div>
+                  <div className="w-8 h-1 bg-current rounded-full"></div>
+                </div>
+              </SidebarTrigger>
+              
+              {/* Logo - Clickable to Home */}
+              <Link to={createPageUrl("Home")} className="flex items-center gap-2 touch-manipulation active:scale-95 py-2 px-3 -mr-2">
+                <img src={logoUrl} alt="Logo" className="w-9 h-9" />
+                <img src={bannerUrl} alt="RepsAndSteps" className="h-4" />
+              </Link>
             </div>
-            <div className="w-11"></div>
           </div>
-
-          {/* Mobile Header with Smart Back Button */}
-          <MobileHeader currentPageName={currentPageName} />
 
           {/* Active Workout Banner */}
           {hasActiveWorkout && !location.pathname.includes('/ActiveWorkout') && (
