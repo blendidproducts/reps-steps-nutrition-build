@@ -297,12 +297,28 @@ export default function Settings() {
                     This action is permanent and cannot be undone. All your data, workouts, progress, and achievements will be permanently deleted.
                   </p>
                   <Button
-                    onClick={() => {
+                    onClick={async () => {
                       if (confirm('⚠️ WARNING: This will permanently delete your account and all associated data. This action cannot be undone.\n\nAre you absolutely sure?')) {
                         if (confirm('This is your final confirmation. Type DELETE in the next prompt to confirm.\n\nProceed with account deletion?')) {
                           const confirmText = prompt('Type DELETE in capital letters to confirm account deletion:');
                           if (confirmText === 'DELETE') {
-                            toast.success('Account deletion requested. Please contact support to complete this process.');
+                            try {
+                              // Mark account for deletion
+                              await base44.auth.updateMe({ 
+                                account_deletion_requested: true,
+                                account_deletion_requested_date: new Date().toISOString()
+                              });
+                              toast.success('Account deletion requested. You will be logged out shortly.');
+                              
+                              // Logout after 2 seconds
+                              setTimeout(async () => {
+                                await base44.auth.logout();
+                                navigate(createPageUrl("Home"));
+                              }, 2000);
+                            } catch (error) {
+                              console.error('Account deletion error:', error);
+                              toast.error('Failed to process account deletion request. Please try again.');
+                            }
                           } else {
                             toast.error('Account deletion cancelled - confirmation text did not match.');
                           }

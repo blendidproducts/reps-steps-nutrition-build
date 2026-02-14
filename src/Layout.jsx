@@ -65,7 +65,25 @@ export default function Layout({ children, currentPageName }) {
   const bannerUrl = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/8866d855e_repsandSteps_name_banner.png";
 
   React.useEffect(() => {
-    document.documentElement.classList.add('dark');
+    // System-aware theme: respect user's OS preference
+    const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    
+    // Listen for system theme changes
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleThemeChange = (e) => {
+      if (e.matches) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    };
+    mediaQuery.addEventListener('change', handleThemeChange);
+    
     document.body.style.backgroundColor = '#020817';
     document.body.style.backgroundImage = 'url(https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/1e7ad6a4e_RnS_HomePage_Concept_bg.png)';
     document.body.style.backgroundSize = 'cover';
@@ -87,6 +105,10 @@ export default function Layout({ children, currentPageName }) {
 
     // Check for active program on mount
     checkActiveProgram();
+    
+    return () => {
+      mediaQuery.removeEventListener('change', handleThemeChange);
+    };
   }, []);
 
   const checkActiveProgram = async () => {
@@ -407,26 +429,76 @@ export default function Layout({ children, currentPageName }) {
           {/* Bottom Navigation Bar - Mobile Only */}
           <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0a1628]/95 backdrop-blur-lg border-t border-brand-blue/30 z-50 select-none" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
             <div className="flex items-center justify-around px-2 py-2">
-              <Link to={createPageUrl("Home")} className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("Home") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}>
+              <button
+                onClick={(e) => {
+                  if (location.pathname === createPageUrl("Home")) {
+                    e.preventDefault();
+                    document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+                  } else {
+                    navigate(createPageUrl("Home"));
+                  }
+                }}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("Home") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+              >
                 <Home className="w-5 h-5" />
                 <span className="text-[10px] font-medium">Home</span>
-              </Link>
-              <Link to={createPageUrl("Exercises")} className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("Exercises") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}>
+              </button>
+              <button
+                onClick={(e) => {
+                  if (location.pathname === createPageUrl("Exercises")) {
+                    e.preventDefault();
+                    document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+                  } else {
+                    navigate(createPageUrl("Exercises"));
+                  }
+                }}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("Exercises") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+              >
                 <Dumbbell className="w-5 h-5" />
                 <span className="text-[10px] font-medium">Exercises</span>
-              </Link>
-              <Link to={createPageUrl("Nutrition")} className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("Nutrition") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}>
+              </button>
+              <button
+                onClick={(e) => {
+                  if (location.pathname === createPageUrl("Nutrition")) {
+                    e.preventDefault();
+                    document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+                  } else {
+                    navigate(createPageUrl("Nutrition"));
+                  }
+                }}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("Nutrition") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+              >
                 <Apple className="w-5 h-5" />
                 <span className="text-[10px] font-medium">Nutrition</span>
-              </Link>
-              <Link to={createPageUrl("History")} className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("History") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}>
+              </button>
+              <button
+                onClick={(e) => {
+                  if (location.pathname === createPageUrl("History")) {
+                    e.preventDefault();
+                    document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+                  } else {
+                    navigate(createPageUrl("History"));
+                  }
+                }}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("History") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+              >
                 <History className="w-5 h-5" />
                 <span className="text-[10px] font-medium">History</span>
-              </Link>
-              <Link to={createPageUrl("Settings")} className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("Settings") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}>
+              </button>
+              <button
+                onClick={(e) => {
+                  if (location.pathname === createPageUrl("Settings")) {
+                    e.preventDefault();
+                    document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+                  } else {
+                    navigate(createPageUrl("Settings"));
+                  }
+                }}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("Settings") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+              >
                 <Settings className="w-5 h-5" />
                 <span className="text-[10px] font-medium">Settings</span>
-              </Link>
+              </button>
             </div>
           </nav>
         </main>

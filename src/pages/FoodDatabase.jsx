@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import MobileDrawerSelect from "@/components/MobileDrawerSelect";
 import { Search, Plus, Apple, Trash2, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -137,17 +138,36 @@ export default function FoodDatabase() {
                   className="pl-10 bg-background border-border"
                 />
               </div>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-full md:w-48 bg-background border-border">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {Object.entries(categoryConfig).map(([key, config]) => (
-                    <SelectItem key={key} value={key}>{config.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Mobile: Drawer */}
+              <div className="md:hidden w-full">
+                <MobileDrawerSelect
+                  value={selectedCategory}
+                  onValueChange={setSelectedCategory}
+                  options={[
+                    { value: "all", label: "All Categories" },
+                    ...Object.entries(categoryConfig).map(([key, config]) => ({
+                      value: key,
+                      label: config.label
+                    }))
+                  ]}
+                  placeholder="Category"
+                  label="Select Category"
+                />
+              </div>
+              {/* Desktop: Standard Select */}
+              <div className="hidden md:block md:w-48">
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="bg-background border-border">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {Object.entries(categoryConfig).map(([key, config]) => (
+                      <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
                 <DialogTrigger asChild>
                   <Button className="gradient-bg">
