@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
 const requestPermission = async (permissionName, friendlyName) => {
@@ -483,6 +483,19 @@ export default function Settings() {
                 <Label className="text-foreground">Default Rest Time (seconds)</Label>
                 <Slider value={settings.defaultRestTime} onValueChange={(v) => updateSetting('defaultRestTime', v)} min={10} max={120} step={5} />
                 <div className="text-sm text-gray-400 text-right">{settings.defaultRestTime[0]}s</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Legal Links */}
+          <Card className="bg-card border-border">
+            <CardContent className="p-6">
+              <div className="flex flex-wrap gap-4 text-sm justify-center">
+                <Link to={createPageUrl("Terms")} className="text-brand-blue hover:underline">Terms of Service</Link>
+                <span className="text-gray-600">•</span>
+                <Link to={createPageUrl("Privacy")} className="text-brand-blue hover:underline">Privacy Policy</Link>
+                <span className="text-gray-600">•</span>
+                <Link to={createPageUrl("Disclaimer")} className="text-brand-blue hover:underline">Health Disclaimer</Link>
               </div>
             </CardContent>
           </Card>
