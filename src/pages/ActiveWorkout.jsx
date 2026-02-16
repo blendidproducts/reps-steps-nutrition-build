@@ -557,6 +557,17 @@ export default function ActiveWorkout() {
       if (transcript.includes('reps and steps') || transcript.includes('rns')) {
         playBeep(true);
         
+        // Get current exercise from state
+        const getCurrentExercise = () => {
+          const state = JSON.parse(localStorage.getItem('activeWorkoutState') || '{}');
+          if (state.workout?.exercises && state.currentExerciseIndex !== undefined) {
+            return state.workout.exercises[state.currentExerciseIndex];
+          }
+          return null;
+        };
+        
+        const voiceCurrentExercise = getCurrentExercise();
+        
         // Extract command after wake phrase
         const commandMatch = transcript.match(/(?:reps and steps|rns)\s+(.+)/i);
         const command = commandMatch ? commandMatch[1].trim() : '';
@@ -567,8 +578,8 @@ export default function ActiveWorkout() {
             speak('Begin workout!');
             startWorkout();
           } else {
-            const exerciseName = currentExercise?.exercise_name || 'exercise';
-            const targetReps = currentExercise?.target_reps || 'as many as possible';
+            const exerciseName = voiceCurrentExercise?.exercise_name || 'exercise';
+            const targetReps = voiceCurrentExercise?.target_reps || 'as many as possible';
             speak(`${exerciseName}. Target: ${targetReps} reps. Go!`);
           }
         } else if (command.match(/(\d+)\s*(reps?\s*)?(completed|done)/i)) {
@@ -625,8 +636,8 @@ export default function ActiveWorkout() {
           speak('Moving to next exercise.');
         } else {
           // Default: announce current exercise
-          const exerciseName = currentExercise?.exercise_name || 'exercise';
-          const targetReps = currentExercise?.target_reps || 'as many as possible';
+          const exerciseName = voiceCurrentExercise?.exercise_name || 'exercise';
+          const targetReps = voiceCurrentExercise?.target_reps || 'as many as possible';
           speak(`${exerciseName}. Target: ${targetReps} reps. Begin!`);
         }
       }
