@@ -271,6 +271,10 @@ export default function Layout({ children, currentPageName }) {
           html, body {
             background-color: #020817 !important;
             color: #f9fafb !important;
+            overflow: hidden;
+            height: 100vh;
+            position: fixed;
+            width: 100%;
           }
           
           :root {
@@ -363,7 +367,7 @@ export default function Layout({ children, currentPageName }) {
           </SidebarFooter>
         </Sidebar>
 
-        <main className="flex-1 flex flex-col" style={{ backgroundColor: 'transparent' }}>
+        <main className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: 'transparent', height: '100vh' }}>
           {/* Program Day Popup */}
           {showProgramPopup && activeProgram && (
             <ProgramDayPopup
@@ -418,12 +422,12 @@ export default function Layout({ children, currentPageName }) {
           )}
 
           <div 
-            className="flex-1 overflow-auto" 
+            className="flex-1 overflow-y-auto overflow-x-hidden" 
             style={{ 
               backgroundColor: 'transparent',
               overscrollBehavior: 'contain',
               WebkitOverflowScrolling: 'touch',
-              minHeight: '100vh'
+              position: 'relative'
             }} 
             id="main-content"
           >
@@ -440,8 +444,8 @@ export default function Layout({ children, currentPageName }) {
           </div>
 
           {/* Bottom Navigation Bar - Mobile Only */}
-          <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0a1628]/95 backdrop-blur-lg border-t border-brand-blue/30 z-50 select-none" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', touchAction: 'manipulation' }}>
-            <div className="flex items-center justify-around px-1 py-1.5">
+          <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0a1628]/95 backdrop-blur-lg border-t border-brand-blue/30 z-50 select-none pointer-events-none" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+            <div className="flex items-center justify-around px-1 py-1.5 pointer-events-auto">
               <button
                 onClick={(e) => {
                   e.preventDefault();
