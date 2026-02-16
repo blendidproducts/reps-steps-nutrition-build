@@ -257,11 +257,15 @@ export default function Layout({ children, currentPageName }) {
             -webkit-tap-highlight-color: rgba(0, 169, 255, 0.2);
           }
           
-          button, a, [role="button"] {
+          button, a, [role="button"], input[type="submit"] {
             -webkit-tap-highlight-color: rgba(0, 169, 255, 0.3);
-            touch-action: manipulation;
             user-select: none;
             -webkit-user-select: none;
+            cursor: pointer;
+          }
+          
+          input, textarea, select {
+            touch-action: manipulation;
           }
           
           html, body {
@@ -419,7 +423,6 @@ export default function Layout({ children, currentPageName }) {
               backgroundColor: 'transparent',
               overscrollBehavior: 'contain',
               WebkitOverflowScrolling: 'touch',
-              touchAction: 'pan-y',
               minHeight: '100vh'
             }} 
             id="main-content"
