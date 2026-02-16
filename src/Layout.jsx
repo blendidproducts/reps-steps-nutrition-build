@@ -254,6 +254,14 @@ export default function Layout({ children, currentPageName }) {
         {`
           * {
             box-sizing: border-box;
+            -webkit-tap-highlight-color: rgba(0, 169, 255, 0.2);
+          }
+          
+          button, a, [role="button"] {
+            -webkit-tap-highlight-color: rgba(0, 169, 255, 0.3);
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
           }
           
           html, body {
@@ -409,8 +417,10 @@ export default function Layout({ children, currentPageName }) {
             className="flex-1 overflow-auto" 
             style={{ 
               backgroundColor: 'transparent',
-              overscrollBehaviorY: 'none',
-              WebkitOverflowScrolling: 'touch'
+              overscrollBehavior: 'contain',
+              WebkitOverflowScrolling: 'touch',
+              touchAction: 'pan-y',
+              minHeight: '100vh'
             }} 
             id="main-content"
           >
@@ -427,76 +437,86 @@ export default function Layout({ children, currentPageName }) {
           </div>
 
           {/* Bottom Navigation Bar - Mobile Only */}
-          <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0a1628]/95 backdrop-blur-lg border-t border-brand-blue/30 z-50 select-none" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-            <div className="flex items-center justify-around px-2 py-2">
+          <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0a1628]/95 backdrop-blur-lg border-t border-brand-blue/30 z-50 select-none" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', touchAction: 'manipulation' }}>
+            <div className="flex items-center justify-around px-1 py-1.5">
               <button
                 onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   if (location.pathname === createPageUrl("Home")) {
-                    e.preventDefault();
                     document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
                   } else {
                     navigate(createPageUrl("Home"));
                   }
                 }}
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("Home") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+                className={`flex flex-col items-center justify-center gap-0.5 min-w-[60px] min-h-[56px] py-2 rounded-lg transition-colors active:scale-95 ${location.pathname === createPageUrl("Home") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
               >
-                <Home className="w-5 h-5" />
+                <Home className="w-6 h-6" />
                 <span className="text-[10px] font-medium">Home</span>
               </button>
               <button
                 onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   if (location.pathname === createPageUrl("Exercises")) {
-                    e.preventDefault();
                     document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
                   } else {
                     navigate(createPageUrl("Exercises"));
                   }
                 }}
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("Exercises") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+                className={`flex flex-col items-center justify-center gap-0.5 min-w-[60px] min-h-[56px] py-2 rounded-lg transition-colors active:scale-95 ${location.pathname === createPageUrl("Exercises") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
               >
-                <Dumbbell className="w-5 h-5" />
+                <Dumbbell className="w-6 h-6" />
                 <span className="text-[10px] font-medium">Exercises</span>
               </button>
               <button
                 onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   if (location.pathname === createPageUrl("Nutrition")) {
-                    e.preventDefault();
                     document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
                   } else {
                     navigate(createPageUrl("Nutrition"));
                   }
                 }}
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("Nutrition") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+                className={`flex flex-col items-center justify-center gap-0.5 min-w-[60px] min-h-[56px] py-2 rounded-lg transition-colors active:scale-95 ${location.pathname === createPageUrl("Nutrition") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
               >
-                <Apple className="w-5 h-5" />
+                <Apple className="w-6 h-6" />
                 <span className="text-[10px] font-medium">Nutrition</span>
               </button>
               <button
                 onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   if (location.pathname === createPageUrl("History")) {
-                    e.preventDefault();
                     document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
                   } else {
                     navigate(createPageUrl("History"));
                   }
                 }}
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("History") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+                className={`flex flex-col items-center justify-center gap-0.5 min-w-[60px] min-h-[56px] py-2 rounded-lg transition-colors active:scale-95 ${location.pathname === createPageUrl("History") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
               >
-                <History className="w-5 h-5" />
+                <History className="w-6 h-6" />
                 <span className="text-[10px] font-medium">History</span>
               </button>
               <button
                 onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   if (location.pathname === createPageUrl("Settings")) {
-                    e.preventDefault();
                     document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
                   } else {
                     navigate(createPageUrl("Settings"));
                   }
                 }}
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${location.pathname === createPageUrl("Settings") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+                className={`flex flex-col items-center justify-center gap-0.5 min-w-[60px] min-h-[56px] py-2 rounded-lg transition-colors active:scale-95 ${location.pathname === createPageUrl("Settings") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
               >
-                <Settings className="w-5 h-5" />
+                <Settings className="w-6 h-6" />
                 <span className="text-[10px] font-medium">Settings</span>
               </button>
             </div>
