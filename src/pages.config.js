@@ -74,6 +74,9 @@ import Upload3DModels from './pages/Upload3DModels';
 import WorkoutBuilder from './pages/WorkoutBuilder';
 import WorkoutComplete from './pages/WorkoutComplete';
 import WorkoutDetail from './pages/WorkoutDetail';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import Disclaimer from './pages/Disclaimer';
 import __Layout from './Layout.jsx';
 
 
@@ -105,6 +108,9 @@ export const PAGES = {
     "WorkoutBuilder": WorkoutBuilder,
     "WorkoutComplete": WorkoutComplete,
     "WorkoutDetail": WorkoutDetail,
+    "Terms": Terms,
+    "Privacy": Privacy,
+    "Disclaimer": Disclaimer,
 }
 
 export const pagesConfig = {
