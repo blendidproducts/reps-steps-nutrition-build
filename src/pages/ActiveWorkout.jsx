@@ -191,7 +191,7 @@ export default function ActiveWorkout() {
     }
   }, [currentExerciseIndex, workout, isActive]);
 
-  // Save workout state to localStorage (including workout ID)
+  // Save workout state to localStorage (including workout ID, GPS, and step tracking)
   useEffect(() => {
     if (workout) {
       const workoutState = {
@@ -208,11 +208,16 @@ export default function ActiveWorkout() {
         restTimer,
         cardioIntervals,
         isPaused,
-        isActive
+        isActive,
+        // CRITICAL: Save GPS and step tracking data
+        gpsPositions,
+        totalWorkoutSteps,
+        totalWorkoutDistance,
+        gpsWatchId
       };
       localStorage.setItem('activeWorkoutState', JSON.stringify(workoutState));
     }
-  }, [workout, currentExerciseIndex, currentSet, timer, elapsedTimer, currentReps, sessionStartTime, totalReps, exerciseTimer, isResting, restTimer, cardioIntervals, isActive, isPaused]);
+  }, [workout, currentExerciseIndex, currentSet, timer, elapsedTimer, currentReps, sessionStartTime, totalReps, exerciseTimer, isResting, restTimer, cardioIntervals, isActive, isPaused, gpsPositions, totalWorkoutSteps, totalWorkoutDistance]);
 
 
 
@@ -826,6 +831,17 @@ export default function ActiveWorkout() {
           setIsActive(state.isActive || false);
           setElapsedTimer(state.elapsedTimer || 0);
           
+          // CRITICAL: Restore GPS and step tracking data
+          setGpsPositions(state.gpsPositions || []);
+          setTotalWorkoutSteps(state.totalWorkoutSteps || 0);
+          setTotalWorkoutDistance(state.totalWorkoutDistance || 0);
+          
+          // CRITICAL: Re-enable GPS tracking if workout was active
+          if (state.isActive && !state.isPaused) {
+            console.log('[GPS] Resuming GPS tracking after app switch');
+            startGlobalGPSTracking();
+          }
+          
           // Load all exercises for swap functionality
           const allExercises = await Exercise.list();
           setAllExercises(allExercises);
@@ -914,12 +930,38 @@ export default function ActiveWorkout() {
       speak(`Begin workout! ${firstExercise.exercise_name}. Target: ${firstExercise.target_reps || firstExercise.target_time + ' seconds'}. Go!`);
     }
     
-    // Start GPS tracking immediately when workout begins
-    startGlobalGPSTracking();
+    // CRITICAL: Request GPS permissions before starting
+    if ('permissions' in navigator) {
+      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+        if (result.state === 'granted' || result.state === 'prompt') {
+          startGlobalGPSTracking();
+          console.log('✅ [GPS] Permission granted, starting tracking');
+        } else {
+          console.warn('⚠️ [GPS] Permission denied');
+          toast.error('Location access needed for step tracking. Please enable in settings.');
+        }
+      }).catch(() => {
+        // Fallback for browsers without permissions API
+        startGlobalGPSTracking();
+      });
+    } else {
+      startGlobalGPSTracking();
+    }
   };
 
   const startGlobalGPSTracking = () => {
     console.log('🎯 [GPS] Starting GPS tracking for workout');
+    
+    // CRITICAL: Clear any existing watch to prevent duplicates
+    if (gpsWatchId !== null) {
+      try {
+        navigator.geolocation.clearWatch(gpsWatchId);
+        setGpsWatchId(null);
+        console.log('🧹 [GPS] Cleared existing watch ID:', gpsWatchId);
+      } catch (e) {
+        console.error('Error clearing existing watch:', e);
+      }
+    }
     
     if ('geolocation' in navigator) {
       let gpsRetries = 0;
@@ -982,6 +1024,7 @@ export default function ActiveWorkout() {
                   }
                 }
                 
+                // CRITICAL: Update state immediately
                 setTotalWorkoutDistance(totalDistance);
                 
                 // Calculate steps: 2,100 steps per mile (average)
@@ -993,6 +1036,15 @@ export default function ActiveWorkout() {
                   steps: steps,
                   positions: updated.length
                 });
+                
+                // CRITICAL: Force localStorage save after GPS update
+                const currentState = JSON.parse(localStorage.getItem('activeWorkoutState') || '{}');
+                localStorage.setItem('activeWorkoutState', JSON.stringify({
+                  ...currentState,
+                  gpsPositions: updated,
+                  totalWorkoutSteps: steps,
+                  totalWorkoutDistance: totalDistance
+                }));
               }
               
               return updated;
