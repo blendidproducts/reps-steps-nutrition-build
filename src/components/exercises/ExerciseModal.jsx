@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, Target, Lightbulb, Zap, Clock } from "lucide-react";
+import { CheckCircle, Target, Lightbulb, Zap, Clock, Play, Box } from "lucide-react";
+import Exercise3DViewer from "@/components/Exercise3DViewer";
 
 const categoryColors = {
   upper_body: "bg-red-900/50 text-red-300 border-red-500/30",
@@ -25,9 +26,42 @@ const difficultyColors = {
 };
 
 export default function ExerciseModal({ exercise, isOpen, onClose }) {
+  const [show3D, setShow3D] = useState(false);
+  
   if (!exercise) return null;
 
   const isTimeBased = exercise.metric === 'time';
+  
+  const getYouTubeVideoId = (exerciseName) => {
+    const videoMap = {
+      'push': 'IODxDxX7oi4',
+      'squat': '9cYEuFbBLSY',
+      'plank': 'pSHjTRCQxIw',
+      'lunge': 'QOVaHwm-Q6U',
+      'burpee': 'dZgVxmf6jkA',
+      'pull': 'eGo4IYlbE5g',
+      'dip': 'yN6Q1UI_xkE',
+      'mountain climber': 'nmwgirgXLYM',
+      'jumping jack': 'c4DAnQ6DtF8',
+      'crunch': '5ER5Of4EISE',
+      'arm circles': 'IODxDxX7oi4',
+      'quad stretch': 'QOVaHwm-Q6U',
+      'calf raises': '9cYEuFbBLSY',
+      'hip circles': 'nmwgirgXLYM',
+      'cat-cow': 'pSHjTRCQxIw',
+      'toe touches': 'g_tea8ZNk5A',
+      'tricep': 'yN6Q1UI_xkE',
+      'chest': 'IODxDxX7oi4',
+    };
+
+    const name = (exerciseName || '').toLowerCase();
+    for (const [key, videoId] of Object.entries(videoMap)) {
+      if (name.includes(key)) {
+        return videoId;
+      }
+    }
+    return 'g_tea8ZNk5A';
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -53,37 +87,69 @@ export default function ExerciseModal({ exercise, isOpen, onClose }) {
         </DialogHeader>
         
         <div className="space-y-4 pt-4">
+          {/* View Options */}
+          <div className="flex justify-center gap-3 mb-4">
+            <Button
+              onClick={() => setShow3D(false)}
+              size="sm"
+              className={`${!show3D ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300'} hover:opacity-90`}
+            >
+              <Play className="w-4 h-4 mr-2" />
+              VIDEO
+            </Button>
+            {exercise.model_url && (
+              <Button
+                onClick={() => setShow3D(true)}
+                size="sm"
+                className={`${show3D ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300'} hover:opacity-90`}
+              >
+                <Box className="w-4 h-4 mr-2" />
+                3D
+              </Button>
+            )}
+          </div>
+
           <div className="w-full h-64 bg-background rounded-lg flex items-center justify-center overflow-hidden mb-4">
-            {exercise.video_url ? (
-              <div className="w-full h-full">
-                {exercise.video_url.includes('youtube.com') || exercise.video_url.includes('youtu.be') ? (
+            {show3D && exercise.model_url ? (
+              <Exercise3DViewer modelUrl={exercise.model_url} exerciseName={exercise.name} />
+            ) : (
+              <>
+                {exercise.video_url ? (
+                  <div className="w-full h-full">
+                    {exercise.video_url.includes('youtube.com') || exercise.video_url.includes('youtu.be') ? (
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        src={exercise.video_url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                        title={exercise.name}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="rounded-lg"
+                      />
+                    ) : (
+                      <video
+                        src={exercise.video_url}
+                        controls
+                        className="w-full h-full object-cover rounded-lg"
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                    )}
+                  </div>
+                ) : (
                   <iframe
                     width="100%"
                     height="100%"
-                    src={exercise.video_url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                    src={`https://www.youtube.com/embed/${getYouTubeVideoId(exercise.name)}?rel=0`}
                     title={exercise.name}
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                     className="rounded-lg"
                   />
-                ) : (
-                  <video
-                    src={exercise.video_url}
-                    controls
-                    className="w-full h-full object-cover rounded-lg"
-                  >
-                    Your browser does not support the video tag.
-                  </video>
                 )}
-              </div>
-            ) : exercise.image_url ? (
-              <img src={exercise.image_url} alt={exercise.name} className="w-full h-full object-contain" />
-            ) : (
-              <div className="text-center">
-                <Target className="w-12 h-12 text-gray-600 mx-auto mb-2" />
-                <p className="text-gray-500">Exercise Demo</p>
-              </div>
+              </>
             )}
           </div>
 
