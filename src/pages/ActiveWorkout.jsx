@@ -948,16 +948,72 @@ export default function ActiveWorkout() {
   };
 
   const startGlobalGPSTracking = () => {
-    console.log('🎯 [GPS] Starting GPS tracking for workout');
+    console.log('🎯 [GPS-AUDIT] ========== STARTING GPS TRACKING AUDIT ==========');
+    console.log('[GPS-AUDIT] Timestamp:', new Date().toISOString());
+    console.log('[GPS-AUDIT] User Agent:', navigator.userAgent);
+    
+    // AUDIT: Check if Geolocation API exists
+    if (!('geolocation' in navigator)) {
+      console.error('❌ [GPS-AUDIT] CRITICAL: Geolocation API not available');
+      setGpsError('GPS not supported on this device');
+      toast.error('GPS not supported on this device');
+      return;
+    }
+    console.log('✅ [GPS-AUDIT] Geolocation API exists');
+    
+    // AUDIT: Check permission state before starting
+    if ('permissions' in navigator) {
+      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+        console.log('🔐 [GPS-AUDIT] Permission state:', result.state);
+        console.log('[GPS-AUDIT] Permission onchange handler:', typeof result.onchange);
+      }).catch((err) => {
+        console.warn('⚠️ [GPS-AUDIT] Cannot query permissions:', err);
+      });
+    } else {
+      console.warn('⚠️ [GPS-AUDIT] Permissions API not available');
+    }
+    
+    // AUDIT: Check current position immediately (one-time)
+    console.log('[GPS-AUDIT] Testing getCurrentPosition (one-time check)...');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        console.log('✅ [GPS-AUDIT] getCurrentPosition SUCCESS:', {
+          lat: position.coords.latitude.toFixed(6),
+          lon: position.coords.longitude.toFixed(6),
+          accuracy: position.coords.accuracy.toFixed(1) + 'm',
+          timestamp: new Date(position.timestamp).toISOString()
+        });
+      },
+      (error) => {
+        console.error('❌ [GPS-AUDIT] getCurrentPosition FAILED:', {
+          code: error.code,
+          message: error.message,
+          PERMISSION_DENIED: error.code === 1,
+          POSITION_UNAVAILABLE: error.code === 2,
+          TIMEOUT: error.code === 3
+        });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+    
+    // AUDIT: Check for motion/activity sensors (if available)
+    if ('DeviceMotionEvent' in window) {
+      console.log('✅ [GPS-AUDIT] DeviceMotionEvent API exists');
+      if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        console.log('[GPS-AUDIT] iOS motion permission required');
+      }
+    } else {
+      console.warn('⚠️ [GPS-AUDIT] DeviceMotionEvent not available');
+    }
     
     // CRITICAL: Clear any existing watch to prevent duplicates
     if (gpsWatchId !== null) {
       try {
         navigator.geolocation.clearWatch(gpsWatchId);
         setGpsWatchId(null);
-        console.log('🧹 [GPS] Cleared existing watch ID:', gpsWatchId);
+        console.log('🧹 [GPS-AUDIT] Cleared existing watch ID:', gpsWatchId);
       } catch (e) {
-        console.error('Error clearing existing watch:', e);
+        console.error('❌ [GPS-AUDIT] Error clearing existing watch:', e);
       }
     }
     
@@ -967,10 +1023,34 @@ export default function ActiveWorkout() {
       let lastValidPosition = null;
       
       const startWatching = () => {
-        console.log('🔍 [GPS] Requesting location permission...');
+        console.log('🔍 [GPS-AUDIT] ========== STARTING WATCH POSITION ==========');
+        console.log('[GPS-AUDIT] Timestamp:', new Date().toISOString());
+        console.log('[GPS-AUDIT] Config:', {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 2000
+        });
+        
+        const watchStartTime = Date.now();
+        let callbackCount = 0;
         
         const watchId = navigator.geolocation.watchPosition(
           (position) => {
+            callbackCount++;
+            const timeSinceStart = Date.now() - watchStartTime;
+            
+            console.log(`✅ [GPS-AUDIT] Callback #${callbackCount} fired after ${(timeSinceStart / 1000).toFixed(1)}s`);
+            console.log('[GPS-AUDIT] Position data:', {
+              lat: position.coords.latitude.toFixed(6),
+              lon: position.coords.longitude.toFixed(6),
+              accuracy: position.coords.accuracy.toFixed(1) + 'm',
+              altitude: position.coords.altitude,
+              altitudeAccuracy: position.coords.altitudeAccuracy,
+              heading: position.coords.heading,
+              speed: position.coords.speed,
+              timestamp: new Date(position.timestamp).toISOString()
+            });
+            
             // Clear any previous errors
             setGpsError(null);
             gpsRetries = 0; // Reset retry count on success
@@ -995,14 +1075,29 @@ export default function ActiveWorkout() {
             setGpsPositions(prev => {
               const updated = [...prev, newPos];
               
+              console.log('[GPS-AUDIT] Position array updated:', {
+                total_positions: updated.length,
+                new_position_index: updated.length - 1
+              });
+              
               // Calculate cumulative distance and steps for entire workout
               if (updated.length > 1) {
                 let totalDistance = 0;
+                let validSegments = 0;
+                let filteredSegments = 0;
+                
+                console.log('[GPS-AUDIT] Starting distance calculation for', updated.length, 'positions');
                 
                 // IMPROVED: More lenient accuracy threshold and better filtering
                 for (let i = 1; i < updated.length; i++) {
                   const curr = updated[i];
                   const last = updated[i-1];
+                  
+                  console.log(`[GPS-AUDIT] Segment ${i}:`, {
+                    curr_accuracy: curr.accuracy.toFixed(1) + 'm',
+                    last_accuracy: last.accuracy.toFixed(1) + 'm',
+                    time_diff: ((curr.timestamp - last.timestamp) / 1000).toFixed(1) + 's'
+                  });
                   
                   // Only use positions with reasonable accuracy (< 100m)
                   if (curr.accuracy < 100 && last.accuracy < 100) {
@@ -1011,23 +1106,40 @@ export default function ActiveWorkout() {
                       curr.lat, curr.lon
                     );
                     
+                    console.log(`[GPS-AUDIT] Segment ${i} distance:`, dist.toFixed(6), 'mi');
+                    
                     // IMPROVED: Filter unrealistic jumps (> 0.1 miles in single update)
                     // but allow small movements (> 0.0005 miles / ~2.6 feet)
                     if (dist > 0.0005 && dist < 0.1) {
                       totalDistance += dist;
+                      validSegments++;
                       console.log(`📏 [GPS] Segment ${i}: +${dist.toFixed(4)} mi`);
                     } else if (dist >= 0.1) {
-                      console.warn(`⚠️ [GPS] Ignoring unrealistic jump: ${dist.toFixed(4)} mi`);
+                      filteredSegments++;
+                      console.warn(`⚠️ [GPS-AUDIT] Filtered unrealistic jump: ${dist.toFixed(4)} mi`);
+                    } else {
+                      console.log(`[GPS-AUDIT] Segment ${i} too small: ${dist.toFixed(6)} mi`);
                     }
+                  } else {
+                    console.warn(`⚠️ [GPS-AUDIT] Poor accuracy - skipping segment ${i}`);
                   }
                 }
                 
+                console.log('[GPS-AUDIT] Distance calculation complete:', {
+                  total_distance: totalDistance.toFixed(4) + ' mi',
+                  valid_segments: validSegments,
+                  filtered_segments: filteredSegments,
+                  total_segments: updated.length - 1
+                });
+                
                 // CRITICAL: Update state immediately
                 setTotalWorkoutDistance(totalDistance);
+                console.log('[GPS-AUDIT] Updated totalWorkoutDistance state:', totalDistance.toFixed(4));
                 
                 // Calculate steps: 2,100 steps per mile (average)
                 const steps = Math.round(totalDistance * 2100);
                 setTotalWorkoutSteps(steps);
+                console.log('[GPS-AUDIT] Calculated steps:', steps);
                 
                 console.log('🚶 [STEPS] Total:', {
                   distance: totalDistance.toFixed(4) + ' mi',
@@ -1036,55 +1148,86 @@ export default function ActiveWorkout() {
                 });
                 
                 // CRITICAL: Force localStorage save after GPS update
-                const currentState = JSON.parse(localStorage.getItem('activeWorkoutState') || '{}');
-                localStorage.setItem('activeWorkoutState', JSON.stringify({
-                  ...currentState,
-                  gpsPositions: updated,
-                  totalWorkoutSteps: steps,
-                  totalWorkoutDistance: totalDistance
-                }));
+                try {
+                  const currentState = JSON.parse(localStorage.getItem('activeWorkoutState') || '{}');
+                  const updatedState = {
+                    ...currentState,
+                    gpsPositions: updated,
+                    totalWorkoutSteps: steps,
+                    totalWorkoutDistance: totalDistance
+                  };
+                  localStorage.setItem('activeWorkoutState', JSON.stringify(updatedState));
+                  console.log('[GPS-AUDIT] Saved to localStorage:', {
+                    positions_saved: updated.length,
+                    steps_saved: steps,
+                    distance_saved: totalDistance.toFixed(4)
+                  });
+                } catch (err) {
+                  console.error('[GPS-AUDIT] Failed to save to localStorage:', err);
+                }
               }
               
               return updated;
             });
           },
           (error) => {
-            console.error('❌ [GPS] Error:', {
+            console.error('❌ [GPS-AUDIT] ========== ERROR CALLBACK FIRED ==========');
+            console.error('[GPS-AUDIT] Timestamp:', new Date().toISOString());
+            console.error('[GPS-AUDIT] Error details:', {
               code: error.code,
-              message: error.message
+              message: error.message,
+              PERMISSION_DENIED: error.code === 1,
+              POSITION_UNAVAILABLE: error.code === 2,
+              TIMEOUT: error.code === 3
             });
             
+            // AUDIT: Log current permission state on error
+            if ('permissions' in navigator) {
+              navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+                console.error('[GPS-AUDIT] Permission state on error:', result.state);
+              });
+            }
+            
+            // AUDIT: Check if watch is still active
+            console.error('[GPS-AUDIT] Current watchId:', gpsWatchId);
+            console.error('[GPS-AUDIT] Retry count:', gpsRetries, '/', maxRetries);
+            
             if (error.code === 1) {
+              console.error('❌ [GPS-AUDIT] PERMISSION_DENIED - User blocked location access');
               setGpsError('📍 GPS permission denied - Please enable location in settings');
               toast.error('Location permission needed for step tracking');
             } else if (error.code === 2) {
+              console.error('❌ [GPS-AUDIT] POSITION_UNAVAILABLE - GPS hardware issue or signal lost');
               setGpsError('📡 GPS signal weak - Retrying...');
               
               // Retry logic for temporary GPS issues
               if (gpsRetries < maxRetries) {
                 gpsRetries++;
-                console.log(`🔄 [GPS] Retry ${gpsRetries}/${maxRetries}`);
+                console.log(`🔄 [GPS-AUDIT] Retry ${gpsRetries}/${maxRetries} scheduled`);
                 setTimeout(() => {
                   if (gpsWatchId !== null) {
                     try {
                       navigator.geolocation.clearWatch(gpsWatchId);
+                      console.log('[GPS-AUDIT] Cleared watch before retry');
                     } catch (e) {
-                      console.error('Error clearing watch:', e);
+                      console.error('[GPS-AUDIT] Error clearing watch:', e);
                     }
                   }
                   startWatching();
                 }, 3000); // Longer retry delay
               } else {
                 setGpsError('📡 GPS unavailable - Steps may be estimated');
-                console.warn('⚠️ [GPS] Max retries reached');
+                console.warn('⚠️ [GPS-AUDIT] Max retries reached - giving up');
               }
             } else if (error.code === 3) {
+              console.error('❌ [GPS-AUDIT] TIMEOUT - No position received within 15s');
               setGpsError('⏱️ GPS timeout - Retrying...');
-              console.warn('⚠️ [GPS] Timeout');
+              console.warn('⚠️ [GPS-AUDIT] Timeout occurred');
               
               // Auto-retry on timeout
               if (gpsRetries < maxRetries) {
                 gpsRetries++;
+                console.log(`🔄 [GPS-AUDIT] Timeout retry ${gpsRetries}/${maxRetries}`);
                 setTimeout(() => startWatching(), 2000);
               }
             }
@@ -1097,31 +1240,64 @@ export default function ActiveWorkout() {
         );
         
         setGpsWatchId(watchId);
-        console.log('✅ [GPS] Watch ID:', watchId);
+        console.log('✅ [GPS-AUDIT] Watch started successfully');
+        console.log('[GPS-AUDIT] Watch ID:', watchId);
+        console.log('[GPS-AUDIT] Waiting for first callback...');
+        
+        // AUDIT: Set a timer to check if we receive ANY callback
+        setTimeout(() => {
+          if (callbackCount === 0) {
+            console.error('❌ [GPS-AUDIT] CRITICAL: No callbacks received after 30 seconds');
+            console.error('[GPS-AUDIT] Possible causes:');
+            console.error('  1. Permission was denied silently');
+            console.error('  2. GPS provider not available on device');
+            console.error('  3. Browser blocking watchPosition');
+            console.error('  4. Device in airplane mode or location disabled');
+          } else {
+            console.log(`✅ [GPS-AUDIT] Receiving callbacks (${callbackCount} received in 30s)`);
+          }
+        }, 30000);
       };
       
-      // Request permission first
+      // AUDIT: Request permission first with detailed logging
+      console.log('[GPS-AUDIT] Checking permissions before starting watch...');
       navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-        console.log('🔐 [GPS] Permission status:', result.state);
+        console.log('🔐 [GPS-AUDIT] Permission query result:', {
+          state: result.state,
+          granted: result.state === 'granted',
+          prompt: result.state === 'prompt',
+          denied: result.state === 'denied'
+        });
+        
         if (result.state === 'granted') {
+          console.log('✅ [GPS-AUDIT] Permission already granted - starting watch');
           startWatching();
         } else if (result.state === 'prompt') {
-          // Will prompt user
+          console.log('⚠️ [GPS-AUDIT] Permission prompt - will show to user');
           startWatching();
         } else {
+          console.error('❌ [GPS-AUDIT] Permission denied by user');
           setGpsError('Location permission denied');
           toast.error('Please enable location in your device settings');
         }
-      }).catch(() => {
+        
+        // AUDIT: Listen for permission changes
+        result.onchange = () => {
+          console.log('[GPS-AUDIT] Permission state changed to:', result.state);
+        };
+      }).catch((err) => {
         // Fallback if permissions API not supported
-        console.log('⚠️ [GPS] Permissions API not supported, requesting directly');
+        console.log('⚠️ [GPS-AUDIT] Permissions API not supported:', err);
+        console.log('[GPS-AUDIT] Requesting geolocation directly (will trigger native prompt)');
         startWatching();
       });
     } else {
+      console.error('❌ [GPS-AUDIT] CRITICAL: Geolocation API not available on device');
       setGpsError('GPS not supported on this device');
-      console.error('❌ [GPS] Geolocation API not available');
       toast.error('GPS not supported on this device');
     }
+    
+    console.log('[GPS-AUDIT] ========== GPS TRACKING AUDIT COMPLETE ==========');
   };
 
   const pauseWorkout = () => setIsPaused(!isPaused);
