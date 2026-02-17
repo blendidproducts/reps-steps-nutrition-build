@@ -839,36 +839,65 @@ export default function AIWorkoutGenerator() {
               <CardContent className="space-y-4 sm:space-y-6">
                 <div className="space-y-3">
                   <Label className="text-white text-sm sm:text-base">Sets per Exercise</Label>
-                  <Slider
-                    value={settings.defaultSets}
-                    onValueChange={(value) => {
-                      updateSetting('defaultSets', value);
-                      // If manual reps target is set, recalculate reps per set
-                      if (!autoReps && selectedReps && selectedReps > 0 && selectedExercises.length > 0) {
-                        const totalSets = selectedExercises.length * value[0];
-                        const calculatedReps = Math.ceil(selectedReps / totalSets);
-                        updateSetting('defaultReps', [Math.max(5, Math.min(30, calculatedReps))]);
-                      }
-                    }}
-                    min={1}
-                    max={5}
-                    step={1}
-                    className="w-full"
-                  />
-                  <div className="text-right text-white font-bold text-sm sm:text-base">{settings.defaultSets[0]} sets</div>
+                  <div className="flex items-center gap-3">
+                    <Slider
+                      value={settings.defaultSets}
+                      onValueChange={(value) => {
+                        updateSetting('defaultSets', value);
+                        // If manual reps target is set, recalculate reps per set
+                        if (!autoReps && selectedReps && selectedReps > 0 && selectedExercises.length > 0) {
+                          const totalSets = selectedExercises.length * value[0];
+                          const calculatedReps = Math.ceil(selectedReps / totalSets);
+                          updateSetting('defaultReps', [Math.max(5, Math.min(30, calculatedReps))]);
+                        }
+                      }}
+                      min={1}
+                      max={5}
+                      step={1}
+                      className="flex-1"
+                    />
+                    <Input
+                      type="number"
+                      value={settings.defaultSets[0]}
+                      onChange={(e) => {
+                        const val = Math.max(1, Math.min(5, parseInt(e.target.value) || 1));
+                        updateSetting('defaultSets', [val]);
+                        if (!autoReps && selectedReps && selectedReps > 0 && selectedExercises.length > 0) {
+                          const totalSets = selectedExercises.length * val;
+                          const calculatedReps = Math.ceil(selectedReps / totalSets);
+                          updateSetting('defaultReps', [Math.max(5, Math.min(30, calculatedReps))]);
+                        }
+                      }}
+                      className="w-20 bg-gray-800 border-gray-700 text-white text-center font-bold"
+                      min={1}
+                      max={5}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-3">
                   <Label className="text-white text-sm sm:text-base">Reps per Set</Label>
-                  <Slider
-                    value={settings.defaultReps}
-                    onValueChange={(value) => updateSetting('defaultReps', value)}
-                    min={5}
-                    max={50}
-                    step={1}
-                    className="w-full"
-                  />
-                  <div className="text-right text-white font-bold text-sm sm:text-base">{settings.defaultReps[0]} reps</div>
+                  <div className="flex items-center gap-3">
+                    <Slider
+                      value={settings.defaultReps}
+                      onValueChange={(value) => updateSetting('defaultReps', value)}
+                      min={5}
+                      max={50}
+                      step={1}
+                      className="flex-1"
+                    />
+                    <Input
+                      type="number"
+                      value={settings.defaultReps[0]}
+                      onChange={(e) => {
+                        const val = Math.max(5, Math.min(50, parseInt(e.target.value) || 5));
+                        updateSetting('defaultReps', [val]);
+                      }}
+                      className="w-20 bg-gray-800 border-gray-700 text-white text-center font-bold"
+                      min={5}
+                      max={50}
+                    />
+                  </div>
                   {!autoReps && selectedReps && (
                     <p className="text-xs text-gray-400">
                       Adjust to hit your target of {selectedReps} reps
@@ -878,15 +907,28 @@ export default function AIWorkoutGenerator() {
 
                 <div className="space-y-3">
                   <Label className="text-white text-sm sm:text-base">Rest Time (seconds)</Label>
-                  <Slider
-                    value={settings.restTime}
-                    onValueChange={(value) => updateSetting('restTime', value)}
-                    min={15}
-                    max={120}
-                    step={5}
-                    className="w-full"
-                  />
-                  <div className="text-right text-white font-bold text-sm sm:text-base">{settings.restTime[0]} seconds</div>
+                  <div className="flex items-center gap-3">
+                    <Slider
+                      value={settings.restTime}
+                      onValueChange={(value) => updateSetting('restTime', value)}
+                      min={15}
+                      max={120}
+                      step={5}
+                      className="flex-1"
+                    />
+                    <Input
+                      type="number"
+                      value={settings.restTime[0]}
+                      onChange={(e) => {
+                        const val = Math.max(15, Math.min(120, parseInt(e.target.value) || 15));
+                        updateSetting('restTime', [val]);
+                      }}
+                      className="w-20 bg-gray-800 border-gray-700 text-white text-center font-bold"
+                      min={15}
+                      max={120}
+                      step={5}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-800/50 rounded-xl border border-gray-700">
@@ -914,15 +956,28 @@ export default function AIWorkoutGenerator() {
                 {settings.useWeightVest && (
                   <div className="space-y-3">
                     <Label className="text-white text-sm sm:text-base">Vest Weight (LBS)</Label>
-                    <Slider
-                      value={settings.vestWeightLbs}
-                      onValueChange={(value) => updateSetting('vestWeightLbs', value)}
-                      min={5}
-                      max={50}
-                      step={5}
-                      className="w-full"
-                    />
-                    <div className="text-right text-white font-bold text-sm sm:text-base">{settings.vestWeightLbs[0]} LBS</div>
+                    <div className="flex items-center gap-3">
+                      <Slider
+                        value={settings.vestWeightLbs}
+                        onValueChange={(value) => updateSetting('vestWeightLbs', value)}
+                        min={5}
+                        max={50}
+                        step={5}
+                        className="flex-1"
+                      />
+                      <Input
+                        type="number"
+                        value={settings.vestWeightLbs[0]}
+                        onChange={(e) => {
+                          const val = Math.max(5, Math.min(50, parseInt(e.target.value) || 5));
+                          updateSetting('vestWeightLbs', [val]);
+                        }}
+                        className="w-20 bg-gray-800 border-gray-700 text-white text-center font-bold"
+                        min={5}
+                        max={50}
+                        step={5}
+                      />
+                    </div>
                   </div>
                 )}
               </CardContent>
