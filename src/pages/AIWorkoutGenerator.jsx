@@ -860,7 +860,7 @@ export default function AIWorkoutGenerator() {
                       type="number"
                       value={settings.defaultSets[0]}
                       onChange={(e) => {
-                        const val = Math.max(1, Math.min(5, parseInt(e.target.value) || 1));
+                        const val = Math.max(0, Math.min(1000, parseInt(e.target.value) || 0));
                         updateSetting('defaultSets', [val]);
                         if (!autoReps && selectedReps && selectedReps > 0 && selectedExercises.length > 0) {
                           const totalSets = selectedExercises.length * val;
@@ -869,8 +869,8 @@ export default function AIWorkoutGenerator() {
                         }
                       }}
                       className="w-20 bg-gray-800 border-gray-700 text-white text-center font-bold"
-                      min={1}
-                      max={5}
+                      min={0}
+                      max={1000}
                     />
                   </div>
                 </div>
@@ -890,12 +890,12 @@ export default function AIWorkoutGenerator() {
                       type="number"
                       value={settings.defaultReps[0]}
                       onChange={(e) => {
-                        const val = Math.max(5, Math.min(50, parseInt(e.target.value) || 5));
+                        const val = Math.max(0, Math.min(1000, parseInt(e.target.value) || 0));
                         updateSetting('defaultReps', [val]);
                       }}
                       className="w-20 bg-gray-800 border-gray-700 text-white text-center font-bold"
-                      min={5}
-                      max={50}
+                      min={0}
+                      max={1000}
                     />
                   </div>
                   {!autoReps && selectedReps && (
@@ -920,13 +920,12 @@ export default function AIWorkoutGenerator() {
                       type="number"
                       value={settings.restTime[0]}
                       onChange={(e) => {
-                        const val = Math.max(15, Math.min(120, parseInt(e.target.value) || 15));
+                        const val = Math.max(0, Math.min(1000, parseInt(e.target.value) || 0));
                         updateSetting('restTime', [val]);
                       }}
                       className="w-20 bg-gray-800 border-gray-700 text-white text-center font-bold"
-                      min={15}
-                      max={120}
-                      step={5}
+                      min={0}
+                      max={1000}
                     />
                   </div>
                 </div>
@@ -969,13 +968,12 @@ export default function AIWorkoutGenerator() {
                         type="number"
                         value={settings.vestWeightLbs[0]}
                         onChange={(e) => {
-                          const val = Math.max(5, Math.min(50, parseInt(e.target.value) || 5));
+                          const val = Math.max(0, Math.min(1000, parseInt(e.target.value) || 0));
                           updateSetting('vestWeightLbs', [val]);
                         }}
                         className="w-20 bg-gray-800 border-gray-700 text-white text-center font-bold"
-                        min={5}
-                        max={50}
-                        step={5}
+                        min={0}
+                        max={1000}
                       />
                     </div>
                   </div>
