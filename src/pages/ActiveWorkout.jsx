@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Workout } from "@/entities/Workout";
-import { WorkoutSession } from "@/entities/WorkoutSession";
-import { Exercise } from "@/entities/Exercise";
+import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -106,7 +104,7 @@ export default function ActiveWorkout() {
 
   const loadPersonalRecords = async () => {
     try {
-      const sessions = await WorkoutSession.list();
+      const sessions = await base44.entities.WorkoutSession.list();
       const records = {
         mostPushups: 0,
         longestSprint: 0,
@@ -843,7 +841,7 @@ export default function ActiveWorkout() {
           }
           
           // Load all exercises for swap functionality
-          const allExercises = await Exercise.list();
+          const allExercises = await base44.entities.Exercise.list();
           setAllExercises(allExercises);
           console.log('[ActiveWorkout] Successfully restored workout');
           return;
@@ -866,7 +864,7 @@ export default function ActiveWorkout() {
         return;
       }
       
-      const workoutData = await Workout.filter({id: workoutId});
+      const workoutData = await base44.entities.Workout.filter({id: workoutId});
       console.log('[ActiveWorkout] Workout data fetched:', workoutData);
       
       if (!workoutData || workoutData.length === 0) {
@@ -885,7 +883,7 @@ export default function ActiveWorkout() {
         return;
       }
       
-      const allExercises = await Exercise.list();
+      const allExercises = await base44.entities.Exercise.list();
       setAllExercises(allExercises);
       
       // Merge exercise details
@@ -1279,7 +1277,7 @@ export default function ActiveWorkout() {
         cardio_analytics: sessionData.cardio_analytics
       });
       
-      await WorkoutSession.create(sessionData);
+      await base44.entities.WorkoutSession.create(sessionData);
       console.log('[WORKOUT END] Session saved to database');
     }
     
