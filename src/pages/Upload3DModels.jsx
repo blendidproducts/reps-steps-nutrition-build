@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { Exercise } from "@/entities/Exercise";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,19 +21,34 @@ export default function Upload3DModels() {
 
   const loadExercises = async () => {
     setIsLoading(true);
-    const data = await Exercise.list();
-    
-    // Remove duplicates by name (keep first occurrence)
-    const uniqueExercises = data.reduce((acc, current) => {
-      const exists = acc.find(ex => ex.name === current.name);
-      if (!exists) {
-        acc.push(current);
+    try {
+      const data = await base44.entities.Exercise.list();
+      
+      if (!data || !Array.isArray(data)) {
+        console.error('Invalid data format:', data);
+        toast.error('Failed to load exercises');
+        setExercises([]);
+        setIsLoading(false);
+        return;
       }
-      return acc;
-    }, []);
-    
-    setExercises(uniqueExercises.sort((a, b) => a.name.localeCompare(b.name)));
-    setIsLoading(false);
+      
+      // Remove duplicates by name (keep first occurrence)
+      const uniqueExercises = data.reduce((acc, current) => {
+        const exists = acc.find(ex => ex.name === current.name);
+        if (!exists) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+      
+      setExercises(uniqueExercises.sort((a, b) => a.name.localeCompare(b.name)));
+    } catch (error) {
+      console.error('Failed to load exercises:', error);
+      toast.error('Failed to load exercises. Please refresh the page.');
+      setExercises([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleFileUpload = async (exerciseId, file) => {
@@ -67,7 +81,7 @@ export default function Upload3DModels() {
       
       // Update exercise with model URL
       console.log('Updating exercise with model URL...');
-      await Exercise.update(exerciseId, { model_url: fileUrl });
+      await base44.entities.Exercise.update(exerciseId, { model_url: fileUrl });
       console.log('Exercise updated successfully');
       
       // Reload exercises
