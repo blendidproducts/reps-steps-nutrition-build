@@ -38,19 +38,37 @@ export default function Upload3DModels() {
   };
 
   const handleFileUpload = async (exerciseId, file) => {
+    if (!file) {
+      console.error('No file selected');
+      return;
+    }
+
     if (!file.name.endsWith('.glb') && !file.name.endsWith('.gltf')) {
       toast.error('Please upload a GLB or GLTF file');
       return;
     }
 
     setUploadingFor(exerciseId);
+    console.log('Starting upload for exercise:', exerciseId, 'File:', file.name);
     
     try {
       // Upload file to server
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      console.log('Uploading file to server...');
+      const uploadResult = await base44.integrations.Core.UploadFile({ file });
+      console.log('Upload result:', uploadResult);
+      
+      const fileUrl = uploadResult.file_url || uploadResult.url;
+      
+      if (!fileUrl) {
+        throw new Error('No file URL returned from upload');
+      }
+      
+      console.log('File uploaded successfully:', fileUrl);
       
       // Update exercise with model URL
-      await Exercise.update(exerciseId, { model_url: file_url });
+      console.log('Updating exercise with model URL...');
+      await Exercise.update(exerciseId, { model_url: fileUrl });
+      console.log('Exercise updated successfully');
       
       // Reload exercises
       await loadExercises();
@@ -58,7 +76,7 @@ export default function Upload3DModels() {
       toast.success('3D model uploaded successfully!');
     } catch (error) {
       console.error('Upload failed:', error);
-      toast.error('Failed to upload model');
+      toast.error(`Failed to upload: ${error.message || 'Unknown error'}`);
     } finally {
       setUploadingFor(null);
     }
@@ -148,15 +166,32 @@ export default function Upload3DModels() {
                         id={`upload-${exercise.id}`}
                         className="hidden"
                         onChange={(e) => {
-                          if (e.target.files[0]) {
-                            handleFileUpload(exercise.id, e.target.files[0]);
+                          console.log('File input changed:', e.target.files);
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            console.log('File selected:', file.name, file.size, 'bytes');
+                            handleFileUpload(exercise.id, file);
+                            // Reset input to allow re-uploading same file
+                            e.target.value = '';
+                          } else {
+                            console.warn('No file selected');
                           }
                         }}
                       />
                       <Button
-                        onClick={() => document.getElementById(`upload-${exercise.id}`).click()}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const input = document.getElementById(`upload-${exercise.id}`);
+                          if (input) {
+                            console.log('Triggering file input for exercise:', exercise.name);
+                            input.click();
+                          } else {
+                            console.error('File input not found');
+                          }
+                        }}
                         disabled={uploadingFor === exercise.id}
-                        className="bg-brand-blue hover:bg-brand-blue/80"
+                        className="bg-brand-blue hover:bg-brand-blue/80 touch-manipulation"
                       >
                         {uploadingFor === exercise.id ? (
                           <>
