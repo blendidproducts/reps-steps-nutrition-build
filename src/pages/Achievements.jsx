@@ -42,6 +42,10 @@ export default function Achievements() {
       const sessions = await base44.entities.WorkoutSession.list('-created_date');
       
       const achievementData = await AchievementManager.getAchievementProgress(user.email);
+      console.log('Achievement data loaded:', achievementData);
+      console.log('Total achievements:', achievementData.length);
+      console.log('Visible achievements:', achievementData.filter(a => a.is_visible).length);
+      
       setAchievements(achievementData);
       
       const totalWorkouts = sessions.length;
@@ -139,7 +143,12 @@ export default function Achievements() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {isLoading ? (
+              <div className="text-center py-8 text-gray-400">Loading achievements...</div>
+            ) : achievements.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">No achievements found. Complete a workout to start earning badges!</div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {achievements.filter(a => a.is_visible).map((achievement) => {
                 const isEarned = !!achievement.earned_date;
                 
@@ -191,7 +200,8 @@ export default function Achievements() {
                   </motion.div>
                 );
               })}
-            </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
