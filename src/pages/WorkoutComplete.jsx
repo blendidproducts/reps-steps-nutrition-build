@@ -148,6 +148,17 @@ export default function WorkoutComplete() {
     }
   };
 
+  const handleAchievementPopupClose = () => {
+    const currentIndex = newAchievements.indexOf(currentAchievementPopup);
+    if (currentIndex < newAchievements.length - 1) {
+      // Show next achievement
+      setCurrentAchievementPopup(newAchievements[currentIndex + 1]);
+    } else {
+      // All achievements shown
+      setCurrentAchievementPopup(null);
+    }
+  };
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
