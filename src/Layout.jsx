@@ -9,6 +9,7 @@ import { Workout } from "@/entities/Workout";
 import ProgramDayPopup from "@/components/ProgramDayPopup";
 import MobileHeader from "@/components/MobileHeader";
 import MobileRouteTransition from "@/components/MobileRouteTransition";
+import ProgramReminderPopup from "@/components/dashboard/ProgramReminderPopup";
 import {
   Sidebar,
   SidebarContent,
@@ -319,6 +320,9 @@ export default function Layout({ children, currentPageName }) {
         `}
       </style>
       <div className="min-h-screen flex w-full dark" style={{ backgroundColor: 'transparent', color: '#f9fafb' }}>
+        {/* Program Reminder Popups */}
+        <ProgramReminderPopup />
+        
         <Sidebar className="border-r border-[#0a0e1a] bg-[#0a0e1a]">
           <SidebarHeader className="p-4 border-b border-gray-800/50">
             <div className="flex items-center gap-3">
