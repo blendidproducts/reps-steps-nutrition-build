@@ -6,9 +6,11 @@ import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { ProgramEnrollment } from "@/entities/ProgramEnrollment";
 import { Achievement } from "@/entities/Achievement";
-import { Trophy, Target, Clock, TrendingUp, Share2, Home, RotateCcw, Trash2, Footprints, Eye } from "lucide-react";
+import { Trophy, Target, Clock, TrendingUp, Share2, Home, RotateCcw, Trash2, Footprints } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { AchievementManager } from '@/components/services/achievementManager';
+import AchievementUnlockedPopup from '@/components/achievements/AchievementUnlockedPopup';
 
 export default function WorkoutComplete() {
   const navigate = useNavigate();
@@ -16,6 +18,7 @@ export default function WorkoutComplete() {
   const [workoutStats, setWorkoutStats] = useState(null);
   const [newAchievements, setNewAchievements] = useState([]);
   const [programInfo, setProgramInfo] = useState(null);
+  const [currentAchievementPopup, setCurrentAchievementPopup] = useState(null);
 
   useEffect(() => {
     // CRITICAL: Clear active workout state immediately on mount
@@ -135,16 +138,28 @@ export default function WorkoutComplete() {
         }
       }
 
-      // Check for new achievements
-      const allAchievements = await base44.entities.Achievement.list('-earned_date', 5);
-      const recentAchievements = allAchievements.filter(a => {
-        const earnedTime = new Date(a.earned_date).getTime();
-        const now = Date.now();
-        return (now - earnedTime) < 60000; // Within last minute
-      });
-      setNewAchievements(recentAchievements);
+      // Check and award new achievements
+      const user = await base44.auth.me();
+      const newlyEarned = await AchievementManager.checkAndAwardAchievements(user.email);
+      
+      if (newlyEarned.length > 0) {
+        setNewAchievements(newlyEarned);
+        // Show first achievement popup immediately
+        setCurrentAchievementPopup(newlyEarned[0]);
+      }
     } catch (error) {
       console.error('Failed to load stats:', error);
+    }
+  };
+
+  const handleAchievementPopupClose = () => {
+    const currentIndex = newAchievements.indexOf(currentAchievementPopup);
+    if (currentIndex < newAchievements.length - 1) {
+      // Show next achievement
+      setCurrentAchievementPopup(newAchievements[currentIndex + 1]);
+    } else {
+      // All achievements shown
+      setCurrentAchievementPopup(null);
     }
   };
 
@@ -211,6 +226,13 @@ export default function WorkoutComplete() {
 
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-4 sm:p-6 pb-32 relative overflow-hidden">
+      {currentAchievementPopup && (
+        <AchievementUnlockedPopup 
+          achievement={currentAchievementPopup} 
+          onClose={handleAchievementPopupClose} 
+        />
+      )}
+      
       {/* Animated Background Elements */}
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none">
@@ -331,13 +353,13 @@ export default function WorkoutComplete() {
               >
                 <h3 className="text-lg font-bold text-yellow-400 mb-3 flex items-center justify-center gap-2">
                   <Trophy className="w-5 h-5" />
-                  New Achievements Unlocked!
+                  {newAchievements.length} New Achievement{newAchievements.length > 1 ? 's' : ''} Unlocked!
                 </h3>
                 <div className="space-y-2">
-                  {newAchievements.map(achievement => (
-                    <div key={achievement.id} className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/50 rounded-lg p-3">
+                  {newAchievements.map((achievement, idx) => (
+                    <div key={idx} className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/50 rounded-lg p-3">
                       <div className="flex items-center gap-3">
-                        <div className="text-3xl">{achievement.icon}</div>
+                        <img src={achievement.icon_url} alt={achievement.title} className="w-12 h-12" />
                         <div className="text-left">
                           <div className="font-bold text-yellow-400">{achievement.title}</div>
                           <div className="text-xs text-gray-400">{achievement.description}</div>
