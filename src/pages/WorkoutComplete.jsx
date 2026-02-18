@@ -41,6 +41,11 @@ export default function WorkoutComplete() {
           caloriesBurned: session.calories_burned || 0
         });
 
+        // STREAK UPDATE: Import and use centralized streak manager
+        const { updateStreak } = await import('@/components/services/streakManager');
+        const user = await base44.auth.me();
+        await updateStreak(user);
+
         // Check if this was part of a program and advance to next day
         const workouts = await base44.entities.Workout.filter({ id: session.workout_id });
         if (workouts.length > 0 && workouts[0].program_id) {
