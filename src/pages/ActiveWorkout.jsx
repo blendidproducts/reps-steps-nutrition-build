@@ -2167,199 +2167,202 @@ export default function ActiveWorkout() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto"
+              className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-3 overflow-hidden"
+              style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
             >
-              <Card className="bg-gray-900/80 border-brand-blue/30 text-white w-full max-w-sm my-auto max-h-[85vh] overflow-hidden flex flex-col">
-                <CardContent className="p-3 flex flex-col h-full" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+              <Card className="bg-gray-900/80 border-brand-blue/30 text-white w-full max-w-sm flex flex-col" style={{ maxHeight: 'calc(100vh - 2rem)' }}>
+                <CardContent className="p-3 flex flex-col overflow-hidden h-full">
                   {!activeCardio ? (
                     <>
-                      <h2 className="text-2xl font-bold mb-2 text-brand-blue">ACTIVE RECOVERY</h2>
-                      <div className="flex items-center justify-center gap-3 mb-4">
-                        <div className="flex flex-col gap-2">
-                          <button
-                            onClick={() => {
-                              const decrement = workout.exercises[currentExerciseIndex]?.category === 'warmup' ? -5 : -15;
-                              addRestTime(decrement);
-                            }}
-                            className="w-10 h-10 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
-                            title={workout.exercises[currentExerciseIndex]?.category === 'warmup' ? "Subtract 5 seconds" : "Subtract 15 seconds"}
-                            disabled={restTimer <= 5}
-                          >
-                            <Minus className="w-5 h-5" />
-                          </button>
-                          {workout.exercises[currentExerciseIndex]?.category !== 'warmup' && (
+                      <div className="flex-shrink-0">
+                        <h2 className="text-xl font-bold mb-2 text-brand-blue text-center">ACTIVE RECOVERY</h2>
+                        <div className="flex items-center justify-center gap-2 mb-3">
+                          <div className="flex flex-col gap-1">
                             <button
-                              onClick={() => addRestTime(-30)}
-                              className="w-10 h-10 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors text-xs font-bold"
-                              title="Subtract 30 seconds"
-                              disabled={restTimer <= 30}
+                              onClick={() => {
+                                const decrement = workout.exercises[currentExerciseIndex]?.category === 'warmup' ? -5 : -15;
+                                addRestTime(decrement);
+                              }}
+                              className="w-9 h-9 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors touch-manipulation"
+                              disabled={restTimer <= 5}
                             >
-                              -30
+                              <Minus className="w-4 h-4" />
                             </button>
-                          )}
-                        </div>
-                        <div className="text-6xl font-bold">{restTimer}s</div>
-                        <div className="flex flex-col gap-2">
-                          <button
-                            onClick={() => {
-                              const increment = workout.exercises[currentExerciseIndex]?.category === 'warmup' ? 5 : 15;
-                              addRestTime(increment);
-                            }}
-                            className="w-10 h-10 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors"
-                            title={workout.exercises[currentExerciseIndex]?.category === 'warmup' ? "Add 5 seconds" : "Add 15 seconds"}
-                          >
-                            <Plus className="w-5 h-5" />
-                          </button>
-                          {workout.exercises[currentExerciseIndex]?.category !== 'warmup' && (
-                            <button
-                              onClick={() => addRestTime(30)}
-                              className="w-10 h-10 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors text-xs font-bold"
-                              title="Add 30 seconds"
-                            >
-                              +30
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      {extendedRestTime > 0 && (
-                        <p className="text-xs text-blue-400 mb-2">+ {extendedRestTime}s added</p>
-                      )}
-                      <div className="mb-4">
-                        <p className="text-sm text-gray-400">Cardio Time: {restCardioTotal}s / {workout.rest_time || 60}s</p>
-                        <Progress value={(restCardioTotal / (workout.rest_time || 60)) * 100} className="h-2 mt-2" />
-                        {restTimer <= 0 && restCardioTotal >= (workout.rest_time || 60) && (
-                          <p className="text-xs text-green-400 mt-1">✓ Rest complete - tap DONE</p>
-                        )}
-                      </div>
-
-                      {/* Exercise Preview Cards */}
-                      <div className="grid grid-cols-2 gap-2 mb-3">
-                        {/* Just Completed */}
-                        {currentExerciseIndex > 0 && (
-                          <div className="bg-green-600/10 border border-green-500/30 rounded-lg p-2">
-                            <p className="text-[10px] text-green-400 font-bold mb-1">✓ COMPLETED</p>
-                            <div className="w-full h-16 bg-gray-800 rounded mb-1 flex items-center justify-center overflow-hidden">
-                              {workout.exercises[currentExerciseIndex - 1]?.image_url ? (
-                                <img src={workout.exercises[currentExerciseIndex - 1].image_url} alt={workout.exercises[currentExerciseIndex - 1].exercise_name} className="w-full h-full object-cover" />
-                              ) : (
-                                <Target className="w-6 h-6 text-gray-600" />
-                              )}
-                            </div>
-                            <p className="text-[10px] font-semibold text-white line-clamp-2">{workout.exercises[currentExerciseIndex - 1]?.exercise_name}</p>
-                          </div>
-                        )}
-
-                        {/* Coming Up Next */}
-                        <div className="bg-brand-blue/10 border border-brand-blue/30 rounded-lg p-2">
-                          <p className="text-[10px] text-brand-blue font-bold mb-1">▶ UP NEXT</p>
-                          <div className="w-full h-16 bg-gray-800 rounded mb-1 flex items-center justify-center overflow-hidden">
-                            {currentExercise?.image_url ? (
-                              <img src={currentExercise.image_url} alt={currentExercise.exercise_name} className="w-full h-full object-cover" />
-                            ) : (
-                              <Target className="w-6 h-6 text-gray-600" />
+                            {workout.exercises[currentExerciseIndex]?.category !== 'warmup' && (
+                              <button
+                                onClick={() => addRestTime(-30)}
+                                className="w-9 h-9 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors text-[10px] font-bold touch-manipulation"
+                                disabled={restTimer <= 30}
+                              >
+                                -30
+                              </button>
                             )}
                           </div>
-                          <p className="text-[10px] font-semibold text-white line-clamp-2">{currentExercise?.exercise_name}</p>
-                          <p className="text-[10px] text-gray-400">
-                            {currentExercise?.metric === 'time' 
-                              ? `${currentExercise?.target_time}s` 
-                              : `${currentExercise?.target_reps} reps`}
-                          </p>
+                          <div className="text-5xl font-bold">{restTimer}s</div>
+                          <div className="flex flex-col gap-1">
+                            <button
+                              onClick={() => {
+                                const increment = workout.exercises[currentExerciseIndex]?.category === 'warmup' ? 5 : 15;
+                                addRestTime(increment);
+                              }}
+                              className="w-9 h-9 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors touch-manipulation"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                            {workout.exercises[currentExerciseIndex]?.category !== 'warmup' && (
+                              <button
+                                onClick={() => addRestTime(30)}
+                                className="w-9 h-9 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors text-[10px] font-bold touch-manipulation"
+                              >
+                                +30
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {extendedRestTime > 0 && (
+                          <p className="text-xs text-blue-400 mb-2 text-center">+ {extendedRestTime}s added</p>
+                        )}
+                        <div className="mb-2">
+                          <p className="text-xs text-gray-400 text-center">Cardio Time: {restCardioTotal}s / {workout.rest_time || 60}s</p>
+                          <Progress value={(restCardioTotal / (workout.rest_time || 60)) * 100} className="h-2 mt-1" />
+                          {restTimer <= 0 && restCardioTotal >= (workout.rest_time || 60) && (
+                            <p className="text-[10px] text-green-400 mt-1 text-center">✓ Rest complete - tap SKIP</p>
+                          )}
                         </div>
                       </div>
 
-                      {/* Quick instructions for next exercise */}
-                      {currentExercise?.instructions && (
-                        <div className="bg-gray-800/50 rounded-lg p-2 mb-3 max-h-24 overflow-y-auto">
-                          <p className="text-[10px] text-brand-blue font-semibold mb-1">How to:</p>
-                          <ul className="text-[10px] text-gray-300 space-y-0.5">
-                            {currentExercise.instructions.slice(0, 3).map((instruction, i) => (
-                              <li key={i} className="line-clamp-1">• {instruction}</li>
-                            ))}
-                          </ul>
+                      <div className="flex-1 overflow-y-auto min-h-0 mb-2" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
+                        {/* Exercise Preview Cards */}
+                        <div className="grid grid-cols-2 gap-2 mb-2">
+                          {/* Just Completed */}
+                          {currentExerciseIndex > 0 && (
+                            <div className="bg-green-600/10 border border-green-500/30 rounded-lg p-2">
+                              <p className="text-[9px] text-green-400 font-bold mb-1">✓ COMPLETED</p>
+                              <div className="w-full h-14 bg-gray-800 rounded mb-1 flex items-center justify-center overflow-hidden">
+                                {workout.exercises[currentExerciseIndex - 1]?.image_url ? (
+                                  <img src={workout.exercises[currentExerciseIndex - 1].image_url} alt={workout.exercises[currentExerciseIndex - 1].exercise_name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <Target className="w-5 h-5 text-gray-600" />
+                                )}
+                              </div>
+                              <p className="text-[9px] font-semibold text-white line-clamp-2">{workout.exercises[currentExerciseIndex - 1]?.exercise_name}</p>
+                            </div>
+                          )}
+
+                          {/* Coming Up Next */}
+                          <div className="bg-brand-blue/10 border border-brand-blue/30 rounded-lg p-2">
+                            <p className="text-[9px] text-brand-blue font-bold mb-1">▶ UP NEXT</p>
+                            <div className="w-full h-14 bg-gray-800 rounded mb-1 flex items-center justify-center overflow-hidden">
+                              {currentExercise?.image_url ? (
+                                <img src={currentExercise.image_url} alt={currentExercise.exercise_name} className="w-full h-full object-cover" />
+                              ) : (
+                                <Target className="w-5 h-5 text-gray-600" />
+                              )}
+                            </div>
+                            <p className="text-[9px] font-semibold text-white line-clamp-2">{currentExercise?.exercise_name}</p>
+                            <p className="text-[9px] text-gray-400">
+                              {currentExercise?.metric === 'time' 
+                                ? `${currentExercise?.target_time}s` 
+                                : `${currentExercise?.target_reps} reps`}
+                            </p>
+                          </div>
                         </div>
-                      )}
 
-                      <p className="text-xs text-gray-400 mb-2">Choose cardio or skip</p>
+                        {/* Quick instructions for next exercise */}
+                        {currentExercise?.instructions && (
+                          <div className="bg-gray-800/50 rounded-lg p-2 mb-2 max-h-20 overflow-y-auto">
+                            <p className="text-[9px] text-brand-blue font-semibold mb-1">How to:</p>
+                            <ul className="text-[9px] text-gray-300 space-y-0.5">
+                              {currentExercise.instructions.slice(0, 3).map((instruction, i) => (
+                                <li key={i} className="line-clamp-1">• {instruction}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
 
-                      <div className="grid grid-cols-3 gap-2 mb-3">
-                        <Button
-                          onClick={() => startCardio('walk')}
-                          className="flex flex-col items-center gap-2 h-auto py-4 bg-green-600/20 border-2 border-green-500 text-green-300 hover:bg-green-600/40"
-                        >
-                          <Footprints className="w-6 h-6" />
-                          <span className="text-xs font-bold">WALK</span>
-                        </Button>
+                        <p className="text-xs text-gray-400 mb-2 text-center">Choose cardio or skip</p>
 
-                        <Button
-                          onClick={() => startCardio('jog')}
-                          className="flex flex-col items-center gap-2 h-auto py-4 bg-yellow-600/20 border-2 border-yellow-500 text-yellow-300 hover:bg-yellow-600/40"
-                        >
-                          <Route className="w-6 h-6" />
-                          <span className="text-xs font-bold">JOG</span>
-                        </Button>
+                        <div className="grid grid-cols-3 gap-1.5 mb-2">
+                          <Button
+                            onClick={() => startCardio('walk')}
+                            className="flex flex-col items-center gap-1 h-auto py-3 bg-green-600/20 border-2 border-green-500 text-green-300 hover:bg-green-600/40 touch-manipulation"
+                          >
+                            <Footprints className="w-5 h-5" />
+                            <span className="text-[10px] font-bold">WALK</span>
+                          </Button>
 
-                        <Button
-                          onClick={() => startCardio('sprint')}
-                          className="flex flex-col items-center gap-2 h-auto py-4 bg-red-600/20 border-2 border-red-500 text-red-300 hover:bg-red-600/40"
-                        >
-                          <Zap className="w-6 h-6" />
-                          <span className="text-xs font-bold">SPRINT</span>
-                        </Button>
+                          <Button
+                            onClick={() => startCardio('jog')}
+                            className="flex flex-col items-center gap-1 h-auto py-3 bg-yellow-600/20 border-2 border-yellow-500 text-yellow-300 hover:bg-yellow-600/40 touch-manipulation"
+                          >
+                            <Route className="w-5 h-5" />
+                            <span className="text-[10px] font-bold">JOG</span>
+                          </Button>
+
+                          <Button
+                            onClick={() => startCardio('sprint')}
+                            className="flex flex-col items-center gap-1 h-auto py-3 bg-red-600/20 border-2 border-red-500 text-red-300 hover:bg-red-600/40 touch-manipulation"
+                          >
+                            <Zap className="w-5 h-5" />
+                            <span className="text-[10px] font-bold">SPRINT</span>
+                          </Button>
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="flex-shrink-0 grid grid-cols-2 gap-2 border-t border-brand-blue/20 pt-2">
                         <Button
                           onClick={skipRest}
                           variant="outline"
-                          className="border-gray-500 text-gray-300 hover:bg-gray-700 touch-manipulation h-12 text-xs"
+                          className="border-gray-500 text-gray-300 hover:bg-gray-700 touch-manipulation min-h-[52px] text-xs font-bold"
                         >
                           SKIP REST
                         </Button>
                         <Button
                           onClick={openSupersetModal}
-                          className="bg-purple-600/20 border-2 border-purple-500 text-purple-300 hover:bg-purple-600/40 touch-manipulation h-12 text-xs"
+                          className="bg-purple-600/20 border-2 border-purple-500 text-purple-300 hover:bg-purple-600/40 touch-manipulation min-h-[52px] text-xs font-bold"
                         >
                           <LinkIcon className="w-3 h-3 mr-1" />
                           SUPERSET
                         </Button>
                       </div>
-                      </>
-                      ) : (
-                        <>
-                          <h2 className="text-3xl font-bold mb-2 text-brand-blue uppercase">{activeCardio.type}ING</h2>
-                          <div className="text-7xl font-bold mb-4 text-brand-blue animate-pulse">{formatTime(cardioTimer)}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex-shrink-0">
+                        <h2 className="text-2xl font-bold mb-2 text-brand-blue uppercase text-center">{activeCardio.type}ING</h2>
+                        <div className="text-6xl font-bold mb-3 text-brand-blue animate-pulse text-center">{formatTime(cardioTimer)}</div>
 
-                          <div className="mb-4">
-                            <p className="text-sm text-gray-400">Total Cardio: {restCardioTotal}s / {workout.rest_time || 60}s</p>
-                            <Progress value={(restCardioTotal / (workout.rest_time || 60)) * 100} className="h-2 mt-2" />
-                            {restTimer <= 0 && restCardioTotal >= (workout.rest_time || 60) && (
-                              <p className="text-xs text-green-400 mt-1">✓ Rest complete!</p>
-                            )}
-                          </div>
+                        <div className="mb-3">
+                          <p className="text-xs text-gray-400 text-center">Total Cardio: {restCardioTotal}s / {workout.rest_time || 60}s</p>
+                          <Progress value={(restCardioTotal / (workout.rest_time || 60)) * 100} className="h-2 mt-1" />
+                          {restTimer <= 0 && restCardioTotal >= (workout.rest_time || 60) && (
+                            <p className="text-[10px] text-green-400 mt-1 text-center">✓ Rest complete!</p>
+                          )}
+                        </div>
+                      </div>
 
-                          <div className="grid grid-cols-2 gap-2 mb-3 pb-2">
-                              <Button
-                                onClick={stopCardio}
-                                className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold touch-manipulation min-h-[56px] text-sm"
-                              >
-                                <Square className="w-4 h-4 mr-1" />
-                                STOP & SWITCH
-                              </Button>
-                              <Button
-                                onClick={() => {
-                                  stopCardio();
-                                  if (restCardioTotal >= (workout.rest_time || 60)) {
-                                    setTimeout(() => skipRest(), 100);
-                                  }
-                                }}
-                                className="bg-green-500 hover:bg-green-600 text-white font-bold touch-manipulation min-h-[56px] text-sm"
-                              >
-                                DONE
-                              </Button>
-                            </div>
-                        </>
-                      )}
+                      <div className="flex-shrink-0 grid grid-cols-2 gap-2 border-t border-brand-blue/20 pt-2">
+                        <Button
+                          onClick={stopCardio}
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold touch-manipulation min-h-[52px] text-xs"
+                        >
+                          <Square className="w-4 h-4 mr-1" />
+                          STOP & SWITCH
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            stopCardio();
+                            if (restCardioTotal >= (workout.rest_time || 60)) {
+                              setTimeout(() => skipRest(), 100);
+                            }
+                          }}
+                          className="bg-green-500 hover:bg-green-600 text-white font-bold touch-manipulation min-h-[52px] text-xs"
+                        >
+                          DONE
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
