@@ -2046,95 +2046,98 @@ export default function ActiveWorkout() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto"
+              className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-3 overflow-hidden"
+              style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
             >
-              <Card className="bg-gray-900/80 border-cyan-500/30 text-white w-full max-w-sm my-auto max-h-[90vh] overflow-hidden flex flex-col">
-                <CardContent className="p-3 sm:p-4 text-center overflow-y-auto flex-1">
+              <Card className="bg-gray-900/80 border-cyan-500/30 text-white w-full max-w-sm flex flex-col" style={{ maxHeight: 'calc(100vh - 2rem)' }}>
+                <CardContent className="p-3 flex flex-col overflow-hidden h-full">
                   {!activeCardio ? (
                     <>
-                      <h2 className="text-2xl font-bold mb-2 text-cyan-400">ACTIVE RECOVERY</h2>
-                      <div className="flex items-center justify-center gap-3 mb-4">
-                        <div className="flex flex-col gap-2">
-                          <button
-                            onClick={() => addRestTime(-15)}
-                            className="w-10 h-10 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
-                            disabled={restTimer <= 5}
-                          >
-                            <Minus className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => addRestTime(-30)}
-                            className="w-10 h-10 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors text-xs font-bold"
-                            disabled={restTimer <= 30}
-                          >
-                            -30
-                          </button>
-                        </div>
-                        <div className="text-6xl font-bold">{restTimer}s</div>
-                        <div className="flex flex-col gap-2">
-                          <button
-                            onClick={() => addRestTime(15)}
-                            className="w-10 h-10 bg-cyan-600/50 hover:bg-cyan-600 rounded-full flex items-center justify-center transition-colors"
-                          >
-                            <Plus className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => addRestTime(30)}
-                            className="w-10 h-10 bg-cyan-600/50 hover:bg-cyan-600 rounded-full flex items-center justify-center transition-colors text-xs font-bold"
-                          >
-                            +30
-                          </button>
+                      <div className="flex-shrink-0">
+                        <h2 className="text-xl font-bold mb-2 text-cyan-400 text-center">ACTIVE RECOVERY</h2>
+                        <div className="flex items-center justify-center gap-3 mb-3">
+                          <div className="flex flex-col gap-1">
+                            <button
+                              onClick={() => addRestTime(-15)}
+                              className="w-9 h-9 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors touch-manipulation"
+                              disabled={restTimer <= 5}
+                            >
+                              <Minus className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => addRestTime(-30)}
+                              className="w-9 h-9 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors text-[10px] font-bold touch-manipulation"
+                              disabled={restTimer <= 30}
+                            >
+                              -30
+                            </button>
+                          </div>
+                          <div className="text-5xl font-bold">{restTimer}s</div>
+                          <div className="flex flex-col gap-1">
+                            <button
+                              onClick={() => addRestTime(15)}
+                              className="w-9 h-9 bg-cyan-600/50 hover:bg-cyan-600 rounded-full flex items-center justify-center transition-colors touch-manipulation"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => addRestTime(30)}
+                              className="w-9 h-9 bg-cyan-600/50 hover:bg-cyan-600 rounded-full flex items-center justify-center transition-colors text-[10px] font-bold touch-manipulation"
+                            >
+                              +30
+                            </button>
+                          </div>
                         </div>
                       </div>
                       
-                      <div className="flex-1 overflow-y-auto min-h-0" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
-                        <p className="text-sm text-gray-400 mb-3">Choose cardio activity</p>
+                      <div className="flex-1 overflow-y-auto min-h-0 mb-3" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
+                        <p className="text-xs text-gray-400 mb-2 text-center">Choose cardio activity</p>
 
-                        <div className="grid grid-cols-3 gap-2 mb-4">
-                        <Button
-                          onClick={() => startCardio('walk')}
-                          className="flex flex-col items-center gap-2 h-auto py-4 bg-green-600/20 border-2 border-green-500 text-green-300 hover:bg-green-600/40"
-                        >
-                          <Footprints className="w-6 h-6" />
-                          <span className="text-xs font-bold">WALK</span>
-                        </Button>
+                        <div className="grid grid-cols-3 gap-2">
+                          <Button
+                            onClick={() => startCardio('walk')}
+                            className="flex flex-col items-center gap-1 h-auto py-3 bg-green-600/20 border-2 border-green-500 text-green-300 hover:bg-green-600/40 touch-manipulation"
+                          >
+                            <Footprints className="w-5 h-5" />
+                            <span className="text-[10px] font-bold">WALK</span>
+                          </Button>
 
-                        <Button
-                          onClick={() => startCardio('jog')}
-                          className="flex flex-col items-center gap-2 h-auto py-4 bg-yellow-600/20 border-2 border-yellow-500 text-yellow-300 hover:bg-yellow-600/40"
-                        >
-                          <Route className="w-6 h-6" />
-                          <span className="text-xs font-bold">JOG</span>
-                        </Button>
+                          <Button
+                            onClick={() => startCardio('jog')}
+                            className="flex flex-col items-center gap-1 h-auto py-3 bg-yellow-600/20 border-2 border-yellow-500 text-yellow-300 hover:bg-yellow-600/40 touch-manipulation"
+                          >
+                            <Route className="w-5 h-5" />
+                            <span className="text-[10px] font-bold">JOG</span>
+                          </Button>
 
-                        <Button
-                          onClick={() => startCardio('sprint')}
-                          className="flex flex-col items-center gap-2 h-auto py-4 bg-red-600/20 border-2 border-red-500 text-red-300 hover:bg-red-600/40"
-                        >
-                          <Zap className="w-6 h-6" />
-                          <span className="text-xs font-bold">SPRINT</span>
-                        </Button>
+                          <Button
+                            onClick={() => startCardio('sprint')}
+                            className="flex flex-col items-center gap-1 h-auto py-3 bg-red-600/20 border-2 border-red-500 text-red-300 hover:bg-red-600/40 touch-manipulation"
+                          >
+                            <Zap className="w-5 h-5" />
+                            <span className="text-[10px] font-bold">SPRINT</span>
+                          </Button>
+                        </div>
                       </div>
-                      </div>
 
-                      <div className="flex-shrink-0 pt-2">
-                      <Button
-                        onClick={() => setShowActiveRecovery(false)}
-                        className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold touch-manipulation min-h-[48px]"
-                      >
-                        DONE - Continue Workout
-                      </Button>
+                      <div className="flex-shrink-0 border-t border-cyan-500/20 pt-2">
+                        <Button
+                          onClick={() => setShowActiveRecovery(false)}
+                          className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold touch-manipulation min-h-[52px]"
+                        >
+                          DONE - Continue Workout
+                        </Button>
                       </div>
                     </>
                   ) : (
                     <>
-                      <h2 className="text-3xl font-bold mb-2 text-brand-blue uppercase">{activeCardio.type}ING</h2>
-                      <div className="text-7xl font-bold mb-4 text-brand-blue animate-pulse">{formatTime(cardioTimer)}</div>
+                      <h2 className="text-2xl font-bold mb-2 text-brand-blue uppercase text-center flex-shrink-0">{activeCardio.type}ING</h2>
+                      <div className="text-6xl font-bold mb-3 text-brand-blue animate-pulse text-center flex-shrink-0">{formatTime(cardioTimer)}</div>
 
-                      <div className="grid grid-cols-2 gap-2 pb-2">
+                      <div className="grid grid-cols-2 gap-2 flex-shrink-0">
                         <Button
                           onClick={stopCardio}
-                          className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold touch-manipulation min-h-[56px] text-sm"
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold touch-manipulation min-h-[52px] text-xs"
                         >
                           <Square className="w-4 h-4 mr-1" />
                           STOP & SWITCH
@@ -2144,7 +2147,7 @@ export default function ActiveWorkout() {
                             stopCardio();
                             setShowActiveRecovery(false);
                           }}
-                          className="bg-green-500 hover:bg-green-600 text-white font-bold touch-manipulation min-h-[56px] text-sm"
+                          className="bg-green-500 hover:bg-green-600 text-white font-bold touch-manipulation min-h-[52px] text-xs"
                         >
                           DONE
                         </Button>
