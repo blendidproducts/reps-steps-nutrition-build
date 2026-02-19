@@ -460,11 +460,11 @@ export default function Layout({ children, currentPageName }) {
                     navigate(createPageUrl("Home"));
                   }
                 }}
-                className={`flex flex-col items-center justify-center gap-0.5 min-w-[60px] min-h-[56px] py-2 rounded-lg transition-colors active:scale-95 ${location.pathname === createPageUrl("Home") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+                className={`flex flex-col items-center justify-center gap-0.5 min-w-[50px] min-h-[56px] py-2 rounded-lg transition-colors active:scale-95 ${location.pathname === createPageUrl("Home") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
                 style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
               >
-                <Home className="w-6 h-6" />
-                <span className="text-[10px] font-medium">Home</span>
+                <Home className="w-5 h-5" />
+                <span className="text-[9px] font-medium">Home</span>
               </button>
               <button
                 onClick={(e) => {
@@ -476,11 +476,27 @@ export default function Layout({ children, currentPageName }) {
                     navigate(createPageUrl("Exercises"));
                   }
                 }}
-                className={`flex flex-col items-center justify-center gap-0.5 min-w-[60px] min-h-[56px] py-2 rounded-lg transition-colors active:scale-95 ${location.pathname === createPageUrl("Exercises") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+                className={`flex flex-col items-center justify-center gap-0.5 min-w-[50px] min-h-[56px] py-2 rounded-lg transition-colors active:scale-95 ${location.pathname === createPageUrl("Exercises") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
                 style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
               >
-                <Dumbbell className="w-6 h-6" />
-                <span className="text-[10px] font-medium">Exercises</span>
+                <Dumbbell className="w-5 h-5" />
+                <span className="text-[9px] font-medium">Exercises</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (location.pathname === createPageUrl("PresetPrograms")) {
+                    document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+                  } else {
+                    navigate(createPageUrl("PresetPrograms"));
+                  }
+                }}
+                className={`flex flex-col items-center justify-center gap-0.5 min-w-[50px] min-h-[56px] py-2 rounded-lg transition-colors active:scale-95 ${location.pathname === createPageUrl("PresetPrograms") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+              >
+                <Calendar className="w-5 h-5" />
+                <span className="text-[9px] font-medium">Programs</span>
               </button>
               <button
                 onClick={(e) => {
@@ -492,11 +508,11 @@ export default function Layout({ children, currentPageName }) {
                     navigate(createPageUrl("Nutrition"));
                   }
                 }}
-                className={`flex flex-col items-center justify-center gap-0.5 min-w-[60px] min-h-[56px] py-2 rounded-lg transition-colors active:scale-95 ${location.pathname === createPageUrl("Nutrition") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+                className={`flex flex-col items-center justify-center gap-0.5 min-w-[50px] min-h-[56px] py-2 rounded-lg transition-colors active:scale-95 ${location.pathname === createPageUrl("Nutrition") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
                 style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
               >
-                <Apple className="w-6 h-6" />
-                <span className="text-[10px] font-medium">Nutrition</span>
+                <Apple className="w-5 h-5" />
+                <span className="text-[9px] font-medium">Nutrition</span>
               </button>
               <button
                 onClick={(e) => {
@@ -508,11 +524,11 @@ export default function Layout({ children, currentPageName }) {
                     navigate(createPageUrl("History"));
                   }
                 }}
-                className={`flex flex-col items-center justify-center gap-0.5 min-w-[60px] min-h-[56px] py-2 rounded-lg transition-colors active:scale-95 ${location.pathname === createPageUrl("History") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+                className={`flex flex-col items-center justify-center gap-0.5 min-w-[50px] min-h-[56px] py-2 rounded-lg transition-colors active:scale-95 ${location.pathname === createPageUrl("History") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
                 style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
               >
-                <History className="w-6 h-6" />
-                <span className="text-[10px] font-medium">History</span>
+                <History className="w-5 h-5" />
+                <span className="text-[9px] font-medium">History</span>
               </button>
               <button
                 onClick={(e) => {
@@ -524,11 +540,11 @@ export default function Layout({ children, currentPageName }) {
                     navigate(createPageUrl("Settings"));
                   }
                 }}
-                className={`flex flex-col items-center justify-center gap-0.5 min-w-[60px] min-h-[56px] py-2 rounded-lg transition-colors active:scale-95 ${location.pathname === createPageUrl("Settings") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
+                className={`flex flex-col items-center justify-center gap-0.5 min-w-[50px] min-h-[56px] py-2 rounded-lg transition-colors active:scale-95 ${location.pathname === createPageUrl("Settings") ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
                 style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
               >
-                <Settings className="w-6 h-6" />
-                <span className="text-[10px] font-medium">Settings</span>
+                <Settings className="w-5 h-5" />
+                <span className="text-[9px] font-medium">Settings</span>
               </button>
             </div>
           </nav>
