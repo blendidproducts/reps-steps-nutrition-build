@@ -232,9 +232,11 @@ export default function PresetPrograms() {
                   <div className="flex-1">
                     <h3 className="text-2xl font-bold text-foreground mb-2">{activeProgram.program_name}</h3>
                     <div className="flex flex-wrap gap-3 mb-4">
-                      <Badge className="bg-green-500 text-white font-bold">
-                        ✓ Day {activeProgram.current_day - 1} Complete
-                      </Badge>
+                      {activeProgram.completed_days && activeProgram.completed_days.length > 0 && (
+                        <Badge className="bg-green-500 text-white font-bold">
+                          ✓ Day {Math.max(...activeProgram.completed_days)} Complete
+                        </Badge>
+                      )}
                       <Badge className={difficultyColors[activeProgramDetails.difficulty]}>
                         {activeProgramDetails.difficulty}
                       </Badge>
@@ -244,11 +246,11 @@ export default function PresetPrograms() {
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-gray-300">Progress</span>
                         <span className="text-brand-blue font-bold">
-                          {activeProgram.current_day - 1} / {activeProgram.total_days} days
+                          {activeProgram.completed_days?.length || 0} / {activeProgram.total_days} days
                         </span>
                       </div>
                       <Progress 
-                        value={((activeProgram.current_day - 1) / activeProgram.total_days) * 100} 
+                        value={((activeProgram.completed_days?.length || 0) / activeProgram.total_days) * 100} 
                         className="h-3"
                       />
                     </div>

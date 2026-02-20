@@ -88,7 +88,13 @@ export default function WorkoutComplete() {
             
             if (enrollments.length > 0) {
               const enrollment = enrollments[0];
-              const updatedCompletedDays = [...(enrollment.completed_days || []), dayJustCompleted];
+              const existingCompletedDays = enrollment.completed_days || [];
+              
+              // Only add if not already completed
+              const updatedCompletedDays = existingCompletedDays.includes(dayJustCompleted) 
+                ? existingCompletedDays 
+                : [...existingCompletedDays, dayJustCompleted];
+              
               const daysCompletedCount = updatedCompletedDays.length;
               const completionPercentage = (daysCompletedCount / enrollment.total_days) * 100;
               
