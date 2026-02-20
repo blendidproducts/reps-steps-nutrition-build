@@ -120,6 +120,9 @@ export default function Home() {
                       <div className="text-left">
                         <div className="text-white font-bold text-lg">CONTINUE PROGRAM</div>
                         <div className="text-white/80 text-sm">
+                          {activeProgram.completed_days && activeProgram.completed_days.length > 0 && (
+                            <span className="text-green-400">✓ Day {Math.max(...activeProgram.completed_days)} completed • </span>
+                          )}
                           Day {activeProgram.current_day} of {activeProgram.total_days} - {activeProgram.program_name}
                         </div>
                       </div>
