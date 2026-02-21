@@ -105,17 +105,20 @@ export default function WorkoutComplete() {
                 last_activity_date: new Date().toISOString(),
                 current_day: nextDay
               });
-            }
-            
-            // Update to next day if not completed
-            if (nextDay <= user.active_program.total_days) {
+              
+              // Sync user.active_program with enrollment data
               await base44.auth.updateMe({
                 active_program: {
                   ...user.active_program,
+                  completed_days: updatedCompletedDays,
                   current_day: nextDay,
-                  completed_days: completedDays
+                  days_completed_count: daysCompletedCount
                 }
               });
+            }
+            
+            // Progress update already handled above in enrollment sync
+            if (nextDay <= user.active_program.total_days) {
               toast.success(`✓ Day ${dayJustCompleted} complete! Day ${nextDay} is ready.`);
             } else {
               // Program completed - award achievement and update enrollment

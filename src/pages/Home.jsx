@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { PresetProgram } from "@/entities/PresetProgram";
+import { ProgramEnrollment } from "@/entities/ProgramEnrollment";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Mic } from "lucide-react";
@@ -31,9 +32,24 @@ export default function Home() {
       setUser(currentUser);
       setIsPro(currentUser.subscription_status === 'pro' || currentUser.role === 'admin');
       
-      // Check for active program
+      // Check for active program and sync with enrollment
       if (currentUser.active_program) {
-        setActiveProgram(currentUser.active_program);
+        const enrollments = await ProgramEnrollment.filter({ 
+          program_id: currentUser.active_program.program_id,
+          status: 'active'
+        });
+        
+        if (enrollments.length > 0) {
+          const enrollment = enrollments[0];
+          setActiveProgram({
+            ...currentUser.active_program,
+            completed_days: enrollment.completed_days || [],
+            current_day: enrollment.current_day,
+            days_completed_count: enrollment.days_completed_count || 0
+          });
+        } else {
+          setActiveProgram(currentUser.active_program);
+        }
       }
 
       // Check if user needs to complete quiz
