@@ -32,13 +32,45 @@ export default function PresetPrograms() {
   useEffect(() => {
     loadPrograms();
     loadActiveProgram();
+    
+    // Reload active program when page becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadActiveProgram();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const loadActiveProgram = async () => {
     try {
       const user = await base44.auth.me();
       if (user.active_program) {
-        setActiveProgram(user.active_program);
+        // Fetch the latest enrollment data as source of truth
+        const enrollments = await ProgramEnrollment.filter({ 
+          program_id: user.active_program.program_id,
+          status: 'active'
+        });
+        
+        if (enrollments.length > 0) {
+          const enrollment = enrollments[0];
+          // Sync user data with enrollment data
+          const syncedProgram = {
+            ...user.active_program,
+            completed_days: enrollment.completed_days || [],
+            current_day: enrollment.current_day,
+            days_completed_count: enrollment.days_completed_count || 0
+          };
+          setActiveProgram(syncedProgram);
+        } else {
+          setActiveProgram(user.active_program);
+        }
+        
         const programs = await PresetProgram.filter({ id: user.active_program.program_id });
         if (programs.length > 0) {
           setActiveProgramDetails(programs[0]);
