@@ -77,6 +77,8 @@ import Upload3DModels from './pages/Upload3DModels';
 import WorkoutBuilder from './pages/WorkoutBuilder';
 import WorkoutComplete from './pages/WorkoutComplete';
 import WorkoutDetail from './pages/WorkoutDetail';
+import Community from './pages/Community';
+import WatchMode from './pages/WatchMode';
 import __Layout from './Layout.jsx';
 
 
@@ -111,6 +113,8 @@ export const PAGES = {
     "WorkoutBuilder": WorkoutBuilder,
     "WorkoutComplete": WorkoutComplete,
     "WorkoutDetail": WorkoutDetail,
+    "Community": Community,
+    "WatchMode": WatchMode,
 }
 
 export const pagesConfig = {

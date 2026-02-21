@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box } from "lucide-react";
+import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box, Users, Clock } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { PresetProgram } from "@/entities/PresetProgram";
 import { Exercise } from "@/entities/Exercise";
@@ -36,6 +36,8 @@ const navigationItems = [
   { title: "Progress", url: createPageUrl("Progress"), icon: Camera },
   { title: "Achievements", url: createPageUrl("Achievements"), icon: Trophy },
   { title: "Measurements", url: createPageUrl("BodyMeasurements"), icon: Ruler },
+  { title: "Community", url: createPageUrl("Community"), icon: Users },
+  { title: "Watch Mode", url: createPageUrl("WatchMode"), icon: Clock },
   { title: "Referrals", url: createPageUrl("Referrals"), icon: Gift },
   { title: "Upload 3D Models", url: createPageUrl("Upload3DModels"), icon: Box },
   { title: "Help", url: createPageUrl("Help"), icon: HelpCircle },
