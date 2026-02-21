@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Mic } from "lucide-react";
 import { motion } from "framer-motion";
 import FitnessQuiz from "@/components/FitnessQuiz";
+import MuscleRecovery from "@/components/recovery/MuscleRecovery";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -175,6 +176,18 @@ export default function Home() {
                     </Button>
                   </CardContent>
                 </Card>
+              </motion.div>
+            )}
+
+            {/* Muscle Recovery */}
+            {user && (
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.35, duration: 0.6 }}
+                className="mb-6 md:mb-8"
+              >
+                <MuscleRecovery />
               </motion.div>
             )}
 
