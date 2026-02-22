@@ -51,6 +51,7 @@ import AIWorkoutGenerator from './pages/AIWorkoutGenerator';
 import Achievements from './pages/Achievements';
 import ActiveWorkout from './pages/ActiveWorkout';
 import BodyMeasurements from './pages/BodyMeasurements';
+import Community from './pages/Community';
 import Disclaimer from './pages/Disclaimer';
 import Exercises from './pages/Exercises';
 import FoodDatabase from './pages/FoodDatabase';
@@ -74,11 +75,10 @@ import Settings from './pages/Settings';
 import Stretches from './pages/Stretches';
 import Terms from './pages/Terms';
 import Upload3DModels from './pages/Upload3DModels';
+import WatchMode from './pages/WatchMode';
 import WorkoutBuilder from './pages/WorkoutBuilder';
 import WorkoutComplete from './pages/WorkoutComplete';
 import WorkoutDetail from './pages/WorkoutDetail';
-import Community from './pages/Community';
-import WatchMode from './pages/WatchMode';
 import __Layout from './Layout.jsx';
 
 
@@ -87,6 +87,7 @@ export const PAGES = {
     "Achievements": Achievements,
     "ActiveWorkout": ActiveWorkout,
     "BodyMeasurements": BodyMeasurements,
+    "Community": Community,
     "Disclaimer": Disclaimer,
     "Exercises": Exercises,
     "FoodDatabase": FoodDatabase,
@@ -110,11 +111,10 @@ export const PAGES = {
     "Stretches": Stretches,
     "Terms": Terms,
     "Upload3DModels": Upload3DModels,
+    "WatchMode": WatchMode,
     "WorkoutBuilder": WorkoutBuilder,
     "WorkoutComplete": WorkoutComplete,
     "WorkoutDetail": WorkoutDetail,
-    "Community": Community,
-    "WatchMode": WatchMode,
 }
 
 export const pagesConfig = {
