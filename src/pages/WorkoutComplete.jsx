@@ -49,100 +49,129 @@ export default function WorkoutComplete() {
         const user = await base44.auth.me();
         await updateStreak(user);
 
-        // Check if this was part of a program and advance to next day
+        // CRITICAL FIX: Check if this was part of a program and advance to next day
         const workouts = await base44.entities.Workout.filter({ id: session.workout_id });
+        console.log('[PROGRAM] Checking workout for program:', workouts);
+        
         if (workouts.length > 0 && workouts[0].program_id) {
           const workout = workouts[0];
-          const user = await base44.auth.me();
+          const dayJustCompleted = workout.program_day;
           
-          if (user.active_program && user.active_program.program_id === workout.program_id) {
-            const completedDays = user.active_program.completed_days || [];
-            const dayJustCompleted = workout.program_day;
+          console.log('[PROGRAM] Found program workout:', {
+            program_id: workout.program_id,
+            program_day: dayJustCompleted,
+            workout_name: workout.name
+          });
+          
+          // CRITICAL: Find enrollment by program_id AND active status
+          const enrollments = await ProgramEnrollment.filter({ 
+            program_id: workout.program_id,
+            status: 'active'
+          });
+          
+          console.log('[PROGRAM] Found enrollments:', enrollments);
+          
+          if (enrollments.length > 0) {
+            const enrollment = enrollments[0];
+            const existingCompletedDays = enrollment.completed_days || [];
             
-            // Mark current day as completed if not already
-            if (!completedDays.includes(dayJustCompleted)) {
-              completedDays.push(dayJustCompleted);
-            }
+            console.log('[PROGRAM] Current enrollment state:', {
+              current_day: enrollment.current_day,
+              completed_days: existingCompletedDays,
+              total_days: enrollment.total_days
+            });
             
+            // Only add if not already completed
+            const updatedCompletedDays = existingCompletedDays.includes(dayJustCompleted) 
+              ? existingCompletedDays 
+              : [...existingCompletedDays, dayJustCompleted];
+            
+            const daysCompletedCount = updatedCompletedDays.length;
             const nextDay = dayJustCompleted + 1;
+            const completionPercentage = (daysCompletedCount / enrollment.total_days) * 100;
             
-            // Fetch program details
+            console.log('[PROGRAM] Updating enrollment:', {
+              day_just_completed: dayJustCompleted,
+              updated_completed_days: updatedCompletedDays,
+              next_day: nextDay,
+              completion_percentage: completionPercentage
+            });
+            
+            // CRITICAL: Update enrollment FIRST
+            await ProgramEnrollment.update(enrollment.id, {
+              completed_days: updatedCompletedDays,
+              days_completed_count: daysCompletedCount,
+              completion_percentage: completionPercentage,
+              last_activity_date: new Date().toISOString(),
+              current_day: nextDay
+            });
+            
+            console.log('[PROGRAM] ✅ Enrollment updated in database');
+            
+            // Fetch program details for UI
             const programs = await base44.entities.PresetProgram.filter({ id: workout.program_id });
             const program = programs[0];
             
             // Set program info for UI display
             setProgramInfo({
-              programName: user.active_program.program_name,
+              programName: enrollment.program_name,
               dayCompleted: dayJustCompleted,
-              nextDay: nextDay <= user.active_program.total_days ? nextDay : null,
-              totalDays: user.active_program.total_days,
-              nextDayPlan: nextDay <= user.active_program.total_days ? program?.daily_plans?.[nextDay - 1] : null,
+              nextDay: nextDay <= enrollment.total_days ? nextDay : null,
+              totalDays: enrollment.total_days,
+              nextDayPlan: nextDay <= enrollment.total_days ? program?.daily_plans?.[nextDay - 1] : null,
               programId: workout.program_id
             });
             
-            // Update enrollment record
-            const enrollments = await ProgramEnrollment.filter({ 
-              program_id: workout.program_id,
-              status: 'active'
-            });
-            
-            if (enrollments.length > 0) {
-              const enrollment = enrollments[0];
-              const existingCompletedDays = enrollment.completed_days || [];
-              
-              // Only add if not already completed
-              const updatedCompletedDays = existingCompletedDays.includes(dayJustCompleted) 
-                ? existingCompletedDays 
-                : [...existingCompletedDays, dayJustCompleted];
-              
-              const daysCompletedCount = updatedCompletedDays.length;
-              const completionPercentage = (daysCompletedCount / enrollment.total_days) * 100;
-              
-              await ProgramEnrollment.update(enrollment.id, {
+            // CRITICAL: Update user.active_program to match enrollment
+            const user = await base44.auth.me();
+            await base44.auth.updateMe({
+              active_program: {
+                program_id: workout.program_id,
+                program_name: enrollment.program_name,
+                program_type: 'workout',
+                current_day: nextDay,
+                total_days: enrollment.total_days,
                 completed_days: updatedCompletedDays,
                 days_completed_count: daysCompletedCount,
-                completion_percentage: completionPercentage,
-                last_activity_date: new Date().toISOString(),
-                current_day: nextDay
-              });
-              
-              // Sync user.active_program with enrollment data
-              await base44.auth.updateMe({
-                active_program: {
-                  ...user.active_program,
-                  completed_days: updatedCompletedDays,
-                  current_day: nextDay,
-                  days_completed_count: daysCompletedCount
-                }
-              });
-            }
-            
-            // Progress update already handled above in enrollment sync
-            if (nextDay <= user.active_program.total_days) {
-              toast.success(`✓ Day ${dayJustCompleted} complete! Day ${nextDay} is ready.`);
-            } else {
-              // Program completed - award achievement and update enrollment
-              if (enrollments.length > 0) {
-                await ProgramEnrollment.update(enrollments[0].id, {
-                  status: 'completed',
-                  end_date: new Date().toISOString(),
-                  completion_percentage: 100,
-                  achievement_earned: true
-                });
-                
-                // Award program completion achievement
-                await Achievement.create({
-                  achievement_type: `program_${workout.program_id}_completed`,
-                  title: `${user.active_program.program_name} Champion`,
-                  description: `Completed all ${user.active_program.total_days} days of ${user.active_program.program_name}`,
-                  icon: '🏆',
-                  earned_date: new Date().toISOString()
-                });
+                start_date: enrollment.start_date
               }
+            });
+            
+            console.log('[PROGRAM] ✅ User.active_program synced');
+            
+            // Check if program is complete
+            if (nextDay > enrollment.total_days) {
+              // Program completed - award achievement
+              await ProgramEnrollment.update(enrollment.id, {
+                status: 'completed',
+                end_date: new Date().toISOString(),
+                completion_percentage: 100,
+                achievement_earned: true
+              });
               
+              console.log('[PROGRAM] ✅ Program completed!');
+              
+              // Award program completion achievement
+              await Achievement.create({
+                achievement_type: `program_${workout.program_id}_completed`,
+                title: `${enrollment.program_name} Champion`,
+                description: `Completed all ${enrollment.total_days} days of ${enrollment.program_name}`,
+                icon_url: 'https://api.dicebear.com/7.x/icons/svg?icon=trophy',
+                earned_date: new Date().toISOString(),
+                progress: 100,
+                target: 100,
+                category: 'elite'
+              });
+              
+              // Clear active program from user
               await base44.auth.updateMe({ active_program: null });
-              toast.success(`🎉 Program "${user.active_program.program_name}" completed!`);
+              toast.success(`🎉 Program "${enrollment.program_name}" completed!`);
+            } else {
+              // Show progress message
+              toast.success(`✓ Day ${dayJustCompleted} complete! Day ${nextDay} is ready.`);
             }
+          } else {
+            console.warn('[PROGRAM] No active enrollment found for program:', workout.program_id);
           }
         }
       }
