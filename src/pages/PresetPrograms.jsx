@@ -33,17 +33,23 @@ export default function PresetPrograms() {
     loadPrograms();
     loadActiveProgram();
     
-    // Reload active program when page becomes visible
+    // Reload active program when page becomes visible or on focus
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         loadActiveProgram();
       }
     };
     
+    const handleFocus = () => {
+      loadActiveProgram();
+    };
+    
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 
