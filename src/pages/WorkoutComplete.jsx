@@ -55,7 +55,7 @@ export default function WorkoutComplete() {
         
         if (workouts.length > 0 && workouts[0].program_id) {
           const workout = workouts[0];
-          const dayJustCompleted = workout.program_day;
+          const dayJustCompleted = workout.program_day || 1;
           
           console.log('[PROGRAM] Found program workout:', {
             program_id: workout.program_id,
