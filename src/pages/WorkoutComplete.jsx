@@ -112,15 +112,17 @@ export default function WorkoutComplete() {
             const programs = await base44.entities.PresetProgram.filter({ id: workout.program_id });
             const program = programs[0];
             
-            // Set program info for UI display
-            setProgramInfo({
-              programName: enrollment.program_name,
+            // Set program info for UI display - ALWAYS show this immediately
+            const programDisplayInfo = {
+              programName: enrollment.program_name || program?.name || 'Program',
               dayCompleted: dayJustCompleted,
               nextDay: nextDay <= enrollment.total_days ? nextDay : null,
               totalDays: enrollment.total_days,
               nextDayPlan: nextDay <= enrollment.total_days ? program?.daily_plans?.[nextDay - 1] : null,
               programId: workout.program_id
-            });
+            };
+            console.log('[PROGRAM] Setting program info for display:', programDisplayInfo);
+            setProgramInfo(programDisplayInfo);
             
             // CRITICAL: Update user.active_program to match enrollment
             const user = await base44.auth.me();
