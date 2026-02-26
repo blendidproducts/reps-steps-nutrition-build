@@ -28,6 +28,7 @@ export default function PresetPrograms() {
   const [activeNutritionProgram, setActiveNutritionProgram] = useState(null);
   const [activeProgramDetails, setActiveProgramDetails] = useState(null);
   const [activeTab, setActiveTab] = useState('workout');
+  const [allEnrollments, setAllEnrollments] = useState([]);
 
   useEffect(() => {
     loadPrograms();
@@ -112,12 +113,14 @@ export default function PresetPrograms() {
 
   const loadPrograms = async () => {
     setIsLoading(true);
-    const [workoutPrograms, nutritionProgramsList] = await Promise.all([
+    const [workoutPrograms, nutritionProgramsList, enrollments] = await Promise.all([
       PresetProgram.filter({ is_preset: true }),
-      NutritionProgram.list()
+      NutritionProgram.list(),
+      ProgramEnrollment.filter({ program_type: 'workout' })
     ]);
     setPrograms(workoutPrograms);
     setNutritionPrograms(nutritionProgramsList);
+    setAllEnrollments(enrollments);
     setIsLoading(false);
   };
 
@@ -516,6 +519,27 @@ export default function PresetPrograms() {
                             <Zap className="w-4 h-4" />
                             <span>{program.category}</span>
                           </div>
+                          {(() => {
+                            const enrollment = allEnrollments.find(e => e.program_id === program.id);
+                            if (enrollment) {
+                              const daysCompleted = enrollment.days_completed_count || 0;
+                              return (
+                                <div className="pt-2 border-t border-gray-700">
+                                  <div className="flex items-center justify-between text-xs mb-1">
+                                    <span className="text-gray-400">Progress</span>
+                                    <span className="text-brand-blue font-bold">
+                                      {daysCompleted} / {program.duration_days} days
+                                    </span>
+                                  </div>
+                                  <Progress 
+                                    value={(daysCompleted / program.duration_days) * 100} 
+                                    className="h-2"
+                                  />
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                         <Button 
                           onClick={(e) => {
