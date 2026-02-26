@@ -52,12 +52,13 @@ export default function WorkoutComplete() {
         // CRITICAL FIX: Check if this was part of a program and advance to next day
         const workouts = await base44.entities.Workout.filter({ id: session.workout_id });
         console.log('[PROGRAM] Checking workout for program:', workouts);
+        console.log('[PROGRAM] Full workout data:', workouts[0]);
         
         if (workouts.length > 0 && workouts[0].program_id) {
           const workout = workouts[0];
           const dayJustCompleted = workout.program_day || 1;
           
-          console.log('[PROGRAM] Found program workout:', {
+          console.log('[PROGRAM] ✅ Found program workout:', {
             program_id: workout.program_id,
             program_day: dayJustCompleted,
             workout_name: workout.name
@@ -72,7 +73,7 @@ export default function WorkoutComplete() {
             nextDayPlan: null,
             programId: workout.program_id
           };
-          console.log('[PROGRAM] Setting basic program info immediately:', basicProgramInfo);
+          console.log('[PROGRAM] ✅ Setting basic program info immediately:', basicProgramInfo);
           setProgramInfo(basicProgramInfo);
           
           // CRITICAL: Find enrollment by program_id AND active status
@@ -185,8 +186,12 @@ export default function WorkoutComplete() {
               toast.success(`✓ Day ${dayJustCompleted} complete! Day ${nextDay} is ready.`);
             }
           } else {
-            console.warn('[PROGRAM] No active enrollment found for program:', workout.program_id);
+            console.warn('[PROGRAM] ⚠️ No active enrollment found for program:', workout.program_id);
+            console.warn('[PROGRAM] ⚠️ But still showing day completed in UI');
           }
+        } else {
+          console.log('[PROGRAM] ℹ️ This workout is NOT part of a program (no program_id)');
+          console.log('[PROGRAM] Workout details:', workouts[0]);
         }
       }
 
