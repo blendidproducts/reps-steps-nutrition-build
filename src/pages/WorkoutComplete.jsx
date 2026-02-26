@@ -320,10 +320,13 @@ export default function WorkoutComplete() {
               {programInfo ? (
                 <>
                   <h1 className="text-3xl font-bold text-foreground mb-2">
-                    Day {programInfo.dayCompleted} Complete!
+                    🎯 Day {programInfo.dayCompleted} Complete!
                   </h1>
-                  <p className="text-lg text-gray-400 mb-2">
+                  <p className="text-xl text-brand-blue font-semibold mb-1">
                     {programInfo.programName}
+                  </p>
+                  <p className="text-sm text-gray-400 mb-6">
+                    Progress: {programInfo.dayCompleted}/{programInfo.totalDays} days
                   </p>
                   <p className="text-sm text-gray-500 mb-8">
                     Outstanding effort! You've just crushed another session. 🔥
