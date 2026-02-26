@@ -63,6 +63,18 @@ export default function WorkoutComplete() {
             workout_name: workout.name
           });
           
+          // IMMEDIATE: Set basic program info from workout data (before enrollment lookup)
+          const basicProgramInfo = {
+            programName: workout.name?.includes('-') ? workout.name.split('-')[0].trim() : 'Program',
+            dayCompleted: dayJustCompleted,
+            nextDay: null,
+            totalDays: null,
+            nextDayPlan: null,
+            programId: workout.program_id
+          };
+          console.log('[PROGRAM] Setting basic program info immediately:', basicProgramInfo);
+          setProgramInfo(basicProgramInfo);
+          
           // CRITICAL: Find enrollment by program_id AND active status
           const enrollments = await ProgramEnrollment.filter({ 
             program_id: workout.program_id,
