@@ -182,6 +182,12 @@ export class AchievementManager {
   static async checkAndAwardAchievements(userEmail) {
     const newlyEarned = [];
     
+    // CRITICAL FIX: Initialize achievements if user doesn't have any yet
+    const existingAchievements = await base44.entities.Achievement.filter({ created_by: userEmail });
+    if (existingAchievements.length === 0) {
+      await this.initializeUserAchievements(userEmail);
+    }
+    
     // Get all workout sessions
     const sessions = await base44.entities.WorkoutSession.filter({ created_by: userEmail });
     
@@ -209,7 +215,7 @@ export class AchievementManager {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const last30DaysWorkouts = sessions.filter(s => new Date(s.start_time) >= thirtyDaysAgo).length;
     
-    // Get all user achievements
+    // Get all user achievements (after initialization)
     const achievements = await base44.entities.Achievement.filter({ created_by: userEmail });
     
     // Check each achievement type
