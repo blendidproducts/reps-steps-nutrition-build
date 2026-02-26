@@ -178,8 +178,13 @@ export default function PresetPrograms() {
         program_day: dayNumber
       };
 
-      console.log('[PROGRAM START] Creating workout with data:', workoutData);
+      console.log('[PROGRAM START] ✅ Creating workout with program link:', {
+        program_id: program.id,
+        program_day: dayNumber,
+        program_name: program.name
+      });
       const workout = await Workout.create(workoutData);
+      console.log('[PROGRAM START] ✅ Workout created with ID:', workout.id);
       console.log('[PROGRAM START] Workout created:', workout.id, workout);
       
       // CRITICAL: Create or update enrollment record
