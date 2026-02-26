@@ -155,31 +155,51 @@ export default function PresetPrograms() {
         program_day: dayNumber
       };
 
+      console.log('[PROGRAM START] Creating workout with data:', workoutData);
       const workout = await Workout.create(workoutData);
+      console.log('[PROGRAM START] Workout created:', workout.id, workout);
       
-      // Create enrollment record if starting fresh
-      if (dayNumber === 1) {
-        await ProgramEnrollment.create({
+      // CRITICAL: Create or update enrollment record
+      const existingEnrollments = await ProgramEnrollment.filter({ 
+        program_id: program.id,
+        status: 'active'
+      });
+      
+      let enrollment;
+      if (existingEnrollments.length === 0) {
+        // Create new enrollment
+        enrollment = await ProgramEnrollment.create({
           program_id: program.id,
           program_name: program.name,
           program_type: 'workout',
           start_date: new Date().toISOString(),
           current_day: dayNumber,
           total_days: program.duration_days,
-          status: 'active'
+          status: 'active',
+          completed_days: [],
+          days_completed_count: 0,
+          completion_percentage: 0
         });
+        console.log('[PROGRAM START] Created new enrollment:', enrollment.id);
+      } else {
+        // Use existing enrollment
+        enrollment = existingEnrollments[0];
+        console.log('[PROGRAM START] Using existing enrollment:', enrollment.id);
       }
       
+      // CRITICAL: Sync user.active_program with enrollment data
       await base44.auth.updateMe({
         active_program: {
           program_id: program.id,
           program_name: program.name,
-          current_day: dayNumber,
+          current_day: enrollment.current_day,
           total_days: program.duration_days,
-          started_date: new Date().toISOString(),
-          completed_days: []
+          start_date: enrollment.start_date,
+          completed_days: enrollment.completed_days || [],
+          days_completed_count: enrollment.days_completed_count || 0
         }
       });
+      console.log('[PROGRAM START] Updated user.active_program');
       
       toast.dismiss();
       toast.success(`Starting Day ${dayNumber} of ${program.name}`);
