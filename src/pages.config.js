@@ -66,6 +66,7 @@ import NutritionPrograms from './pages/NutritionPrograms';
 import PresetPrograms from './pages/PresetPrograms';
 import Pricing from './pages/Pricing';
 import Privacy from './pages/Privacy';
+import ProgramProgress from './pages/ProgramProgress';
 import Programs from './pages/Programs';
 import Progress from './pages/Progress';
 import RandomWorkout from './pages/RandomWorkout';
@@ -79,7 +80,6 @@ import WatchMode from './pages/WatchMode';
 import WorkoutBuilder from './pages/WorkoutBuilder';
 import WorkoutComplete from './pages/WorkoutComplete';
 import WorkoutDetail from './pages/WorkoutDetail';
-import ProgramProgress from './pages/ProgramProgress';
 import __Layout from './Layout.jsx';
 
 
@@ -103,6 +103,7 @@ export const PAGES = {
     "PresetPrograms": PresetPrograms,
     "Pricing": Pricing,
     "Privacy": Privacy,
+    "ProgramProgress": ProgramProgress,
     "Programs": Programs,
     "Progress": Progress,
     "RandomWorkout": RandomWorkout,
@@ -116,7 +117,6 @@ export const PAGES = {
     "WorkoutBuilder": WorkoutBuilder,
     "WorkoutComplete": WorkoutComplete,
     "WorkoutDetail": WorkoutDetail,
-    "ProgramProgress": ProgramProgress,
 }
 
 export const pagesConfig = {

@@ -55,35 +55,55 @@ export default function PresetPrograms() {
 
   const loadActiveProgram = async () => {
     try {
-      const user = await base44.auth.me();
-      if (user.active_program) {
-        // Fetch the latest enrollment data as source of truth
-        const enrollments = await ProgramEnrollment.filter({ 
-          program_id: user.active_program.program_id,
-          status: 'active'
+      // CRITICAL FIX: Load from ProgramEnrollment first (source of truth)
+      const activeEnrollments = await ProgramEnrollment.filter({ 
+        status: 'active',
+        program_type: 'workout'
+      });
+      
+      if (activeEnrollments.length > 0) {
+        const enrollment = activeEnrollments[0];
+        
+        console.log('[PresetPrograms] Loaded active enrollment:', {
+          program_id: enrollment.program_id,
+          current_day: enrollment.current_day,
+          completed_days: enrollment.completed_days,
+          days_completed_count: enrollment.days_completed_count
         });
         
-        if (enrollments.length > 0) {
-          const enrollment = enrollments[0];
-          // Sync user data with enrollment data
-          const syncedProgram = {
-            ...user.active_program,
-            completed_days: enrollment.completed_days || [],
-            current_day: enrollment.current_day,
-            days_completed_count: enrollment.days_completed_count || 0
-          };
-          setActiveProgram(syncedProgram);
-        } else {
-          setActiveProgram(user.active_program);
-        }
+        // Build activeProgram from enrollment data
+        const syncedProgram = {
+          program_id: enrollment.program_id,
+          program_name: enrollment.program_name,
+          program_type: 'workout',
+          current_day: enrollment.current_day,
+          total_days: enrollment.total_days,
+          completed_days: enrollment.completed_days || [],
+          days_completed_count: enrollment.days_completed_count || 0,
+          start_date: enrollment.start_date
+        };
         
-        const programs = await PresetProgram.filter({ id: user.active_program.program_id });
+        setActiveProgram(syncedProgram);
+        
+        const programs = await PresetProgram.filter({ id: enrollment.program_id });
         if (programs.length > 0) {
           setActiveProgramDetails(programs[0]);
         }
-      }
-      if (user.active_nutrition_program) {
-        setActiveNutritionProgram(user.active_nutrition_program);
+      } else {
+        // Fallback: check user.active_program
+        const user = await base44.auth.me();
+        if (user.active_program && user.active_program.program_type === 'workout') {
+          setActiveProgram(user.active_program);
+          
+          const programs = await PresetProgram.filter({ id: user.active_program.program_id });
+          if (programs.length > 0) {
+            setActiveProgramDetails(programs[0]);
+          }
+        }
+        
+        if (user.active_nutrition_program) {
+          setActiveNutritionProgram(user.active_nutrition_program);
+        }
       }
     } catch (error) {
       console.log('No active program');
