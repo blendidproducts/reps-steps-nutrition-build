@@ -312,27 +312,41 @@ export default function PresetPrograms() {
                             )}
                           </>
                         )}
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedProgram(activeProgramDetails);
                             }}
                             variant="outline"
+                            size="sm"
                             className="mt-3 border-brand-blue text-brand-blue hover:bg-brand-blue/20"
                           >
-                            <Eye className="w-4 h-4 mr-2" />
-                            PREVIEW
+                            <Eye className="w-4 h-4 mr-1" />
+                            Preview
+                          </Button>
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`${createPageUrl("ProgramProgress")}`);
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="mt-3 border-purple-500 text-purple-400 hover:bg-purple-500/20"
+                          >
+                            <Calendar className="w-4 h-4 mr-1" />
+                            Progress
                           </Button>
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
                               startProgram(activeProgramDetails, activeProgram.current_day);
                             }}
+                            size="sm"
                             className="mt-3 bg-green-600 hover:bg-green-700 text-white font-bold"
                           >
-                            <Play className="w-4 h-4 mr-2" />
-                            START
+                            <Play className="w-4 h-4 mr-1" />
+                            Start
                           </Button>
                         </div>
                       </div>
