@@ -330,20 +330,22 @@ export default function WorkoutComplete() {
               transition={{ delay: 0.4, duration: 0.6 }}
             >
               {programInfo ? (
-                <>
-                  <h1 className="text-3xl font-bold text-foreground mb-2">
+                <div className="bg-gradient-to-r from-brand-blue/20 to-purple-600/20 border-2 border-brand-blue/50 rounded-xl p-6 mb-6">
+                  <div className="text-sm text-brand-blue font-bold mb-2">PROGRAM WORKOUT</div>
+                  <h1 className="text-4xl font-bold text-white mb-3">
                     🎯 Day {programInfo.dayCompleted} Complete!
                   </h1>
-                  <p className="text-xl text-brand-blue font-semibold mb-1">
+                  <p className="text-2xl text-brand-blue font-bold mb-2">
                     {programInfo.programName}
                   </p>
-                  <p className="text-sm text-gray-400 mb-6">
-                    Progress: {programInfo.dayCompleted}/{programInfo.totalDays} days
-                  </p>
-                  <p className="text-sm text-gray-500 mb-8">
-                    Outstanding effort! You've just crushed another session. 🔥
-                  </p>
-                </>
+                  {programInfo.totalDays && (
+                    <div className="bg-background/50 rounded-lg px-4 py-2 inline-block">
+                      <p className="text-sm text-gray-300">
+                        Progress: <span className="text-brand-blue font-bold text-lg">{programInfo.dayCompleted}/{programInfo.totalDays}</span> days
+                      </p>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <>
                   <h1 className="text-3xl font-bold text-foreground mb-2">
@@ -354,6 +356,9 @@ export default function WorkoutComplete() {
                   </p>
                 </>
               )}
+              <p className="text-sm text-gray-500 mb-8">
+                Outstanding effort! You've just crushed another session. 🔥
+              </p>
             </motion.div>
 
             {/* Workout Stats */}
