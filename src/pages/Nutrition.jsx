@@ -63,9 +63,14 @@ export default function Nutrition() {
     fat: acc.fat + (meal.fat || 0)
   }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
 
-  const handleFoodAdded = () => {
-    loadData();
+  const handleFoodAdded = (newEntry) => {
+    // Optimistic update: add the new entry immediately to the UI
+    if (newEntry) {
+      setTodaysMeals(prev => [...prev, { ...newEntry, id: `optimistic-${Date.now()}` }]);
+    }
     setShowQuickAdd(false);
+    // Refresh in background to sync with backend
+    loadData();
   };
 
   return (
