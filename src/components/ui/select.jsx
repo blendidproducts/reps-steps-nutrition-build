@@ -1,46 +1,13 @@
+
 "use client"
 
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 
 import { cn } from "@/lib/utils"
 
-// Mobile-aware Select: on mobile (<768px) renders as a bottom drawer
-const MobileSelectContext = React.createContext(null);
-
-function Select({ children, value, onValueChange, defaultValue, ...props }) {
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const [drawerOpen, setDrawerOpen] = React.useState(false);
-  const [internalValue, setInternalValue] = React.useState(value ?? defaultValue ?? '');
-
-  // Sync controlled value
-  React.useEffect(() => {
-    if (value !== undefined) setInternalValue(value);
-  }, [value]);
-
-  const handleValueChange = (v) => {
-    setInternalValue(v);
-    onValueChange?.(v);
-  };
-
-  if (!isMobile) {
-    return (
-      <SelectPrimitive.Root value={value} onValueChange={onValueChange} defaultValue={defaultValue} {...props}>
-        {children}
-      </SelectPrimitive.Root>
-    );
-  }
-
-  return (
-    <MobileSelectContext.Provider value={{ value: internalValue, onValueChange: handleValueChange, drawerOpen, setDrawerOpen }}>
-      <SelectPrimitive.Root value={value} onValueChange={onValueChange} defaultValue={defaultValue} {...props}>
-        {children}
-      </SelectPrimitive.Root>
-    </MobileSelectContext.Provider>
-  );
-}
+const Select = SelectPrimitive.Root
 
 const SelectGroup = SelectPrimitive.Group
 
