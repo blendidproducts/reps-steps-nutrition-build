@@ -445,7 +445,7 @@ export default function Layout({ children, currentPageName }) {
             className="flex-1 overflow-y-auto overflow-x-hidden" 
             style={{ 
               backgroundColor: 'transparent',
-              overscrollBehavior: 'contain',
+              overscrollBehavior: 'none',
               WebkitOverflowScrolling: 'touch',
               position: 'relative'
             }} 
