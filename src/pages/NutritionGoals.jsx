@@ -115,20 +115,27 @@ export default function NutritionGoals() {
   const handleSave = async () => {
     setIsSaving(true);
 
-    // Deactivate existing goals
+    // Optimistic update: immediately reflect new goal in UI
+    const optimisticGoal = {
+      ...formData,
+      current_weight_lbs: parseFloat(formData.current_weight_lbs) || null,
+      target_weight_lbs: parseFloat(formData.target_weight_lbs) || null,
+      is_active: true,
+      id: currentGoal?.id || `optimistic-${Date.now()}`
+    };
+    setCurrentGoal(optimisticGoal);
+    setIsSaving(false);
+
+    // Backend call in background
     if (currentGoal) {
       await NutritionGoal.update(currentGoal.id, { is_active: false });
     }
-
-    // Create new goal
     await NutritionGoal.create({
       ...formData,
       current_weight_lbs: parseFloat(formData.current_weight_lbs) || null,
       target_weight_lbs: parseFloat(formData.target_weight_lbs) || null,
       is_active: true
     });
-
-    setIsSaving(false);
     loadGoal();
   };
 
