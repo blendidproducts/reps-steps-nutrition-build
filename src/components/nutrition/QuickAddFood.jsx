@@ -7,7 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import MobileDrawerSelect from "@/components/MobileDrawerSelect";
 import { Search, Plus } from "lucide-react";
+
+const MEAL_TYPE_OPTIONS = [
+  { value: "breakfast", label: "Breakfast" },
+  { value: "lunch", label: "Lunch" },
+  { value: "dinner", label: "Dinner" },
+  { value: "snack", label: "Snack" },
+];
 
 export default function QuickAddFood({ onClose, onFoodAdded, date }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -18,7 +26,6 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
   const [servings, setServings] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Manual entry state
   const [manualEntry, setManualEntry] = useState({
     food_name: "",
     calories: "",
@@ -33,7 +40,7 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
 
   useEffect(() => {
     if (searchQuery) {
-      const filtered = foods.filter(f => 
+      const filtered = foods.filter(f =>
         f.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setFilteredFoods(filtered);
@@ -55,9 +62,7 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
 
   const handleLogFood = async () => {
     if (!selectedFood) return;
-    setIsLoading(true);
-
-    await MealLog.create({
+    const newEntry = {
       date,
       meal_type: mealType,
       food_id: selectedFood.id,
@@ -67,17 +72,16 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
       protein: Math.round(selectedFood.protein * servings),
       carbs: Math.round(selectedFood.carbs * servings),
       fat: Math.round(selectedFood.fat * servings)
-    });
-
-    setIsLoading(false);
-    onFoodAdded();
+    };
+    // Optimistic: close immediately and notify parent
+    onFoodAdded(newEntry);
+    // Backend call in background
+    MealLog.create(newEntry);
   };
 
   const handleManualLog = async () => {
     if (!manualEntry.food_name || !manualEntry.calories) return;
-    setIsLoading(true);
-
-    await MealLog.create({
+    const newEntry = {
       date,
       meal_type: mealType,
       food_name: manualEntry.food_name,
@@ -86,11 +90,14 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
       protein: parseInt(manualEntry.protein) || 0,
       carbs: parseInt(manualEntry.carbs) || 0,
       fat: parseInt(manualEntry.fat) || 0
-    });
-
-    setIsLoading(false);
-    onFoodAdded();
+    };
+    // Optimistic: close immediately and notify parent
+    onFoodAdded(newEntry);
+    // Backend call in background
+    MealLog.create(newEntry);
   };
+
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -101,17 +108,27 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
 
         <div className="mb-4">
           <Label>Meal Type</Label>
-          <Select value={mealType} onValueChange={setMealType}>
-            <SelectTrigger className="bg-background border-border">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="breakfast">Breakfast</SelectItem>
-              <SelectItem value="lunch">Lunch</SelectItem>
-              <SelectItem value="dinner">Dinner</SelectItem>
-              <SelectItem value="snack">Snack</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="md:hidden mt-1">
+            <MobileDrawerSelect
+              value={mealType}
+              onValueChange={setMealType}
+              options={MEAL_TYPE_OPTIONS}
+              placeholder="Select meal type"
+              label="Meal Type"
+            />
+          </div>
+          <div className="hidden md:block mt-1">
+            <Select value={mealType} onValueChange={setMealType}>
+              <SelectTrigger className="bg-background border-border">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MEAL_TYPE_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <Tabs defaultValue="search">
@@ -137,8 +154,8 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
                   key={food.id}
                   onClick={() => handleSelectFood(food)}
                   className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                    selectedFood?.id === food.id 
-                      ? 'bg-brand-blue/20 border border-brand-blue' 
+                    selectedFood?.id === food.id
+                      ? 'bg-brand-blue/20 border border-brand-blue'
                       : 'bg-background hover:bg-gray-800'
                   }`}
                 >
@@ -176,13 +193,9 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
                     </div>
                   </div>
                 </div>
-                <Button 
-                  onClick={handleLogFood} 
-                  className="w-full gradient-bg"
-                  disabled={isLoading}
-                >
+                <Button onClick={handleLogFood} className="w-full gradient-bg">
                   <Plus className="w-4 h-4 mr-2" />
-                  {isLoading ? "Adding..." : "Add to Log"}
+                  Add to Log
                 </Button>
               </div>
             )}
@@ -240,13 +253,13 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
                 />
               </div>
             </div>
-            <Button 
-              onClick={handleManualLog} 
+            <Button
+              onClick={handleManualLog}
               className="w-full gradient-bg"
-              disabled={isLoading || !manualEntry.food_name || !manualEntry.calories}
+              disabled={!manualEntry.food_name || !manualEntry.calories}
             >
               <Plus className="w-4 h-4 mr-2" />
-              {isLoading ? "Adding..." : "Add to Log"}
+              Add to Log
             </Button>
           </TabsContent>
         </Tabs>
