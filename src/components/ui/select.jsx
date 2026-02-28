@@ -3,84 +3,236 @@
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 
 import { cn } from "@/lib/utils"
 
-const Select = SelectPrimitive.Root
+// ─── Mobile-aware context ────────────────────────────────────────────────────
+// Wraps each Select so that on mobile the content renders as a bottom drawer
+// instead of a floating popover.
+const MobileSelectContext = React.createContext(null);
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState(
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+  React.useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
+
+// ─── Select root ─────────────────────────────────────────────────────────────
+function Select({ children, value, onValueChange, defaultValue, ...props }) {
+  const isMobile = useIsMobile();
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
+
+  if (!isMobile) {
+    return (
+      <SelectPrimitive.Root
+        value={value}
+        onValueChange={onValueChange}
+        defaultValue={defaultValue}
+        {...props}
+      >
+        {children}
+      </SelectPrimitive.Root>
+    );
+  }
+
+  return (
+    <MobileSelectContext.Provider value={{ value, onValueChange, drawerOpen, setDrawerOpen }}>
+      <SelectPrimitive.Root
+        value={value}
+        onValueChange={onValueChange}
+        defaultValue={defaultValue}
+        {...props}
+      >
+        {children}
+      </SelectPrimitive.Root>
+    </MobileSelectContext.Provider>
+  );
+}
 
 const SelectGroup = SelectPrimitive.Group
 
 const SelectValue = SelectPrimitive.Value
 
-const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) => (
-  <SelectPrimitive.Trigger
-    ref={ref}
-    className={cn(
-      "flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
-      className
-    )}
-    {...props}>
-    {children}
-    <SelectPrimitive.Icon asChild>
-      <ChevronDown className="h-4 w-4 opacity-50" />
-    </SelectPrimitive.Icon>
-  </SelectPrimitive.Trigger>
-))
-SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
+// ─── SelectTrigger ────────────────────────────────────────────────────────────
+const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) => {
+  const mobileCtx = React.useContext(MobileSelectContext);
 
+  if (mobileCtx) {
+    // On mobile: trigger opens the drawer instead of the Radix popover
+    return (
+      <button
+        ref={ref}
+        type="button"
+        onClick={() => mobileCtx.setDrawerOpen(true)}
+        className={cn(
+          "flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+          className
+        )}
+        {...props}
+      >
+        {children}
+        <ChevronDown className="h-4 w-4 opacity-50 flex-shrink-0" />
+      </button>
+    );
+  }
+
+  return (
+    <SelectPrimitive.Trigger
+      ref={ref}
+      className={cn(
+        "flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+        className
+      )}
+      {...props}
+    >
+      {children}
+      <SelectPrimitive.Icon asChild>
+        <ChevronDown className="h-4 w-4 opacity-50" />
+      </SelectPrimitive.Icon>
+    </SelectPrimitive.Trigger>
+  );
+});
+SelectTrigger.displayName = SelectPrimitive.Trigger.displayName;
+
+// ─── SelectScrollUpButton ─────────────────────────────────────────────────────
 const SelectScrollUpButton = React.forwardRef(({ className, ...props }, ref) => (
   <SelectPrimitive.ScrollUpButton
     ref={ref}
     className={cn("flex cursor-default items-center justify-center py-1", className)}
-    {...props}>
+    {...props}
+  >
     <ChevronUp className="h-4 w-4" />
   </SelectPrimitive.ScrollUpButton>
 ))
 SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
 
+// ─── SelectScrollDownButton ───────────────────────────────────────────────────
 const SelectScrollDownButton = React.forwardRef(({ className, ...props }, ref) => (
   <SelectPrimitive.ScrollDownButton
     ref={ref}
     className={cn("flex cursor-default items-center justify-center py-1", className)}
-    {...props}>
+    {...props}
+  >
     <ChevronDown className="h-4 w-4" />
   </SelectPrimitive.ScrollDownButton>
 ))
-SelectScrollDownButton.displayName =
-  SelectPrimitive.ScrollDownButton.displayName
+SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
 
-const SelectContent = React.forwardRef(({ className, children, position = "popper", ...props }, ref) => (
-  <SelectPrimitive.Portal>
-    <SelectPrimitive.Content
-      ref={ref}
-      className={cn(
-        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-        position === "popper" &&
-          "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
-        className
-      )}
-      position={position}
-      {...props}>
-      <SelectScrollUpButton />
-      <SelectPrimitive.Viewport
-        className={cn("p-1", position === "popper" &&
-          "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]")}>
-        {children}
-      </SelectPrimitive.Viewport>
-      <SelectScrollDownButton />
-    </SelectPrimitive.Content>
-  </SelectPrimitive.Portal>
-))
-SelectContent.displayName = SelectPrimitive.Content.displayName
+// ─── SelectContent ────────────────────────────────────────────────────────────
+// On mobile: renders as a Drawer bottom sheet.
+// On desktop: renders as the normal Radix popover.
+const SelectContent = React.forwardRef(({ className, children, position = "popper", label, ...props }, ref) => {
+  const mobileCtx = React.useContext(MobileSelectContext);
 
+  if (mobileCtx) {
+    // Collect items from children for the drawer list
+    return (
+      <Drawer open={mobileCtx.drawerOpen} onOpenChange={mobileCtx.setDrawerOpen}>
+        <DrawerContent className="bg-gray-900 border-gray-700">
+          {label && (
+            <DrawerHeader className="border-b border-gray-700">
+              <DrawerTitle className="text-white">{label}</DrawerTitle>
+            </DrawerHeader>
+          )}
+          <div className="max-h-[60vh] overflow-y-auto py-2">
+            <MobileSelectItemsRenderer
+              ctx={mobileCtx}
+              children={children}
+            />
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <SelectPrimitive.Portal>
+      <SelectPrimitive.Content
+        ref={ref}
+        className={cn(
+          "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+          position === "popper" &&
+            "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+          className
+        )}
+        position={position}
+        {...props}
+      >
+        <SelectScrollUpButton />
+        <SelectPrimitive.Viewport
+          className={cn(
+            "p-1",
+            position === "popper" &&
+              "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
+          )}
+        >
+          {children}
+        </SelectPrimitive.Viewport>
+        <SelectScrollDownButton />
+      </SelectPrimitive.Content>
+    </SelectPrimitive.Portal>
+  );
+});
+SelectContent.displayName = SelectPrimitive.Content.displayName;
+
+// ─── Helper: render SelectItems inside the mobile drawer ─────────────────────
+function MobileSelectItemsRenderer({ ctx, children }) {
+  // Walk through children and render drawer-native buttons for SelectItem nodes
+  const renderChild = (child) => {
+    if (!React.isValidElement(child)) return null;
+
+    // SelectItem → render as a native drawer button row
+    if (child.type === SelectItem || child.type?.displayName === "SelectItem") {
+      const { value, children: label, disabled } = child.props;
+      const isSelected = ctx.value === value;
+      return (
+        <button
+          key={value}
+          onClick={() => {
+            if (!disabled) {
+              ctx.onValueChange?.(value);
+              ctx.setDrawerOpen(false);
+            }
+          }}
+          disabled={disabled}
+          className="w-full px-6 py-4 text-left flex items-center justify-between border-b border-gray-800 hover:bg-gray-800 transition-colors disabled:opacity-50"
+        >
+          <span className="text-white font-medium">{label}</span>
+          {isSelected && <Check className="w-5 h-5 text-[#00a9ff] flex-shrink-0" />}
+        </button>
+      );
+    }
+
+    // SelectGroup, SelectLabel, fragments → recurse into children
+    if (child.props?.children) {
+      return React.Children.map(child.props.children, renderChild);
+    }
+
+    return null;
+  };
+
+  return <>{React.Children.map(children, renderChild)}</>;
+}
+
+// ─── SelectLabel ──────────────────────────────────────────────────────────────
 const SelectLabel = React.forwardRef(({ className, ...props }, ref) => (
   <SelectPrimitive.Label
     ref={ref}
     className={cn("px-2 py-1.5 text-sm font-semibold", className)}
-    {...props} />
+    {...props}
+  />
 ))
 SelectLabel.displayName = SelectPrimitive.Label.displayName
 
+// ─── SelectItem ───────────────────────────────────────────────────────────────
 const SelectItem = React.forwardRef(({ className, children, ...props }, ref) => (
   <SelectPrimitive.Item
     ref={ref}
@@ -88,7 +240,8 @@ const SelectItem = React.forwardRef(({ className, children, ...props }, ref) => 
       "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
-    {...props}>
+    {...props}
+  >
     <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
       <SelectPrimitive.ItemIndicator>
         <Check className="h-4 w-4" />
@@ -99,11 +252,13 @@ const SelectItem = React.forwardRef(({ className, children, ...props }, ref) => 
 ))
 SelectItem.displayName = SelectPrimitive.Item.displayName
 
+// ─── SelectSeparator ──────────────────────────────────────────────────────────
 const SelectSeparator = React.forwardRef(({ className, ...props }, ref) => (
   <SelectPrimitive.Separator
     ref={ref}
     className={cn("-mx-1 my-1 h-px bg-muted", className)}
-    {...props} />
+    {...props}
+  />
 ))
 SelectSeparator.displayName = SelectPrimitive.Separator.displayName
 
