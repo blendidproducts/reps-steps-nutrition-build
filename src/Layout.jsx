@@ -274,11 +274,18 @@ export default function Layout({ children, currentPageName }) {
             -webkit-tap-highlight-color: rgba(0, 169, 255, 0.2);
           }
           
-          button, a, [role="button"], input[type="submit"] {
+          button, a, [role="button"], input[type="submit"],
+          nav, .select-none {
             -webkit-tap-highlight-color: rgba(0, 169, 255, 0.3);
             user-select: none;
             -webkit-user-select: none;
             cursor: pointer;
+          }
+          
+          /* Allow text selection in content areas for copying workout logs, instructions, etc. */
+          p, span, h1, h2, h3, h4, h5, h6, li, td, th, label, .selectable-text {
+            user-select: text;
+            -webkit-user-select: text;
           }
           
           input, textarea, select {
