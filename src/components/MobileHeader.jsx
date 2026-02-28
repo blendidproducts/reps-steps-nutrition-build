@@ -19,7 +19,7 @@ export default function MobileHeader({ currentPageName }) {
   };
 
   return (
-    <header className="md:hidden bg-[#0a1628]/95 backdrop-blur-lg border-b border-brand-blue/30 px-4 py-3 sticky top-0 z-50 select-none">
+    <header className="md:hidden bg-[#0a1628]/95 backdrop-blur-lg border-b border-brand-blue/30 px-4 py-3 sticky top-0 z-50 select-none" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
       <div className="flex items-center gap-4">
         {isRootTab ? (
           // Root tab: Show logo and banner
