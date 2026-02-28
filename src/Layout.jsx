@@ -48,17 +48,31 @@ export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
   const contentRef = React.useRef(null);
+  const scrollPositions = React.useRef({});
 
-  // Prevent scroll to top on navigation
+  // Tab pages whose scroll positions should be preserved when switching
+  const TAB_PAGES = ['/Home', '/Exercises', '/PresetPrograms', '/Nutrition', '/History', '/Settings'];
+  const isTabPage = (path) => TAB_PAGES.some(p => path.includes(p));
+
+  // Scroll position preservation: save on scroll, restore when returning to a tab page
   React.useEffect(() => {
     const mainContent = document.getElementById('main-content');
-    if (mainContent && location.state?.preventScroll !== true) {
-      // Only reset scroll if it's a new navigation (not a back button)
-      const isNavigatingForward = !location.state?.fromBack;
-      if (isNavigatingForward) {
-        mainContent.scrollTop = 0;
-      }
+    if (!mainContent) return;
+
+    if (isTabPage(location.pathname)) {
+      // Restore saved scroll position for this tab, otherwise keep at top
+      const savedPos = scrollPositions.current[location.pathname] ?? 0;
+      mainContent.scrollTop = savedPos;
+    } else {
+      // Non-tab pages always start at top
+      mainContent.scrollTop = 0;
     }
+
+    const handleScroll = () => {
+      scrollPositions.current[location.pathname] = mainContent.scrollTop;
+    };
+    mainContent.addEventListener('scroll', handleScroll, { passive: true });
+    return () => mainContent.removeEventListener('scroll', handleScroll);
   }, [location.pathname]);
   const [hasActiveWorkout, setHasActiveWorkout] = React.useState(false);
   const [workoutTimer, setWorkoutTimer] = React.useState(0);
