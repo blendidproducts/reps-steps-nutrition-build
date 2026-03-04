@@ -22,7 +22,8 @@ function useIsMobile() {
   return isMobile;
 }
 
-function Select({ children, value, onValueChange, defaultValue, ...selectRootProps }) {
+function Select(allProps) {
+  const { children, value, onValueChange, defaultValue, ...selectRootProps } = allProps;
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
 
@@ -57,7 +58,8 @@ const SelectGroup = SelectPrimitive.Group
 
 const SelectValue = SelectPrimitive.Value
 
-const SelectTrigger = React.forwardRef(function SelectTriggerInner({ className, children, ...triggerProps }, ref) {
+const SelectTrigger = React.forwardRef(function SelectTriggerInner(allProps, ref) {
+  const { className, children, ...triggerProps } = allProps;
   const mobileCtx = React.useContext(MobileSelectContext);
 
   if (mobileCtx) {
@@ -96,7 +98,8 @@ const SelectTrigger = React.forwardRef(function SelectTriggerInner({ className, 
 });
 SelectTrigger.displayName = SelectPrimitive.Trigger.displayName;
 
-const SelectScrollUpButton = React.forwardRef(function SelectScrollUpInner({ className, ...scrollProps }, ref) {
+const SelectScrollUpButton = React.forwardRef(function SelectScrollUpInner(allProps, ref) {
+  const { className, ...scrollProps } = allProps;
   return (
     <SelectPrimitive.ScrollUpButton
       ref={ref}
@@ -109,7 +112,8 @@ const SelectScrollUpButton = React.forwardRef(function SelectScrollUpInner({ cla
 })
 SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
 
-const SelectScrollDownButton = React.forwardRef(function SelectScrollDownInner({ className, ...scrollProps }, ref) {
+const SelectScrollDownButton = React.forwardRef(function SelectScrollDownInner(allProps, ref) {
+  const { className, ...scrollProps } = allProps;
   return (
     <SelectPrimitive.ScrollDownButton
       ref={ref}
@@ -122,8 +126,8 @@ const SelectScrollDownButton = React.forwardRef(function SelectScrollDownInner({
 })
 SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
 
-const SelectContent = React.forwardRef(function SelectContentInner(props, ref) {
-  const { className, children, position = "popper", label, ...contentProps } = props;
+const SelectContent = React.forwardRef(function SelectContentInner(allProps, ref) {
+  const { className, children, position = "popper", label, ...contentProps } = allProps;
   const mobileCtx = React.useContext(MobileSelectContext);
 
   if (mobileCtx) {
@@ -176,7 +180,8 @@ const SelectContent = React.forwardRef(function SelectContentInner(props, ref) {
 });
 SelectContent.displayName = SelectPrimitive.Content.displayName;
 
-function MobileSelectItemsRenderer({ ctx, children }) {
+function MobileSelectItemsRenderer(allProps) {
+  const { ctx, children } = allProps;
   const renderChild = (child) => {
     if (!React.isValidElement(child)) return null;
 
@@ -211,7 +216,8 @@ function MobileSelectItemsRenderer({ ctx, children }) {
   return <>{React.Children.map(children, renderChild)}</>;
 }
 
-const SelectLabel = React.forwardRef(function SelectLabelInner({ className, ...labelProps }, ref) {
+const SelectLabel = React.forwardRef(function SelectLabelInner(allProps, ref) {
+  const { className, ...labelProps } = allProps;
   return (
     <SelectPrimitive.Label
       ref={ref}
@@ -222,7 +228,8 @@ const SelectLabel = React.forwardRef(function SelectLabelInner({ className, ...l
 })
 SelectLabel.displayName = SelectPrimitive.Label.displayName
 
-const SelectItem = React.forwardRef(function SelectItemInner({ className, children, ...itemProps }, ref) {
+const SelectItem = React.forwardRef(function SelectItemInner(allProps, ref) {
+  const { className, children, ...itemProps } = allProps;
   return (
     <SelectPrimitive.Item
       ref={ref}
@@ -243,7 +250,8 @@ const SelectItem = React.forwardRef(function SelectItemInner({ className, childr
 })
 SelectItem.displayName = SelectPrimitive.Item.displayName
 
-const SelectSeparator = React.forwardRef(function SelectSeparatorInner({ className, ...sepProps }, ref) {
+const SelectSeparator = React.forwardRef(function SelectSeparatorInner(allProps, ref) {
+  const { className, ...sepProps } = allProps;
   return (
     <SelectPrimitive.Separator
       ref={ref}
