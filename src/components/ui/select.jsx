@@ -124,7 +124,6 @@ const SelectScrollDownButton = React.forwardRef(({ className, ...props }, ref) =
 SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
 
 // ─── SelectContent ────────────────────────────────────────────────────────────
-// On mobile: renders as a Drawer bottom sheet. On desktop: renders as the normal Radix popover.
 const SelectContent = React.forwardRef(({ className, children, position = "popper", label, ...props }, ref) => {
   const mobileCtx = React.useContext(MobileSelectContext);
 
