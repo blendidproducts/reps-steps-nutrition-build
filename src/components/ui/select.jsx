@@ -1,5 +1,5 @@
 "use client"
-// v2
+
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
@@ -7,7 +7,6 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 
 import { cn } from "@/lib/utils"
 
-// ─── Mobile-aware context ────────────────────────────────────────────────────
 const MobileSelectContext = React.createContext(null);
 
 function useIsMobile() {
@@ -23,8 +22,7 @@ function useIsMobile() {
   return isMobile;
 }
 
-// ─── Select root ─────────────────────────────────────────────────────────────
-function Select({ children, value, onValueChange, defaultValue, ...props }) {
+function Select({ children, value, onValueChange, defaultValue, ...selectRootProps }) {
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
 
@@ -34,7 +32,7 @@ function Select({ children, value, onValueChange, defaultValue, ...props }) {
         value={value}
         onValueChange={onValueChange}
         defaultValue={defaultValue}
-        {...props}
+        {...selectRootProps}
       >
         {children}
       </SelectPrimitive.Root>
@@ -47,7 +45,7 @@ function Select({ children, value, onValueChange, defaultValue, ...props }) {
         value={value}
         onValueChange={onValueChange}
         defaultValue={defaultValue}
-        {...props}
+        {...selectRootProps}
       >
         {children}
       </SelectPrimitive.Root>
@@ -59,8 +57,7 @@ const SelectGroup = SelectPrimitive.Group
 
 const SelectValue = SelectPrimitive.Value
 
-// ─── SelectTrigger ────────────────────────────────────────────────────────────
-const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) => {
+const SelectTrigger = React.forwardRef(function SelectTriggerInner({ className, children, ...triggerProps }, ref) {
   const mobileCtx = React.useContext(MobileSelectContext);
 
   if (mobileCtx) {
@@ -73,7 +70,7 @@ const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) 
           "flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
           className
         )}
-        {...props}
+        {...triggerProps}
       >
         {children}
         <ChevronDown className="h-4 w-4 opacity-50 flex-shrink-0" />
@@ -88,7 +85,7 @@ const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) 
         "flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
         className
       )}
-      {...props}
+      {...triggerProps}
     >
       {children}
       <SelectPrimitive.Icon asChild>
@@ -99,32 +96,33 @@ const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) 
 });
 SelectTrigger.displayName = SelectPrimitive.Trigger.displayName;
 
-// ─── SelectScrollUpButton ─────────────────────────────────────────────────────
-const SelectScrollUpButton = React.forwardRef(({ className, ...props }, ref) => (
-  <SelectPrimitive.ScrollUpButton
-    ref={ref}
-    className={cn("flex cursor-default items-center justify-center py-1", className)}
-    {...props}
-  >
-    <ChevronUp className="h-4 w-4" />
-  </SelectPrimitive.ScrollUpButton>
-))
+const SelectScrollUpButton = React.forwardRef(function SelectScrollUpInner({ className, ...scrollProps }, ref) {
+  return (
+    <SelectPrimitive.ScrollUpButton
+      ref={ref}
+      className={cn("flex cursor-default items-center justify-center py-1", className)}
+      {...scrollProps}
+    >
+      <ChevronUp className="h-4 w-4" />
+    </SelectPrimitive.ScrollUpButton>
+  );
+})
 SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
 
-// ─── SelectScrollDownButton ───────────────────────────────────────────────────
-const SelectScrollDownButton = React.forwardRef(({ className, ...props }, ref) => (
-  <SelectPrimitive.ScrollDownButton
-    ref={ref}
-    className={cn("flex cursor-default items-center justify-center py-1", className)}
-    {...props}
-  >
-    <ChevronDown className="h-4 w-4" />
-  </SelectPrimitive.ScrollDownButton>
-))
+const SelectScrollDownButton = React.forwardRef(function SelectScrollDownInner({ className, ...scrollProps }, ref) {
+  return (
+    <SelectPrimitive.ScrollDownButton
+      ref={ref}
+      className={cn("flex cursor-default items-center justify-center py-1", className)}
+      {...scrollProps}
+    >
+      <ChevronDown className="h-4 w-4" />
+    </SelectPrimitive.ScrollDownButton>
+  );
+})
 SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
 
-// ─── SelectContent ────────────────────────────────────────────────────────────
-const SelectContent = React.forwardRef(({ className, children, position = "popper", label, ...props }, ref) => {
+const SelectContent = React.forwardRef(function SelectContentInner({ className, children, position = "popper", label, ...contentProps }, ref) {
   const mobileCtx = React.useContext(MobileSelectContext);
 
   if (mobileCtx) {
@@ -158,7 +156,7 @@ const SelectContent = React.forwardRef(({ className, children, position = "poppe
           className
         )}
         position={position}
-        {...props}
+        {...contentProps}
       >
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport
@@ -177,7 +175,6 @@ const SelectContent = React.forwardRef(({ className, children, position = "poppe
 });
 SelectContent.displayName = SelectPrimitive.Content.displayName;
 
-// ─── Helper: render SelectItems inside the mobile drawer ─────────────────────
 function MobileSelectItemsRenderer({ ctx, children }) {
   const renderChild = (child) => {
     if (!React.isValidElement(child)) return null;
@@ -213,44 +210,47 @@ function MobileSelectItemsRenderer({ ctx, children }) {
   return <>{React.Children.map(children, renderChild)}</>;
 }
 
-// ─── SelectLabel ──────────────────────────────────────────────────────────────
-const SelectLabel = React.forwardRef(({ className, ...props }, ref) => (
-  <SelectPrimitive.Label
-    ref={ref}
-    className={cn("px-2 py-1.5 text-sm font-semibold", className)}
-    {...props}
-  />
-))
+const SelectLabel = React.forwardRef(function SelectLabelInner({ className, ...labelProps }, ref) {
+  return (
+    <SelectPrimitive.Label
+      ref={ref}
+      className={cn("px-2 py-1.5 text-sm font-semibold", className)}
+      {...labelProps}
+    />
+  );
+})
 SelectLabel.displayName = SelectPrimitive.Label.displayName
 
-// ─── SelectItem ───────────────────────────────────────────────────────────────
-const SelectItem = React.forwardRef(({ className, children, ...props }, ref) => (
-  <SelectPrimitive.Item
-    ref={ref}
-    className={cn(
-      "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-      className
-    )}
-    {...props}
-  >
-    <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
-      <SelectPrimitive.ItemIndicator>
-        <Check className="h-4 w-4" />
-      </SelectPrimitive.ItemIndicator>
-    </span>
-    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-  </SelectPrimitive.Item>
-))
+const SelectItem = React.forwardRef(function SelectItemInner({ className, children, ...itemProps }, ref) {
+  return (
+    <SelectPrimitive.Item
+      ref={ref}
+      className={cn(
+        "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        className
+      )}
+      {...itemProps}
+    >
+      <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+        <SelectPrimitive.ItemIndicator>
+          <Check className="h-4 w-4" />
+        </SelectPrimitive.ItemIndicator>
+      </span>
+      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+    </SelectPrimitive.Item>
+  );
+})
 SelectItem.displayName = SelectPrimitive.Item.displayName
 
-// ─── SelectSeparator ──────────────────────────────────────────────────────────
-const SelectSeparator = React.forwardRef(({ className, ...props }, ref) => (
-  <SelectPrimitive.Separator
-    ref={ref}
-    className={cn("-mx-1 my-1 h-px bg-muted", className)}
-    {...props}
-  />
-))
+const SelectSeparator = React.forwardRef(function SelectSeparatorInner({ className, ...sepProps }, ref) {
+  return (
+    <SelectPrimitive.Separator
+      ref={ref}
+      className={cn("-mx-1 my-1 h-px bg-muted", className)}
+      {...sepProps}
+    />
+  );
+})
 SelectSeparator.displayName = SelectPrimitive.Separator.displayName
 
 export {
