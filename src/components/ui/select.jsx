@@ -8,8 +8,6 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { cn } from "@/lib/utils"
 
 // ─── Mobile-aware context ────────────────────────────────────────────────────
-// Wraps each Select so that on mobile the content renders as a bottom drawer
-// instead of a floating popover.
 const MobileSelectContext = React.createContext(null);
 
 function useIsMobile() {
@@ -66,7 +64,6 @@ const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) 
   const mobileCtx = React.useContext(MobileSelectContext);
 
   if (mobileCtx) {
-    // On mobile: trigger opens the drawer instead of the Radix popover
     return (
       <button
         ref={ref}
@@ -127,13 +124,10 @@ const SelectScrollDownButton = React.forwardRef(({ className, ...props }, ref) =
 SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
 
 // ─── SelectContent ────────────────────────────────────────────────────────────
-// On mobile: renders as a Drawer bottom sheet.
-// On desktop: renders as the normal Radix popover.
 const SelectContent = React.forwardRef(({ className, children, position = "popper", label, ...props }, ref) => {
   const mobileCtx = React.useContext(MobileSelectContext);
 
   if (mobileCtx) {
-    // Collect items from children for the drawer list
     return (
       <Drawer open={mobileCtx.drawerOpen} onOpenChange={mobileCtx.setDrawerOpen}>
         <DrawerContent className="bg-gray-900 border-gray-700">
@@ -185,11 +179,9 @@ SelectContent.displayName = SelectPrimitive.Content.displayName;
 
 // ─── Helper: render SelectItems inside the mobile drawer ─────────────────────
 function MobileSelectItemsRenderer({ ctx, children }) {
-  // Walk through children and render drawer-native buttons for SelectItem nodes
   const renderChild = (child) => {
     if (!React.isValidElement(child)) return null;
 
-    // SelectItem → render as a native drawer button row
     if (child.type === SelectItem || child.type?.displayName === "SelectItem") {
       const { value, children: label, disabled } = child.props;
       const isSelected = ctx.value === value;
@@ -211,7 +203,6 @@ function MobileSelectItemsRenderer({ ctx, children }) {
       );
     }
 
-    // SelectGroup, SelectLabel, fragments → recurse into children
     if (child.props?.children) {
       return React.Children.map(child.props.children, renderChild);
     }
