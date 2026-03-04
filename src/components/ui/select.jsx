@@ -122,7 +122,8 @@ const SelectScrollDownButton = React.forwardRef(function SelectScrollDownInner({
 })
 SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
 
-const SelectContent = React.forwardRef(function SelectContentInner({ className, children, position = "popper", label, ...contentProps }, ref) {
+const SelectContent = React.forwardRef(function SelectContentInner(props, ref) {
+  const { className, children, position = "popper", label, ...contentProps } = props;
   const mobileCtx = React.useContext(MobileSelectContext);
 
   if (mobileCtx) {
