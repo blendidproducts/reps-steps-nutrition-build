@@ -261,6 +261,30 @@ export default function Home() {
                 </CardContent>
               </Card>
 
+              {/* AI Fitness Brain */}
+              <Card 
+                className="bg-gradient-to-r from-purple-700/20 to-[#00a9ff]/20 border-2 border-purple-500/50 cursor-pointer hover:border-purple-400 hover:shadow-lg hover:shadow-purple-500/30 transition-all backdrop-blur-sm"
+                onClick={() => navigate(createPageUrl("FitnessBrain"))}
+              >
+                <CardContent className="p-4 md:p-8">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 md:gap-6">
+                      <div className="w-12 h-12 md:w-20 md:h-20 bg-gradient-to-br from-purple-600 to-[#00a9ff] rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/50">
+                        <Brain className="w-6 h-6 md:w-10 md:h-10 text-white" />
+                      </div>
+                      <div className="text-left">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg md:text-3xl font-bold text-white mb-0 md:mb-1">AI Fitness Brain</h3>
+                          <span className="bg-purple-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">NEW</span>
+                        </div>
+                        <p className="text-gray-300 text-xs md:text-base">24/7 AI trainer + nutritionist</p>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-5 h-5 md:w-10 md:h-10 text-purple-400" />
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Voice Control Fitness System (VCFS) - Small Bonus Feature Button */}
               <div className="flex justify-center mt-4">
                 <Button
