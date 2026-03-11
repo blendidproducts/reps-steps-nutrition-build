@@ -20,7 +20,8 @@ import {
   Beef,
   Wheat,
   Droplets,
-  ArrowRight
+  ArrowRight,
+  Link2
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
