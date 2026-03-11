@@ -82,6 +82,7 @@ import WorkoutBuilder from './pages/WorkoutBuilder';
 import WorkoutComplete from './pages/WorkoutComplete';
 import WorkoutDetail from './pages/WorkoutDetail';
 import LinkMealBuilder from './pages/LinkMealBuilder';
+import FoodPhotoAnalyzer from './pages/FoodPhotoAnalyzer';
 import __Layout from './Layout.jsx';
 
 
@@ -121,6 +122,7 @@ export const PAGES = {
     "WorkoutComplete": WorkoutComplete,
     "WorkoutDetail": WorkoutDetail,
     "LinkMealBuilder": LinkMealBuilder,
+    "FoodPhotoAnalyzer": FoodPhotoAnalyzer,
 }
 
 export const pagesConfig = {

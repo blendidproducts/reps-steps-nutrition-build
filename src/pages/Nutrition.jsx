@@ -21,7 +21,8 @@ import {
   Wheat,
   Droplets,
   ArrowRight,
-  Link2
+  Link2,
+  Camera
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
