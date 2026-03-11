@@ -7,6 +7,7 @@ import { base44 } from "@/api/base44Client";
 import { ProgramEnrollment } from "@/entities/ProgramEnrollment";
 import { Achievement } from "@/entities/Achievement";
 import { Trophy, Target, Clock, TrendingUp, Share2, Home, RotateCcw, Trash2, Footprints } from "lucide-react";
+import AddToProgramSection from "@/components/workout/AddToProgramSection";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { AchievementManager } from '@/components/services/achievementManager';
