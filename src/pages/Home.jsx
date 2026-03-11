@@ -6,7 +6,7 @@ import { PresetProgram } from "@/entities/PresetProgram";
 import { ProgramEnrollment } from "@/entities/ProgramEnrollment";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Mic } from "lucide-react";
+import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Brain } from "lucide-react";
 import { motion } from "framer-motion";
 import FitnessQuiz from "@/components/FitnessQuiz";
 import MuscleRecovery from "@/components/recovery/MuscleRecovery";
