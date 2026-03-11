@@ -136,6 +136,25 @@ export default function Nutrition() {
           </Link>
         </div>
 
+        {/* AI Food Photo Analyzer Banner */}
+        <Link to={createPageUrl("FoodPhotoAnalyzer")} className="block mb-3">
+          <div className="bg-gradient-to-r from-orange-700/30 to-amber-700/30 border border-orange-500/40 rounded-xl p-4 flex items-center justify-between hover:border-orange-400/60 transition-all">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-600 rounded-xl flex items-center justify-center">
+                <Camera className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <div className="text-white font-bold text-sm flex items-center gap-2">
+                  AI Food Analyzer
+                  <span className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">NEW</span>
+                </div>
+                <p className="text-gray-400 text-xs">Photo your meal — AI tracks calories & macros</p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-orange-400" />
+          </div>
+        </Link>
+
         {/* Link Meal Builder Banner */}
         <Link to={createPageUrl("LinkMealBuilder")} className="block mb-6">
           <div className="bg-gradient-to-r from-emerald-700/30 to-teal-700/30 border border-emerald-500/40 rounded-xl p-4 flex items-center justify-between hover:border-emerald-400/60 transition-all">
