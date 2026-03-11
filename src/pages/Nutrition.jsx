@@ -135,6 +135,25 @@ export default function Nutrition() {
           </Link>
         </div>
 
+        {/* Link Meal Builder Banner */}
+        <Link to={createPageUrl("LinkMealBuilder")} className="block mb-6">
+          <div className="bg-gradient-to-r from-emerald-700/30 to-teal-700/30 border border-emerald-500/40 rounded-xl p-4 flex items-center justify-between hover:border-emerald-400/60 transition-all">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
+                <Link2 className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <div className="text-white font-bold text-sm flex items-center gap-2">
+                  Link Meal Builder
+                  <span className="bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">NEW</span>
+                </div>
+                <p className="text-gray-400 text-xs">Paste a recipe or meal plan URL to auto-build</p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-emerald-400" />
+          </div>
+        </Link>
+
         {/* Nutrition Programs Section */}
         <Card className="bg-card border-border mb-6">
           <CardHeader className="flex flex-row items-center justify-between">
