@@ -541,6 +541,8 @@ export default function WorkoutComplete() {
                 View Full History
               </Button>
 
+              <AddToProgramSection />
+
               <Button
                 variant="outline"
                 onClick={deleteWorkout}
