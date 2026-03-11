@@ -3,23 +3,27 @@ import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Activity, Zap, Moon, Flame, Target, Brain } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 
-const MetricCard = ({ icon: Icon, label, value, unit, color, trend }) => (
+// eslint-disable-next-line no-unused-vars
+const MetricCard = ({ icon: IconComponent, label, value, unit, color, trend }) => {
+  const Icon = IconComponent;
+  return (
   <div className={`bg-white/5 border border-white/10 rounded-xl p-4 relative overflow-hidden`}>
     <div className={`absolute top-0 right-0 w-16 h-16 rounded-full blur-2xl opacity-20`} style={{ backgroundColor: color }} />
     <div className="flex items-start justify-between mb-2">
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center`} style={{ backgroundColor: color + '33' }}>
-        <Icon className="w-4 h-4" style={{ color }} />
-      </div>
-      {trend !== undefined && (
-        <span className={`text-xs font-medium ${trend >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-          {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}%
-        </span>
-      )}
+    <div className={`w-8 h-8 rounded-lg flex items-center justify-center`} style={{ backgroundColor: color + '33' }}>
+    <Icon className="w-4 h-4" style={{ color }} />
+    </div>
+    {trend !== undefined && (
+    <span className={`text-xs font-medium ${trend >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+      {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}%
+    </span>
+    )}
     </div>
     <div className="text-2xl font-bold text-white">{value ?? '—'}<span className="text-sm text-gray-400 ml-1">{unit}</span></div>
     <div className="text-xs text-gray-400 mt-0.5">{label}</div>
-  </div>
-);
+    </div>
+    );
+    };
 
 const ScoreRing = ({ score, label, color }) => {
   const r = 28;
