@@ -80,6 +80,7 @@ import WatchMode from './pages/WatchMode';
 import WorkoutBuilder from './pages/WorkoutBuilder';
 import WorkoutComplete from './pages/WorkoutComplete';
 import WorkoutDetail from './pages/WorkoutDetail';
+import FitnessBrain from './pages/FitnessBrain';
 import __Layout from './Layout.jsx';
 
 
@@ -117,6 +118,7 @@ export const PAGES = {
     "WorkoutBuilder": WorkoutBuilder,
     "WorkoutComplete": WorkoutComplete,
     "WorkoutDetail": WorkoutDetail,
+    "FitnessBrain": FitnessBrain,
 }
 
 export const pagesConfig = {
