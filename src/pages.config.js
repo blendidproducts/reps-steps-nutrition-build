@@ -54,6 +54,7 @@ import BodyMeasurements from './pages/BodyMeasurements';
 import Community from './pages/Community';
 import Disclaimer from './pages/Disclaimer';
 import Exercises from './pages/Exercises';
+import FitnessBrain from './pages/FitnessBrain';
 import FoodDatabase from './pages/FoodDatabase';
 import Help from './pages/Help';
 import History from './pages/History';
@@ -80,7 +81,7 @@ import WatchMode from './pages/WatchMode';
 import WorkoutBuilder from './pages/WorkoutBuilder';
 import WorkoutComplete from './pages/WorkoutComplete';
 import WorkoutDetail from './pages/WorkoutDetail';
-import FitnessBrain from './pages/FitnessBrain';
+import LinkMealBuilder from './pages/LinkMealBuilder';
 import __Layout from './Layout.jsx';
 
 
@@ -92,6 +93,7 @@ export const PAGES = {
     "Community": Community,
     "Disclaimer": Disclaimer,
     "Exercises": Exercises,
+    "FitnessBrain": FitnessBrain,
     "FoodDatabase": FoodDatabase,
     "Help": Help,
     "History": History,
@@ -118,7 +120,7 @@ export const PAGES = {
     "WorkoutBuilder": WorkoutBuilder,
     "WorkoutComplete": WorkoutComplete,
     "WorkoutDetail": WorkoutDetail,
-    "FitnessBrain": FitnessBrain,
+    "LinkMealBuilder": LinkMealBuilder,
 }
 
 export const pagesConfig = {
