@@ -57,7 +57,8 @@ export default function AIWorkoutGenerator() {
         const currentUser = await User.me();
         setUser(currentUser);
         
-        if (currentUser.subscription_status !== 'pro') {
+        const isPro = currentUser.is_pro === true || currentUser.subscription_status === 'pro' || currentUser.role === 'admin';
+        if (!isPro) {
           toast.error('AI Workout Generator is a PRO feature');
           navigate(createPageUrl("Pricing"));
           return;
