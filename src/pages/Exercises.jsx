@@ -40,7 +40,7 @@ export default function Exercises() {
     const checkUserStatus = async () => {
       try {
         const user = await User.me();
-        setIsPro(user.subscription_status === 'pro');
+        setIsPro(user.is_pro === true || user.subscription_status === 'pro' || user.role === 'admin');
       } catch (error) {
         setIsPro(false);
       }

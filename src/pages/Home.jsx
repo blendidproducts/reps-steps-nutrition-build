@@ -31,7 +31,7 @@ export default function Home() {
     try {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
-      setIsPro(currentUser.subscription_status === 'pro' || currentUser.role === 'admin');
+      setIsPro(currentUser.is_pro === true || currentUser.subscription_status === 'pro' || currentUser.role === 'admin');
       
       // Check for active program and sync with enrollment
       if (currentUser.active_program) {
