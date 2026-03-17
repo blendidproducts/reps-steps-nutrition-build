@@ -39,6 +39,7 @@ const navigationItems = [
   { title: "Measurements", url: createPageUrl("BodyMeasurements"), icon: Ruler },
   { title: "Community", url: createPageUrl("Community"), icon: Users },
   { title: "Watch Mode", url: createPageUrl("WatchMode"), icon: Clock },
+  { title: "Smart Watch Hub", url: createPageUrl("SmartWatchHub"), icon: Watch },
   { title: "Referrals", url: createPageUrl("Referrals"), icon: Gift },
   { title: "Upload 3D Models", url: createPageUrl("Upload3DModels"), icon: Box },
   { title: "Help", url: createPageUrl("Help"), icon: HelpCircle },
