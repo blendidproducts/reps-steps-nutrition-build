@@ -77,6 +77,7 @@ import Settings from './pages/Settings';
 import Stretches from './pages/Stretches';
 import Terms from './pages/Terms';
 import Upload3DModels from './pages/Upload3DModels';
+import Stretches from './pages/Stretches';
 import WatchMode from './pages/WatchMode';
 import WorkoutBuilder from './pages/WorkoutBuilder';
 import WorkoutComplete from './pages/WorkoutComplete';
