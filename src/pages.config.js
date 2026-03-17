@@ -83,6 +83,7 @@ import WorkoutComplete from './pages/WorkoutComplete';
 import WorkoutDetail from './pages/WorkoutDetail';
 import LinkMealBuilder from './pages/LinkMealBuilder';
 import FoodPhotoAnalyzer from './pages/FoodPhotoAnalyzer';
+import SmartWatchHub from './pages/SmartWatchHub';
 import __Layout from './Layout.jsx';
 
 
@@ -123,6 +124,7 @@ export const PAGES = {
     "WorkoutDetail": WorkoutDetail,
     "LinkMealBuilder": LinkMealBuilder,
     "FoodPhotoAnalyzer": FoodPhotoAnalyzer,
+    "SmartWatchHub": SmartWatchHub,
 }
 
 export const pagesConfig = {
