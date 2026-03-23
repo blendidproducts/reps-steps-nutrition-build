@@ -323,12 +323,13 @@ export default function AddOns() {
           <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
             {[
               { label: "Core App", price: "Free", color: "text-green-400" },
-              { label: "AI Fitness Brain", price: "$1.99/mo", color: "text-blue-400" },
-              { label: "AI Nutrition Add-On", price: "$3.99/mo", color: "text-orange-400" },
-              { label: "Nutrition All-Access", price: "$29.99/mo", color: "text-emerald-400" },
-              { label: "Pro Monthly (Full Workout AI)", price: "$9.99/mo", color: "text-[#00a9ff]" },
-              { label: "Pro Lifetime", price: "$199.99 once", color: "text-yellow-400" },
-              { label: "Custom Coaching (1-on-1)", price: "$197/mo", color: "text-rose-400" },
+              { label: "Pro — AI Workouts", price: "$9.99/mo", color: "text-[#00a9ff]" },
+              { label: "Pro Lifetime", price: "$149.99 once", color: "text-yellow-400" },
+              { label: "AI Fitness Brain Add-On", price: "+ $4.99/mo", color: "text-blue-400" },
+              { label: "AI Nutrition Add-On", price: "+ $4.99/mo", color: "text-orange-400" },
+              { label: "Brain + Nutrition Bundle", price: "+ $7.99/mo", color: "text-violet-400" },
+              { label: "All-Access (Pro + Both AI Add-Ons)", price: "$14.99/mo", color: "text-emerald-400" },
+              { label: "Custom Coaching (1-on-1 Human)", price: "$149/mo", color: "text-rose-400" },
             ].map((row, i, arr) => (
               <div key={i} className={`flex items-center justify-between px-5 py-3.5 ${i < arr.length - 1 ? "border-b border-white/5" : ""}`}>
                 <span className="text-gray-300 text-sm">{row.label}</span>
