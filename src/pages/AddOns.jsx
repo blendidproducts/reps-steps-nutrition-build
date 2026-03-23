@@ -296,11 +296,11 @@ export default function AddOns() {
               </div>
               <div className="grid sm:grid-cols-2 gap-3">
                 <Button
-                  onClick={() => window.open(COACHING.stripeUrl, "_blank")}
-                  className="bg-gradient-to-r from-rose-600 to-pink-700 text-white font-bold rounded-xl gap-2 hover:opacity-90 py-3"
+                 onClick={() => window.open(COACHING.stripeUrl, "_blank")}
+                 className="bg-gradient-to-r from-rose-600 to-pink-700 text-white font-bold rounded-xl gap-2 hover:opacity-90 py-3"
                 >
-                  <ExternalLink className="w-4 h-4" />
-                  Enroll Now — $197/mo
+                 <ExternalLink className="w-4 h-4" />
+                 Enroll Now — $149/mo
                 </Button>
                 {COACHING.websiteUrl && (
                   <Button
