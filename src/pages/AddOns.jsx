@@ -90,6 +90,7 @@ const BUNDLES = [
   },
   {
     id: "pro_lifetime",
+    icon: Star,
     gradient: "from-yellow-500 to-orange-500",
     badge: "Best Deal",
     badgeColor: "bg-yellow-500",
