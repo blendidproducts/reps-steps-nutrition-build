@@ -40,6 +40,7 @@ export default function Nutrition() {
   const [isLoading, setIsLoading] = useState(true);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const today = format(new Date(), 'yyyy-MM-dd');
+  const { hasAiAddon } = useNutritionPlan();
 
   useEffect(() => {
     loadData();
