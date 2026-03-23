@@ -18,6 +18,7 @@ const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
 
 export default function FoodPhotoAnalyzer() {
   const navigate = useNavigate();
+  const { plan, loading: planLoading, hasAiAddon } = useNutritionPlan();
   const fileInputRef = useRef(null);
   const [image, setImage] = useState(null); // base64 preview
   const [imageFile, setImageFile] = useState(null);

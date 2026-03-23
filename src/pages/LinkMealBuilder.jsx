@@ -185,6 +185,7 @@ function AddMealModal({ meal, programs, onClose, onAdded }) {
 
 export default function LinkMealBuilder() {
   const navigate = useNavigate();
+  const { plan, loading: planLoading, hasAiAddon } = useNutritionPlan();
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
