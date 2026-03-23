@@ -277,64 +277,53 @@ export default function AddOns() {
         {/* ── Custom Coaching ── */}
         <section>
           <h2 className="text-white font-bold text-lg mb-1 flex items-center gap-2">
-            <Users className="w-5 h-5 text-rose-400" /> 1-on-1 Custom Coaching
+            <Users className="w-5 h-5 text-rose-400" /> Real Human Coaching
           </h2>
-          <p className="text-gray-500 text-sm mb-4">Human expertise, not just AI</p>
+          <p className="text-gray-500 text-sm mb-4">Expert guidance beyond AI — personalized to you</p>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-gradient-to-br from-rose-900/30 to-pink-900/30 border-2 border-rose-500/40 rounded-2xl overflow-hidden"
-          >
-            <div className={`bg-gradient-to-br ${COACHING.gradient} p-6`}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                  <Users className="w-7 h-7 text-white" />
-                </div>
-                <span className={`${COACHING.badgeColor} text-white text-[10px] font-bold px-2.5 py-1 rounded-full`}>
-                  {COACHING.badge}
-                </span>
-              </div>
-              <h3 className="text-white font-black text-2xl">{COACHING.title}</h3>
-              <p className="text-white/80 text-sm mt-0.5">{COACHING.subtitle}</p>
-              <div className="mt-3">
-                <span className="text-4xl font-black text-white">$149</span>
-                <span className="text-white/70 text-base">/mo</span>
-                <span className="ml-2 text-white/50 line-through text-xl">$199</span>
-              </div>
-            </div>
-
-            <div className="p-5">
-              <div className="grid sm:grid-cols-2 gap-2 mb-5">
-                {COACHING.features.map((f, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                    <span className="text-gray-300 text-sm">{f}</span>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {COACHING_TIERS.map((tier, i) => (
+              <motion.div
+                key={tier.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-gradient-to-br from-rose-900/20 to-pink-900/20 border border-rose-500/30 rounded-2xl overflow-hidden hover:border-rose-400/50 transition-all"
+              >
+                <div className={`bg-gradient-to-br ${tier.gradient} p-5`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center">
+                      <Users className="w-6 h-6 text-white" />
+                    </div>
+                    <span className={`${tier.badgeColor} text-white text-[10px] font-bold px-2.5 py-1 rounded-full`}>
+                      {tier.badge}
+                    </span>
                   </div>
-                ))}
-              </div>
-              <div className="grid sm:grid-cols-2 gap-3">
-                <Button
-                 onClick={() => window.open(COACHING.stripeUrl, "_blank")}
-                 className="bg-gradient-to-r from-rose-600 to-pink-700 text-white font-bold rounded-xl gap-2 hover:opacity-90 py-3"
-                >
-                 <ExternalLink className="w-4 h-4" />
-                 Enroll Now — $149/mo
-                </Button>
-                {COACHING.websiteUrl && (
+                  <h3 className="text-white font-black text-lg leading-tight">{tier.title}</h3>
+                  <p className="text-white/75 text-xs mt-0.5">{tier.subtitle}</p>
+                  <div className="mt-3">
+                    <span className="text-3xl font-black text-white">{tier.price}</span>
+                    <span className="text-white/70 text-sm">{tier.period}</span>
+                  </div>
+                </div>
+                <div className="p-4 space-y-2">
+                  {tier.features.map((f, fi) => (
+                    <div key={fi} className="flex items-start gap-2">
+                      <Check className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                      <span className="text-gray-300 text-xs">{f}</span>
+                    </div>
+                  ))}
                   <Button
-                    variant="outline"
-                    onClick={() => window.open(COACHING.websiteUrl, "_blank")}
-                    className="border-rose-500/40 text-rose-300 hover:border-rose-400 hover:bg-rose-500/10 gap-2 py-3"
+                    onClick={() => window.open(tier.formUrl, "_blank")}
+                    className={`w-full mt-3 bg-gradient-to-r ${tier.gradient} text-white font-bold rounded-xl gap-2 hover:opacity-90`}
                   >
-                    <ChevronRight className="w-4 h-4" />
-                    Learn More on Website
+                    <ExternalLink className="w-4 h-4" />
+                    {tier.ctaLabel}
                   </Button>
-                )}
-              </div>
-            </div>
-          </motion.div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </section>
 
         {/* ── Pricing Summary Table ── */}
