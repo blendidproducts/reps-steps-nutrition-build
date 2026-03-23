@@ -126,6 +126,7 @@ export const PAGES = {
     "LinkMealBuilder": LinkMealBuilder,
     "FoodPhotoAnalyzer": FoodPhotoAnalyzer,
     "SmartWatchHub": SmartWatchHub,
+    "NutritionPricing": NutritionPricing,
 }
 
 export const pagesConfig = {
