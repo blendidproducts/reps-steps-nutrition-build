@@ -13,6 +13,8 @@ import {
   Flame, Beef, Wheat, Droplets, ArrowLeft, Save, Plus,
   CalendarPlus, BookmarkPlus, X
 } from "lucide-react";
+import { useNutritionPlan } from "@/hooks/useNutritionPlan";
+import NutritionUpgradeGate from "@/components/nutrition/NutritionUpgradeGate";
 
 const MEAL_META = {
   breakfast: { emoji: "🌅", color: "#f59e0b", label: "Breakfast" },

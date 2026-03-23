@@ -11,6 +11,8 @@ import {
   Camera, Upload, ArrowLeft, Loader2, CheckCircle,
   Flame, Beef, Wheat, Droplets, Plus, X, RefreshCw
 } from "lucide-react";
+import { useNutritionPlan } from "@/hooks/useNutritionPlan";
+import NutritionUpgradeGate from "@/components/nutrition/NutritionUpgradeGate";
 
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
 
