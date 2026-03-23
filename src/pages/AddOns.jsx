@@ -135,6 +135,8 @@ const COACHING = {
   period: "/mo",
   stripeUrl: "https://buy.stripe.com/YOUR_STRIPE_LINK_COACHING",
   websiteUrl: "https://repsandsteps.com/coaching",
+  price: "$149",
+  period: "/mo",
   features: [
     "Dedicated personal coach assigned to you",
     "Weekly check-ins & program adjustments",
