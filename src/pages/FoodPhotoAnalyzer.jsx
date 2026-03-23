@@ -145,6 +145,7 @@ If you can't identify something clearly, make a reasonable estimate.`,
         </div>
       </div>
 
+      <NutritionUpgradeGate requiredPlan="ai_addon" loading={planLoading} plan={plan} featureName="AI Food Analyzer">
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
 
         {/* Upload Area */}
@@ -332,6 +333,7 @@ If you can't identify something clearly, make a reasonable estimate.`,
           </>
         )}
       </div>
+      </NutritionUpgradeGate>
     </div>
   );
 }
