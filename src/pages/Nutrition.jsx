@@ -30,6 +30,8 @@ import { format } from "date-fns";
 import DailyNutritionSummary from "../components/nutrition/DailyNutritionSummary";
 import MealList from "../components/nutrition/MealList";
 import QuickAddFood from "../components/nutrition/QuickAddFood";
+import { useNutritionPlan } from "@/hooks/useNutritionPlan";
+import { Lock } from "lucide-react";
 
 export default function Nutrition() {
   const [todaysMeals, setTodaysMeals] = useState([]);
