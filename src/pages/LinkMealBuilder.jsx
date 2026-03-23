@@ -472,6 +472,7 @@ export default function LinkMealBuilder() {
           </>
         )}
       </div>
+      </NutritionUpgradeGate>
     </div>
   );
 }
