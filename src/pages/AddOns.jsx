@@ -280,8 +280,9 @@ export default function AddOns() {
               <h3 className="text-white font-black text-2xl">{COACHING.title}</h3>
               <p className="text-white/80 text-sm mt-0.5">{COACHING.subtitle}</p>
               <div className="mt-3">
-                <span className="text-4xl font-black text-white">{COACHING.price}</span>
-                <span className="text-white/70 text-base">{COACHING.period}</span>
+                <span className="text-4xl font-black text-white">$149</span>
+                <span className="text-white/70 text-base">/mo</span>
+                <span className="ml-2 text-white/50 line-through text-xl">$199</span>
               </div>
             </div>
 
