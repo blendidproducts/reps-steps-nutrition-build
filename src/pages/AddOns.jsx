@@ -229,25 +229,27 @@ export default function AddOns() {
 
       <div className="max-w-3xl mx-auto px-4 py-7 space-y-10">
 
-        {/* ── Individual Add-Ons ── */}
+        {/* ── Step 1: Pro Base ── */}
         <section>
-          <h2 className="text-white font-bold text-lg mb-1 flex items-center gap-2">
-            <Star className="w-5 h-5 text-yellow-400" /> Individual Add-Ons
-          </h2>
-          <p className="text-gray-500 text-sm mb-4">Pick exactly what you need</p>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-6 h-6 rounded-full bg-[#0066cc] text-white text-xs font-black flex items-center justify-center">1</span>
+            <h2 className="text-white font-bold text-lg">Start with Pro — AI Workouts</h2>
+          </div>
+          <p className="text-gray-500 text-sm mb-4">The base plan unlocks all AI workout features</p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {ADD_ONS.map((a, i) => <AddOnCard key={a.id} item={a} index={i} />)}
+            {BUNDLES.map((b, i) => <AddOnCard key={b.id} item={b} index={i} />)}
           </div>
         </section>
 
-        {/* ── Pro Bundles ── */}
+        {/* ── Step 2: Add-Ons ── */}
         <section>
-          <h2 className="text-white font-bold text-lg mb-1 flex items-center gap-2">
-            <Zap className="w-5 h-5 text-[#00a9ff]" /> Pro Bundles
-          </h2>
-          <p className="text-gray-500 text-sm mb-4">Get the full workout AI experience</p>
-          <div className="grid sm:grid-cols-2 gap-4">
-            {BUNDLES.map((b, i) => <AddOnCard key={b.id} item={b} index={i} />)}
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-6 h-6 rounded-full bg-purple-600 text-white text-xs font-black flex items-center justify-center">2</span>
+            <h2 className="text-white font-bold text-lg">Layer On AI Add-Ons</h2>
+          </div>
+          <p className="text-gray-500 text-sm mb-4">Customize your plan — add only what you need</p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {ADD_ONS.map((a, i) => <AddOnCard key={a.id} item={a} index={i} />)}
           </div>
         </section>
 
