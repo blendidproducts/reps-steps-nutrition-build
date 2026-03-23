@@ -71,6 +71,7 @@ const ADD_ONS = [
 const BUNDLES = [
   {
     id: "pro_monthly",
+    icon: Zap,
     gradient: "from-[#0066cc] to-blue-700",
     badge: "Most Popular",
     badgeColor: "bg-[#0066cc]",
