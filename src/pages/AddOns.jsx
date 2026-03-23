@@ -1,12 +1,10 @@
-import React, { useState } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
-  Brain, Apple, Camera, Link2, Utensils, Users,
-  Check, ExternalLink, Zap, Star, Lock, ArrowLeft, ChevronRight
+  Brain, Camera, Users,
+  Check, ExternalLink, Zap, Star, Lock, ArrowLeft
 } from "lucide-react";
 
 const ADD_ONS = [
@@ -95,7 +93,7 @@ const BUNDLES = [
     badgeColor: "bg-emerald-500",
     title: "All-Access",
     subtitle: "Pro + AI Brain + AI Nutrition — everything",
-    price: "$14.99",
+    price: "$19.99",
     period: "/mo",
     stripeUrl: "https://buy.stripe.com/YOUR_STRIPE_LINK_ALL_ACCESS",
     features: [
@@ -176,7 +174,6 @@ function AddOnCard({ item, index }) {
       transition={{ delay: index * 0.07 }}
       className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-all"
     >
-      {/* Header */}
       <div className={`bg-gradient-to-br ${item.gradient} p-5`}>
         <div className="flex items-start justify-between mb-3">
           <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center">
@@ -194,7 +191,6 @@ function AddOnCard({ item, index }) {
         </div>
       </div>
 
-      {/* Features */}
       <div className="p-4 space-y-2">
         {item.features.map((f, i) => (
           <div key={i} className="flex items-start gap-2">
@@ -238,7 +234,6 @@ export default function AddOns() {
             </div>
           </div>
 
-          {/* Free base note */}
           <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3 flex items-center gap-3 mt-4">
             <Check className="w-5 h-5 text-green-400 shrink-0" />
             <p className="text-green-300 text-sm font-medium">
@@ -250,7 +245,7 @@ export default function AddOns() {
 
       <div className="max-w-3xl mx-auto px-4 py-7 space-y-10">
 
-        {/* ── Step 1: Pro Base ── */}
+        {/* Step 1: Pro Base */}
         <section>
           <div className="flex items-center gap-2 mb-1">
             <span className="w-6 h-6 rounded-full bg-[#0066cc] text-white text-xs font-black flex items-center justify-center">1</span>
@@ -262,7 +257,7 @@ export default function AddOns() {
           </div>
         </section>
 
-        {/* ── Step 2: Add-Ons ── */}
+        {/* Step 2: Add-Ons */}
         <section>
           <div className="flex items-center gap-2 mb-1">
             <span className="w-6 h-6 rounded-full bg-purple-600 text-white text-xs font-black flex items-center justify-center">2</span>
@@ -274,7 +269,7 @@ export default function AddOns() {
           </div>
         </section>
 
-        {/* ── Custom Coaching ── */}
+        {/* Custom Coaching */}
         <section>
           <h2 className="text-white font-bold text-lg mb-1 flex items-center gap-2">
             <Users className="w-5 h-5 text-rose-400" /> Real Human Coaching
@@ -326,7 +321,7 @@ export default function AddOns() {
           </div>
         </section>
 
-        {/* ── Pricing Summary Table ── */}
+        {/* Pricing Summary Table */}
         <section>
           <h2 className="text-white font-bold text-lg mb-4">Quick Price Overview</h2>
           <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
@@ -337,7 +332,7 @@ export default function AddOns() {
               { label: "AI Fitness Brain Add-On", price: "+ $4.99/mo", color: "text-blue-400" },
               { label: "AI Nutrition Add-On", price: "+ $4.99/mo", color: "text-orange-400" },
               { label: "Brain + Nutrition Bundle", price: "+ $7.99/mo", color: "text-violet-400" },
-              { label: "All-Access (Pro + Both AI Add-Ons)", price: "$14.99/mo", color: "text-emerald-400" },
+              { label: "All-Access (Pro + Both AI Add-Ons)", price: "$19.99/mo", color: "text-emerald-400" },
               { label: "Custom Fitness Plan (one-time)", price: "$149", color: "text-rose-400" },
               { label: "Online Personal Training (1-on-1)", price: "$297/mo", color: "text-pink-400" },
             ].map((row, i, arr) => (
