@@ -141,7 +141,7 @@ export default function Nutrition() {
 
         {/* AI Food Photo Analyzer Banner */}
         <Link to={createPageUrl("FoodPhotoAnalyzer")} className="block mb-3">
-          <div className="bg-gradient-to-r from-orange-700/30 to-amber-700/30 border border-orange-500/40 rounded-xl p-4 flex items-center justify-between hover:border-orange-400/60 transition-all">
+          <div className={`bg-gradient-to-r from-orange-700/30 to-amber-700/30 border rounded-xl p-4 flex items-center justify-between hover:border-orange-400/60 transition-all ${hasAiAddon ? 'border-orange-500/40' : 'border-orange-500/20 opacity-80'}`}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-orange-600 rounded-xl flex items-center justify-center">
                 <Camera className="w-5 h-5 text-white" />
@@ -149,7 +149,10 @@ export default function Nutrition() {
               <div>
                 <div className="text-white font-bold text-sm flex items-center gap-2">
                   AI Food Analyzer
-                  <span className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">NEW</span>
+                  {hasAiAddon
+                    ? <span className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">AI ADD-ON</span>
+                    : <span className="bg-gray-600 text-gray-300 text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><Lock className="w-2.5 h-2.5" /> $3.99/mo</span>
+                  }
                 </div>
                 <p className="text-gray-400 text-xs">Photo your meal — AI tracks calories & macros</p>
               </div>
@@ -159,8 +162,8 @@ export default function Nutrition() {
         </Link>
 
         {/* Link Meal Builder Banner */}
-        <Link to={createPageUrl("LinkMealBuilder")} className="block mb-6">
-          <div className="bg-gradient-to-r from-emerald-700/30 to-teal-700/30 border border-emerald-500/40 rounded-xl p-4 flex items-center justify-between hover:border-emerald-400/60 transition-all">
+        <Link to={createPageUrl("LinkMealBuilder")} className="block mb-3">
+          <div className={`bg-gradient-to-r from-emerald-700/30 to-teal-700/30 border rounded-xl p-4 flex items-center justify-between hover:border-emerald-400/60 transition-all ${hasAiAddon ? 'border-emerald-500/40' : 'border-emerald-500/20 opacity-80'}`}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center">
                 <Link2 className="w-5 h-5 text-white" />
@@ -168,7 +171,10 @@ export default function Nutrition() {
               <div>
                 <div className="text-white font-bold text-sm flex items-center gap-2">
                   Link Meal Builder
-                  <span className="bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">NEW</span>
+                  {hasAiAddon
+                    ? <span className="bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">AI ADD-ON</span>
+                    : <span className="bg-gray-600 text-gray-300 text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><Lock className="w-2.5 h-2.5" /> $3.99/mo</span>
+                  }
                 </div>
                 <p className="text-gray-400 text-xs">Paste a recipe or meal plan URL to auto-build</p>
               </div>
@@ -176,6 +182,24 @@ export default function Nutrition() {
             <ArrowRight className="w-4 h-4 text-emerald-400" />
           </div>
         </Link>
+
+        {/* Nutrition upgrade CTA — only shown to non-subscribers */}
+        {!hasAiAddon && (
+          <Link to={createPageUrl("NutritionPricing")} className="block mb-6">
+            <div className="bg-gradient-to-r from-orange-600/20 to-emerald-600/20 border border-orange-500/30 rounded-xl p-4 flex items-center justify-between hover:border-orange-400/50 transition-all">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-emerald-500 rounded-xl flex items-center justify-center">
+                  <Lock className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <div className="text-white font-bold text-sm">Unlock AI Nutrition Features</div>
+                  <p className="text-gray-400 text-xs">AI Add-On from $3.99/mo · All-Access $29.99/mo</p>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-orange-400" />
+            </div>
+          </Link>
+        )}
 
         {/* Nutrition Programs Section */}
         <Card className="bg-card border-border mb-6">
