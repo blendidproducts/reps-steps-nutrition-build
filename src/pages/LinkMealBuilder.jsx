@@ -289,6 +289,7 @@ export default function LinkMealBuilder() {
         </div>
       </div>
 
+      <NutritionUpgradeGate requiredPlan="ai_addon" loading={planLoading} plan={plan} featureName="Link Meal Builder">
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
 
         {/* URL Input */}
