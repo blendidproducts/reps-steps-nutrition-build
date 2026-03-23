@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Brain, BarChart2, RefreshCw, LayoutDashboard, TrendingUp, ClipboardList, Zap, ChevronRight } from "lucide-react";
+import { useAddons } from "@/hooks/useAddons";
+import UpgradeGate from "@/components/UpgradeGate";
 import BrainSetupWizard from "@/components/fitnessbrain/BrainSetupWizard";
 import BrainDashboard from "@/components/fitnessbrain/BrainDashboard";
 import TransformationPredictor from "@/components/fitnessbrain/TransformationPredictor";
