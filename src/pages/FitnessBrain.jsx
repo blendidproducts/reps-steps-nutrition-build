@@ -133,6 +133,14 @@ export default function FitnessBrain() {
   }
 
   return (
+    <UpgradeGate
+      locked={!hasFitnessBrain}
+      loading={addonLoading}
+      title="AI Fitness Brain"
+      description="Get daily AI coaching, smart adjustments, and weekly performance reports."
+      price="$1.99/mo"
+      gradient="from-blue-600 to-purple-700"
+    >
     <div className="min-h-screen pb-24 md:pb-8" style={{ color: '#f9fafb' }}>
       {showSetup && <BrainSetupWizard onComplete={handleSetupComplete} />}
 
