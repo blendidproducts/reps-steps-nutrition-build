@@ -131,6 +131,7 @@ If you can't identify something clearly, make a reasonable estimate.`,
     <div className="min-h-screen pb-24 md:pb-8" style={{ color: "#f9fafb", backgroundColor: "transparent" }}>
       {/* Header */}
       <div className="bg-gradient-to-r from-orange-600 to-amber-600 text-white py-5 px-4">
+
         <div className="max-w-2xl mx-auto flex items-center gap-3">
           <button onClick={() => navigate(createPageUrl("Nutrition"))} className="text-white/80 hover:text-white">
             <ArrowLeft className="w-5 h-5" />
