@@ -19,6 +19,7 @@ const TABS = [
 ];
 
 export default function FitnessBrain() {
+  const { hasFitnessBrain, loading: addonLoading } = useAddons();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
