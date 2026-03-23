@@ -84,6 +84,7 @@ import WorkoutDetail from './pages/WorkoutDetail';
 import LinkMealBuilder from './pages/LinkMealBuilder';
 import FoodPhotoAnalyzer from './pages/FoodPhotoAnalyzer';
 import SmartWatchHub from './pages/SmartWatchHub';
+import NutritionPricing from './pages/NutritionPricing';
 import __Layout from './Layout.jsx';
 
 
