@@ -246,5 +246,6 @@ export default function FitnessBrain() {
         </AnimatePresence>
       </div>
     </div>
+    </UpgradeGate>
   );
 }
