@@ -125,28 +125,47 @@ const BUNDLES = [
   },
 ];
 
-const COACHING = {
-  gradient: "from-rose-600 to-pink-700",
-  badge: "1-on-1",
-  badgeColor: "bg-rose-600",
-  title: "Custom Coaching",
-  subtitle: "Real human coach, fully personalized to you",
-  price: "$197",
-  period: "/mo",
-  stripeUrl: "https://buy.stripe.com/YOUR_STRIPE_LINK_COACHING",
-  websiteUrl: "https://repsandsteps.com/coaching",
-  price: "$149",
-  period: "/mo",
-  features: [
-    "Dedicated personal coach assigned to you",
-    "Weekly check-ins & program adjustments",
-    "Custom workout & nutrition plan",
-    "Unlimited messaging with your coach",
-    "Accountability & motivation system",
-    "Goal setting & progress reviews",
-    "Access to exclusive coaching community",
-  ],
-};
+const COACHING_TIERS = [
+  {
+    id: "custom_plan",
+    gradient: "from-rose-500 to-pink-600",
+    badge: "One-Time",
+    badgeColor: "bg-rose-500",
+    title: "Custom Fitness Plan",
+    subtitle: "Personalized plan designed for YOU",
+    price: "$149",
+    period: " one-time",
+    ctaLabel: "Get Custom Plan",
+    formUrl: "https://forms.gle/Azqxpphow5MDUGPk7",
+    features: [
+      "Personalized workout plan for your fitness level & goals",
+      "Designed around your schedule",
+      "Form guidance & technique tips",
+      "Progress tracking framework",
+      "Ongoing support included",
+    ],
+  },
+  {
+    id: "online_training",
+    gradient: "from-rose-600 to-pink-800",
+    badge: "1-on-1",
+    badgeColor: "bg-rose-700",
+    title: "Online Personal Training",
+    subtitle: "Work 1-on-1 with me every week",
+    price: "$297",
+    period: "/mo",
+    ctaLabel: "Start Coaching",
+    formUrl: "https://forms.gle/Azqxpphow5MDUGPk7",
+    features: [
+      "Weekly check-ins & program adjustments",
+      "Custom workout & nutrition guidance",
+      "Form coaching videos",
+      "24/7 messaging support",
+      "Daily accountability system",
+      "Goal setting & progress reviews",
+    ],
+  },
+];
 
 function AddOnCard({ item, index }) {
   const Icon = item.icon;
