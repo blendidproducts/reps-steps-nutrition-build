@@ -85,6 +85,7 @@ import LinkMealBuilder from './pages/LinkMealBuilder';
 import FoodPhotoAnalyzer from './pages/FoodPhotoAnalyzer';
 import SmartWatchHub from './pages/SmartWatchHub';
 import NutritionPricing from './pages/NutritionPricing';
+import AddOns from './pages/AddOns';
 import __Layout from './Layout.jsx';
 
 
