@@ -153,8 +153,8 @@ export default function NutritionGoals() {
         <div className="container mx-auto px-4">
           <div className="flex items-center gap-4">
             <Link to={createPageUrl("Nutrition")}>
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
-                <ArrowLeft className="w-5 h-5" />
+              <Button variant="ghost" size="icon" aria-label="Back to Nutrition" className="text-white hover:bg-white/10">
+                <ArrowLeft className="w-5 h-5" aria-hidden="true" />
               </Button>
             </Link>
             <div>

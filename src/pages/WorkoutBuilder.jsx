@@ -539,9 +539,10 @@ Make it realistic and achievable.`,
             variant="ghost"
             size="icon"
             onClick={() => navigate(-1)}
+            aria-label="Go back"
             className="text-white hover:text-brand-blue flex-shrink-0"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5" aria-hidden="true" />
           </Button>
           <div className="min-w-0 flex-1">
             <h1 className="text-base font-bold truncate">Build Workout</h1>
@@ -967,26 +968,26 @@ Make it realistic and achievable.`,
                                       </div>
                                       <div className="flex gap-2">
                                         <button
-                                          onClick={() => {
-                                            const similar = allExercises.filter(ex => 
-                                              ex.category === exercise.category && ex.id !== exercise.id
-                                            );
-                                            if (similar.length > 0) {
-                                              const random = similar[Math.floor(Math.random() * similar.length)];
-                                              swapExercise(index, random);
-                                            }
-                                          }}
-                                          className="w-8 h-8 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors"
-                                          title="Swap Exercise"
+                                         onClick={() => {
+                                           const similar = allExercises.filter(ex => 
+                                             ex.category === exercise.category && ex.id !== exercise.id
+                                           );
+                                           if (similar.length > 0) {
+                                             const random = similar[Math.floor(Math.random() * similar.length)];
+                                             swapExercise(index, random);
+                                           }
+                                         }}
+                                         className="w-11 h-11 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors touch-manipulation"
+                                         aria-label={`Swap ${exercise.name} with a similar exercise`}
                                         >
-                                          <RefreshCw className="w-4 h-4 text-white" />
+                                         <RefreshCw className="w-4 h-4 text-white" aria-hidden="true" />
                                         </button>
                                         <button
-                                          onClick={() => removeExercise(index)}
-                                          className="w-8 h-8 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
-                                          title="Remove Exercise"
+                                         onClick={() => removeExercise(index)}
+                                         className="w-11 h-11 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors touch-manipulation"
+                                         aria-label={`Remove ${exercise.name} from workout`}
                                         >
-                                          <Trash2 className="w-4 h-4 text-white" />
+                                         <Trash2 className="w-4 h-4 text-white" aria-hidden="true" />
                                         </button>
                                       </div>
                                     </div>
