@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useTabNavigator, resolveTabForPath, TAB_ROOTS, pushTabPath } from "@/hooks/useTabNavigator";
 import { createPageUrl } from "@/utils";
 import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box, Users, Clock, Brain, Watch, ShoppingBag } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -52,6 +53,13 @@ const navigationItems = [
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { navigateToTab } = useTabNavigator();
+
+  // Track current path into its tab stack whenever the route changes
+  React.useEffect(() => {
+    const tab = resolveTabForPath(location.pathname);
+    if (tab) pushTabPath(tab, location.pathname + location.search);
+  }, [location.pathname, location.search]);
 
   // Robust sessionStorage-based scroll memory for all routes
   useScrollMemory("main-content");
