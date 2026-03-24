@@ -26,6 +26,7 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
   const [mealType, setMealType] = useState("lunch");
   const [servings, setServings] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const { mutate } = useOptimisticMutation();
 
   const [manualEntry, setManualEntry] = useState({
     food_name: "",
