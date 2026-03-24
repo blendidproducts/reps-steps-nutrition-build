@@ -787,9 +787,9 @@ export default function AIWorkoutGenerator() {
                                 className="bg-gray-800/50 rounded-lg p-3 sm:p-4 border border-gray-700"
                               >
                                 <div className="flex items-start gap-2 sm:gap-3">
-                                  <div {...provided.dragHandleProps} className="mt-1 cursor-grab active:cursor-grabbing">
-                                    <GripVertical className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
-                                  </div>
+                                  <div {...provided.dragHandleProps} className="mt-1 cursor-grab active:cursor-grabbing" aria-label={`Drag to reorder ${exercise.name}`} role="button">
+                                                     <GripVertical className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" aria-hidden="true" />
+                                                  </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-start justify-between mb-2 sm:mb-3">
                                       <div className="flex-1 min-w-0">

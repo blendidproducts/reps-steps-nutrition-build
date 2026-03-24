@@ -418,6 +418,7 @@ export default function Settings() {
                 <Switch
                   checked={settings.workoutReminders}
                   onCheckedChange={() => handlePermissionSwitch('workoutReminders', 'notifications', 'Notifications')}
+                  aria-label="Enable notification permissions"
                 />
               </div>
               <div className="flex items-center justify-between p-4 bg-background rounded-lg border border-border">
@@ -428,6 +429,7 @@ export default function Settings() {
                 <Switch
                   checked={settings.recordWorkouts}
                   onCheckedChange={() => handlePermissionSwitch('recordWorkouts', 'video', 'Camera')}
+                  aria-label="Enable camera access"
                 />
               </div>
             </CardContent>
@@ -447,14 +449,14 @@ export default function Settings() {
                   <Label className="font-medium text-foreground">Voice Guidance</Label>
                   <p className="text-sm text-gray-400">Hear workout instructions</p>
                 </div>
-                <Switch checked={settings.voiceGuidance} onCheckedChange={(c) => updateSetting('voiceGuidance', c)} />
+                <Switch checked={settings.voiceGuidance} onCheckedChange={(c) => updateSetting('voiceGuidance', c)} aria-label="Toggle voice guidance" />
               </div>
               <div className="flex items-center justify-between p-4 bg-background rounded-lg border border-border">
                 <div>
                   <Label className="font-medium text-foreground">Sound Effects</Label>
                   <p className="text-sm text-gray-400">For timers and counters</p>
                 </div>
-                <Switch checked={settings.soundEffects} onCheckedChange={(c) => updateSetting('soundEffects', c)} />
+                <Switch checked={settings.soundEffects} onCheckedChange={(c) => updateSetting('soundEffects', c)} aria-label="Toggle sound effects" />
               </div>
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-background rounded-lg border border-border">
@@ -462,7 +464,7 @@ export default function Settings() {
                     <Label className="font-medium text-foreground">Timer Countdown Beeps</Label>
                     <p className="text-sm text-gray-400">Beeps during last 3 seconds of timers</p>
                   </div>
-                  <Switch checked={settings.enableTimerBeeps} onCheckedChange={(c) => updateSetting('enableTimerBeeps', c)} />
+                  <Switch checked={settings.enableTimerBeeps} onCheckedChange={(c) => updateSetting('enableTimerBeeps', c)} aria-label="Toggle timer countdown beeps" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-foreground">Timer Beeps Volume</Label>
@@ -491,14 +493,14 @@ export default function Settings() {
                   <Label className="font-medium text-foreground">Dark Mode</Label>
                   <p className="text-sm text-gray-400">Toggle the application's visual theme</p>
                 </div>
-                <Switch checked={settings.darkMode} onCheckedChange={(c) => updateSetting('darkMode', c)} />
+                <Switch checked={settings.darkMode} onCheckedChange={(c) => updateSetting('darkMode', c)} aria-label="Toggle dark mode" />
               </div>
               <div className="flex items-center justify-between p-4 bg-background rounded-lg border border-border">
                 <div>
                   <Label className="font-medium text-foreground">Large Text</Label>
                   <p className="text-sm text-gray-400">Increase text size for readability</p>
                 </div>
-                <Switch checked={settings.largeText} onCheckedChange={(c) => updateSetting('largeText', c)} />
+                <Switch checked={settings.largeText} onCheckedChange={(c) => updateSetting('largeText', c)} aria-label="Toggle large text" />
               </div>
             </CardContent>
           </Card>
@@ -517,7 +519,7 @@ export default function Settings() {
                   <Label className="font-medium text-foreground">Auto-start Next Set</Label>
                   <p className="text-sm text-gray-400">Start automatically after rest periods</p>
                 </div>
-                <Switch checked={settings.autoStart} onCheckedChange={(c) => updateSetting('autoStart', c)} />
+                <Switch checked={settings.autoStart} onCheckedChange={(c) => updateSetting('autoStart', c)} aria-label="Toggle auto-start next set" />
               </div>
               <div className="space-y-2">
                 <Label className="text-foreground">Default Rest Time (seconds)</Label>
