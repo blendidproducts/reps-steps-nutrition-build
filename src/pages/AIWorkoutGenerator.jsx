@@ -1028,10 +1028,8 @@ export default function AIWorkoutGenerator() {
         </div>
       </div>
 
-      {/* Bottom Placeholder */}
-      <div className="fixed bottom-0 left-0 right-0 h-20 bg-black sm:hidden z-40 flex items-center justify-center">
-        <div className="text-gray-800 text-xs">RepsAndSteps</div>
-      </div>
+      {/* Spacer to clear bottom nav bar on mobile */}
+      <div className="h-20 md:hidden" aria-hidden="true" />
 
       <style>
         {`
