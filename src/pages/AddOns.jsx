@@ -56,7 +56,7 @@ const ADD_ONS = [
     subtitle: "Both AI add-ons at a discount",
     price: "$7.99",
     period: "/mo",
-    stripeUrl: "https://buy.stripe.com/YOUR_STRIPE_LINK_BUNDLE",
+    stripeUrl: "https://buy.stripe.com/14A9ATf0qcOW31G9cNbQY0l",
     features: [
       "Everything in AI Fitness Brain",
       "Everything in AI Nutrition Add-On",
