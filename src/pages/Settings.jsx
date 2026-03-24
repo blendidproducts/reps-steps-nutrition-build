@@ -365,14 +365,26 @@ export default function Settings() {
                         </span>
                       </p>
                     </div>
-                    <Button
-                      onClick={handleLogout}
-                      variant="outline"
-                      className="w-full bg-red-500/10 border-red-500 text-red-500 hover:bg-red-500/20"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Logout
-                    </Button>
+                    <div className="flex flex-col gap-3">
+                      <Button
+                        onClick={handleLogout}
+                        variant="outline"
+                        aria-label="Logout of your account"
+                        className="w-full bg-red-500/10 border-red-500 text-red-500 hover:bg-red-500/20"
+                      >
+                        <LogOut className="w-4 h-4 mr-2" aria-hidden="true" />
+                        Logout
+                      </Button>
+                      <Button
+                        onClick={() => setShowDeleteModal(true)}
+                        variant="outline"
+                        aria-label="Permanently delete your account"
+                        className="w-full bg-red-900/20 border-red-700 text-red-400 hover:bg-red-900/40 font-bold"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" aria-hidden="true" />
+                        Delete My Account
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="p-4 bg-background rounded-lg border border-border text-center">

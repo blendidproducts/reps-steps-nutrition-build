@@ -409,6 +409,8 @@ export default function AIWorkoutGenerator() {
               <CardContent className="space-y-4">
                 <button
                   onClick={() => setWorkoutLevel('beginner')}
+                  aria-pressed={workoutLevel === 'beginner'}
+                  aria-label="Select Beginner level"
                   className={`w-full p-4 sm:p-6 md:p-8 rounded-xl border-2 transition-all text-left ${
                     workoutLevel === 'beginner'
                       ? 'bg-green-600/20 border-green-500 text-white'
@@ -427,6 +429,8 @@ export default function AIWorkoutGenerator() {
 
                 <button
                   onClick={() => setWorkoutLevel('intermediate')}
+                  aria-pressed={workoutLevel === 'intermediate'}
+                  aria-label="Select Intermediate level"
                   className={`w-full p-4 sm:p-6 md:p-8 rounded-xl border-2 transition-all text-left ${
                     workoutLevel === 'intermediate'
                       ? 'bg-yellow-600/20 border-yellow-500 text-white'
@@ -445,6 +449,8 @@ export default function AIWorkoutGenerator() {
 
                 <button
                   onClick={() => setWorkoutLevel('advanced')}
+                  aria-pressed={workoutLevel === 'advanced'}
+                  aria-label="Select Advanced level"
                   className={`w-full p-4 sm:p-6 md:p-8 rounded-xl border-2 transition-all text-left ${
                     workoutLevel === 'advanced'
                       ? 'bg-red-600/20 border-red-500 text-white'
@@ -487,9 +493,11 @@ export default function AIWorkoutGenerator() {
                   <Label className="text-white text-base sm:text-lg font-semibold mb-3 block">Body Focus</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <button
-                      onClick={() => setSelectedCategory('upper')}
-                      className={`p-3 sm:p-4 md:p-6 rounded-xl border-2 transition-all ${
-                        selectedCategory === 'upper'
+                     onClick={() => setSelectedCategory('upper')}
+                     aria-pressed={selectedCategory === 'upper'}
+                     aria-label="Focus on Upper Body"
+                     className={`p-3 sm:p-4 md:p-6 rounded-xl border-2 transition-all ${
+                       selectedCategory === 'upper'
                           ? 'bg-blue-600/20 border-blue-500 text-white'
                           : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-blue-500/50'
                       }`}
@@ -501,6 +509,8 @@ export default function AIWorkoutGenerator() {
 
                     <button
                       onClick={() => setSelectedCategory('lower')}
+                      aria-pressed={selectedCategory === 'lower'}
+                      aria-label="Focus on Lower Body"
                       className={`p-3 sm:p-4 md:p-6 rounded-xl border-2 transition-all ${
                         selectedCategory === 'lower'
                           ? 'bg-green-600/20 border-green-500 text-white'
@@ -514,6 +524,8 @@ export default function AIWorkoutGenerator() {
 
                     <button
                       onClick={() => setSelectedCategory('mix')}
+                      aria-pressed={selectedCategory === 'mix'}
+                      aria-label="Focus on Mixed full body"
                       className={`p-3 sm:p-4 md:p-6 rounded-xl border-2 transition-all ${
                         selectedCategory === 'mix'
                           ? 'bg-purple-600/20 border-purple-500 text-white'
