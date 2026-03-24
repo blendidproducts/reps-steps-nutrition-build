@@ -427,8 +427,8 @@ export default function Layout({ children, currentPageName }) {
           <div className="md:hidden sticky top-0 z-50 bg-[#0a1628]/95 backdrop-blur-lg border-b-2 border-brand-blue/40 shadow-lg">
             <div className="flex items-center justify-between px-3 py-3">
               {/* Hamburger Menu - Extra large clickable area */}
-              <SidebarTrigger className="text-white hover:bg-brand-blue/20 rounded-lg transition-all touch-manipulation active:scale-95 -ml-2">
-                <div className="flex flex-col gap-2 p-4">
+              <SidebarTrigger aria-label="Open navigation menu" className="text-white hover:bg-brand-blue/20 rounded-lg transition-all touch-manipulation active:scale-95 -ml-2">
+                <div className="flex flex-col gap-2 p-4" aria-hidden="true">
                   <div className="w-8 h-1 bg-current rounded-full"></div>
                   <div className="w-8 h-1 bg-current rounded-full"></div>
                   <div className="w-8 h-1 bg-current rounded-full"></div>
