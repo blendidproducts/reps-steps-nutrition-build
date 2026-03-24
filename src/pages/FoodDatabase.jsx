@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import MobileDrawerSelect from "@/components/MobileDrawerSelect";
 import { Search, Plus, Apple, Trash2, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -112,8 +111,8 @@ export default function FoodDatabase() {
         <div className="container mx-auto px-4">
           <div className="flex items-center gap-4 mb-4">
             <Link to={createPageUrl("Nutrition")}>
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
-                <ArrowLeft className="w-5 h-5" />
+              <Button variant="ghost" size="icon" aria-label="Back to Nutrition" className="text-white hover:bg-white/10">
+                <ArrowLeft className="w-5 h-5" aria-hidden="true" />
               </Button>
             </Link>
             <div>
@@ -138,8 +137,7 @@ export default function FoodDatabase() {
                   className="pl-10 bg-background border-border"
                 />
               </div>
-              {/* Mobile: Drawer */}
-              <div className="md:hidden w-full">
+              <div className="w-full md:w-48">
                 <MobileDrawerSelect
                   value={selectedCategory}
                   onValueChange={setSelectedCategory}
@@ -153,20 +151,6 @@ export default function FoodDatabase() {
                   placeholder="Category"
                   label="Select Category"
                 />
-              </div>
-              {/* Desktop: Standard Select */}
-              <div className="hidden md:block md:w-48">
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="bg-background border-border">
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    {Object.entries(categoryConfig).map(([key, config]) => (
-                      <SelectItem key={key} value={key}>{config.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
               <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
                 <DialogTrigger asChild>
@@ -191,16 +175,16 @@ export default function FoodDatabase() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Category</Label>
-                        <Select value={newFood.category} onValueChange={(v) => setNewFood({...newFood, category: v})}>
-                          <SelectTrigger className="bg-background border-border">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(categoryConfig).map(([key, config]) => (
-                              <SelectItem key={key} value={key}>{config.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <MobileDrawerSelect
+                          value={newFood.category}
+                          onValueChange={(v) => setNewFood({...newFood, category: v})}
+                          options={Object.entries(categoryConfig).map(([key, config]) => ({
+                            value: key,
+                            label: config.label
+                          }))}
+                          placeholder="Select category"
+                          label="Food Category"
+                        />
                       </div>
                       <div>
                         <Label>Serving Size</Label>
