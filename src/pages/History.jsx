@@ -7,9 +7,10 @@ import { Calendar, Clock, Target, TrendingUp, Share2, Footprints } from "lucide-
 import { format } from "date-fns";
 import { createPageUrl } from "@/utils";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import MobileDrawerSelect from "@/components/MobileDrawerSelect";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import PullToRefresh from "@/components/PullToRefresh";
 
 export default function History() {
