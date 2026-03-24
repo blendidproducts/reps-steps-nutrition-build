@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { MealLog } from "@/entities/MealLog";
 import { Food } from "@/entities/Food";
+import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
