@@ -18,7 +18,7 @@ const ADD_ONS = [
     subtitle: "Your 24/7 personal AI coach",
     price: "$4.99",
     period: "/mo",
-    stripeUrl: "https://buy.stripe.com/YOUR_STRIPE_LINK_FITNESS_BRAIN",
+    stripeUrl: "https://buy.stripe.com/cNi3cvcSi6qy45Kex7bQY0j",
     features: [
       "Daily AI analysis & coaching message",
       "Smart calorie & macro adjustments",
