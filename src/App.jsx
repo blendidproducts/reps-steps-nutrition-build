@@ -1,4 +1,5 @@
 import './App.css'
+import React, { Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -9,6 +10,13 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+
+// Fallback shown while a lazy page chunk is loading
+const PageLoader = () => (
+  <div className="fixed inset-0 flex items-center justify-center bg-[#020817]">
+    <div className="w-8 h-8 border-4 border-[#00a9ff]/30 border-t-[#00a9ff] rounded-full animate-spin" />
+  </div>
+);
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
