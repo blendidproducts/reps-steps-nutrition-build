@@ -87,7 +87,10 @@ export function VideoModal({ show, exerciseName, videoId, instructions, onClose 
         className="fixed inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center z-[9999] p-2" onClick={onClose}>
         <Card className="bg-gray-900 w-full max-w-2xl border-gray-800 max-h-[95vh] overflow-auto" onClick={e => e.stopPropagation()}>
           <CardContent className="p-3 sm:p-4">
-            <h3 className="text-lg font-bold mb-3 text-white">{exerciseName}</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-bold text-white">{exerciseName}</h3>
+              <button onClick={onClose} aria-label="Close video modal" className="no-min-height w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-800 text-gray-400 hover:text-white transition-colors">✕</button>
+            </div>
             <div className="w-full aspect-video bg-black rounded-lg mb-3 overflow-hidden">
               <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${videoId}?rel=0`} title={exerciseName}
                 frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full" />
@@ -100,7 +103,7 @@ export function VideoModal({ show, exerciseName, videoId, instructions, onClose 
                 </ol>
               </div>
             )}
-            <Button onClick={onClose} className="w-full gradient-bg text-white">Got It!</Button>
+            <Button onClick={onClose} aria-label="Close video guide" className="w-full gradient-bg text-white">Got It!</Button>
           </CardContent>
         </Card>
       </motion.div>
@@ -116,7 +119,10 @@ export function ThreeDViewModal({ show, exerciseName, modelUrl, instructions, on
         className="fixed inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center z-[9999] p-2" onClick={onClose}>
         <Card className="bg-gray-900 w-full max-w-2xl border-gray-800 max-h-[95vh] overflow-auto" onClick={e => e.stopPropagation()}>
           <CardContent className="p-3 sm:p-4">
-            <h3 className="text-lg font-bold mb-3 text-white">{exerciseName} - 3D View</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-bold text-white">{exerciseName} — 3D View</h3>
+              <button onClick={onClose} aria-label="Close 3D view" className="no-min-height w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-800 text-gray-400 hover:text-white transition-colors">✕</button>
+            </div>
             <div className="w-full aspect-square bg-black rounded-lg mb-3 overflow-hidden">
               {modelUrl ? (
                 <Exercise3DViewer modelUrl={modelUrl} exerciseName={exerciseName} />
