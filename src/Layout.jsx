@@ -10,6 +10,8 @@ import ProgramDayPopup from "@/components/ProgramDayPopup";
 import MobileHeader from "@/components/MobileHeader";
 import MobileRouteTransition from "@/components/MobileRouteTransition";
 import ProgramReminderPopup from "@/components/dashboard/ProgramReminderPopup";
+import SyncIndicator from "@/components/SyncIndicator";
+import { useScrollMemory } from "@/hooks/useScrollMemory";
 import {
   Sidebar,
   SidebarContent,
