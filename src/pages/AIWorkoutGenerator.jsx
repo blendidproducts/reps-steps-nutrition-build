@@ -542,7 +542,7 @@ export default function AIWorkoutGenerator() {
                 {/* Duration */}
                 <div>
                   <Label className="text-white text-base sm:text-lg font-semibold mb-3 block">Workout Duration</Label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4">
+                  <div role="group" aria-label="Select workout duration" className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4">
                     {[15, 30, 45, 60].map(minutes => (
                       <button
                         key={minutes}
@@ -551,6 +551,8 @@ export default function AIWorkoutGenerator() {
                           setIsFreeTime(false);
                           setCustomTime("");
                         }}
+                        aria-pressed={selectedTime === minutes && !isFreeTime}
+                        aria-label={`${minutes} minute workout`}
                         className={`p-3 sm:p-4 md:p-6 rounded-xl border-2 transition-all ${
                           selectedTime === minutes && !isFreeTime
                             ? 'bg-brand-blue/20 border-brand-blue text-white'
@@ -598,6 +600,8 @@ export default function AIWorkoutGenerator() {
                         setSelectedTime(999);
                         setCustomTime("");
                       }}
+                      aria-pressed={isFreeTime}
+                      aria-label="No time limit"
                       className={`w-full p-4 sm:p-6 rounded-xl border-2 transition-all ${
                         isFreeTime
                           ? 'bg-purple-600/20 border-purple-500 text-white'
@@ -619,6 +623,8 @@ export default function AIWorkoutGenerator() {
                       setAutoReps(true);
                       setSelectedReps(null);
                     }}
+                    aria-pressed={autoReps}
+                    aria-label="Let AI choose reps automatically"
                     className={`w-full p-4 sm:p-6 rounded-xl border-2 transition-all text-left mb-4 ${
                       autoReps
                         ? 'bg-brand-blue/20 border-brand-blue'
@@ -636,7 +642,7 @@ export default function AIWorkoutGenerator() {
 
                   <div>
                     <p className="text-white font-medium mb-3 text-sm sm:text-base">Or manually set total reps:</p>
-                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
+                    <div role="group" aria-label="Select total rep count" className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
                       {[100, 150, 200, 250, 300].map(reps => (
                         <button
                           key={reps}
@@ -645,6 +651,8 @@ export default function AIWorkoutGenerator() {
                             setAutoReps(false);
                             setCustomReps("");
                           }}
+                          aria-pressed={selectedReps === reps && !autoReps && !customReps}
+                          aria-label={`${reps} total reps`}
                           className={`p-2 sm:p-3 md:p-4 rounded-xl border-2 transition-all ${
                             selectedReps === reps && !autoReps && !customReps
                               ? 'bg-brand-blue/20 border-brand-blue text-white'
