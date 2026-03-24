@@ -350,8 +350,13 @@ export default function Layout({ children, currentPageName }) {
                           location.pathname === item.url ? 'bg-[#0066cc] text-white' : 'text-gray-300'
                         }`}
                       >
-                        <Link to={item.url} className="flex items-center gap-3 px-5 py-3">
-                          <item.icon className="w-4 h-4" />
+                        <Link
+                          to={item.url}
+                          aria-label={item.title}
+                          aria-current={location.pathname === item.url ? "page" : undefined}
+                          className="flex items-center gap-3 px-5 py-3"
+                        >
+                          <item.icon className="w-4 h-4" aria-hidden="true" />
                           <span className="font-normal text-sm">{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
