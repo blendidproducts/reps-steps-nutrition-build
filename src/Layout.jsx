@@ -464,7 +464,7 @@ export default function Layout({ children, currentPageName }) {
           </div>
 
           {/* Bottom Navigation Bar - Mobile Only */}
-          <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0a1628]/95 backdrop-blur-lg border-t border-brand-blue/30 z-50 select-none pointer-events-none" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          <nav aria-label="Main navigation" className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0a1628]/95 backdrop-blur-lg border-t border-brand-blue/30 z-50 select-none pointer-events-none" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
             <div className="flex items-center justify-around px-1 py-1.5 pointer-events-auto">
               {[
                 { page: "Home",          Icon: Home,     label: "Home" },
