@@ -123,7 +123,7 @@ export function ThreeDViewModal({ show, exerciseName, modelUrl, instructions, on
               <h3 className="text-lg font-bold text-white">{exerciseName} — 3D View</h3>
               <button onClick={onClose} aria-label="Close 3D view" className="no-min-height w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-800 text-gray-400 hover:text-white transition-colors">✕</button>
             </div>
-            <div className="w-full aspect-square bg-black rounded-lg mb-3 overflow-hidden">
+            <div className="w-full aspect-square bg-black rounded-lg mb-3 overflow-hidden" style={{marginTop: 0}}>
               {modelUrl ? (
                 <Exercise3DViewer modelUrl={modelUrl} exerciseName={exerciseName} />
               ) : (
@@ -181,8 +181,8 @@ export function SupersetConfigModal({ show, selections, onToggle, onApply, onClo
               ))}
             </div>
             <div className="flex gap-2 sm:gap-3 flex-shrink-0 pt-3 border-t border-gray-700">
-              <Button onClick={onApply} className="flex-1 bg-purple-600 hover:bg-purple-700 min-h-[48px]"><Check className="w-4 h-4 mr-2" />Confirm</Button>
-              <Button onClick={onClose} variant="outline" className="flex-1 min-h-[48px] border-gray-600 hover:bg-gray-800">Cancel</Button>
+              <Button onClick={onApply} aria-label="Confirm superset configuration" className="flex-1 bg-purple-600 hover:bg-purple-700 min-h-[48px]"><Check className="w-4 h-4 mr-2" />Confirm</Button>
+              <Button onClick={onClose} aria-label="Cancel superset configuration" variant="outline" className="flex-1 min-h-[48px] border-gray-600 hover:bg-gray-800">Cancel</Button>
             </div>
           </CardContent>
         </Card>
@@ -215,7 +215,7 @@ export function SwapExerciseModal({ show, exercises, currentCategory, searchQuer
                 ))}
             </div>
             <div className="flex-shrink-0 pt-3 border-t border-gray-700">
-              <Button onClick={onClose} variant="outline" className="w-full min-h-[48px] border-gray-600 hover:bg-gray-800">Cancel</Button>
+              <Button onClick={onClose} aria-label="Cancel exercise swap" variant="outline" className="w-full min-h-[48px] border-gray-600 hover:bg-gray-800">Cancel</Button>
             </div>
           </CardContent>
         </Card>
