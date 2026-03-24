@@ -156,3 +156,25 @@ button:focus-visible {
     @apply bg-background text-foreground;
   }
 }
+
+/* ── Android WebView parity: hide scrollbars, preserve scroll functionality ── */
+* {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE / Edge legacy */
+}
+*::-webkit-scrollbar {
+  display: none;                /* Chrome, Safari, Android WebView */
+}
+
+/* ── Global minimum touch target: 44×44 px for all interactive elements ────── */
+button:not(.no-min-height),
+[role="button"],
+a,
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+select,
+summary {
+  min-height: 44px;
+  min-width: 44px;
+}
