@@ -487,44 +487,7 @@ export default function Layout({ children, currentPageName }) {
           </div>
 
           {/* Bottom Navigation Bar - Mobile Only */}
-          <nav aria-label="Main navigation" className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0a1628]/95 backdrop-blur-lg border-t border-brand-blue/30 z-50 select-none pointer-events-none" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-            <div className="flex items-center justify-around px-1 py-1.5 pointer-events-auto">
-              {[
-                { tab: "Home",           Icon: Home,     label: "Home" },
-                { tab: "Exercises",      Icon: Dumbbell, label: "Exercises" },
-                { tab: "PresetPrograms", Icon: Calendar, label: "Programs" },
-                { tab: "Nutrition",      Icon: Apple,    label: "Nutrition" },
-                { tab: "History",        Icon: History,  label: "History" },
-                { tab: "Settings",       Icon: Settings, label: "Settings" },
-              ].map(({ tab, Icon, label }) => {
-                // Active if current path belongs to this tab's sub-tree
-                const isActive = resolveTabForPath(location.pathname) === tab ||
-                  (tab === "Home" && location.pathname === "/");
-                return (
-                  <button
-                    key={tab}
-                    aria-label={label}
-                    aria-current={isActive ? "page" : undefined}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (isActive) {
-                        // Same tab: scroll to top
-                        document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
-                      } else {
-                        navigateToTab(tab);
-                      }
-                    }}
-                    className={`flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[56px] py-2 px-2 rounded-lg transition-colors active:scale-95 ${isActive ? 'text-brand-blue bg-brand-blue/10' : 'text-gray-400'}`}
-                    style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
-                  >
-                    <Icon className="w-5 h-5" aria-hidden="true" />
-                    <span className="text-[9px] font-medium">{label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </nav>
+          <BottomNav location={location} navigateToTab={navigateToTab} />
         </main>
       </div>
     </SidebarProvider>
