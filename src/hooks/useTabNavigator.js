@@ -13,6 +13,7 @@ const STORAGE_KEY = "rns_tab_stacks";
 
 // Map each bottom-nav tab to the root path it owns.
 // Sub-pages reachable FROM a tab are considered part of its stack.
+// Paths must match createPageUrl() output exactly: '/' + PageName
 export const TAB_ROOTS = {
   Home:          "/Home",
   Exercises:     "/Exercises",
@@ -20,6 +21,16 @@ export const TAB_ROOTS = {
   Nutrition:     "/Nutrition",
   History:       "/History",
   Settings:      "/Settings",
+};
+
+// Sub-paths that belong to a specific tab (pages launched FROM that tab)
+const TAB_SUBTREES = {
+  Home:           ["/Home", "/FitnessBrain", "/Achievements", "/Progress", "/BodyMeasurements", "/Community", "/Referrals"],
+  Exercises:      ["/Exercises", "/AIWorkoutGenerator", "/WorkoutBuilder", "/ActiveWorkout", "/WorkoutComplete", "/WorkoutDetail", "/SavedWorkouts", "/WatchMode", "/SmartWatchHub", "/Stretches", "/RandomWorkout", "/Programs"],
+  PresetPrograms: ["/PresetPrograms", "/ProgramProgress"],
+  Nutrition:      ["/Nutrition", "/NutritionGoals", "/NutritionHistory", "/NutritionPrograms", "/FoodDatabase", "/MealPlans", "/FoodPhotoAnalyzer", "/LinkMealBuilder", "/NutritionPricing"],
+  History:        ["/History"],
+  Settings:       ["/Settings", "/Upload3DModels", "/Help", "/Pricing", "/AddOns", "/Disclaimer", "/Privacy", "/Terms"],
 };
 
 // Which root does a given pathname belong to?
