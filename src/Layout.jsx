@@ -260,18 +260,24 @@ export default function Layout({ children, currentPageName }) {
         {`
           * {
             box-sizing: border-box;
-            -webkit-tap-highlight-color: rgba(0, 169, 255, 0.2);
+            -webkit-tap-highlight-color: transparent;
           }
           
-          button, a, [role="button"], input[type="submit"],
-          nav, .select-none {
-            -webkit-tap-highlight-color: rgba(0, 169, 255, 0.3);
+          button, a, [role="button"], input[type="submit"] {
+            -webkit-tap-highlight-color: transparent;
             user-select: none;
             -webkit-user-select: none;
             cursor: pointer;
+            /* Ensure all interactive elements meet 44px minimum */
+            min-height: 44px;
+          }
+
+          /* Override min-height for inline/icon buttons that deliberately break the rule */
+          button.no-min-height {
+            min-height: unset;
           }
           
-          /* Allow text selection in content areas for copying workout logs, instructions, etc. */
+          /* Allow text selection in content areas */
           p, span, h1, h2, h3, h4, h5, h6, li, td, th, label, .selectable-text {
             user-select: text;
             -webkit-user-select: text;
@@ -279,6 +285,20 @@ export default function Layout({ children, currentPageName }) {
           
           input, textarea, select {
             touch-action: manipulation;
+            /* Prevent zoom on focus in iOS Safari */
+            font-size: max(16px, 1em);
+          }
+
+          /* Suppress browser outline in favour of our own focus-visible ring */
+          *:focus:not(:focus-visible) {
+            outline: none;
+          }
+
+          /* Prevent horizontal browser swipe-back gesture on scroll containers */
+          #main-content {
+            touch-action: pan-y;
+            overscroll-behavior-x: none;
+            overscroll-behavior-y: contain;
           }
           
           html, body {
@@ -288,6 +308,8 @@ export default function Layout({ children, currentPageName }) {
             height: 100vh;
             position: fixed;
             width: 100%;
+            /* Prevent rubber-band scroll bounce */
+            overscroll-behavior: none;
           }
           
           :root {
