@@ -327,6 +327,9 @@ export default function Layout({ children, currentPageName }) {
         {/* Program Reminder Popups */}
         <ProgramReminderPopup />
         
+        {/* Global background-sync indicator */}
+        <SyncIndicator />
+        
         <Sidebar className="border-r border-[#0a0e1a] bg-[#0a0e1a]">
           <SidebarHeader className="p-4 border-b border-gray-800/50">
             <div className="flex items-center gap-3">
