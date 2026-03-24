@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTabNavigator, resolveTabForPath, TAB_ROOTS, pushTabPath } from "@/hooks/useTabNavigator";
 import { createPageUrl } from "@/utils";
