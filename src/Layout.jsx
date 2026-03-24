@@ -417,6 +417,10 @@ export default function Layout({ children, currentPageName }) {
           {hasActiveWorkout && !location.pathname.includes('/ActiveWorkout') && (
             <div 
               onClick={resumeWorkout}
+              role="button"
+              tabIndex={0}
+              aria-label="Resume active workout"
+              onKeyDown={(e) => e.key === 'Enter' && resumeWorkout()}
               className="bg-gradient-to-r from-brand-blue/95 to-blue-600/95 backdrop-blur-lg text-white px-4 py-3 cursor-pointer hover:opacity-90 transition-opacity sticky top-0 z-50 border-b-2 border-blue-400"
             >
               <div className="container mx-auto flex items-center justify-between">
