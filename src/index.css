@@ -178,3 +178,29 @@ summary {
   min-height: 44px;
   min-width: 44px;
 }
+
+/* ── Focus-visible: clear keyboard/switch-access ring ───────────────────────── */
+:focus-visible {
+  outline: 2px solid #00a9ff;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Scrollable content areas: native bounce on iOS, no root bounce ─────────── */
+#main-content {
+  -webkit-overflow-scrolling: touch;  /* iOS momentum scrolling */
+  overscroll-behavior-y: contain;     /* contain bounce to the scroll container */
+}
+
+/* ── Improve WCAG AA contrast for muted text in dark contexts ───────────────── */
+.dark .text-muted-foreground,
+.text-gray-400 {
+  /* Ensures at least 4.5:1 on #020817 background */
+  color: #9ca3af !important; /* gray-400 = 5.9:1 on dark bg — keep it */
+}
+
+/* ── Bottom nav GPU compositing hint ────────────────────────────────────────── */
+nav[aria-label="Main navigation"] {
+  will-change: transform;
+  transform: translateZ(0);
+}
