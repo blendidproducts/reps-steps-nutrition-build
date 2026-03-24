@@ -109,7 +109,7 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
 
         <div className="mb-4">
           <Label>Meal Type</Label>
-          <div className="md:hidden mt-1">
+          <div className="mt-1">
             <MobileDrawerSelect
               value={mealType}
               onValueChange={setMealType}
@@ -117,18 +117,6 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
               placeholder="Select meal type"
               label="Meal Type"
             />
-          </div>
-          <div className="hidden md:block mt-1">
-            <Select value={mealType} onValueChange={setMealType}>
-              <SelectTrigger className="bg-background border-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MEAL_TYPE_OPTIONS.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </div>
 

@@ -174,19 +174,19 @@ export default function History() {
           </CardHeader>
           <CardContent>
             <div className="mb-4 flex items-center gap-2">
-              <Label htmlFor="exercise-select" className="text-sm font-medium">Exercise:</Label>
-              <Select value={selectedExercise} onValueChange={setSelectedExercise}>
-                <SelectTrigger id="exercise-select" className="w-[200px] bg-background border-border">
-                  <SelectValue placeholder="Select an exercise" />
-                </SelectTrigger>
-                <SelectContent>
-                  {allExercises.length > 0 ? (
-                    allExercises.map(ex => <SelectItem key={ex} value={ex}>{ex}</SelectItem>)
-                  ) : (
-                    <SelectItem disabled value="no-data">No exercises in history</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+              <Label className="text-sm font-medium shrink-0">Exercise:</Label>
+              <div className="w-full max-w-[220px]">
+                <MobileDrawerSelect
+                  value={selectedExercise}
+                  onValueChange={setSelectedExercise}
+                  options={allExercises.length > 0
+                    ? allExercises.map(ex => ({ value: ex, label: ex }))
+                    : [{ value: "no-data", label: "No exercises in history" }]
+                  }
+                  placeholder="Select an exercise"
+                  label="Select Exercise"
+                />
+              </div>
             </div>
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
