@@ -3,7 +3,7 @@ import { MealLog } from "@/entities/MealLog";
 import { NutritionGoal } from "@/entities/NutritionGoal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import MobileDrawerSelect from "@/components/MobileDrawerSelect";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { ArrowLeft, TrendingUp, Calendar } from "lucide-react";

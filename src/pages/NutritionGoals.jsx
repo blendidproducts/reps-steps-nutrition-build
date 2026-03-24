@@ -229,35 +229,17 @@ export default function NutritionGoals() {
 
             <div>
               <Label>Activity Level</Label>
-              {/* Mobile: Drawer */}
-              <div className="md:hidden">
-                <MobileDrawerSelect
-                  value={formData.activity_level}
-                  onValueChange={(v) => setFormData({...formData, activity_level: v})}
-                  options={Object.entries(activityLevels).map(([key, level]) => ({
-                    value: key,
-                    label: level.label,
-                    description: level.description
-                  }))}
-                  placeholder="Select activity level"
-                  label="Activity Level"
-                />
-              </div>
-              {/* Desktop: Standard Select */}
-              <div className="hidden md:block">
-                <Select value={formData.activity_level} onValueChange={(v) => setFormData({...formData, activity_level: v})}>
-                  <SelectTrigger className="bg-background border-border">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(activityLevels).map(([key, level]) => (
-                      <SelectItem key={key} value={key}>
-                        {level.label} - {level.description}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <MobileDrawerSelect
+                value={formData.activity_level}
+                onValueChange={(v) => setFormData({...formData, activity_level: v})}
+                options={Object.entries(activityLevels).map(([key, level]) => ({
+                  value: key,
+                  label: level.label,
+                  description: level.description
+                }))}
+                placeholder="Select activity level"
+                label="Activity Level"
+              />
             </div>
 
             <Button onClick={calculateMacros} variant="outline" className="w-full">
