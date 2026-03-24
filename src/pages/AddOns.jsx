@@ -95,7 +95,7 @@ const BUNDLES = [
     subtitle: "Pro + AI Brain + AI Nutrition — everything",
     price: "$19.99",
     period: "/mo",
-    stripeUrl: "https://buy.stripe.com/YOUR_STRIPE_LINK_ALL_ACCESS",
+    stripeUrl: "https://buy.stripe.com/3cI4gz3hI4iq45KbkVbQY0m",
     features: [
       "Everything in Pro AI Workouts",
       "AI Fitness Brain coaching",
