@@ -459,16 +459,9 @@ export default function Layout({ children, currentPageName }) {
             }} 
             id="main-content"
           >
-            {/* Mobile: Animated route transitions */}
-            <div className="md:hidden">
-              <MobileRouteTransition>
-                {children}
-              </MobileRouteTransition>
-            </div>
-            {/* Desktop: No animation */}
-            <div className="hidden md:block">
+            <MobileRouteTransition>
               {children}
-            </div>
+            </MobileRouteTransition>
           </div>
 
           {/* Bottom Navigation Bar - Mobile Only */}
