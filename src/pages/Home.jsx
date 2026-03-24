@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Brain } from "lucide-react";
 import { motion } from "framer-motion";
-import FitnessQuiz from "@/components/FitnessQuiz";
-import MuscleRecovery from "@/components/recovery/MuscleRecovery";
+const FitnessQuiz = React.lazy(() => import("@/components/FitnessQuiz"));
+const MuscleRecovery = React.lazy(() => import("@/components/recovery/MuscleRecovery"));
 
 export default function Home() {
   const navigate = useNavigate();
@@ -95,7 +95,11 @@ export default function Home() {
   return (
     <div style={{ backgroundColor: 'transparent', minHeight: '100vh', color: '#f9fafb' }}>
       {/* Fitness Quiz Modal */}
-      {showQuiz && <FitnessQuiz onComplete={handleQuizComplete} />}
+      {showQuiz && (
+        <React.Suspense fallback={null}>
+          <FitnessQuiz onComplete={handleQuizComplete} />
+        </React.Suspense>
+      )}
 
       {/* Hero Section */}
       <section className="relative overflow-hidden">
@@ -187,7 +191,9 @@ export default function Home() {
                 transition={{ delay: 0.35, duration: 0.6 }}
                 className="mb-6 md:mb-8"
               >
-                <MuscleRecovery />
+                <React.Suspense fallback={<div className="h-20 animate-pulse rounded-xl bg-white/5" />}>
+                  <MuscleRecovery />
+                </React.Suspense>
               </motion.div>
             )}
 
