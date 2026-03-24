@@ -62,7 +62,7 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
     setServings(1);
   };
 
-  const handleLogFood = async () => {
+  const handleLogFood = () => {
     if (!selectedFood) return;
     const newEntry = {
       date,
@@ -75,13 +75,13 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
       carbs: Math.round(selectedFood.carbs * servings),
       fat: Math.round(selectedFood.fat * servings)
     };
-    // Optimistic: close immediately and notify parent
-    onFoodAdded(newEntry);
-    // Backend call in background
-    MealLog.create(newEntry);
+    mutate(
+      () => MealLog.create(newEntry),
+      () => onFoodAdded(newEntry)
+    );
   };
 
-  const handleManualLog = async () => {
+  const handleManualLog = () => {
     if (!manualEntry.food_name || !manualEntry.calories) return;
     const newEntry = {
       date,
@@ -93,10 +93,10 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
       carbs: parseInt(manualEntry.carbs) || 0,
       fat: parseInt(manualEntry.fat) || 0
     };
-    // Optimistic: close immediately and notify parent
-    onFoodAdded(newEntry);
-    // Backend call in background
-    MealLog.create(newEntry);
+    mutate(
+      () => MealLog.create(newEntry),
+      () => onFoodAdded(newEntry)
+    );
   };
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
