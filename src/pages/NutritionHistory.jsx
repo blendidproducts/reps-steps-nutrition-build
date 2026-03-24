@@ -17,6 +17,12 @@ export default function NutritionHistory() {
   const [timeRange, setTimeRange] = useState("7");
   const [chartData, setChartData] = useState([]);
 
+  const timeRangeOptions = [
+    { value: "7", label: "Last 7 Days" },
+    { value: "14", label: "Last 14 Days" },
+    { value: "30", label: "Last 30 Days" },
+  ];
+
   useEffect(() => {
     loadData();
   }, [timeRange]);
@@ -88,16 +94,16 @@ export default function NutritionHistory() {
         {/* Time Range Selector */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-white">Progress Chart</h2>
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-40 bg-card border-border">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 Days</SelectItem>
-              <SelectItem value="14">Last 14 Days</SelectItem>
-              <SelectItem value="30">Last 30 Days</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="w-44">
+            <MobileDrawerSelect
+              value={timeRange}
+              onValueChange={setTimeRange}
+              options={timeRangeOptions}
+              placeholder="Select range"
+              label="Time Range"
+              aria-label="Select time range for chart"
+            />
+          </div>
         </div>
 
         {/* Averages */}
