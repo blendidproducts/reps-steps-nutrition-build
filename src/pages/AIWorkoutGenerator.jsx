@@ -315,7 +315,8 @@ export default function AIWorkoutGenerator() {
               variant="outline"
               size="icon"
               onClick={() => navigate(createPageUrl("Exercises"))}
-              className="bg-white/10 text-white border-white/20 hover:bg-white/20 rounded-lg flex-shrink-0"
+              aria-label="Back to Exercises"
+              className="bg-white/10 text-white border-white/20 hover:bg-white/20 rounded-lg flex-shrink-0 w-11 h-11"
             >
               <ArrowLeft className="w-4 h-4" />
             </Button>
