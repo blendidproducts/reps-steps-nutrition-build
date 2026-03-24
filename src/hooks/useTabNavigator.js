@@ -35,18 +35,28 @@ const TAB_SUBTREES = {
 
 // Which root does a given pathname belong to?
 export function resolveTabForPath(pathname) {
-  const roots = Object.entries(TAB_ROOTS);
-  // Longest-prefix match wins
+  // Strip query string for matching
+  const path = pathname.split("?")[0];
+
+  // Match bare "/" as Home
+  if (path === "/") return "Home";
+
+  // Check sub-tree membership first (explicit map)
+  for (const [tab, subtree] of Object.entries(TAB_SUBTREES)) {
+    if (subtree.some(p => path === p || path.startsWith(p + "/"))) {
+      return tab;
+    }
+  }
+
+  // Fallback: longest root-prefix match
   let best = null;
   let bestLen = 0;
-  for (const [tab, root] of roots) {
-    if ((pathname === root || pathname.startsWith(root + "?") || pathname.startsWith(root + "/")) && root.length > bestLen) {
+  for (const [tab, root] of Object.entries(TAB_ROOTS)) {
+    if ((path === root || path.startsWith(root + "/")) && root.length > bestLen) {
       best = tab;
       bestLen = root.length;
     }
   }
-  // Also match the bare "/" as Home
-  if (!best && pathname === "/") best = "Home";
   return best;
 }
 
