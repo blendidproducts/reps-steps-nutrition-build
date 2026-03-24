@@ -46,31 +46,68 @@ const requestPermission = async (permissionName, friendlyName) => {
   }
 };
 
-// ── Secure deletion modal ────────────────────────────────────────────────────
-function DeleteAccountModal({ onConfirm, onCancel, isDeleting }) {
-  const [step, setStep] = useState(1); // 1 = warning, 2 = type confirm
-  const [confirmText, setConfirmText] = useState("");
-  const REQUIRED = "DELETE";
+// ── Secure email-verified deletion modal ────────────────────────────────────
+function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
+  // step: 1=warning, 2=sending code, 3=enter code, 4=confirming
+  const [step, setStep] = useState(1);
+  const [code, setCode] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const sendCode = async () => {
+    setIsSending(true);
+    try {
+      const res = await base44.functions.invoke('requestAccountDeletion', { action: 'send' });
+      if (res.data?.success) {
+        toast.success(`Verification code sent to ${userEmail}`);
+        setStep(3);
+      } else {
+        toast.error(res.data?.error || 'Failed to send code. Please try again.');
+      }
+    } catch {
+      toast.error('Failed to send verification code.');
+    }
+    setIsSending(false);
+  };
+
+  const confirmDeletion = async () => {
+    if (!code.trim()) return;
+    setIsConfirming(true);
+    try {
+      const res = await base44.functions.invoke('requestAccountDeletion', { action: 'confirm', code: code.trim() });
+      if (res.data?.success) {
+        toast.success('Account deletion confirmed. Logging you out...');
+        onSuccess();
+      } else {
+        toast.error(res.data?.error || 'Invalid or expired code.');
+        setIsConfirming(false);
+      }
+    } catch {
+      toast.error('Confirmation failed. Please try again.');
+      setIsConfirming(false);
+    }
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Delete account confirmation">
       <div className="bg-[#0a1628] border border-red-500/40 rounded-2xl max-w-md w-full p-6 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center" aria-hidden="true">
               <AlertTriangle className="w-5 h-5 text-red-500" />
             </div>
             <h2 className="text-white font-bold text-lg">Delete Account</h2>
           </div>
-          <button onClick={onCancel} className="text-gray-400 hover:text-white transition-colors no-min-height p-1">
-            <X className="w-5 h-5" />
+          <button onClick={onCancel} aria-label="Close delete account dialog" className="text-gray-400 hover:text-white transition-colors no-min-height p-1">
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
-        {step === 1 ? (
+        {/* Step 1 — Warning */}
+        {step === 1 && (
           <>
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-5">
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-5" role="alert">
               <p className="text-red-300 text-sm font-semibold mb-2">⚠️ This action is permanent and irreversible.</p>
               <ul className="text-gray-400 text-sm space-y-1 list-disc list-inside">
                 <li>All workouts and session history will be deleted</li>
@@ -80,39 +117,66 @@ function DeleteAccountModal({ onConfirm, onCancel, isDeleting }) {
               </ul>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300">
+              <Button variant="outline" onClick={onCancel} aria-label="Keep my account" className="flex-1 border-gray-600 text-gray-300">
                 Keep My Account
               </Button>
-              <Button
-                onClick={() => setStep(2)}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold"
-              >
+              <Button onClick={() => setStep(2)} aria-label="Continue to email verification" className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold">
                 Continue
               </Button>
             </div>
           </>
-        ) : (
+        )}
+
+        {/* Step 2 — Explain email verification */}
+        {step === 2 && (
           <>
-            <p className="text-gray-300 text-sm mb-3">
-              To confirm deletion, type <span className="font-mono font-bold text-red-400">{REQUIRED}</span> below:
+            <p className="text-gray-300 text-sm mb-4">
+              For security, we'll send a <strong className="text-white">6-digit verification code</strong> to:
+            </p>
+            <div className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 mb-5 text-center">
+              <p className="text-brand-blue font-mono font-bold">{userEmail}</p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300">
+                Cancel
+              </Button>
+              <Button onClick={sendCode} disabled={isSending} aria-label="Send verification code to email" className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold disabled:opacity-50">
+                {isSending ? 'Sending...' : 'Send Code'}
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* Step 3 — Enter code */}
+        {step === 3 && (
+          <>
+            <p className="text-gray-300 text-sm mb-2">
+              Enter the 6-digit code sent to <span className="text-white font-semibold">{userEmail}</span>:
             </p>
             <Input
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              placeholder={`Type ${REQUIRED} to confirm`}
-              className="bg-gray-900 border-gray-700 text-white mb-5 font-mono"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="Enter 6-digit code"
+              className="bg-gray-900 border-gray-700 text-white mb-1 font-mono text-center text-xl tracking-widest"
+              maxLength={6}
+              inputMode="numeric"
               autoFocus
+              aria-label="Verification code"
             />
+            <button onClick={() => { setStep(2); setCode(''); }} className="text-xs text-gray-500 hover:text-gray-300 mb-4 block no-min-height py-1">
+              Resend code
+            </button>
             <div className="flex gap-3">
-              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300" disabled={isDeleting}>
+              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300" disabled={isConfirming}>
                 Cancel
               </Button>
               <Button
-                onClick={() => onConfirm()}
-                disabled={confirmText !== REQUIRED || isDeleting}
+                onClick={confirmDeletion}
+                disabled={code.length < 6 || isConfirming}
+                aria-label="Confirm account deletion"
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold disabled:opacity-40"
               >
-                {isDeleting ? "Deleting..." : "Delete My Account"}
+                {isConfirming ? 'Confirming...' : 'Delete My Account'}
               </Button>
             </div>
           </>
@@ -128,7 +192,6 @@ export default function Settings() {
   const [user, setUser] = useState(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const [settings, setSettings] = useState(() => {
     const defaultSettings = {
@@ -219,23 +282,12 @@ export default function Settings() {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    setIsDeleting(true);
-    try {
-      await base44.auth.updateMe({
-        account_deletion_requested: true,
-        account_deletion_requested_date: new Date().toISOString()
-      });
-      toast.success('Account deletion requested. Logging you out...');
-      setShowDeleteModal(false);
-      setTimeout(async () => {
-        await base44.auth.logout();
-        navigate(createPageUrl("Home"));
-      }, 1500);
-    } catch {
-      toast.error('Failed to process account deletion. Please try again.');
-      setIsDeleting(false);
-    }
+  const handleDeleteSuccess = async () => {
+    setShowDeleteModal(false);
+    setTimeout(async () => {
+      await base44.auth.logout();
+      navigate(createPageUrl("Home"));
+    }, 1500);
   };
 
   return (
@@ -273,9 +325,9 @@ export default function Settings() {
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <DeleteAccountModal
-          onConfirm={handleDeleteAccount}
+          userEmail={user?.email}
+          onSuccess={handleDeleteSuccess}
           onCancel={() => setShowDeleteModal(false)}
-          isDeleting={isDeleting}
         />
       )}
 
