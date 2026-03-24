@@ -2,68 +2,51 @@
  * useOptimisticMutation — Fire-and-forget mutations with a subtle background-sync indicator.
  *
  * Usage:
- *   const { mutate, syncing } = useOptimisticMutation();
- *
+ *   const { mutate } = useOptimisticMutation();
  *   mutate(
- *     () => MealLog.create(data),           // async fn (background)
- *     () => setMeals(prev => [...prev, data]) // optimistic local update (sync)
+ *     () => MealLog.create(data),            // async background fn
+ *     () => setMeals(prev => [...prev, data]) // optimistic local update (runs immediately)
  *   );
- *
- * While any mutation is in-flight, `syncing` is true and a global
- * SyncIndicator component shows a subtle pulsing dot.
  */
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
-// Shared state via module-level subscribers (no context needed)
-let _syncCount = 0;
-const _listeners = new Set();
+// Module-level sync counter shared across all hook instances and SyncIndicator
+let _count = 0;
+const _subs = new Set();
 
-function notifyListeners() {
-  _listeners.forEach(fn => fn(_syncCount));
+export function _getSyncCount() { return _count; }
+
+function _setCount(n) {
+  _count = n;
+  _subs.forEach(fn => fn(_count));
 }
 
-export function useSyncStatus() {
-  const [count, setCount] = useState(_syncCount);
-  const subscribe = useCallback((fn) => {
-    _listeners.add(fn);
-    return () => _listeners.delete(fn);
-  }, []);
+/** Subscribe to sync count changes. Returns unsubscribe fn. */
+export function subscribeSyncStatus(fn) {
+  _subs.add(fn);
+  return () => _subs.delete(fn);
+}
 
-  useState(() => {
-    const unsub = (() => {
-      _listeners.add(setCount);
-      return () => _listeners.delete(setCount);
-    })();
-    return unsub;
-  });
-
-  return count > 0;
+/** Returns true when any mutation is in-flight */
+export function useSyncActive() {
+  const [active, setActive] = useState(() => _count > 0);
+  useEffect(() => subscribeSyncStatus(n => setActive(n > 0)), []);
+  return active;
 }
 
 export function useOptimisticMutation() {
-  const [syncing, setSyncing] = useState(false);
-
   const mutate = useCallback(async (asyncFn, optimisticUpdate) => {
-    // Run optimistic update immediately (sync)
     if (optimisticUpdate) optimisticUpdate();
 
-    // Increment global sync counter
-    _syncCount++;
-    notifyListeners();
-    setSyncing(true);
-
+    _setCount(_count + 1);
     try {
       await asyncFn();
     } catch (err) {
-      console.error("[OptimisticMutation] Background sync failed:", err);
-      // We intentionally don't roll back — failures are silent unless
-      // the caller passes an onError callback
+      console.error("[sync] Background mutation failed:", err);
     } finally {
-      _syncCount = Math.max(0, _syncCount - 1);
-      notifyListeners();
-      setSyncing(false);
+      _setCount(Math.max(0, _count - 1));
     }
   }, []);
 
-  return { mutate, syncing };
+  return { mutate };
 }
