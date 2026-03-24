@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTabNavigator, resolveTabForPath, TAB_ROOTS, pushTabPath } from "@/hooks/useTabNavigator";
 import { createPageUrl } from "@/utils";
 import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box, Users, Clock, Brain, Watch, ShoppingBag } from "lucide-react";
+import BottomNav from "@/components/BottomNav";
 import { base44 } from "@/api/base44Client";
 import { PresetProgram } from "@/entities/PresetProgram";
 import { Exercise } from "@/entities/Exercise";
@@ -475,7 +476,8 @@ export default function Layout({ children, currentPageName }) {
             className="flex-1 overflow-y-auto overflow-x-hidden" 
             style={{ 
               backgroundColor: 'transparent',
-              overscrollBehavior: 'none',
+              overscrollBehaviorX: 'none',
+              overscrollBehaviorY: 'contain',
               WebkitOverflowScrolling: 'touch',
               position: 'relative'
             }} 
