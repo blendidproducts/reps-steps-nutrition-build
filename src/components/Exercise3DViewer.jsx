@@ -121,20 +121,61 @@ function ThreeScene({ modelUrl, exerciseName }) {
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
-      if (mixerRef.current) mixerRef.current.stopAllAction();
-      if (rendererRef.current && mountRef.current) {
-        mountRef.current.removeChild(rendererRef.current.domElement);
-        rendererRef.current.dispose();
+
+      // 1. Stop animation loop immediately
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
       }
+
+      // 2. Stop & destroy animation mixer
+      if (mixerRef.current) {
+        mixerRef.current.stopAllAction();
+        mixerRef.current.uncacheRoot(mixerRef.current.getRoot());
+        mixerRef.current = null;
+      }
+
+      // 3. Dispose controls
+      controls.dispose();
+
+      // 4. Traverse scene — dispose geometries, materials AND their textures
       if (sceneRef.current) {
         sceneRef.current.traverse((obj) => {
-          if (obj.geometry) obj.geometry.dispose();
-          if (obj.material) {
-            if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
-            else obj.material.dispose();
+          if (obj.isMesh) {
+            if (obj.geometry) {
+              obj.geometry.dispose();
+              obj.geometry = null;
+            }
+            const disposeMaterial = (mat) => {
+              // Dispose every texture slot on the material
+              Object.values(mat).forEach((val) => {
+                if (val && val.isTexture) val.dispose();
+              });
+              mat.dispose();
+            };
+            if (Array.isArray(obj.material)) {
+              obj.material.forEach(disposeMaterial);
+            } else if (obj.material) {
+              disposeMaterial(obj.material);
+            }
+            obj.material = null;
           }
         });
+        // Remove all children to release references
+        while (sceneRef.current.children.length > 0) {
+          sceneRef.current.remove(sceneRef.current.children[0]);
+        }
+        sceneRef.current = null;
+      }
+
+      // 5. Dispose renderer and remove its canvas
+      if (rendererRef.current) {
+        if (mountRef.current && rendererRef.current.domElement.parentNode === mountRef.current) {
+          mountRef.current.removeChild(rendererRef.current.domElement);
+        }
+        rendererRef.current.renderLists.dispose();
+        rendererRef.current.dispose();
+        rendererRef.current = null;
       }
     };
   }, [modelUrl]);
