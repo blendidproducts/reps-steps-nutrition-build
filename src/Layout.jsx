@@ -360,7 +360,7 @@ export default function Layout({ children, currentPageName }) {
         {/* Global background-sync indicator */}
         <SyncIndicator />
         
-        <Sidebar className="border-r border-[#0a0e1a] bg-[#0a0e1a]">
+        <Sidebar className="border-r border-[#0a0e1a] bg-[#0a0e1a] hidden md:flex">
           <SidebarHeader className="p-4 border-b border-gray-800/50">
             <div className="flex items-center gap-3">
               <img src={logoUrl} alt="RepsAndSteps Logo" className="w-9 h-9" />
@@ -423,7 +423,7 @@ export default function Layout({ children, currentPageName }) {
             />
           )}
 
-          {/* Mobile Menu Bar - Single unified banner */}
+          {/* Mobile Menu Bar - hidden on desktop since sidebar handles it */}
           <div className="md:hidden sticky top-0 z-50 bg-[#0a1628]/95 backdrop-blur-lg border-b-2 border-brand-blue/40 shadow-lg">
             <div className="flex items-center justify-between px-3 py-3">
               {/* Hamburger Menu - Extra large clickable area */}
