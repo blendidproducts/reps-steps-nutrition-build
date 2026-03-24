@@ -775,7 +775,7 @@ export default function AIWorkoutGenerator() {
                                         <h4 className="text-white font-semibold text-sm sm:text-base truncate">{exercise.name}</h4>
                                         <p className="text-xs text-gray-400 mt-1">{exercise.category}</p>
                                       </div>
-                                      <div className="flex gap-1 sm:gap-2 flex-shrink-0 ml-2">
+                                      <div className="flex gap-1 flex-shrink-0 ml-2">
                                         <button
                                           onClick={() => {
                                             const similar = allExercises.filter(ex => 
@@ -786,17 +786,19 @@ export default function AIWorkoutGenerator() {
                                               swapExercise(index, random);
                                             }
                                           }}
-                                          className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors"
+                                          className="w-11 h-11 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors touch-manipulation"
                                           title="Swap Exercise"
+                                          aria-label="Swap exercise"
                                         >
-                                          <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                                          <RefreshCw className="w-4 h-4 text-white" />
                                         </button>
                                         <button
                                           onClick={() => removeExercise(index)}
-                                          className="w-7 h-7 sm:w-8 sm:h-8 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
+                                          className="w-11 h-11 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors touch-manipulation"
                                           title="Remove Exercise"
+                                          aria-label="Remove exercise"
                                         >
-                                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                                          <Trash2 className="w-4 h-4 text-white" />
                                         </button>
                                       </div>
                                     </div>
