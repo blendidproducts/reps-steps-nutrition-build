@@ -10,7 +10,6 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import MobileDrawerSelect from "@/components/MobileDrawerSelect";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import PullToRefresh from "@/components/PullToRefresh";
 
 export default function History() {
