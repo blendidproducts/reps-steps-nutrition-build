@@ -716,13 +716,15 @@ Make it realistic and achievable.`,
                       setIsFreeTime(false);
                       setCustomTime("");
                     }}
-                    className={`p-6 rounded-xl border-2 transition-all ${
+                    aria-label={`Set workout duration to ${minutes} minutes`}
+                    aria-pressed={selectedTime === minutes && !isFreeTime}
+                    className={`tap-target p-6 rounded-xl border-2 transition-all flex flex-col items-center justify-center ${
                       selectedTime === minutes && !isFreeTime
                         ? 'bg-brand-blue/20 border-brand-blue text-white'
                         : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-brand-blue/50'
                     }`}
                   >
-                    <Timer className="w-8 h-8 mx-auto mb-2" />
+                    <Timer className="w-8 h-8 mx-auto mb-2" aria-hidden="true" />
                     <div className="text-3xl font-bold">{minutes}</div>
                     <div className="text-sm">MINUTES</div>
                   </button>
