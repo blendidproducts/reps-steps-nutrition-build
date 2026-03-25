@@ -1,21 +1,34 @@
-import React, { useRef, useEffect, useState, Suspense } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-// Shared DRACOLoader instance (reused across all viewers)
+// ── Shared DRACO loader (one instance for the entire app lifetime) ────────────
+// Uses WASM decoder for maximum decompression speed on budget devices.
 let _dracoLoader = null;
 function getDracoLoader() {
   if (!_dracoLoader) {
     _dracoLoader = new DRACOLoader();
-    // Use the Google-hosted DRACO decoder (no extra bundle cost)
     _dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
-    _dracoLoader.setDecoderConfig({ type: 'js' }); // 'wasm' also works for better perf
+    // 'wasm' is significantly faster than 'js' on mid/low-end Android SoCs
+    _dracoLoader.setDecoderConfig({ type: 'wasm' });
+    // Pre-fetch the WASM binary so it's ready when first model loads
+    _dracoLoader.preload();
   }
   return _dracoLoader;
 }
 
+// ── Detect low-end device heuristic ──────────────────────────────────────────
+// Budget Android devices typically report 4 or fewer logical CPU cores and a
+// device pixel ratio of exactly 1 (or use software rendering at low DPR).
+function isLowEndDevice() {
+  const cores = navigator.hardwareConcurrency ?? 4;
+  const dpr = window.devicePixelRatio ?? 1;
+  return cores <= 4 || dpr <= 1;
+}
+
+// ── Three.js scene ────────────────────────────────────────────────────────────
 function ThreeScene({ modelUrl, exerciseName }) {
   const mountRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -29,23 +42,29 @@ function ThreeScene({ modelUrl, exerciseName }) {
   useEffect(() => {
     if (!modelUrl || !mountRef.current) return;
 
+    const lowEnd = isLowEndDevice();
+
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a1a1a);
     sceneRef.current = scene;
 
-    const camera = new THREE.PerspectiveCamera(
-      50,
-      mountRef.current.clientWidth / mountRef.current.clientHeight,
-      0.1,
-      1000
-    );
+    const { clientWidth: w, clientHeight: h } = mountRef.current;
+    const camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 1000);
     camera.position.set(0, 1.5, 3);
     camera.lookAt(0, 1, 0);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // cap at 2× for perf
-    renderer.shadowMap.enabled = true;
+    const renderer = new THREE.WebGLRenderer({
+      antialias: !lowEnd,       // skip MSAA on budget devices
+      powerPreference: 'low-power', // hint GPU driver to use efficient path
+      precision: lowEnd ? 'mediump' : 'highp',
+    });
+    renderer.setSize(w, h);
+    // Cap DPR: 1.5 on low-end devices, 2 on capable hardware
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowEnd ? 1.5 : 2));
+    // Disable shadow maps entirely on low-end devices — expensive fill-rate
+    renderer.shadowMap.enabled = !lowEnd;
+    if (!lowEnd) renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
     mountRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -57,16 +76,19 @@ function ThreeScene({ modelUrl, exerciseName }) {
     controls.maxDistance = 10;
     controls.target.set(0, 1, 0);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    // Lights — simpler lighting on low-end to reduce fragment shader cost
+    scene.add(new THREE.AmbientLight(0xffffff, lowEnd ? 0.9 : 0.6));
+    const dirLight = new THREE.DirectionalLight(0xffffff, lowEnd ? 0.6 : 0.8);
     dirLight.position.set(5, 10, 5);
-    dirLight.castShadow = true;
+    dirLight.castShadow = !lowEnd;
     scene.add(dirLight);
-    const fillLight = new THREE.DirectionalLight(0x4080ff, 0.3);
-    fillLight.position.set(-5, 5, -5);
-    scene.add(fillLight);
+    if (!lowEnd) {
+      const fillLight = new THREE.DirectionalLight(0x4080ff, 0.3);
+      fillLight.position.set(-5, 5, -5);
+      scene.add(fillLight);
+    }
 
-    // GLTFLoader with DRACO support
+    // Load GLB with DRACO decompression
     const loader = new GLTFLoader();
     loader.setDRACOLoader(getDracoLoader());
 
@@ -74,6 +96,8 @@ function ThreeScene({ modelUrl, exerciseName }) {
       modelUrl,
       (gltf) => {
         const model = gltf.scene;
+
+        // Normalise scale & centre the model
         const box = new THREE.Box3().setFromObject(model);
         const center = box.getCenter(new THREE.Vector3());
         const size = box.getSize(new THREE.Vector3());
@@ -82,6 +106,26 @@ function ThreeScene({ modelUrl, exerciseName }) {
         model.position.x = -center.x * scale;
         model.position.y = -box.min.y * scale;
         model.position.z = -center.z * scale;
+
+        // On low-end devices downgrade materials to MeshLambertMaterial to
+        // avoid expensive PBR lighting calculations in the fragment shader.
+        if (lowEnd) {
+          model.traverse((obj) => {
+            if (obj.isMesh && obj.material) {
+              const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+              obj.material = mats.map((m) => {
+                const lambert = new THREE.MeshLambertMaterial({
+                  map: m.map ?? null,
+                  color: m.color ?? new THREE.Color(0xcccccc),
+                });
+                m.dispose();
+                return lambert;
+              });
+              if (!Array.isArray(obj.material)) obj.material = obj.material[0];
+            }
+          });
+        }
+
         scene.add(model);
 
         if (gltf.animations?.length > 0) {
@@ -113,62 +157,47 @@ function ThreeScene({ modelUrl, exerciseName }) {
 
     const handleResize = () => {
       if (!mountRef.current) return;
-      camera.aspect = mountRef.current.clientWidth / mountRef.current.clientHeight;
+      const { clientWidth: rw, clientHeight: rh } = mountRef.current;
+      camera.aspect = rw / rh;
       camera.updateProjectionMatrix();
-      renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
+      renderer.setSize(rw, rh);
     };
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
 
-      // 1. Stop animation loop immediately
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
         animationRef.current = null;
       }
-
-      // 2. Stop & destroy animation mixer
       if (mixerRef.current) {
         mixerRef.current.stopAllAction();
         mixerRef.current.uncacheRoot(mixerRef.current.getRoot());
         mixerRef.current = null;
       }
-
-      // 3. Dispose controls
       controls.dispose();
 
-      // 4. Traverse scene — dispose geometries, materials AND their textures
       if (sceneRef.current) {
         sceneRef.current.traverse((obj) => {
           if (obj.isMesh) {
-            if (obj.geometry) {
-              obj.geometry.dispose();
-              obj.geometry = null;
-            }
-            const disposeMaterial = (mat) => {
-              // Dispose every texture slot on the material
-              Object.values(mat).forEach((val) => {
-                if (val && val.isTexture) val.dispose();
-              });
+            obj.geometry?.dispose();
+            obj.geometry = null;
+            const disposeMat = (mat) => {
+              Object.values(mat).forEach((v) => { if (v?.isTexture) v.dispose(); });
               mat.dispose();
             };
-            if (Array.isArray(obj.material)) {
-              obj.material.forEach(disposeMaterial);
-            } else if (obj.material) {
-              disposeMaterial(obj.material);
-            }
+            if (Array.isArray(obj.material)) obj.material.forEach(disposeMat);
+            else if (obj.material) disposeMat(obj.material);
             obj.material = null;
           }
         });
-        // Remove all children to release references
         while (sceneRef.current.children.length > 0) {
           sceneRef.current.remove(sceneRef.current.children[0]);
         }
         sceneRef.current = null;
       }
 
-      // 5. Dispose renderer and remove its canvas
       if (rendererRef.current) {
         if (mountRef.current && rendererRef.current.domElement.parentNode === mountRef.current) {
           mountRef.current.removeChild(rendererRef.current.domElement);
@@ -190,12 +219,21 @@ function ThreeScene({ modelUrl, exerciseName }) {
 
   return (
     <div className="relative w-full h-full">
-      <div ref={mountRef} className="w-full h-full rounded-lg overflow-hidden" aria-label={`3D model of ${exerciseName}`} role="img" />
+      <div
+        ref={mountRef}
+        className="w-full h-full rounded-lg overflow-hidden"
+        role="img"
+        aria-label={`3D model of ${exerciseName}`}
+      />
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 rounded-lg" aria-live="polite" aria-label="Loading 3D model">
+        <div
+          className="absolute inset-0 flex items-center justify-center bg-gray-900/80 rounded-lg"
+          aria-live="polite"
+          aria-label="Loading 3D model"
+        >
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-2" />
-            <p className="text-sm text-gray-400">Loading 3D model...</p>
+            <p className="text-sm text-gray-400">Loading 3D model…</p>
           </div>
         </div>
       )}
@@ -203,23 +241,35 @@ function ThreeScene({ modelUrl, exerciseName }) {
   );
 }
 
-// Lazy-loaded wrapper — the Three.js scene only mounts when this component is rendered
+// ── Lazy-mount wrapper ────────────────────────────────────────────────────────
+// The Three.js scene is only instantiated when the container scrolls into the
+// viewport (IntersectionObserver). This avoids booting WebGL on hidden modals
+// and prevents wasted GPU/CPU cycles on budget Android devices.
 export default function Exercise3DViewer({ modelUrl, exerciseName }) {
-  const [shouldMount, setShouldMount] = useState(false);
+  const containerRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
 
-  // Defer mounting by one frame so the modal transition completes first
   useEffect(() => {
-    const id = requestAnimationFrame(() => setShouldMount(true));
-    return () => cancelAnimationFrame(id);
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setIsVisible(true); observer.disconnect(); } },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
-  if (!shouldMount) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-900 rounded-lg">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500" />
-      </div>
-    );
-  }
-
-  return <ThreeScene modelUrl={modelUrl} exerciseName={exerciseName} />;
+  return (
+    <div ref={containerRef} className="w-full h-full">
+      {isVisible ? (
+        <ThreeScene modelUrl={modelUrl} exerciseName={exerciseName} />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-gray-900 rounded-lg">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500" />
+        </div>
+      )}
+    </div>
+  );
 }

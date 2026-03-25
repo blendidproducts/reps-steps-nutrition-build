@@ -2,78 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-
-/* :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-} */
-
-
-
+/* ── Shadcn/ui design tokens ─────────────────────────────────────────────── */
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -110,6 +39,7 @@ button:focus-visible {
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
@@ -146,8 +76,6 @@ button:focus-visible {
   }
 }
 
-
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -155,29 +83,6 @@ button:focus-visible {
   body {
     @apply bg-background text-foreground;
   }
-}
-
-/* ── Android WebView parity: hide scrollbars, preserve scroll functionality ── */
-* {
-  scrollbar-width: none;        /* Firefox */
-  -ms-overflow-style: none;     /* IE / Edge legacy */
-}
-*::-webkit-scrollbar {
-  display: none;                /* Chrome, Safari, Android WebView */
-}
-
-/* ── Global minimum touch target: 44×44 px for all interactive elements ────── */
-/* Use .no-min-height to opt-out on deliberate compact elements (icon-only badges, etc.) */
-button:not(.no-min-height),
-[role="button"]:not(.no-min-height),
-a:not(.no-min-height),
-input[type="submit"],
-input[type="button"],
-input[type="reset"],
-select,
-summary {
-  min-height: 44px;
-  min-width: 44px;
 }
 
 /* ── Safe-area CSS custom properties ────────────────────────────────────────── */
@@ -191,33 +96,73 @@ summary {
   --content-pb:  calc(var(--nav-height) + var(--safe-bottom));
 }
 
-/* ── Bottom nav – always pins flush to hardware edge ────────────────────────── */
-nav[aria-label="Main navigation"] {
-  padding-bottom: var(--safe-bottom);
+/* ── Android WebView parity: hide scrollbars, preserve scroll functionality ── */
+* {
+  scrollbar-width: none;       /* Firefox */
+  -ms-overflow-style: none;    /* IE / Edge legacy */
+}
+*::-webkit-scrollbar {
+  display: none;               /* Chrome, Safari, Android WebView */
 }
 
-/* ── Focus-visible: clear keyboard/switch-access ring ───────────────────────── */
+/* ── Global minimum touch target: 44×44 px for all interactive elements ─────── */
+/* Use .no-min-height to opt-out on deliberate compact elements */
+button:not(.no-min-height),
+[role="button"]:not(.no-min-height),
+a:not(.no-min-height),
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+select,
+summary {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* ── Bottom nav: pins flush to hardware edge + GPU compositing hint ─────────── */
+nav[aria-label="Main navigation"] {
+  padding-bottom: var(--safe-bottom);
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* ── Focus-visible: clear keyboard / switch-access ring ─────────────────────── */
 :focus-visible {
   outline: 2px solid #00a9ff;
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-/* ── Scrollable content areas: native bounce on iOS, no root bounce ─────────── */
+/* ── Scrollable content areas: native bounce on iOS, no root bounce ──────────── */
 #main-content {
-  -webkit-overflow-scrolling: touch;  /* iOS momentum scrolling */
-  overscroll-behavior-y: contain;     /* contain bounce to the scroll container */
+  -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
+  overscroll-behavior-y: contain;    /* contain bounce to this scroll container */
 }
 
-/* ── Improve WCAG AA contrast for muted text in dark contexts ───────────────── */
+/* ── WCAG AA contrast for muted text in dark contexts ───────────────────────── */
+/* gray-400 (#9ca3af) achieves ≥ 4.5:1 on the #020817 app background */
 .dark .text-muted-foreground,
 .text-gray-400 {
-  /* Ensures at least 4.5:1 on #020817 background */
-  color: #9ca3af !important; /* gray-400 = 5.9:1 on dark bg — keep it */
+  color: #9ca3af !important;
 }
 
-/* ── Bottom nav GPU compositing hint ────────────────────────────────────────── */
-nav[aria-label="Main navigation"] {
-  will-change: transform;
-  transform: translateZ(0);
+/* ── Responsive breakpoint alignment (matches Tailwind defaults) ─────────────── */
+/* sm = 640px  |  md = 768px  |  lg = 1024px                                    */
+/* The sidebar is hidden below md; bottom-nav is hidden at md and above.         */
+/* These rules prevent layout shifts when sidebar state toggles.                 */
+
+/* Below 768px: full-width single-column; bottom-nav visible */
+@media (max-width: 767px) {
+  #main-content {
+    touch-action: pan-y;
+    overscroll-behavior-x: none;
+  }
+}
+
+/* 768px and above: sidebar present; bottom-nav hidden */
+@media (min-width: 768px) {
+  /* Remove the bottom-nav clearance — sidebar handles layout instead */
+  #main-content {
+    padding-bottom: 0 !important;
+  }
 }
