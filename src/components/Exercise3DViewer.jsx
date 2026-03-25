@@ -32,7 +32,7 @@ function isLowEndDevice() {
 }
 
 // ── Three.js scene ────────────────────────────────────────────────────────────
-function ThreeScene({ modelUrl, exerciseName, force低Perf }) {
+function ThreeScene({ modelUrl, exerciseName, forceLowPerf }) {
   const mountRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -45,7 +45,7 @@ function ThreeScene({ modelUrl, exerciseName, force低Perf }) {
   useEffect(() => {
     if (!modelUrl || !mountRef.current) return;
 
-    const lowEnd = isLowEndDevice();
+    const lowEnd = forceLowPerf || isLowEndDevice();
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a1a1a);
