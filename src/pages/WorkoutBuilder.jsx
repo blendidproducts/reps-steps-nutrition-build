@@ -767,7 +767,9 @@ Make it realistic and achievable.`,
                     setSelectedTime(999);
                     setCustomTime("");
                   }}
-                  className={`w-full p-6 rounded-xl border-2 transition-all ${
+                  aria-label="No time limit — train at your own pace"
+                  aria-pressed={isFreeTime}
+                  className={`tap-target w-full p-6 rounded-xl border-2 transition-all ${
                     isFreeTime
                       ? 'bg-purple-600/20 border-purple-500 text-white'
                       : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-purple-500/50'
