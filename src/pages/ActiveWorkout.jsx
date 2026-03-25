@@ -551,8 +551,8 @@ export default function ActiveWorkout() {
               <div className="flex justify-between items-start mb-2">
                 <Badge variant="outline" className="border-brand-blue/50 text-brand-blue text-xs">Set {currentSet} of {currentExercise.sets || 1}</Badge>
                 <div className="flex gap-1">
-                  <button onClick={openSupersetModal} className="w-7 h-7 bg-purple-600/50 hover:bg-purple-600 rounded-full flex items-center justify-center"><LinkIcon className="w-3 h-3" /></button>
-                  <button onClick={() => setShowSwapModal(true)} className="w-7 h-7 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center"><RefreshCw className="w-3 h-3" /></button>
+                  <button aria-label="Configure supersets" onClick={openSupersetModal} className="no-press-feedback w-7 h-7 bg-purple-600/50 hover:bg-purple-600 active:bg-purple-700 active:scale-90 rounded-full flex items-center justify-center transition-all"><LinkIcon className="w-3 h-3" /></button>
+                  <button aria-label="Swap exercise" onClick={() => setShowSwapModal(true)} className="no-press-feedback w-7 h-7 bg-blue-600/50 hover:bg-blue-600 active:bg-blue-700 active:scale-90 rounded-full flex items-center justify-center transition-all"><RefreshCw className="w-3 h-3" /></button>
                 </div>
               </div>
               <h2 className="text-lg sm:text-xl font-bold mb-2 leading-tight">{currentExercise.exercise_name}</h2>
