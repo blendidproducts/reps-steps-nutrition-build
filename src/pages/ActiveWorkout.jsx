@@ -444,6 +444,41 @@ export default function ActiveWorkout() {
   const setQuickReps = (reps) => { const d = reps - currentReps; setCurrentReps(reps); setTotalReps(p => p+d); const ue = [...workout.exercises]; const p = ue[currentExerciseIndex].completed_reps||0; ue[currentExerciseIndex].completed_reps = p+d; setWorkout({...workout, exercises: ue}); setRepInput(reps.toString()); updateWorkoutProgress(reps,'reps'); };
   const handleRepInput = (value) => { const reps = parseInt(value)||0; const d = reps - currentReps; setCurrentReps(reps); setTotalReps(p => p+d); const ue = [...workout.exercises]; const p = ue[currentExerciseIndex].completed_reps||0; ue[currentExerciseIndex].completed_reps = p+d; setWorkout({...workout, exercises: ue}); setRepInput(value); updateWorkoutProgress(reps,'reps'); };
   const formatTime = (seconds) => { const m = Math.floor(seconds/60); const s = seconds%60; return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`; };
+
+  // ── aria-live announcement throttle ────────────────────────────────────────
+  // Announce rep count every 5 reps and timer every 10 seconds to avoid
+  // overwhelming screen-reader / TalkBack / VoiceOver users.
+  const prevAnnouncedReps = useRef(-1);
+  const prevAnnouncedTimer = useRef(-1);
+
+  const ariaTimerAnnouncement = useMemo(() => {
+    if (!isActive || isPaused) return "";
+    if (isResting) return `Rest: ${restTimer} seconds remaining`;
+    if (isTimeBased) {
+      const left = (currentExercise?.target_time || 0) - exerciseTimer;
+      // announce every 10 s; don't re-announce same value
+      const bucket = Math.floor(left / 10) * 10;
+      if (bucket !== prevAnnouncedTimer.current && left > 0) {
+        prevAnnouncedTimer.current = bucket;
+        return `${left} seconds remaining`;
+      }
+      return "";
+    }
+    return "";
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restTimer, exerciseTimer, isResting, isActive, isPaused]);
+
+  const ariaRepAnnouncement = useMemo(() => {
+    if (!isActive || isTimeBased) return "";
+    // announce on every 5th rep boundary
+    const bucket = Math.floor(currentReps / 5) * 5;
+    if (currentReps > 0 && bucket !== prevAnnouncedReps.current) {
+      prevAnnouncedReps.current = bucket;
+      return `${currentReps} reps`;
+    }
+    return "";
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentReps, isActive, isTimeBased]);
   const getYouTubeVideoId = (name) => { const map = {'push':'IODxDxX7oi4','squat':'9cYEuFbBLSY','plank':'pSHjTRCQxIw','lunge':'QOVaHwm-Q6U','burpee':'dZgVxmf6jkA','pull':'eGo4IYlbE5g','dip':'yN6Q1UI_xkE','mountain climber':'nmwgirgXLYM','jumping jack':'c4DAnQ6DtF8','crunch':'5ER5Of4EISE'}; const n = name.toLowerCase(); for (const [k,v] of Object.entries(map)) if (n.includes(k)) return v; return 'g_tea8ZNk5A'; };
 
   if (!workout) return (
