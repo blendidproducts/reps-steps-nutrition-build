@@ -595,11 +595,16 @@ export default function ActiveWorkout() {
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center bg-gray-900/50 rounded-lg p-3 w-full sm:w-auto sm:min-w-[180px]">
-                    <div className="text-5xl font-bold mb-2 text-brand-blue">{formatTime(exerciseTimer)}</div>
+                    <div
+                      className="text-5xl font-bold mb-2 text-brand-blue"
+                      aria-label={`${formatTime(exerciseTimer)} elapsed`}
+                      role="timer"
+                      aria-live="off"
+                    >{formatTime(exerciseTimer)}</div>
                     <p className="text-xs text-gray-400 mb-3">Target: {formatTime(currentExercise.target_time)}</p>
                     <div className="flex items-center gap-2 mb-3">
-                      <button onClick={() => { const t = Math.max(5, currentExercise.target_time-5); const ue = [...workout.exercises]; ue[currentExerciseIndex].target_time = t; setWorkout({...workout, exercises: ue}); }} className="w-8 h-8 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center"><Minus className="w-4 h-4" /></button>
-                      <button onClick={() => { const t = Math.min(300, currentExercise.target_time+5); const ue = [...workout.exercises]; ue[currentExerciseIndex].target_time = t; setWorkout({...workout, exercises: ue}); }} className="w-8 h-8 bg-green-600/50 hover:bg-green-600 rounded-full flex items-center justify-center"><Plus className="w-4 h-4" /></button>
+                      <button aria-label="Decrease target time by 5 seconds" onClick={() => { const t = Math.max(5, currentExercise.target_time-5); const ue = [...workout.exercises]; ue[currentExerciseIndex].target_time = t; setWorkout({...workout, exercises: ue}); }} className="no-press-feedback w-8 h-8 bg-red-600/50 hover:bg-red-600 active:bg-red-700 active:scale-90 rounded-full flex items-center justify-center transition-all"><Minus className="w-4 h-4" /></button>
+                      <button aria-label="Increase target time by 5 seconds" onClick={() => { const t = Math.min(300, currentExercise.target_time+5); const ue = [...workout.exercises]; ue[currentExerciseIndex].target_time = t; setWorkout({...workout, exercises: ue}); }} className="no-press-feedback w-8 h-8 bg-green-600/50 hover:bg-green-600 active:bg-green-700 active:scale-90 rounded-full flex items-center justify-center transition-all"><Plus className="w-4 h-4" /></button>
                     </div>
                     <Progress value={timeProgress} className="h-2 w-full" />
                   </div>
