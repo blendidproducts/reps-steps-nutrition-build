@@ -1125,7 +1125,10 @@ Make it realistic and achievable.`,
       <div className="h-64 md:h-32"></div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-20 md:bottom-0 left-0 right-0 bg-gradient-to-t from-gray-900 via-gray-900 to-gray-900/95 border-t-2 border-brand-blue/30 p-6 shadow-2xl z-50">
+      <div
+        className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-gray-900 via-gray-900 to-gray-900/95 border-t-2 border-brand-blue/30 p-4 shadow-2xl z-50"
+        style={{ paddingBottom: 'calc(var(--safe-bottom, env(safe-area-inset-bottom, 0px)) + 1rem + var(--nav-height, 56px))' }}
+      >
         <div className="container mx-auto max-w-3xl">
           <div className="flex justify-between items-center gap-4">
             {currentStep > 1 ? (
