@@ -966,8 +966,12 @@ Make it realistic and achievable.`,
                                 className="bg-gray-800/50 rounded-lg p-4 border border-gray-700"
                               >
                                 <div className="flex items-start gap-3">
-                                  <div {...provided.dragHandleProps} className="mt-1 cursor-grab active:cursor-grabbing">
-                                    <GripVertical className="w-5 h-5 text-gray-400" />
+                                  <div
+                                    {...provided.dragHandleProps}
+                                    aria-label={`Drag to reorder ${exercise.name}`}
+                                    className="tap-target mt-1 cursor-grab active:cursor-grabbing flex items-center justify-center"
+                                  >
+                                    <GripVertical className="w-5 h-5 text-gray-400" aria-hidden="true" />
                                   </div>
                                   <div className="flex-1">
                                     <div className="flex items-start justify-between mb-3">
