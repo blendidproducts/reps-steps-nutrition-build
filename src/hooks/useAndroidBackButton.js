@@ -1,40 +1,79 @@
 /**
  * useAndroidBackButton
  *
- * Intercepts the Android hardware back button (popstate event fired when the
- * WebView's history stack is popped) and maps it to React Router's navigate(-1).
+ * Intercepts the Android hardware back button (popstate) and maps it to
+ * React Router's navigate(-1), with these additional safeguards:
  *
- * Strategy:
- * - We push a dummy history entry on mount so there is always something for the
- *   OS back button to pop before we consume it ourselves.
- * - On each popstate (back press) we call navigate(-1) via React Router so the
- *   in-app navigation stack is respected, then push another dummy entry to keep
- *   the sentinel in place.
- * - On unmount we clean up the listener.
+ * 1. ROOT GUARD — if the current path is a root tab or "/", pressing back
+ *    does NOT navigate (it lets the OS minimise the app naturally).
+ * 2. MODAL GUARD — any component can register an open modal via the
+ *    exported `pushBackInterceptor` / `popBackInterceptor` helpers.
+ *    Back will call the modal's close handler instead of navigating.
+ * 3. SENTINEL — a dummy history entry is kept at all times so the OS
+ *    always fires popstate before it would close / minimise the app.
  */
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
+// ── Root paths where back should NOT navigate (let OS minimise app) ──────────
+const ROOT_PATHS = new Set([
+  "/", "/Home", "/Exercises", "/Nutrition", "/History", "/Settings",
+  "/Community", "/Achievements", "/Progress",
+]);
+
+// ── Global interceptor stack (LIFO) ─────────────────────────────────────────
+// Each entry: { id: string, handler: () => void }
+const _interceptors = [];
+
+let _idCounter = 0;
+
+/**
+ * Push a back-press interceptor (e.g. to close a modal).
+ * Returns a cleanup function that removes the interceptor.
+ */
+export function pushBackInterceptor(handler) {
+  const id = ++_idCounter;
+  _interceptors.push({ id, handler });
+  return () => {
+    const idx = _interceptors.findIndex(e => e.id === id);
+    if (idx !== -1) _interceptors.splice(idx, 1);
+  };
+}
+
+// ── Hook (mounted once in App.jsx inside <Router>) ───────────────────────────
 export function useAndroidBackButton() {
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    // Push a sentinel so Android always has something to pop
+    // Always keep a sentinel so the OS fires popstate first
     window.history.pushState({ __rns_sentinel: true }, "");
 
-    const handlePopState = (event) => {
-      // If the popped state is our sentinel (or anything else), treat it as
-      // a back-navigation request and handle it in React Router.
-      navigate(-1);
+    const handlePopState = () => {
+      // 1. Let top interceptor (modal) handle back first
+      if (_interceptors.length > 0) {
+        const top = _interceptors[_interceptors.length - 1];
+        top.handler();
+        // Re-push sentinel so next back is still caught
+        window.history.pushState({ __rns_sentinel: true }, "");
+        return;
+      }
 
-      // Re-push the sentinel so the next back press is also intercepted
+      // 2. Root guard — don't navigate away from root tabs
+      const currentPath = location.pathname;
+      if (ROOT_PATHS.has(currentPath)) {
+        // Re-push sentinel; the OS will minimise on a real second press
+        window.history.pushState({ __rns_sentinel: true }, "");
+        return;
+      }
+
+      // 3. Normal in-app back navigation
+      navigate(-1);
       window.history.pushState({ __rns_sentinel: true }, "");
     };
 
     window.addEventListener("popstate", handlePopState);
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-    };
-  }, [navigate, location.key]); // re-run on route changes to keep sentinel fresh
+    return () => window.removeEventListener("popstate", handlePopState);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate, location.key]);
 }
