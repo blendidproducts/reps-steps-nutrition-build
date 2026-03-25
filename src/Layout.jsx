@@ -428,7 +428,10 @@ export default function Layout({ children, currentPageName }) {
           )}
 
           {/* Mobile Menu Bar - hidden on desktop since sidebar handles it */}
-          <div className="md:hidden sticky top-0 z-50 bg-[#0a1628]/95 backdrop-blur-lg border-b-2 border-brand-blue/40 shadow-lg">
+          <div
+            className="md:hidden sticky top-0 z-50 bg-[#0a1628]/95 backdrop-blur-lg border-b-2 border-brand-blue/40 shadow-lg"
+            style={{ paddingTop: "var(--safe-top, env(safe-area-inset-top, 0px))" }}
+          >
             <div className="flex items-center justify-between px-3 py-3">
               {/* Hamburger Menu - Extra large clickable area */}
               <SidebarTrigger aria-label="Open navigation menu" className="text-white hover:bg-brand-blue/20 rounded-lg transition-all touch-manipulation active:scale-95 -ml-2">
