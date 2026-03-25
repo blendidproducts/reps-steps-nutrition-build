@@ -16,8 +16,10 @@ import {
   User as UserIcon,
   Trash2,
   AlertTriangle,
-  X
+  X,
+  Zap
 } from "lucide-react";
+import { useLowPerformanceMode } from "@/hooks/useLowPerformanceMode";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 import { useNavigate, Link } from "react-router-dom";
@@ -189,6 +191,7 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
 // ── Main Settings page ───────────────────────────────────────────────────────
 export default function Settings() {
   const navigate = useNavigate();
+  const { isLowPerf, toggle: toggleLowPerf } = useLowPerformanceMode();
   const [user, setUser] = useState(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -501,6 +504,29 @@ export default function Settings() {
                   <p className="text-sm text-gray-400">Increase text size for readability</p>
                 </div>
                 <Switch checked={settings.largeText} onCheckedChange={(c) => updateSetting('largeText', c)} aria-label="Toggle large text" />
+              </div>
+
+              {/* Low Performance Mode */}
+              <div className={`flex items-center justify-between p-4 rounded-lg border ${isLowPerf ? 'bg-yellow-500/10 border-yellow-500/40' : 'bg-background border-border'}`}>
+                <div className="flex items-start gap-3">
+                  <Zap className={`w-5 h-5 mt-0.5 flex-shrink-0 ${isLowPerf ? 'text-yellow-400' : 'text-gray-500'}`} aria-hidden="true" />
+                  <div>
+                    <Label className={`font-medium ${isLowPerf ? 'text-yellow-300' : 'text-foreground'}`}>
+                      Low Performance Mode
+                    </Label>
+                    <p className="text-sm text-gray-400">
+                      Reduces 3D rendering quality (MSAA, shadows, precision shaders) and disables non-essential animations. Improves battery life and frame-rate on older devices.
+                    </p>
+                    {isLowPerf && (
+                      <p className="text-xs text-yellow-400 mt-1 font-semibold">⚡ Active — reopen 3D viewer to apply</p>
+                    )}
+                  </div>
+                </div>
+                <Switch
+                  checked={isLowPerf}
+                  onCheckedChange={toggleLowPerf}
+                  aria-label="Toggle low performance mode"
+                />
               </div>
             </CardContent>
           </Card>
