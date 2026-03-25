@@ -146,8 +146,17 @@ function ThreeScene({ modelUrl, exerciseName }) {
       }
     );
 
+    // Pause the render loop when the document is hidden (tab switch, modal close)
+    // to avoid burning GPU cycles needlessly on low-end devices.
+    let animationPaused = false;
+    const handleVisibility = () => {
+      animationPaused = document.hidden;
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
     const animate = () => {
       animationRef.current = requestAnimationFrame(animate);
+      if (animationPaused) return;
       const delta = clockRef.current.getDelta();
       if (mixerRef.current) mixerRef.current.update(delta);
       controls.update();
@@ -166,6 +175,7 @@ function ThreeScene({ modelUrl, exerciseName }) {
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      document.removeEventListener('visibilitychange', handleVisibility);
 
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
