@@ -180,45 +180,79 @@ function ThreeScene({ modelUrl, exerciseName, forceLowPerf }) {
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('visibilitychange', handleVisibility);
 
+      // 1. Stop animation loop immediately so no further render calls fire
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
         animationRef.current = null;
       }
+
+      // 2. Tear down animation mixer
       if (mixerRef.current) {
         mixerRef.current.stopAllAction();
         mixerRef.current.uncacheRoot(mixerRef.current.getRoot());
         mixerRef.current = null;
       }
+
+      // 3. Dispose orbit controls
       controls.dispose();
+
+      // 4. Walk the scene graph and release every GPU resource
+      //    disposeMaterial exhaustively disposes all known PBR texture slots
+      //    so nothing is leaked even when the material has non-standard maps.
+      const disposeMaterial = (mat) => {
+        // Explicit PBR + common texture slots — covers MeshStandardMaterial,
+        // MeshPhysicalMaterial, MeshLambertMaterial, MeshPhongMaterial, etc.
+        const textureSlots = [
+          'map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap',
+          'emissiveMap', 'displacementMap', 'bumpMap', 'alphaMap',
+          'envMap', 'lightMap', 'gradientMap', 'specularMap', 'matcap',
+          'transmissionMap', 'thicknessMap', 'clearcoatMap',
+          'clearcoatNormalMap', 'clearcoatRoughnessMap', 'sheenColorMap',
+        ];
+        textureSlots.forEach((slot) => {
+          if (mat[slot]?.isTexture) {
+            mat[slot].dispose();
+            mat[slot] = null;
+          }
+        });
+        mat.dispose();
+      };
 
       if (sceneRef.current) {
         sceneRef.current.traverse((obj) => {
           if (obj.isMesh) {
-            obj.geometry?.dispose();
-            obj.geometry = null;
-            const disposeMat = (mat) => {
-              Object.values(mat).forEach((v) => { if (v?.isTexture) v.dispose(); });
-              mat.dispose();
-            };
-            if (Array.isArray(obj.material)) obj.material.forEach(disposeMat);
-            else if (obj.material) disposeMat(obj.material);
+            if (obj.geometry) {
+              obj.geometry.dispose();
+              obj.geometry = null;
+            }
+            if (Array.isArray(obj.material)) {
+              obj.material.forEach(disposeMaterial);
+            } else if (obj.material) {
+              disposeMaterial(obj.material);
+            }
             obj.material = null;
           }
         });
+        // Remove all children so GC can collect them
         while (sceneRef.current.children.length > 0) {
           sceneRef.current.remove(sceneRef.current.children[0]);
         }
         sceneRef.current = null;
       }
 
+      // 5. Tear down renderer — nullify domElement ref to prevent stale access
       if (rendererRef.current) {
         if (mountRef.current && rendererRef.current.domElement.parentNode === mountRef.current) {
           mountRef.current.removeChild(rendererRef.current.domElement);
         }
         rendererRef.current.renderLists.dispose();
+        rendererRef.current.info.reset();
         rendererRef.current.dispose();
         rendererRef.current = null;
       }
+
+      // 6. Reset clock so delta is sane if the component remounts
+      clockRef.current.stop();
     };
   }, [modelUrl]);
 

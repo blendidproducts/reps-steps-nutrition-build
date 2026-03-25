@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { base44 } from "@/api/base44Client";
+import MobileDrawerSelect from "@/components/MobileDrawerSelect";
 
 const GOALS = [
   { value: "fat_loss", label: "🔥 Fat Loss", desc: "Burn fat, lean out" },
@@ -136,11 +137,18 @@ export default function BrainSetupWizard({ onComplete }) {
                     </div>
                     <div>
                       <label className="text-xs text-gray-400 mb-1 block">Gender</label>
-                      <select value={form.gender} onChange={e => set('gender', e.target.value)} className="w-full bg-white/5 border border-white/10 text-white rounded-md px-3 py-2 text-sm">
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
-                      </select>
+                      <MobileDrawerSelect
+                        value={form.gender}
+                        onValueChange={v => set('gender', v)}
+                        placeholder="Select gender"
+                        label="Gender"
+                        options={[
+                          { value: 'male', label: 'Male' },
+                          { value: 'female', label: 'Female' },
+                          { value: 'other', label: 'Other' },
+                        ]}
+                        triggerClassName="bg-white/5 border-white/10 text-white text-sm"
+                      />
                     </div>
                   </div>
                 </>

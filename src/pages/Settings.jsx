@@ -112,10 +112,13 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
             <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-5" role="alert">
               <p className="text-red-300 text-sm font-semibold mb-2">⚠️ This action is permanent and irreversible.</p>
               <ul className="text-gray-400 text-sm space-y-1 list-disc list-inside">
-                <li>All workouts and session history will be deleted</li>
-                <li>Your progress photos and measurements will be lost</li>
-                <li>Achievements, streaks, and referrals will be removed</li>
-                <li>Your subscription will not be refunded</li>
+                <li><strong className="text-red-300">Workout logs & session history</strong> — every rep, set, and calorie record</li>
+                <li><strong className="text-red-300">Progress photos</strong> — all uploaded transformation images</li>
+                <li><strong className="text-red-300">Body measurements</strong> — weight, body fat %, and circumference logs</li>
+                <li><strong className="text-red-300">Achievements & streaks</strong> — badges, milestones, and referral credits</li>
+                <li><strong className="text-red-300">AI Brain profile & insights</strong> — metabolism data and weekly analyses</li>
+                <li>Your subscription will <strong className="text-red-300">not be refunded</strong></li>
+                <li>This action <strong className="text-red-300">cannot be undone</strong> by support</li>
               </ul>
             </div>
             <div className="flex gap-3">
