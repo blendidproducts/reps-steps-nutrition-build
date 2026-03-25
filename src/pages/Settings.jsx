@@ -181,6 +181,7 @@ export default function Settings() {
   const [user, setUser] = useState(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
 
   const [settings, setSettings] = useState(() => {
     const defaultSettings = {
@@ -311,7 +312,43 @@ export default function Settings() {
         }
       `}</style>
 
-      {/* Delete Confirmation Modal */}
+      {/* Stage 1 — Native AlertDialog gate */}
+      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+        <AlertDialogContent className="bg-[#0a1628] border border-red-500/40 text-white max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-400">
+              <AlertTriangle className="w-5 h-5" aria-hidden="true" />
+              Permanently Delete Account?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                <p className="text-gray-300">This will immediately and permanently destroy:</p>
+                <ul className="text-gray-400 space-y-1 list-disc list-inside">
+                  <li><strong className="text-red-300">Workout logs & session history</strong></li>
+                  <li><strong className="text-red-300">Progress photos</strong></li>
+                  <li><strong className="text-red-300">Body measurements</strong></li>
+                  <li><strong className="text-red-300">Achievements, streaks & referral credits</strong></li>
+                  <li><strong className="text-red-300">AI Brain profile & weekly analyses</strong></li>
+                </ul>
+                <p className="text-red-400 font-semibold">Your subscription will not be refunded. This cannot be undone by support.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel className="border-gray-600 text-gray-300 hover:bg-gray-800">
+              Keep My Account
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { setShowDeleteAlert(false); setShowDeleteModal(true); }}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold"
+            >
+              Yes, Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Stage 2 — Email verification modal */}
       {showDeleteModal && (
         <DeleteAccountModal
           userEmail={user?.email}
@@ -365,7 +402,7 @@ export default function Settings() {
                         Logout
                       </Button>
                       <Button
-                        onClick={() => setShowDeleteModal(true)}
+                        onClick={() => setShowDeleteAlert(true)}
                         variant="outline"
                         aria-label="Permanently delete your account"
                         className="w-full bg-red-900/20 border-red-700 text-red-400 hover:bg-red-900/40 font-bold"
@@ -557,7 +594,7 @@ export default function Settings() {
                     Permanently deletes your account and all associated data. This cannot be undone.
                   </p>
                   <Button
-                    onClick={() => setShowDeleteModal(true)}
+                    onClick={() => setShowDeleteAlert(true)}
                     variant="outline"
                     className="w-full bg-red-500/10 border-red-500 text-red-500 hover:bg-red-500/20 select-none"
                   >

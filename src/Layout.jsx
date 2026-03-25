@@ -289,8 +289,7 @@ export default function Layout({ children, currentPageName }) {
           
           input, textarea, select {
             touch-action: manipulation;
-            /* Prevent zoom on focus in iOS Safari */
-            font-size: max(16px, 1em);
+            /* Prevent zoom on focus in iOS Safari — global rule in index.css handles font-size */
           }
 
           /* Suppress browser outline in favour of our own focus-visible ring */
