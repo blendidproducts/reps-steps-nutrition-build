@@ -492,7 +492,7 @@ export default function Layout({ children, currentPageName }) {
           </div>
 
           {/* Bottom Navigation Bar - Mobile Only */}
-          <BottomNav location={location} navigateToTab={navigateToTab} />
+          <BottomNav activeTab={activeTab} navigateToTab={navigateToTab} />
         </main>
       </div>
     </SidebarProvider>
