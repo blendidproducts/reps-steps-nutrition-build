@@ -1167,10 +1167,8 @@ Make it realistic and achievable.`,
         </div>
       </div>
 
-      {/* Bottom Placeholder/Graphic */}
-      <div className="fixed bottom-0 left-0 right-0 h-20 bg-black md:hidden z-40 flex items-center justify-center">
-        <div className="text-gray-800 text-xs">RepsAndSteps</div>
-      </div>
+      {/* Spacer so scrollable content is never hidden behind the fixed bottom bar */}
+      <div className="h-40 md:h-24" aria-hidden="true" />
 
       <style>
         {`
