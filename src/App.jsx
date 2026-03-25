@@ -7,7 +7,8 @@ import { useLowPerformanceMode } from '@/hooks/useLowPerformanceMode'
 import { queryClientInstance } from '@/lib/query-client'
 import VisualEditAgent from '@/lib/VisualEditAgent'
 import NavigationTracker from '@/lib/NavigationTracker'
-import { useAndroidBackButton } from '@/hooks/useAndroidBackButton'
+import { NavigationManagerProvider } from '@/lib/NavigationManager'
+import { useAxeDev } from '@/hooks/useAxeDev'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
@@ -29,9 +30,9 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
 
-// Wires Android hardware back button to React Router inside the Router context
-function AndroidBackButtonHandler() {
-  useAndroidBackButton();
+// Runs axe-core contrast / ARIA checks in dev builds only
+function A11yDevChecker() {
+  useAxeDev();
   return null;
 }
 
@@ -90,9 +91,11 @@ function AppShell() {
   return (
     <MotionConfig reducedMotion={isLowPerf ? "always" : "never"}>
       <Router>
-        <NavigationTracker />
-        <AndroidBackButtonHandler />
-        <AuthenticatedApp />
+        <NavigationManagerProvider>
+          <NavigationTracker />
+          <A11yDevChecker />
+          <AuthenticatedApp />
+        </NavigationManagerProvider>
       </Router>
       <Toaster />
       <VisualEditAgent />
