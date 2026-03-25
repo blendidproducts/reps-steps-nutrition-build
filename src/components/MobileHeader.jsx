@@ -11,6 +11,10 @@ export default function MobileHeader({ currentPageName }) {
   const rootTabs = ['Home', 'Exercises', 'Nutrition', 'History', 'Settings'];
   const isRootTab = rootTabs.includes(currentPageName);
 
+  // Show back button whenever the browser history stack has entries to go back to,
+  // even if this page would normally be considered a root tab.
+  const canGoBack = window.history.length > 1 && !isRootTab;
+
   const logoUrl = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/d1545e30c_repsandsteps_main_logo_2.png";
   const bannerUrl = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/8866d855e_repsandSteps_name_banner.png";
 

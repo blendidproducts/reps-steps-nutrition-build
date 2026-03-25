@@ -224,6 +224,7 @@ export default function WatchWorkoutController({ connectedDevice, liveData, acti
       <div className="grid grid-cols-3 gap-3">
         <Button
           onClick={() => setReps(r => Math.max(0, r - 1))}
+          aria-label="Remove one rep"
           className="h-16 text-2xl font-black bg-white/10 hover:bg-white/20 border border-white/10 text-white rounded-xl"
           variant="ghost"
         >
@@ -231,12 +232,14 @@ export default function WatchWorkoutController({ connectedDevice, liveData, acti
         </Button>
         <Button
           onClick={() => setIsPaused(p => !p)}
+          aria-label={isPaused ? "Resume workout" : "Pause workout"}
           className={`h-16 font-bold rounded-xl text-white ${isPaused ? "bg-green-600 hover:bg-green-700" : "bg-yellow-600 hover:bg-yellow-700"}`}
         >
-          {isPaused ? <Play className="w-6 h-6" /> : <Pause className="w-6 h-6" />}
+          {isPaused ? <Play className="w-6 h-6" aria-hidden="true" /> : <Pause className="w-6 h-6" aria-hidden="true" />}
         </Button>
         <Button
           onClick={() => setReps(r => r + 1)}
+          aria-label="Add one rep"
           className="h-16 text-2xl font-black bg-[#00a9ff] hover:bg-[#007fbf] text-white rounded-xl"
         >
           +1
@@ -246,18 +249,20 @@ export default function WatchWorkoutController({ connectedDevice, liveData, acti
       {/* Complete & Skip */}
       <Button
         onClick={completeExercise}
+        aria-label="Mark exercise as done and go to next"
         className="w-full h-16 bg-green-600 hover:bg-green-700 text-white font-black text-lg rounded-xl gap-2"
       >
-        <CheckCircle className="w-6 h-6" />
+        <CheckCircle className="w-6 h-6" aria-hidden="true" />
         Done — Next Exercise
       </Button>
 
       <Button
         onClick={nextExercise}
+        aria-label="Skip this exercise"
         variant="outline"
         className="w-full border-white/20 text-gray-400 hover:bg-white/10 rounded-xl h-11 gap-2"
       >
-        <SkipForward className="w-4 h-4" /> Skip Exercise
+        <SkipForward className="w-4 h-4" aria-hidden="true" /> Skip Exercise
       </Button>
 
       {/* Next exercise preview */}

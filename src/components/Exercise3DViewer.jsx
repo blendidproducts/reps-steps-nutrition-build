@@ -149,13 +149,20 @@ function ThreeScene({ modelUrl, exerciseName, forceLowPerf }) {
       }
     );
 
-    // Pause the render loop when the document is hidden (tab switch, modal close)
-    // to avoid burning GPU cycles needlessly on low-end devices.
+    // Pause the render loop when:
+    //  a) the document is hidden (tab switch, app backgrounded on Android), or
+    //  b) the canvas container is scrolled out of the viewport (IntersectionObserver)
+    // Both paths set the same `animationPaused` flag checked every rAF tick.
     let animationPaused = false;
-    const handleVisibility = () => {
-      animationPaused = document.hidden;
-    };
+    const handleVisibility = () => { animationPaused = document.hidden; };
     document.addEventListener('visibilitychange', handleVisibility);
+
+    // IntersectionObserver: pause when the canvas is off-screen
+    const intersectionObserver = new IntersectionObserver(
+      ([entry]) => { animationPaused = !entry.isIntersecting || document.hidden; },
+      { threshold: 0 }
+    );
+    if (mountRef.current) intersectionObserver.observe(mountRef.current);
 
     const animate = () => {
       animationRef.current = requestAnimationFrame(animate);
