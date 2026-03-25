@@ -572,7 +572,11 @@ export default function ActiveWorkout() {
                 </div>
                 {!isTimeBased ? (
                   <div className="flex flex-col items-center justify-center bg-gray-900/50 rounded-lg p-3 w-full sm:w-auto sm:min-w-[180px]">
-                    <div className="text-6xl sm:text-7xl font-bold mb-2 text-brand-blue">{currentReps}</div>
+                    <div
+                      className="text-6xl sm:text-7xl font-bold mb-2 text-brand-blue"
+                      aria-label={`${currentReps} reps completed`}
+                      role="status"
+                    >{currentReps}</div>
                     <p className="text-sm text-gray-300 font-bold mb-4">Target: {currentExercise.target_reps || 'AMAP'}</p>
                     <div className="flex flex-col gap-3 w-full">
                       {[5, currentExercise.target_reps].filter(Boolean).filter((v,i,a) => a.indexOf(v)===i && v > 0).sort((a,b) => a-b).map(r => (
