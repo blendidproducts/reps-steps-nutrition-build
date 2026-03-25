@@ -22,7 +22,7 @@ export function useAxeDev() {
 
     timerRef.current = setTimeout(async () => {
       try {
-        const axe = (await import("axe-core")).default;
+        const axe = (await import(/* @vite-ignore */ "axe-core")).default;
         const results = await axe.run(document.body, {
           runOnly: {
             type: "tag",
