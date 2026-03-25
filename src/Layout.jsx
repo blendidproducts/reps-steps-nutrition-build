@@ -482,7 +482,9 @@ export default function Layout({ children, currentPageName }) {
               overscrollBehaviorX: 'none',
               overscrollBehaviorY: 'contain',
               WebkitOverflowScrolling: 'touch',
-              position: 'relative'
+              position: 'relative',
+              // Reserve space for the fixed bottom nav (56px) + safe area on mobile
+              paddingBottom: 'calc(56px + env(safe-area-inset-bottom, 0px))',
             }} 
             id="main-content"
           >
