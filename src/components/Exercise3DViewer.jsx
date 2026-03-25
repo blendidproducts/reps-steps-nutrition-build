@@ -32,7 +32,7 @@ function isLowEndDevice() {
 }
 
 // ── Three.js scene ────────────────────────────────────────────────────────────
-function ThreeScene({ modelUrl, exerciseName }) {
+function ThreeScene({ modelUrl, exerciseName, force低Perf }) {
   const mountRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
