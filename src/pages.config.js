@@ -5,39 +5,45 @@
 import React from 'react';
 import __Layout from './Layout.jsx';
 
+// ── Critical path — preloaded immediately after initial render ───────────────
+// These are the pages users are most likely to navigate to first.
+const Home            = React.lazy(() => import(/* webpackPreload: true */ './pages/Home'));
+const Exercises       = React.lazy(() => import(/* webpackPreload: true */ './pages/Exercises'));
+const ActiveWorkout   = React.lazy(() => import(/* webpackPreload: true */ './pages/ActiveWorkout'));
+const WorkoutBuilder  = React.lazy(() => import(/* webpackPreload: true */ './pages/WorkoutBuilder'));
+const Nutrition       = React.lazy(() => import(/* webpackPreload: true */ './pages/Nutrition'));
+const PresetPrograms  = React.lazy(() => import(/* webpackPreload: true */ './pages/PresetPrograms'));
+
+// ── High-priority — prefetched during idle time ───────────────────────────────
+const History         = React.lazy(() => import(/* webpackPrefetch: true */ './pages/History'));
+const Settings        = React.lazy(() => import(/* webpackPrefetch: true */ './pages/Settings'));
+const WorkoutComplete = React.lazy(() => import(/* webpackPrefetch: true */ './pages/WorkoutComplete'));
+const FitnessBrain    = React.lazy(() => import(/* webpackPrefetch: true */ './pages/FitnessBrain'));
+const Pricing         = React.lazy(() => import(/* webpackPrefetch: true */ './pages/Pricing'));
+const Progress        = React.lazy(() => import(/* webpackPrefetch: true */ './pages/Progress'));
+const SavedWorkouts   = React.lazy(() => import(/* webpackPrefetch: true */ './pages/SavedWorkouts'));
+
+// ── Standard lazy — loaded on demand ─────────────────────────────────────────
 const AIWorkoutGenerator  = React.lazy(() => import('./pages/AIWorkoutGenerator'));
 const Achievements        = React.lazy(() => import('./pages/Achievements'));
-const ActiveWorkout       = React.lazy(() => import('./pages/ActiveWorkout'));
 const BodyMeasurements    = React.lazy(() => import('./pages/BodyMeasurements'));
 const Community           = React.lazy(() => import('./pages/Community'));
 const Disclaimer          = React.lazy(() => import('./pages/Disclaimer'));
-const Exercises           = React.lazy(() => import('./pages/Exercises'));
-const FitnessBrain        = React.lazy(() => import('./pages/FitnessBrain'));
 const FoodDatabase        = React.lazy(() => import('./pages/FoodDatabase'));
 const Help                = React.lazy(() => import('./pages/Help'));
-const History             = React.lazy(() => import('./pages/History'));
-const Home                = React.lazy(() => import('./pages/Home'));
 const MealPlans           = React.lazy(() => import('./pages/MealPlans'));
-const Nutrition           = React.lazy(() => import('./pages/Nutrition'));
 const NutritionGoals      = React.lazy(() => import('./pages/NutritionGoals'));
 const NutritionHistory    = React.lazy(() => import('./pages/NutritionHistory'));
 const NutritionPrograms   = React.lazy(() => import('./pages/NutritionPrograms'));
-const PresetPrograms      = React.lazy(() => import('./pages/PresetPrograms'));
-const Pricing             = React.lazy(() => import('./pages/Pricing'));
 const Privacy             = React.lazy(() => import('./pages/Privacy'));
 const ProgramProgress     = React.lazy(() => import('./pages/ProgramProgress'));
 const Programs            = React.lazy(() => import('./pages/Programs'));
-const Progress            = React.lazy(() => import('./pages/Progress'));
 const RandomWorkout       = React.lazy(() => import('./pages/RandomWorkout'));
 const Referrals           = React.lazy(() => import('./pages/Referrals'));
-const SavedWorkouts       = React.lazy(() => import('./pages/SavedWorkouts'));
-const Settings            = React.lazy(() => import('./pages/Settings'));
 const Stretches           = React.lazy(() => import('./pages/Stretches'));
 const Terms               = React.lazy(() => import('./pages/Terms'));
 const Upload3DModels      = React.lazy(() => import('./pages/Upload3DModels'));
 const WatchMode           = React.lazy(() => import('./pages/WatchMode'));
-const WorkoutBuilder      = React.lazy(() => import('./pages/WorkoutBuilder'));
-const WorkoutComplete     = React.lazy(() => import('./pages/WorkoutComplete'));
 const WorkoutDetail       = React.lazy(() => import('./pages/WorkoutDetail'));
 const LinkMealBuilder     = React.lazy(() => import('./pages/LinkMealBuilder'));
 const FoodPhotoAnalyzer   = React.lazy(() => import('./pages/FoodPhotoAnalyzer'));

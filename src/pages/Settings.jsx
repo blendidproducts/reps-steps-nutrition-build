@@ -19,6 +19,16 @@ import {
   X,
   Zap
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useLowPerformanceMode } from "@/hooks/useLowPerformanceMode";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
