@@ -58,10 +58,10 @@ const requestPermission = async (permissionName, friendlyName) => {
   }
 };
 
-// ── Secure email-verified deletion modal ────────────────────────────────────
+// ── Secure email-verified deletion flow ─────────────────────────────────────
+// Step 0: native AlertDialog gate → Step 1: email code → Step 2: confirm code
 function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
-  // step: 1=warning, 2=sending code, 3=enter code, 4=confirming
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(1); // 1=send code, 2=enter code
   const [code, setCode] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -72,7 +72,7 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
       const res = await base44.functions.invoke('requestAccountDeletion', { action: 'send' });
       if (res.data?.success) {
         toast.success(`Verification code sent to ${userEmail}`);
-        setStep(3);
+        setStep(2);
       } else {
         toast.error(res.data?.error || 'Failed to send code. Please try again.');
       }
@@ -103,7 +103,6 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Delete account confirmation">
       <div className="bg-[#0a1628] border border-red-500/40 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center" aria-hidden="true">
@@ -111,39 +110,13 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
             </div>
             <h2 className="text-white font-bold text-lg">Delete Account</h2>
           </div>
-          <button onClick={onCancel} aria-label="Close delete account dialog" className="text-gray-400 hover:text-white transition-colors no-min-height p-1">
+          <button onClick={onCancel} aria-label="Close" className="text-gray-400 hover:text-white transition-colors no-min-height p-1">
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
-        {/* Step 1 — Warning */}
+        {/* Step 1 — Send verification code */}
         {step === 1 && (
-          <>
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-5" role="alert">
-              <p className="text-red-300 text-sm font-semibold mb-2">⚠️ This action is permanent and irreversible.</p>
-              <ul className="text-gray-400 text-sm space-y-1 list-disc list-inside">
-                <li><strong className="text-red-300">Workout logs & session history</strong> — every rep, set, and calorie record</li>
-                <li><strong className="text-red-300">Progress photos</strong> — all uploaded transformation images</li>
-                <li><strong className="text-red-300">Body measurements</strong> — weight, body fat %, and circumference logs</li>
-                <li><strong className="text-red-300">Achievements & streaks</strong> — badges, milestones, and referral credits</li>
-                <li><strong className="text-red-300">AI Brain profile & insights</strong> — metabolism data and weekly analyses</li>
-                <li>Your subscription will <strong className="text-red-300">not be refunded</strong></li>
-                <li>This action <strong className="text-red-300">cannot be undone</strong> by support</li>
-              </ul>
-            </div>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={onCancel} aria-label="Keep my account" className="flex-1 border-gray-600 text-gray-300">
-                Keep My Account
-              </Button>
-              <Button onClick={() => setStep(2)} aria-label="Continue to email verification" className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold">
-                Continue
-              </Button>
-            </div>
-          </>
-        )}
-
-        {/* Step 2 — Explain email verification */}
-        {step === 2 && (
           <>
             <p className="text-gray-300 text-sm mb-4">
               For security, we'll send a <strong className="text-white">6-digit verification code</strong> to:
@@ -162,8 +135,8 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
           </>
         )}
 
-        {/* Step 3 — Enter code */}
-        {step === 3 && (
+        {/* Step 2 — Enter code */}
+        {step === 2 && (
           <>
             <p className="text-gray-300 text-sm mb-2">
               Enter the 6-digit code sent to <span className="text-white font-semibold">{userEmail}</span>:
@@ -178,7 +151,7 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
               autoFocus
               aria-label="Verification code"
             />
-            <button onClick={() => { setStep(2); setCode(''); }} className="text-xs text-gray-500 hover:text-gray-300 mb-4 block no-min-height py-1">
+            <button onClick={() => { setStep(1); setCode(''); }} className="text-xs text-gray-500 hover:text-gray-300 mb-4 block no-min-height py-1">
               Resend code
             </button>
             <div className="flex gap-3">
