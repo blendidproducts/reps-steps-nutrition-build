@@ -69,13 +69,20 @@ export default function Nutrition() {
   }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
 
   const handleFoodAdded = (newEntry) => {
-    // Optimistic update: add the new entry immediately to the UI
     if (newEntry) {
       setTodaysMeals(prev => [...prev, { ...newEntry, id: `optimistic-${Date.now()}` }]);
     }
     setShowQuickAdd(false);
-    // Refresh in background to sync with backend
     loadData();
+  };
+
+  // Called by MealList with the deleted meal's id for instant removal
+  const handleMealDeleted = (deletedId) => {
+    if (deletedId) {
+      setTodaysMeals(prev => prev.filter(m => m.id !== deletedId));
+    } else {
+      loadData();
+    }
   };
 
   return (
