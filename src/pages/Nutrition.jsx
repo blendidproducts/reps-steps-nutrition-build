@@ -282,7 +282,7 @@ export default function Nutrition() {
           <CardContent>
             <MealList 
               meals={todaysMeals} 
-              onMealDeleted={loadData}
+              onMealDeleted={handleMealDeleted}
               isLoading={isLoading}
             />
           </CardContent>
