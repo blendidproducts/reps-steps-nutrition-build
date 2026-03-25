@@ -258,9 +258,12 @@ function ThreeScene({ modelUrl, exerciseName, forceLowPerf }) {
 // The Three.js scene is only instantiated when the container scrolls into the
 // viewport (IntersectionObserver). This avoids booting WebGL on hidden modals
 // and prevents wasted GPU/CPU cycles on budget Android devices.
+// Low Performance Mode is read from the global hook so toggling it in Settings
+// immediately affects any newly opened 3D viewer.
 export default function Exercise3DViewer({ modelUrl, exerciseName }) {
   const containerRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
+  const { isLowPerf } = useLowPerformanceMode();
 
   useEffect(() => {
     const el = containerRef.current;
@@ -277,7 +280,7 @@ export default function Exercise3DViewer({ modelUrl, exerciseName }) {
   return (
     <div ref={containerRef} className="w-full h-full">
       {isVisible ? (
-        <ThreeScene modelUrl={modelUrl} exerciseName={exerciseName} />
+        <ThreeScene modelUrl={modelUrl} exerciseName={exerciseName} forceLowPerf={isLowPerf} />
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-gray-900 rounded-lg">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500" />
