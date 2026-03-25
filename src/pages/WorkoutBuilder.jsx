@@ -531,7 +531,7 @@ Make it realistic and achievable.`,
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-24 md:pb-0">
+    <div className="min-h-screen bg-background text-foreground" style={{ paddingBottom: 'var(--content-pb, 88px)' }}>
       {/* Mobile Header with Back Button */}
       <div className="md:hidden sticky top-0 z-40 bg-[#0a1628]/95 backdrop-blur-lg border-b border-brand-blue/30 px-4 py-3 select-none">
         <div className="flex items-center gap-3">
