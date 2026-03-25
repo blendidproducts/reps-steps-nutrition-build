@@ -561,7 +561,7 @@ Make it realistic and achievable.`,
               onClick={() => navigate(createPageUrl("Exercises"))}
               className="bg-white/10 text-white border-white/20 hover:bg-white/20 rounded-lg flex-shrink-0 select-none"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
             </Button>
             <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-bold truncate">Build Your Workout</h1>
@@ -1102,6 +1102,7 @@ Make it realistic and achievable.`,
                   <Switch
                     checked={settings.includeWarmup}
                     onCheckedChange={(checked) => updateSetting('includeWarmup', checked)}
+                    aria-label="Toggle warm-up exercises"
                   />
                 </div>
 
@@ -1113,6 +1114,7 @@ Make it realistic and achievable.`,
                   <Switch
                     checked={settings.useWeightVest}
                     onCheckedChange={(checked) => updateSetting('useWeightVest', checked)}
+                    aria-label="Toggle weight vest"
                   />
                 </div>
 

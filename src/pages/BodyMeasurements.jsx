@@ -123,9 +123,10 @@ export default function BodyMeasurements() {
             variant="ghost"
             size="icon"
             onClick={() => window.history.back()}
+            aria-label="Go back"
             className="text-white hover:text-brand-blue flex-shrink-0"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5" aria-hidden="true" />
           </Button>
           <div className="min-w-0 flex-1">
             <h1 className="text-base font-bold truncate">Body Measurements</h1>
@@ -400,9 +401,10 @@ export default function BodyMeasurements() {
                         variant="ghost"
                         size="sm"
                         onClick={() => deleteMeasurement(measurement.id)}
+                        aria-label="Delete this measurement"
                         className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" aria-hidden="true" />
                       </Button>
                     </div>
                     

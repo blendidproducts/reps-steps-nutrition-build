@@ -280,8 +280,8 @@ export default function History() {
                         
                       </div>
                       
-                      <Button variant="ghost" size="icon" onClick={() => shareWorkout(session)} className="ml-2 text-gray-400 hover:text-brand-blue">
-                        <Share2 className="w-4 h-4" />
+                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); shareWorkout(session); }} aria-label="Share this workout" className="ml-2 text-gray-400 hover:text-brand-blue">
+                        <Share2 className="w-4 h-4" aria-hidden="true" />
                       </Button>
                     </div>
                   </CardContent>

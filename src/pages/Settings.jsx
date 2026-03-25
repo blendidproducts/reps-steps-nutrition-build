@@ -67,18 +67,28 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
   const [isSending, setIsSending] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
+  const [sendError, setSendError] = useState(null);
+  const [verifyError, setVerifyError] = useState(null);
+
   const sendCode = async () => {
     setIsSending(true);
+    setSendError(null);
     try {
       const res = await base44.functions.invoke('requestAccountDeletion', { action: 'send' });
       if (res.data?.success) {
         toast.success(`Verification code sent to ${userEmail}`);
         setStep(2);
       } else {
-        toast.error(res.data?.error || 'Failed to send code. Please try again.');
+        const msg = res.data?.error || 'Failed to send code. Please try again.';
+        setSendError(msg);
+        toast.error(msg);
       }
-    } catch {
-      toast.error('Failed to send verification code.');
+    } catch (err) {
+      const msg = err?.message?.includes('fetch') || err?.message?.includes('network') || err?.message?.includes('Network')
+        ? 'Network error — please check your connection and try again.'
+        : 'Failed to send verification code. Please try again later.';
+      setSendError(msg);
+      toast.error(msg);
     }
     setIsSending(false);
   };
@@ -86,16 +96,22 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
   const verifyCode = async () => {
     if (!code.trim()) return;
     setIsConfirming(true);
+    setVerifyError(null);
     try {
       const res = await base44.functions.invoke('requestAccountDeletion', { action: 'confirm', code: code.trim() });
       if (res.data?.success) {
-        // Code verified — now require the final "DELETE" typed confirmation
         setStep(3);
       } else {
-        toast.error(res.data?.error || 'Invalid or expired code.');
+        const msg = res.data?.error || 'Invalid or expired code.';
+        setVerifyError(msg);
+        toast.error(msg);
       }
-    } catch {
-      toast.error('Confirmation failed. Please try again.');
+    } catch (err) {
+      const msg = err?.message?.includes('fetch') || err?.message?.includes('network') || err?.message?.includes('Network')
+        ? 'Network error — please check your connection and try again.'
+        : 'Verification failed. Please try again.';
+      setVerifyError(msg);
+      toast.error(msg);
     }
     setIsConfirming(false);
   };
@@ -127,9 +143,14 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
             <p className="text-gray-300 text-sm mb-4">
               For security, we'll send a <strong className="text-white">6-digit verification code</strong> to:
             </p>
-            <div className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 mb-5 text-center">
+            <div className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 mb-3 text-center">
               <p className="text-brand-blue font-mono font-bold">{userEmail}</p>
             </div>
+            {sendError && (
+              <div className="bg-red-900/30 border border-red-600/40 rounded-lg p-3 mb-3 text-sm text-red-300" role="alert">
+                {sendError}
+              </div>
+            )}
             <div className="flex gap-3">
               <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300">
                 Cancel
@@ -157,9 +178,17 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
               autoFocus
               aria-label="Verification code"
             />
-            <button onClick={() => { setStep(1); setCode(''); }} className="text-xs text-gray-500 hover:text-gray-300 mb-4 block no-min-height py-1">
-              Resend code
-            </button>
+            {verifyError && (
+              <div className="bg-red-900/30 border border-red-600/40 rounded-lg p-2 mb-2 text-xs text-red-300" role="alert">
+                {verifyError}
+              </div>
+            )}
+            <div className="flex items-center justify-between mb-4">
+              <button onClick={() => { setStep(1); setCode(''); setSendError(null); setVerifyError(null); }} className="text-xs text-gray-500 hover:text-gray-300 no-min-height py-1" aria-label="Resend verification code">
+                Resend code
+              </button>
+              <span className="text-xs text-gray-600">Didn't receive it? Check spam or resend.</span>
+            </div>
             <div className="flex gap-3">
               <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300" disabled={isConfirming}>
                 Cancel
