@@ -119,6 +119,34 @@ summary {
   min-width: 44px;
 }
 
+/* ── Immediate touch press feedback — visible on first frame of contact ──────── */
+/* Applies to ALL buttons/links unless opted out with .no-press-feedback          */
+/* Uses :active (pointer) + [data-pressed] (programmatic) for WebView compat.    */
+button:not(.no-press-feedback):active,
+[role="button"]:not(.no-press-feedback):active,
+a:not(.no-press-feedback):active {
+  opacity: 0.72;
+  transform: scale(0.96);
+  /* GPU-composited — no layout thrash */
+  will-change: transform, opacity;
+  transition: transform 60ms ease-out, opacity 60ms ease-out;
+}
+
+/* Release transition — snaps back smoothly */
+button:not(.no-press-feedback),
+[role="button"]:not(.no-press-feedback),
+a:not(.no-press-feedback) {
+  transition: transform 150ms ease-out, opacity 150ms ease-out;
+}
+
+/* Prevent double-scaling on elements that already use Tailwind active:scale-* */
+button.active\:scale-95:active,
+button.active\:scale-90:active {
+  opacity: 0.80;
+  /* scale is handled by Tailwind — don't override */
+  transform: unset;
+}
+
 /* ── Bottom nav: pins flush to hardware edge + GPU compositing hint ─────────── */
 nav[aria-label="Main navigation"] {
   padding-bottom: var(--safe-bottom);
