@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Trash2, Coffee, Sun, Moon, Cookie } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 
 const mealTypeConfig = {
   breakfast: { icon: Coffee, label: "Breakfast", color: "bg-yellow-500/20 text-yellow-400" },
@@ -13,10 +14,14 @@ const mealTypeConfig = {
 };
 
 export default function MealList({ meals, onMealDeleted, isLoading }) {
-  const handleDelete = async (mealId) => {
+  const { mutate } = useOptimisticMutation();
+
+  const handleDelete = (mealId) => {
     if (confirm("Delete this meal entry?")) {
-      await MealLog.delete(mealId);
-      onMealDeleted();
+      mutate(
+        () => MealLog.delete(mealId),
+        () => onMealDeleted(mealId) // optimistic: remove from UI immediately
+      );
     }
   };
 

@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import { ProgressPhoto } from "@/entities/ProgressPhoto";
 import { base44 } from "@/api/base44Client";
+import { useOptimisticMutation } from "@/hooks/useOptimisticMutation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

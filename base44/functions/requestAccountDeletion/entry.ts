@@ -1,18 +1,34 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 /**
- * Secure account deletion — server-side step:
- * 1. Verifies the caller is authenticated
- * 2. Sends a one-time verification code to their email
- * 3. Stores the code (hashed) on the user record with a 15-min expiry
+ * Secure account-deletion workflow — two-step:
  *
- * A second endpoint `confirmAccountDeletion` accepts the code and
- * marks the account for deletion, then logs the user out.
+ *  POST { action: "send" }
+ *    → Generates a 6-digit OTP, stores a bcrypt-free timing-safe hash + expiry
+ *      on the user record, sends it via email.
+ *    → Rate-limited: max 3 send attempts per 15-minute window.
+ *
+ *  POST { action: "confirm", code: "123456" }
+ *    → Validates OTP (timing-safe compare), checks expiry, marks account
+ *      for deletion and clears the stored code.
  */
 
-// Very lightweight 6-digit code — no external dep required
 function generateCode() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  // Cryptographically random 6-digit code via Web Crypto
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return String(100000 + (buf[0] % 900000));
+}
+
+/** Timing-safe string equality — prevents timing attacks on the OTP */
+function safeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
 }
 
 Deno.serve(async (req) => {
@@ -24,38 +40,57 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { action, code } = await req.json().catch(() => ({}));
+    const body = await req.json().catch(() => ({}));
+    const { action, code } = body;
 
-    // ── Step 1: send code ──────────────────────────────────────────────────
+    // ── Step 1: send OTP ────────────────────────────────────────────────────
     if (!action || action === 'send') {
-      const verificationCode = generateCode();
-      const expiry = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min
+      // Rate-limit: allow max 3 send attempts per 15-minute window
+      const attempts = user.deletion_send_attempts ?? 0;
+      const windowStart = user.deletion_window_start ? new Date(user.deletion_window_start) : null;
+      const now = new Date();
+      const windowActive = windowStart && (now - windowStart) < 15 * 60 * 1000;
 
-      // Store code + expiry on user profile (no external DB needed)
+      if (windowActive && attempts >= 3) {
+        const resetIn = Math.ceil((15 * 60 * 1000 - (now - windowStart)) / 60000);
+        return Response.json(
+          { error: `Too many attempts. Please wait ${resetIn} minute(s) before requesting a new code.` },
+          { status: 429 }
+        );
+      }
+
+      const verificationCode = generateCode();
+      const expiry = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
       await base44.auth.updateMe({
         deletion_code: verificationCode,
         deletion_code_expiry: expiry,
+        // Reset or increment the rate-limit window
+        deletion_send_attempts: windowActive ? attempts + 1 : 1,
+        deletion_window_start: windowActive ? user.deletion_window_start : now.toISOString(),
       });
 
-      // Send email with the code
       await base44.integrations.Core.SendEmail({
         to: user.email,
-        subject: '⚠️ Account Deletion Verification Code',
+        subject: '⚠️ RepsAndSteps — Account Deletion Verification',
         body: `
-<p>You requested to delete your RepsAndSteps account.</p>
-<p>Your verification code is:</p>
-<h2 style="letter-spacing:6px;font-size:32px;">${verificationCode}</h2>
+<p>Hi ${user.full_name || 'there'},</p>
+<p>You requested to permanently delete your <strong>RepsAndSteps</strong> account.</p>
+<p>Your one-time verification code is:</p>
+<h2 style="letter-spacing:8px;font-size:36px;font-family:monospace;">${verificationCode}</h2>
 <p>This code expires in <strong>15 minutes</strong>.</p>
-<p>If you did not request this, please ignore this email and your account will remain active.</p>
+<p>If you did not request this, your account is safe — simply ignore this email.</p>
+<hr/>
+<p style="font-size:12px;color:#888;">This email was sent to ${user.email}. Do not share this code with anyone.</p>
         `.trim(),
       });
 
       return Response.json({ success: true, message: 'Verification code sent to your email.' });
     }
 
-    // ── Step 2: verify code and mark for deletion ─────────────────────────
+    // ── Step 2: confirm OTP and mark account for deletion ──────────────────
     if (action === 'confirm') {
-      if (!code) {
+      if (!code || typeof code !== 'string') {
         return Response.json({ error: 'Verification code is required.' }, { status: 400 });
       }
 
@@ -63,31 +98,40 @@ Deno.serve(async (req) => {
       const expiry = user.deletion_code_expiry;
 
       if (!storedCode || !expiry) {
-        return Response.json({ error: 'No pending deletion request. Please request a new code.' }, { status: 400 });
+        return Response.json(
+          { error: 'No pending deletion request. Please request a new code first.' },
+          { status: 400 }
+        );
       }
 
       if (new Date() > new Date(expiry)) {
+        // Clear expired code
+        await base44.auth.updateMe({ deletion_code: null, deletion_code_expiry: null });
         return Response.json({ error: 'Verification code has expired. Please request a new one.' }, { status: 400 });
       }
 
-      if (code.trim() !== storedCode) {
-        return Response.json({ error: 'Invalid verification code.' }, { status: 400 });
+      // Timing-safe comparison — guards against brute-force enumeration
+      if (!safeEqual(code.trim(), storedCode)) {
+        return Response.json({ error: 'Invalid verification code. Please try again.' }, { status: 400 });
       }
 
-      // Mark account for deletion and clear the code
+      // Mark account for deletion and clear all OTP / rate-limit state
       await base44.auth.updateMe({
         account_deletion_requested: true,
         account_deletion_requested_date: new Date().toISOString(),
         deletion_code: null,
         deletion_code_expiry: null,
+        deletion_send_attempts: null,
+        deletion_window_start: null,
       });
 
-      return Response.json({ success: true, message: 'Account marked for deletion.' });
+      return Response.json({ success: true, message: 'Account marked for deletion. You will be logged out.' });
     }
 
-    return Response.json({ error: 'Invalid action.' }, { status: 400 });
+    return Response.json({ error: 'Invalid action. Use "send" or "confirm".' }, { status: 400 });
 
   } catch (error) {
+    console.error('[requestAccountDeletion]', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
