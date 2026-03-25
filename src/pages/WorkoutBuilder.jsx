@@ -790,7 +790,9 @@ Make it realistic and achievable.`,
                   setAutoReps(true);
                   setSelectedReps(null);
                 }}
-                className={`w-full p-6 rounded-xl border-2 transition-all text-left mb-4 ${
+                aria-label="Let AI choose rep count automatically"
+                aria-pressed={autoReps}
+                className={`tap-target w-full p-6 rounded-xl border-2 transition-all text-left mb-4 ${
                   autoReps
                     ? 'bg-brand-blue/20 border-brand-blue'
                     : 'bg-gray-800/50 border-gray-700 hover:border-brand-blue/50'
