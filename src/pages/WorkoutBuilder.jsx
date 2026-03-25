@@ -1006,14 +1006,16 @@ Make it realistic and achievable.`,
                                     </div>
 
                                     {index < selectedExercises.length - 1 && (
-                                      <button
-                                        onClick={() => toggleSuperset(index)}
-                                        className={`w-full flex items-center justify-between p-2 rounded-lg border-2 transition-all ${
-                                          exercise.superset_with_next
-                                            ? 'bg-purple-600/20 border-purple-500 text-purple-300'
-                                            : 'bg-gray-700/50 border-gray-600 text-gray-400 hover:border-gray-500'
-                                        }`}
-                                      >
+                                       <button
+                                         onClick={() => toggleSuperset(index)}
+                                         aria-label={`${exercise.superset_with_next ? 'Remove superset' : 'Create superset'} between ${exercise.name} and next exercise`}
+                                         aria-pressed={exercise.superset_with_next}
+                                         className={`tap-target w-full flex items-center justify-between p-2 rounded-lg border-2 transition-all ${
+                                           exercise.superset_with_next
+                                             ? 'bg-purple-600/20 border-purple-500 text-purple-300'
+                                             : 'bg-gray-700/50 border-gray-600 text-gray-400 hover:border-gray-500'
+                                         }`}
+                                       >
                                         <div className="flex items-center gap-2">
                                           <LinkIcon className="w-4 h-4" />
                                           <span className="text-sm font-medium">Superset with next</span>
