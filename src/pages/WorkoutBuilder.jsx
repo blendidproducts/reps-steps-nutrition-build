@@ -809,7 +809,8 @@ Make it realistic and achievable.`,
 
               <div>
                 <p className="text-white font-medium mb-3">Or manually set total reps:</p>
-                <div className="grid grid-cols-3 gap-3 mb-4">
+                {/* Always single-column stack on mobile → 2-col on sm+ */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                   {[100, 150, 200, 250, 300].map(reps => (
                     <button
                       key={reps}
@@ -818,7 +819,9 @@ Make it realistic and achievable.`,
                         setAutoReps(false);
                         setCustomReps("");
                       }}
-                      className={`p-4 rounded-xl border-2 transition-all ${
+                      aria-label={`Set total reps to ${reps}`}
+                      aria-pressed={selectedReps === reps && !autoReps && !customReps}
+                      className={`tap-target p-4 rounded-xl border-2 transition-all flex flex-col items-center justify-center ${
                         selectedReps === reps && !autoReps && !customReps
                           ? 'bg-brand-blue/20 border-brand-blue text-white'
                           : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-brand-blue/50'
