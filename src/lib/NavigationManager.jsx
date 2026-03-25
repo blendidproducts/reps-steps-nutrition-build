@@ -140,10 +140,31 @@ export function NavigationManagerProvider({ children }) {
   const location = useLocation();
 
   // ── Android back button ──────────────────────────────────────────────────
+  // We maintain a "sentinel" entry on top of the browser history stack so that
+  // pressing the hardware back button triggers a popstate event we can intercept
+  // instead of navigating away from the app entirely.
+  //
+  // Robustness concerns addressed here:
+  //   1. Debounce: rapid double-fires (seen on some Android WebViews) are
+  //      collapsed via a timestamp guard.
+  //   2. Re-push on focus / visibilitychange: Android Chrome sometimes strips
+  //      the sentinel when the app is backgrounded and resumed. We re-push it
+  //      whenever the document regains focus or becomes visible again.
+  //   3. Re-push on location change: existing behaviour, kept as-is.
+
+  const lastBackRef = useRef(0);
+
   useEffect(() => {
+    // Always (re-)push the sentinel whenever the location key changes so
+    // navigating forward/backward in-app never leaves us without a sentinel.
     window.history.pushState({ __rns_sentinel: true }, "");
 
-    const handlePopState = () => {
+    const handlePopState = (e) => {
+      // Debounce: ignore events fired within 300 ms of the previous one.
+      const now = Date.now();
+      if (now - lastBackRef.current < 300) return;
+      lastBackRef.current = now;
+
       if (_interceptors.length > 0) {
         _interceptors[_interceptors.length - 1].handler();
         window.history.pushState({ __rns_sentinel: true }, "");
@@ -151,6 +172,7 @@ export function NavigationManagerProvider({ children }) {
       }
       const currentPath = location.pathname;
       if (ROOT_PATHS.has(currentPath)) {
+        // At a root page — just re-push the sentinel so the app stays open.
         window.history.pushState({ __rns_sentinel: true }, "");
         return;
       }
@@ -158,8 +180,27 @@ export function NavigationManagerProvider({ children }) {
       window.history.pushState({ __rns_sentinel: true }, "");
     };
 
+    // Re-push sentinel when the WebView regains foreground (Android resume).
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        window.history.pushState({ __rns_sentinel: true }, "");
+      }
+    };
+
+    // Re-push sentinel when the window regains focus (covers some edge cases
+    // where visibilitychange does not fire reliably on older Android WebViews).
+    const handleFocus = () => {
+      window.history.pushState({ __rns_sentinel: true }, "");
+    };
+
     window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleFocus);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate, location.key]);
 

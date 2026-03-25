@@ -194,22 +194,20 @@ function ThreeScene({ modelUrl, exerciseName, forceLowPerf }) {
         animationRef.current = null;
       }
 
-      // 2. Tear down animation mixer
+      // 2. Tear down animation mixer — uncache all clips and the root object
       if (mixerRef.current) {
         mixerRef.current.stopAllAction();
         mixerRef.current.uncacheRoot(mixerRef.current.getRoot());
+        mixerRef.current.timeScale = 0;
         mixerRef.current = null;
       }
 
       // 3. Dispose orbit controls
       controls.dispose();
 
-      // 4. Walk the scene graph and release every GPU resource
-      //    disposeMaterial exhaustively disposes all known PBR texture slots
-      //    so nothing is leaked even when the material has non-standard maps.
+      // 4. Walk the scene graph and release every GPU resource.
+      //    disposeMaterial exhaustively disposes all known PBR texture slots.
       const disposeMaterial = (mat) => {
-        // Explicit PBR + common texture slots — covers MeshStandardMaterial,
-        // MeshPhysicalMaterial, MeshLambertMaterial, MeshPhongMaterial, etc.
         const textureSlots = [
           'map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap',
           'emissiveMap', 'displacementMap', 'bumpMap', 'alphaMap',
@@ -241,20 +239,29 @@ function ThreeScene({ modelUrl, exerciseName, forceLowPerf }) {
             obj.material = null;
           }
         });
-        // Remove all children so GC can collect them
         while (sceneRef.current.children.length > 0) {
           sceneRef.current.remove(sceneRef.current.children[0]);
         }
         sceneRef.current = null;
       }
 
-      // 5. Tear down renderer — nullify domElement ref to prevent stale access
+      // 5. Tear down renderer.
+      //    - renderLists.dispose() releases all internal draw-call buffers.
+      //    - forceContextLoss() is the most aggressive step: it tells the GPU
+      //      driver to immediately reclaim the WebGL context and all associated
+      //      VRAM. This is the single most effective action for preventing
+      //      "too many WebGL contexts" crashes on low-end Android devices that
+      //      cap the number of concurrent GL contexts at 4–8.
       if (rendererRef.current) {
         if (mountRef.current && rendererRef.current.domElement.parentNode === mountRef.current) {
           mountRef.current.removeChild(rendererRef.current.domElement);
         }
         rendererRef.current.renderLists.dispose();
         rendererRef.current.info.reset();
+        // Force the WebGL context loss — reclaims GPU memory immediately.
+        const ext = rendererRef.current.getContext()
+          ?.getExtension('WEBGL_lose_context');
+        if (ext) ext.loseContext();
         rendererRef.current.dispose();
         rendererRef.current = null;
       }

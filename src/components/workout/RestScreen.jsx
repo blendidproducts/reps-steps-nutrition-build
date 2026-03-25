@@ -23,24 +23,26 @@ export default function RestScreen({
               <>
                 <div className="flex-shrink-0">
                   <h2 className="text-xl font-bold mb-2 text-brand-blue text-center">ACTIVE RECOVERY</h2>
-                  <div className="flex items-center justify-center gap-2 mb-3">
+                  <div className="flex items-center justify-center gap-2 mb-3" role="group" aria-label="Rest timer controls">
                     <div className="flex flex-col gap-1">
                       <button onClick={() => { const dec = workout.exercises[currentExerciseIndex]?.category === 'warmup' ? -5 : -15; addRestTime(dec); }}
+                        aria-label="Decrease rest time by 15 seconds"
                         className="w-9 h-9 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors touch-manipulation" disabled={restTimer <= 5}>
-                        <Minus className="w-4 h-4" />
+                        <Minus className="w-4 h-4" aria-hidden="true" />
                       </button>
                       {workout.exercises[currentExerciseIndex]?.category !== 'warmup' && (
-                        <button onClick={() => addRestTime(-30)} className="w-9 h-9 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center text-[10px] font-bold touch-manipulation" disabled={restTimer <= 30}>-30</button>
+                        <button onClick={() => addRestTime(-30)} aria-label="Decrease rest time by 30 seconds" className="w-9 h-9 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center text-[10px] font-bold touch-manipulation" disabled={restTimer <= 30}>-30</button>
                       )}
                     </div>
-                    <div className="text-5xl font-bold">{restTimer}s</div>
+                    <div className="text-5xl font-bold" role="timer" aria-label={`${restTimer} seconds remaining`} aria-live="off">{restTimer}s</div>
                     <div className="flex flex-col gap-1">
                       <button onClick={() => { const inc = workout.exercises[currentExerciseIndex]?.category === 'warmup' ? 5 : 15; addRestTime(inc); }}
+                        aria-label="Increase rest time by 15 seconds"
                         className="w-9 h-9 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors touch-manipulation">
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-4 h-4" aria-hidden="true" />
                       </button>
                       {workout.exercises[currentExerciseIndex]?.category !== 'warmup' && (
-                        <button onClick={() => addRestTime(30)} className="w-9 h-9 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center text-[10px] font-bold touch-manipulation">+30</button>
+                        <button onClick={() => addRestTime(30)} aria-label="Increase rest time by 30 seconds" className="w-9 h-9 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center text-[10px] font-bold touch-manipulation">+30</button>
                       )}
                     </div>
                   </div>
@@ -78,15 +80,15 @@ export default function RestScreen({
                     </div>
                   )}
                   <p className="text-xs text-gray-400 mb-2 text-center">Choose cardio or skip</p>
-                  <div className="grid grid-cols-3 gap-1.5 mb-2">
-                    <Button onClick={() => startCardio('walk')} className="flex flex-col items-center gap-1 h-auto py-3 bg-green-600/20 border-2 border-green-500 text-green-300 hover:bg-green-600/40 touch-manipulation"><Footprints className="w-5 h-5" /><span className="text-[10px] font-bold">WALK</span></Button>
-                    <Button onClick={() => startCardio('jog')} className="flex flex-col items-center gap-1 h-auto py-3 bg-yellow-600/20 border-2 border-yellow-500 text-yellow-300 hover:bg-yellow-600/40 touch-manipulation"><Route className="w-5 h-5" /><span className="text-[10px] font-bold">JOG</span></Button>
-                    <Button onClick={() => startCardio('sprint')} className="flex flex-col items-center gap-1 h-auto py-3 bg-red-600/20 border-2 border-red-500 text-red-300 hover:bg-red-600/40 touch-manipulation"><Zap className="w-5 h-5" /><span className="text-[10px] font-bold">SPRINT</span></Button>
+                  <div className="grid grid-cols-3 gap-1.5 mb-2" role="group" aria-label="Cardio activity options">
+                    <Button onClick={() => startCardio('walk')} aria-label="Start walking cardio" className="flex flex-col items-center gap-1 h-auto py-3 bg-green-600/20 border-2 border-green-500 text-green-300 hover:bg-green-600/40 touch-manipulation"><Footprints className="w-5 h-5" aria-hidden="true" /><span className="text-[10px] font-bold">WALK</span></Button>
+                    <Button onClick={() => startCardio('jog')} aria-label="Start jogging cardio" className="flex flex-col items-center gap-1 h-auto py-3 bg-yellow-600/20 border-2 border-yellow-500 text-yellow-300 hover:bg-yellow-600/40 touch-manipulation"><Route className="w-5 h-5" aria-hidden="true" /><span className="text-[10px] font-bold">JOG</span></Button>
+                    <Button onClick={() => startCardio('sprint')} aria-label="Start sprinting cardio" className="flex flex-col items-center gap-1 h-auto py-3 bg-red-600/20 border-2 border-red-500 text-red-300 hover:bg-red-600/40 touch-manipulation"><Zap className="w-5 h-5" aria-hidden="true" /><span className="text-[10px] font-bold">SPRINT</span></Button>
                   </div>
                 </div>
                 <div className="flex-shrink-0 grid grid-cols-2 gap-2 border-t border-brand-blue/20 pt-2">
-                  <Button onClick={skipRest} variant="outline" className="border-gray-500 text-gray-300 hover:bg-gray-700 touch-manipulation min-h-[52px] text-xs font-bold">SKIP REST</Button>
-                  <Button onClick={openSupersetModal} className="bg-purple-600/20 border-2 border-purple-500 text-purple-300 hover:bg-purple-600/40 touch-manipulation min-h-[52px] text-xs font-bold"><LinkIcon className="w-3 h-3 mr-1" />SUPERSET</Button>
+                  <Button onClick={skipRest} aria-label="Skip rest and continue workout" variant="outline" className="border-gray-500 text-gray-300 hover:bg-gray-700 touch-manipulation min-h-[52px] text-xs font-bold">SKIP REST</Button>
+                  <Button onClick={openSupersetModal} aria-label="Configure superset settings" className="bg-purple-600/20 border-2 border-purple-500 text-purple-300 hover:bg-purple-600/40 touch-manipulation min-h-[52px] text-xs font-bold"><LinkIcon className="w-3 h-3 mr-1" aria-hidden="true" />SUPERSET</Button>
                 </div>
               </>
             ) : (
