@@ -186,6 +186,7 @@ function ThreeScene({ modelUrl, exerciseName, forceLowPerf }) {
     return () => {
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('visibilitychange', handleVisibility);
+      intersectionObserver.disconnect();
 
       // 1. Stop animation loop immediately so no further render calls fire
       if (animationRef.current) {
