@@ -312,14 +312,16 @@ export default function Exercise3DViewer({ modelUrl, exerciseName }) {
   }, []);
 
   return (
-    <div ref={containerRef} className="w-full h-full">
-      {isVisible ? (
-        <ThreeScene modelUrl={modelUrl} exerciseName={exerciseName} forceLowPerf={isLowPerf} />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center bg-gray-900 rounded-lg">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500" />
-        </div>
-      )}
+    <div ref={containerRef} className="w-full relative" style={{ paddingBottom: "56.25%" /* 16:9 */ }}>
+      <div className="absolute inset-0">
+        {isVisible ? (
+          <ThreeScene modelUrl={modelUrl} exerciseName={exerciseName} forceLowPerf={isLowPerf} />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-900 rounded-lg">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
