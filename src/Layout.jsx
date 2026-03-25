@@ -55,6 +55,9 @@ export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { navigateToTab } = useTabNavigator();
+  // Derive the active tab name once — passed as a primitive to BottomNav so
+  // React.memo can bail out cheaply on the 1-second timer ticks.
+  const activeTab = resolveTabForPath(location.pathname) || (location.pathname === "/" ? "Home" : null);
 
   // Track current path into its tab stack whenever the route changes
   React.useEffect(() => {
