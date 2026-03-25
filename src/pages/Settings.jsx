@@ -165,12 +165,45 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
                 Cancel
               </Button>
               <Button
-                onClick={confirmDeletion}
+                onClick={verifyCode}
                 disabled={code.length < 6 || isConfirming}
-                aria-label="Confirm account deletion"
+                aria-label="Verify code"
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold disabled:opacity-40"
               >
-                {isConfirming ? 'Confirming...' : 'Delete My Account'}
+                {isConfirming ? 'Verifying...' : 'Verify Code'}
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* Step 3 — Final high-friction "type DELETE" confirmation */}
+        {step === 3 && (
+          <>
+            <div className="bg-red-900/30 border border-red-600/50 rounded-xl p-4 mb-4" role="alert">
+              <p className="text-red-300 text-sm font-bold mb-1">⛔ Final confirmation required</p>
+              <p className="text-gray-400 text-sm">
+                Type <strong className="text-red-400 font-mono tracking-widest">DELETE</strong> below to permanently destroy your account and all data. There is no recovery.
+              </p>
+            </div>
+            <Input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder='Type DELETE to confirm'
+              className="bg-gray-900 border-red-700 text-white mb-4 font-mono text-center tracking-widest"
+              autoFocus
+              aria-label="Type DELETE to confirm account deletion"
+            />
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300">
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmDeletion}
+                disabled={deleteConfirmText !== "DELETE"}
+                aria-label="Permanently delete account"
+                className="flex-1 bg-red-700 hover:bg-red-800 text-white font-bold disabled:opacity-30"
+              >
+                Permanently Delete
               </Button>
             </div>
           </>
