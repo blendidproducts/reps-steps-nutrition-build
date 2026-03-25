@@ -12,12 +12,11 @@ const TABS = [
 ];
 
 /**
- * BottomNav — memoized so the 1-second workout-timer interval in Layout
- * doesn't cause this component to re-render unless the active tab changes.
+ * BottomNav — accepts the resolved activeTab string (not the full location
+ * object) so React.memo's shallow comparison actually bails out when the
+ * active tab hasn't changed (e.g. during the 1-second workout-timer tick).
  */
-const BottomNav = memo(function BottomNav({ location, navigateToTab }) {
-  const activeTab = resolveTabForPath(location.pathname) ||
-    (location.pathname === "/" ? "Home" : null);
+const BottomNav = memo(function BottomNav({ activeTab, navigateToTab }) {
 
   return (
     <nav
