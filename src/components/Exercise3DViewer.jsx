@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { useLowPerformanceMode } from '@/hooks/useLowPerformanceMode';
 
 // ── Shared DRACO loader (one instance for the entire app lifetime) ────────────
 // Uses WASM decoder for maximum decompression speed on budget devices.
@@ -22,7 +23,9 @@ function getDracoLoader() {
 // ── Detect low-end device heuristic ──────────────────────────────────────────
 // Budget Android devices typically report 4 or fewer logical CPU cores and a
 // device pixel ratio of exactly 1 (or use software rendering at low DPR).
+// Also respects the user-controlled Low Performance Mode flag.
 function isLowEndDevice() {
+  if (window.__RNS_LOW_PERF) return true;
   const cores = navigator.hardwareConcurrency ?? 4;
   const dpr = window.devicePixelRatio ?? 1;
   return cores <= 4 || dpr <= 1;
