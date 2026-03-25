@@ -20,6 +20,7 @@ export default function Community() {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const { mutate } = useOptimisticMutation();
 
   useEffect(() => {
     loadPosts();
@@ -97,25 +98,21 @@ export default function Community() {
     setUploading(false);
   };
 
-  const toggleLike = async (post) => {
-    try {
-      const userEmail = currentUser?.email;
-      if (!userEmail) return;
+  const toggleLike = (post) => {
+    const userEmail = currentUser?.email;
+    if (!userEmail) return;
 
-      const likedBy = post.liked_by || [];
-      const hasLiked = likedBy.includes(userEmail);
+    const likedBy = post.liked_by || [];
+    const hasLiked = likedBy.includes(userEmail);
+    const newLikedBy = hasLiked ? likedBy.filter(e => e !== userEmail) : [...likedBy, userEmail];
+    const newCount = hasLiked ? (post.likes_count || 0) - 1 : (post.likes_count || 0) + 1;
 
-      await base44.entities.CommunityPost.update(post.id, {
-        liked_by: hasLiked 
-          ? likedBy.filter(email => email !== userEmail)
-          : [...likedBy, userEmail],
-        likes_count: hasLiked ? (post.likes_count || 0) - 1 : (post.likes_count || 0) + 1
-      });
-
-      loadPosts();
-    } catch (error) {
-      console.error('Failed to toggle like:', error);
-    }
+    mutate(
+      () => base44.entities.CommunityPost.update(post.id, { liked_by: newLikedBy, likes_count: newCount }),
+      () => setPosts(prev => prev.map(p =>
+        p.id === post.id ? { ...p, liked_by: newLikedBy, likes_count: newCount } : p
+      ))
+    );
   };
 
   const formatTime = (seconds) => {

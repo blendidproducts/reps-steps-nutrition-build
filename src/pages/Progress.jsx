@@ -16,6 +16,7 @@ import { motion } from "framer-motion";
 export default function Progress() {
   const [photos, setPhotos] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const { mutate } = useOptimisticMutation();
   const [uploadForm, setUploadForm] = useState({
     photo_date: new Date().toISOString().split('T')[0],
     weight_lbs: '',
@@ -62,11 +63,15 @@ export default function Progress() {
     setIsUploading(false);
   };
 
-  const deletePhoto = async (id) => {
+  const deletePhoto = (id) => {
     if (confirm('Delete this progress photo?')) {
-      await ProgressPhoto.delete(id);
-      toast.success('Photo deleted!');
-      loadPhotos();
+      mutate(
+        () => ProgressPhoto.delete(id),
+        () => {
+          setPhotos(prev => prev.filter(p => p.id !== id));
+          toast.success('Photo deleted!');
+        }
+      );
     }
   };
 
