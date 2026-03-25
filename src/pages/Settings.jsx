@@ -59,10 +59,11 @@ const requestPermission = async (permissionName, friendlyName) => {
 };
 
 // ── Secure email-verified deletion flow ─────────────────────────────────────
-// Step 0: native AlertDialog gate → Step 1: email code → Step 2: confirm code
+// Step 1: send email code → Step 2: enter code → Step 3: type "DELETE" to confirm
 function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
-  const [step, setStep] = useState(1); // 1=send code, 2=enter code
+  const [step, setStep] = useState(1); // 1=send code, 2=enter code, 3=type DELETE
   const [code, setCode] = useState("");
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
 
@@ -82,22 +83,27 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
     setIsSending(false);
   };
 
-  const confirmDeletion = async () => {
+  const verifyCode = async () => {
     if (!code.trim()) return;
     setIsConfirming(true);
     try {
       const res = await base44.functions.invoke('requestAccountDeletion', { action: 'confirm', code: code.trim() });
       if (res.data?.success) {
-        toast.success('Account deletion confirmed. Logging you out...');
-        onSuccess();
+        // Code verified — now require the final "DELETE" typed confirmation
+        setStep(3);
       } else {
         toast.error(res.data?.error || 'Invalid or expired code.');
-        setIsConfirming(false);
       }
     } catch {
       toast.error('Confirmation failed. Please try again.');
-      setIsConfirming(false);
     }
+    setIsConfirming(false);
+  };
+
+  const confirmDeletion = () => {
+    if (deleteConfirmText !== "DELETE") return;
+    toast.success('Account deleted. Logging you out...');
+    onSuccess();
   };
 
   return (
