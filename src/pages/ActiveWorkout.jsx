@@ -501,6 +501,14 @@ export default function ActiveWorkout() {
 
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="overflow-x-hidden">
+      {/* aria-live regions — visually hidden, announce dynamic changes to screen readers */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {ariaTimerAnnouncement}
+      </div>
+      <div aria-live="assertive" aria-atomic="true" className="sr-only">
+        {ariaRepAnnouncement}
+      </div>
+
       {/* Accelerometer Step Tracker - invisible, runs in background */}
       <StepTracker isActive={isActive && !isPaused} onStepUpdate={handleAccelStepUpdate} />
 
