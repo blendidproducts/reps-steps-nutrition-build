@@ -2,6 +2,8 @@ import './App.css'
 import React, { Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
+import { MotionConfig } from 'framer-motion'
+import { useLowPerformanceMode } from '@/hooks/useLowPerformanceMode'
 import { queryClientInstance } from '@/lib/query-client'
 import VisualEditAgent from '@/lib/VisualEditAgent'
 import NavigationTracker from '@/lib/NavigationTracker'
@@ -83,21 +85,29 @@ const AuthenticatedApp = () => {
 };
 
 
-function App() {
+function AppShell() {
+  const { isLowPerf } = useLowPerformanceMode();
+  return (
+    <MotionConfig reducedMotion={isLowPerf ? "always" : "never"}>
+      <Router>
+        <NavigationTracker />
+        <AndroidBackButtonHandler />
+        <AuthenticatedApp />
+      </Router>
+      <Toaster />
+      <VisualEditAgent />
+    </MotionConfig>
+  );
+}
 
+function App() {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <NavigationTracker />
-          <AndroidBackButtonHandler />
-          <AuthenticatedApp />
-        </Router>
-        <Toaster />
-        <VisualEditAgent />
+        <AppShell />
       </QueryClientProvider>
     </AuthProvider>
-  )
+  );
 }
 
 export default App
