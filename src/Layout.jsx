@@ -1,6 +1,6 @@
 import React, { memo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useTabNavigator, resolveTabForPath, TAB_ROOTS, pushTabPath } from "@/hooks/useTabNavigator";
+import { useNavigationManager, resolveTabForPath, TAB_ROOTS, pushTabPath } from "@/lib/NavigationManager";
 import { createPageUrl } from "@/utils";
 import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box, Users, Clock, Brain, Watch, ShoppingBag } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
@@ -54,16 +54,7 @@ const navigationItems = [
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { navigateToTab } = useTabNavigator();
-  // Derive the active tab name once — passed as a primitive to BottomNav so
-  // React.memo can bail out cheaply on the 1-second timer ticks.
-  const activeTab = resolveTabForPath(location.pathname) || (location.pathname === "/" ? "Home" : null);
-
-  // Track current path into its tab stack whenever the route changes
-  React.useEffect(() => {
-    const tab = resolveTabForPath(location.pathname);
-    if (tab) pushTabPath(tab, location.pathname + location.search);
-  }, [location.pathname, location.search]);
+  const { navigateToTab, activeTab } = useNavigationManager();
 
   // Robust sessionStorage-based scroll memory for all routes
   useScrollMemory("main-content");
