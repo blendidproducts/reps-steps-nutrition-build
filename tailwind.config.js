@@ -106,6 +106,18 @@ module.exports = {
           // Bottom nav height (56px) + device safe area
           'padding-bottom': 'calc(56px + env(safe-area-inset-bottom, 0px))',
         },
+        // Screen-reader only — visually hidden but accessible to AT
+        '.sr-only': {
+          position: 'absolute',
+          width: '1px',
+          height: '1px',
+          padding: '0',
+          margin: '-1px',
+          overflow: 'hidden',
+          clip: 'rect(0,0,0,0)',
+          'white-space': 'nowrap',
+          'border-width': '0',
+        },
       });
     },
   ],
