@@ -41,7 +41,7 @@ const BottomNav = memo(function BottomNav({ activeTab, navigateToTab }) {
                   navigateToTab(tab);
                 }
               }}
-              className={`flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[56px] py-2 px-2 rounded-lg transition-colors active:scale-95 focus-visible:outline-2 focus-visible:outline-[#00a9ff] ${
+              className={`tap-target flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[56px] py-2 px-2 rounded-lg transition-colors active:scale-95 focus-visible:outline-2 focus-visible:outline-[#00a9ff] ${
                 isActive ? "text-[#00a9ff] bg-[#00a9ff]/10" : "text-gray-400"
               }`}
               style={{ touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}
