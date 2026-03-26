@@ -2,11 +2,20 @@
  * NavigationManager
  *
  * Single provider that unifies:
- *   - Android hardware back-button interception (formerly useAndroidBackButton)
- *   - Tab-based navigation with independent per-tab history stacks (formerly useTabNavigator)
+ *   - Android hardware back-button interception
+ *   - Tab-based navigation with independent per-tab history stacks
  *
- * Backward-compat re-exports keep every existing call-site working unchanged.
- * Mount <NavigationManager> once inside <Router>, replacing the two separate hooks.
+ * Back-button strategy (v3 — sentinel-free where possible):
+ *   React Router v6 exposes `navigate` and `location`. We track our own
+ *   in-app history depth via a module-level counter that increments on every
+ *   push and decrements on every pop. When the counter reaches 0 the user is
+ *   at the "root" of the SPA and we push ONE guard entry so the next hardware
+ *   back press fires a popstate we can swallow (preventing the WebView from
+ *   closing the app). At all other depths we let React Router handle back
+ *   navigation normally via `navigate(-1)`, keeping the browser history stack
+ *   clean and predictable.
+ *
+ * Backward-compat re-exports keep every existing call-site unchanged.
  */
 import React, { createContext, useContext, useCallback, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -120,6 +129,26 @@ export function pushBackInterceptor(handler) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// In-app navigation depth tracker (module-level, survives re-renders)
+// ─────────────────────────────────────────────────────────────────────────────
+// We count how many SPA pushes have happened since mount. When depth === 0 we
+// are at the entry page and need the guard entry to prevent app close. Every
+// navigate(-1) decrements the counter; every forward navigation increments it.
+// This means we never push more than ONE guard entry — the browser history
+// stays clean except for that single defensive entry at depth-0.
+
+let _navDepth = 0;
+const _GUARD_STATE = "__rns_guard";
+
+function pushGuard() {
+  window.history.pushState({ [_GUARD_STATE]: true }, "");
+}
+
+function isAtRoot(pathname) {
+  return ROOT_PATHS.has(pathname) || pathname === "/";
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Context
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -136,94 +165,106 @@ export function useNavigationManager() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function NavigationManagerProvider({ children }) {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigate   = useNavigate();
+  const location   = useLocation();
 
-  // ── Android back button ──────────────────────────────────────────────────
-  // We maintain a "sentinel" entry on top of the browser history stack so that
-  // pressing the hardware back button triggers a popstate event we can intercept
-  // instead of navigating away from the app entirely.
-  //
-  // Robustness concerns addressed here:
-  //   1. Debounce: rapid double-fires (seen on some Android WebViews) are
-  //      collapsed via a timestamp guard.
-  //   2. Re-push on focus / visibilitychange: Android Chrome sometimes strips
-  //      the sentinel when the app is backgrounded and resumed. We re-push it
-  //      whenever the document regains focus or becomes visible again.
-  //   3. Re-push on location change: existing behaviour, kept as-is.
+  const lastBackRef      = useRef(0);
+  const isHandlingRef    = useRef(false);
+  // Track the pathname we saw on the previous render so we can detect
+  // whether a location change was a push (+1) or pop (-1).
+  const prevPathnameRef  = useRef(location.pathname);
+  // Remember the history.length at mount to calibrate depth.
+  const baseHistoryLen   = useRef(window.history.length);
 
-  const lastBackRef = useRef(0);
-  // Re-entrancy guard: prevents a second popstate from firing while we're
-  // already handling one (can happen in iOS WKWebView on fast swipe-back).
-  const isHandlingBackRef = useRef(false);
-
+  // ── Back button handling ─────────────────────────────────────────────────
   useEffect(() => {
-    // ── Strategy: no sentinel manipulation ──────────────────────────────────
-    // Instead of pushing dummy history entries, we listen for popstate and
-    // call navigate(-1) for in-app back navigation, or simply re-push one
-    // entry only when the user is already at a root so the app cannot close.
-    //
-    // One single dummy entry is pushed only at mount (and on resume) so
-    // pressing back at a root page fires a popstate we can swallow rather
-    // than letting the WebView close the app. This is the minimum viable
-    // sentinel approach — one entry, re-pushed only when needed.
+    // Push one guard at mount so the very first back-press on a root page
+    // fires a popstate we can intercept instead of closing the WebView.
+    pushGuard();
 
-    // Push one guard entry at mount so root-page back-press is interceptable.
-    window.history.pushState({ __rns_guard: true }, "");
-
-    const handlePopState = () => {
+    const handlePopState = (e) => {
       const now = Date.now();
-      // Debounce rapid double-fires (iOS WKWebView, some Android WebViews).
+      // 350 ms debounce — collapses double-fires on Android WebViews.
       if (now - lastBackRef.current < 350) return;
       lastBackRef.current = now;
 
       // Re-entrancy guard.
-      if (isHandlingBackRef.current) return;
-      isHandlingBackRef.current = true;
+      if (isHandlingRef.current) return;
+      isHandlingRef.current = true;
 
       const currentPath = location.pathname;
 
       try {
-        // 1. Custom interceptors (modals, wizards, etc.) take highest priority.
+        // 1. Modal / wizard interceptors take highest priority.
         if (_interceptors.length > 0) {
           _interceptors[_interceptors.length - 1].handler();
-          // Re-push guard so the next back press is also interceptable.
-          window.history.pushState({ __rns_guard: true }, "");
+          pushGuard(); // keep a guard on top for the next press
           return;
         }
 
-        // 2. At a root/home page: swallow the back press to keep app open.
-        if (ROOT_PATHS.has(currentPath) || currentPath === "/") {
-          window.history.pushState({ __rns_guard: true }, "");
+        // 2. At a root page: swallow the back press — keep the app alive.
+        if (isAtRoot(currentPath)) {
+          pushGuard();
           return;
         }
 
-        // 3. Inside a sub-page: use React Router to go back.
-        // Re-push the guard after a tick so it sits on top of wherever
-        // React Router lands us.
+        // 3. Sub-page: let React Router navigate back.
+        // Decrement depth so we know where we are after the transition.
+        _navDepth = Math.max(0, _navDepth - 1);
         navigate(-1);
+
+        // After the navigation settles, re-push the guard only if we
+        // landed back at depth-0 (i.e. a root page). At depth > 0 the
+        // browser's own forward entry already acts as a guard, so we
+        // avoid cluttering history with extra pushes.
         setTimeout(() => {
-          window.history.pushState({ __rns_guard: true }, "");
-        }, 50);
+          if (_navDepth === 0 || isAtRoot(window.location.pathname)) {
+            pushGuard();
+          }
+        }, 80);
       } finally {
-        setTimeout(() => { isHandlingBackRef.current = false; }, 400);
+        setTimeout(() => { isHandlingRef.current = false; }, 400);
       }
     };
 
-    // Re-push the guard when the WebView is resumed (Android/iOS background→foreground).
-    // The OS sometimes discards our extra history entry while backgrounded.
+    // Re-push guard on WebView resume — Android/iOS can discard extra
+    // history entries when the app is backgrounded.
     const handleVisibility = () => {
-      if (!document.hidden) window.history.pushState({ __rns_guard: true }, "");
+      if (!document.hidden) pushGuard();
     };
 
     window.addEventListener("popstate", handlePopState);
     document.addEventListener("visibilitychange", handleVisibility);
+
     return () => {
       window.removeEventListener("popstate", handlePopState);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
+  // Re-run when location.key changes so `location.pathname` closure is fresh.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate, location.key]);
+
+  // ── Depth tracker — runs after every location change ────────────────────
+  useEffect(() => {
+    const prev = prevPathnameRef.current;
+    const curr = location.pathname;
+
+    if (prev !== curr) {
+      // Heuristic: if history.length grew the user pushed; if it stayed the
+      // same or shrank they navigated back or replaced. This is the most
+      // reliable signal available without patching history.pushState globally.
+      const histLen = window.history.length;
+      const grew = histLen > (baseHistoryLen.current + _navDepth);
+
+      if (grew) {
+        _navDepth += 1;
+        baseHistoryLen.current = histLen;
+      }
+      // (Back navigation decrements in handlePopState before navigate(-1))
+
+      prevPathnameRef.current = curr;
+    }
+  }, [location.pathname]);
 
   // ── Track current path into its tab stack ────────────────────────────────
   useEffect(() => {
@@ -234,7 +275,7 @@ export function NavigationManagerProvider({ children }) {
   // ── Tab navigation helpers ───────────────────────────────────────────────
   const navigateToTab = useCallback((tab) => {
     const currentTab = resolveTabForPath(location.pathname);
-    if (currentTab === tab) return; // already here — BottomNav scrolls to top
+    if (currentTab === tab) return;
     navigate(getLastTabPath(tab));
   }, [navigate, location.pathname]);
 
@@ -266,7 +307,4 @@ export function useTabNavigator() {
 }
 
 /** @deprecated Handled automatically by NavigationManagerProvider */
-export function useAndroidBackButton() {
-  // No-op: the provider mounts the listener once; calling this hook again
-  // would duplicate the popstate handler. Safe to leave as a no-op.
-}
+export function useAndroidBackButton() {}

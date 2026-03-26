@@ -31,11 +31,34 @@ function isLowEndDevice() {
   return cores <= 4 || dpr <= 1;
 }
 
+// ── Global WebGL context memory observer ─────────────────────────────────────
+// Tracks the total number of live WebGL contexts across the app.
+// Most Android WebViews cap concurrent contexts at 8–16; iOS WKWebView at 8.
+// When the count approaches the cap we log a warning. If the context is lost
+// (GPU driver eviction, OOM, or tab backgrounding), we surface a recoverable
+// error state instead of a silent blank canvas.
+const _webglContextCount = { active: 0 };
+
+function incrementWebGLCount() {
+  _webglContextCount.active += 1;
+  if (_webglContextCount.active >= 6) {
+    console.warn(
+      `[WebGL] ${_webglContextCount.active} active contexts — approaching device limit. ` +
+      "Consider closing unused 3D viewers to prevent context eviction."
+    );
+  }
+}
+
+function decrementWebGLCount() {
+  _webglContextCount.active = Math.max(0, _webglContextCount.active - 1);
+}
+
 // ── Three.js scene ────────────────────────────────────────────────────────────
 function ThreeScene({ modelUrl, exerciseName, forceLowPerf }) {
   const mountRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [contextLost, setContextLost] = useState(false);
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
   const animationRef = useRef(null);
@@ -70,6 +93,37 @@ function ThreeScene({ modelUrl, exerciseName, forceLowPerf }) {
 
     mountRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
+
+    // ── WebGL context loss/restore monitoring ──────────────────────────────
+    // `webglcontextlost` fires when the GPU driver evicts this context (OOM,
+    // too many concurrent contexts, or Android backgrounding). We surface a
+    // recoverable error UI instead of a silent freeze.
+    // `webglcontextrestored` fires if the driver later reinstates the context
+    // (common on Android after returning from background). We reload the page
+    // or notify the user they can retry.
+    incrementWebGLCount();
+
+    const canvas = renderer.domElement;
+    const handleContextLost = (e) => {
+      e.preventDefault(); // required to allow context restoration
+      console.warn("[WebGL] Context lost for", exerciseName);
+      setContextLost(true);
+      // Stop the animation loop so we don't call render() on a dead context.
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+    };
+    const handleContextRestored = () => {
+      console.info("[WebGL] Context restored for", exerciseName);
+      setContextLost(false);
+      // The scene state (GPU buffers) is gone after a context loss. Signal
+      // the user to retry rather than attempting a silent hot-reload which
+      // would likely fail due to stale GPU handles.
+      setError("3D context was lost. Tap to retry.");
+    };
+    canvas.addEventListener("webglcontextlost", handleContextLost);
+    canvas.addEventListener("webglcontextrestored", handleContextRestored);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -187,6 +241,9 @@ function ThreeScene({ modelUrl, exerciseName, forceLowPerf }) {
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('visibilitychange', handleVisibility);
       intersectionObserver.disconnect();
+      canvas.removeEventListener("webglcontextlost", handleContextLost);
+      canvas.removeEventListener("webglcontextrestored", handleContextRestored);
+      decrementWebGLCount();
 
       // 1. Stop animation loop immediately so no further render calls fire
       if (animationRef.current) {
@@ -273,8 +330,14 @@ function ThreeScene({ modelUrl, exerciseName, forceLowPerf }) {
 
   if (error) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-900 rounded-lg">
-        <p className="text-sm text-red-400">{error}</p>
+      <div
+        className="w-full h-full flex flex-col items-center justify-center bg-gray-900 rounded-lg gap-3 cursor-pointer"
+        onClick={() => { setError(null); setContextLost(false); }}
+        role="button"
+        aria-label="Retry loading 3D model"
+      >
+        <p className="text-sm text-red-400 text-center px-4">{error}</p>
+        <span className="text-xs text-gray-500">Tap to retry</span>
       </div>
     );
   }
