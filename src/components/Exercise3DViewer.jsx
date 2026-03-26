@@ -283,17 +283,16 @@ function ThreeScene({ modelUrl, exerciseName, forceLowPerf }) {
 
       if (sceneRef.current) {
         sceneRef.current.traverse((obj) => {
-          if (obj.isMesh) {
+          if (obj.isMesh || obj.isSkinnedMesh) {
             if (obj.geometry) {
               obj.geometry.dispose();
               obj.geometry = null;
             }
-            if (Array.isArray(obj.material)) {
-              obj.material.forEach(disposeMaterial);
-            } else if (obj.material) {
-              disposeMaterial(obj.material);
+            if (obj.material) {
+              const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+              materials.forEach(disposeMaterial);
+              obj.material = null;
             }
-            obj.material = null;
           }
         });
         while (sceneRef.current.children.length > 0) {
@@ -301,6 +300,9 @@ function ThreeScene({ modelUrl, exerciseName, forceLowPerf }) {
         }
         sceneRef.current = null;
       }
+      
+      // Clear Three.js global cache to ensure loaders drop references
+      THREE.Cache.clear();
 
       // 5. Tear down renderer.
       //    - renderLists.dispose() releases all internal draw-call buffers.

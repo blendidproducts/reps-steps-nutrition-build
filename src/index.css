@@ -113,6 +113,10 @@ a:not(.no-min-height),
 input[type="submit"],
 input[type="button"],
 input[type="reset"],
+input[type="checkbox"],
+input[type="radio"],
+input[type="file"],
+input[type="image"],
 select,
 summary {
   min-height: 44px;
