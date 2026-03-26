@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useNutritionPlan } from "@/hooks/useNutritionPlan";
 import NutritionUpgradeGate from "@/components/nutrition/NutritionUpgradeGate";
+import MobileDrawerSelect from "@/components/MobileDrawerSelect";
 
 const MEAL_META = {
   breakfast: { emoji: "🌅", color: "#f59e0b", label: "Breakfast" },
@@ -148,10 +149,14 @@ function AddMealModal({ meal, programs, onClose, onAdded }) {
                 <>
                   <div>
                     <label className="text-gray-400 text-xs font-medium mb-1.5 block">Program</label>
-                    <select value={selectedProgram} onChange={e => { setSelectedProgram(e.target.value); setTargetDayNum(1); }}
-                      className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-400">
-                      {programs.map(p => <option key={p.id} value={p.id} style={{ background: "#0d1b2e" }}>{p.name}</option>)}
-                    </select>
+                    <MobileDrawerSelect
+                      value={selectedProgram}
+                      onValueChange={v => { setSelectedProgram(v); setTargetDayNum(1); }}
+                      options={programs.map(p => ({ value: p.id, label: p.name }))}
+                      placeholder="Select program"
+                      label="Program"
+                      triggerClassName="w-full bg-white/10 border-white/20 text-white text-sm"
+                    />
                   </div>
                   <div>
                     <label className="text-gray-400 text-xs font-medium mb-1.5 block">Day <span className="text-gray-600">(1–{maxDay})</span></label>
