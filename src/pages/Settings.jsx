@@ -58,33 +58,17 @@ const requestPermission = async (permissionName, friendlyName) => {
   }
 };
 
-// ── Secure email-verified deletion flow ─────────────────────────────────────
-// Step 1: send email code → Step 2: enter code → Step 3: type "DELETE"
-// Step 4: final countdown confirmation (high-friction, 5s mandatory wait)
+// ── Account deletion flow — App Store 5.1.1(v) compliant ────────────────────
+// Step 1: Clear intent confirmation with data summary
+// Step 2: Email verification code (security confirmation)
+// On success → logout
 function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
   const [step, setStep] = useState(1);
   const [code, setCode] = useState("");
-  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [isConfirming, setIsConfirming] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [sendError, setSendError] = useState(null);
   const [verifyError, setVerifyError] = useState(null);
-  // Step 4: mandatory 5-second countdown before the final delete button activates
-  const [countdown, setCountdown] = useState(5);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  // Start countdown when step 4 is reached
-  useEffect(() => {
-    if (step !== 4) return;
-    setCountdown(5);
-    const id = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) { clearInterval(id); return 0; }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [step]);
 
   const sendCode = async () => {
     setIsSending(true);
@@ -109,14 +93,15 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
     setIsSending(false);
   };
 
-  const verifyCode = async () => {
+  const verifyAndDelete = async () => {
     if (!code.trim()) return;
-    setIsConfirming(true);
+    setIsVerifying(true);
     setVerifyError(null);
     try {
       const res = await base44.functions.invoke('requestAccountDeletion', { action: 'confirm', code: code.trim() });
       if (res.data?.success) {
-        setStep(3);
+        toast.success('Account deleted. Logging you out…');
+        onSuccess();
       } else {
         const msg = res.data?.error || 'Invalid or expired code.';
         setVerifyError(msg);
@@ -129,185 +114,104 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
       setVerifyError(msg);
       toast.error(msg);
     }
-    setIsConfirming(false);
+    setIsVerifying(false);
   };
-
-  const advanceToFinalStep = () => {
-    if (deleteConfirmText !== "DELETE") return;
-    setStep(4);
-  };
-
-  const executeDeletion = async () => {
-    if (countdown > 0 || isDeleting) return;
-    setIsDeleting(true);
-    toast.success('Account deleted. Logging you out...');
-    onSuccess();
-  };
-
-  const stepLabel = { 1: 'Step 1 of 4', 2: 'Step 2 of 4', 3: 'Step 3 of 4', 4: 'Step 4 of 4' };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Delete account confirmation">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
       <div className="bg-[#0a1628] border border-red-500/40 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center" aria-hidden="true">
               <AlertTriangle className="w-5 h-5 text-red-500" />
             </div>
-            <div>
-              <h2 className="text-white font-bold text-lg leading-tight">Delete Account</h2>
-              <p className="text-xs text-gray-500">{stepLabel[step]}</p>
-            </div>
+            <h2 id="delete-modal-title" className="text-white font-bold text-lg">Delete Account</h2>
           </div>
           <button onClick={onCancel} aria-label="Close" className="text-gray-400 hover:text-white transition-colors no-min-height p-1">
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
-        {/* Progress dots */}
-        <div className="flex gap-1.5 mb-5 mt-3" aria-hidden="true">
-          {[1,2,3,4].map(s => (
+        {/* Progress indicator */}
+        <div className="flex gap-1.5 mb-5" aria-hidden="true">
+          {[1, 2].map(s => (
             <div key={s} className={`h-1 flex-1 rounded-full transition-all duration-300 ${step >= s ? 'bg-red-500' : 'bg-gray-700'}`} />
           ))}
         </div>
 
-        {/* Step 1 — Send verification code */}
+        {/* Step 1 — Intent + data summary */}
         {step === 1 && (
           <>
-            <p className="text-gray-300 text-sm mb-4">
-              For security, we'll send a <strong className="text-white">6-digit verification code</strong> to:
+            <p className="text-gray-300 text-sm mb-3">
+              Deleting your account will <strong className="text-red-400">permanently remove</strong> all of your data, including:
             </p>
-            <div className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 mb-3 text-center">
-              <p className="text-brand-blue font-mono font-bold">{userEmail}</p>
-            </div>
+            <ul className="text-sm text-gray-400 space-y-1 mb-4 list-disc list-inside">
+              <li>Workout logs &amp; session history</li>
+              <li>Progress photos &amp; body measurements</li>
+              <li>Achievements, streaks &amp; referral credits</li>
+              <li>AI Brain profile, meal logs &amp; nutrition goals</li>
+            </ul>
+            <p className="text-red-400 text-sm font-semibold mb-4">
+              Active subscriptions will not be refunded. This cannot be undone.
+            </p>
             {sendError && (
               <div className="bg-red-900/30 border border-red-600/40 rounded-lg p-3 mb-3 text-sm text-red-300" role="alert">
                 {sendError}
               </div>
             )}
             <div className="flex gap-3">
-              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300">Cancel</Button>
-              <Button onClick={sendCode} disabled={isSending} aria-label="Send verification code to email" className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold disabled:opacity-50">
-                {isSending ? 'Sending...' : 'Send Code'}
+              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300">
+                Cancel
+              </Button>
+              <Button onClick={sendCode} disabled={isSending} aria-label="Send email verification code to delete account" className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold disabled:opacity-50">
+                {isSending ? 'Sending…' : 'Delete My Account'}
               </Button>
             </div>
           </>
         )}
 
-        {/* Step 2 — Enter code */}
+        {/* Step 2 — Email verification */}
         {step === 2 && (
           <>
-            <p className="text-gray-300 text-sm mb-2">
+            <p className="text-gray-300 text-sm mb-1">
               Enter the 6-digit code sent to <span className="text-white font-semibold">{userEmail}</span>:
             </p>
+            <p className="text-gray-500 text-xs mb-3">Check your spam folder if you don't see it.</p>
             <Input
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="Enter 6-digit code"
+              placeholder="6-digit code"
               className="bg-gray-900 border-gray-700 text-white mb-1 font-mono text-center text-xl tracking-widest"
               maxLength={6}
               inputMode="numeric"
               autoFocus
-              aria-label="Verification code"
+              aria-label="Email verification code"
             />
             {verifyError && (
-              <div className="bg-red-900/30 border border-red-600/40 rounded-lg p-2 mb-2 text-xs text-red-300" role="alert">
+              <div className="bg-red-900/30 border border-red-600/40 rounded-lg p-2 mb-2 text-sm text-red-300" role="alert">
                 {verifyError}
               </div>
             )}
-            <div className="flex items-center justify-between mb-4">
-              <button onClick={() => { setStep(1); setCode(''); setSendError(null); setVerifyError(null); }} className="text-xs text-gray-500 hover:text-gray-300 no-min-height py-1" aria-label="Go back to resend verification code">
+            <div className="mb-4">
+              <button
+                onClick={() => { setStep(1); setCode(''); setSendError(null); setVerifyError(null); }}
+                className="text-sm text-gray-500 hover:text-gray-300 no-min-height py-1"
+                aria-label="Go back and resend code"
+              >
                 ← Resend code
               </button>
-              <span className="text-xs text-gray-600">Check spam if not received.</span>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300" disabled={isConfirming}>Cancel</Button>
-              <Button onClick={verifyCode} disabled={code.length < 6 || isConfirming} aria-label="Verify code" className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold disabled:opacity-40">
-                {isConfirming ? 'Verifying...' : 'Verify Code'}
-              </Button>
-            </div>
-          </>
-        )}
-
-        {/* Step 3 — Type DELETE */}
-        {step === 3 && (
-          <>
-            <div className="bg-red-900/30 border border-red-600/50 rounded-xl p-4 mb-4" role="alert">
-              <p className="text-red-300 text-sm font-bold mb-1">⛔ Confirmation required</p>
-              <p className="text-gray-400 text-sm">
-                Type <strong className="text-red-400 font-mono tracking-widest">DELETE</strong> to proceed to the final step.
-              </p>
-            </div>
-            <Input
-              value={deleteConfirmText}
-              onChange={(e) => setDeleteConfirmText(e.target.value)}
-              placeholder="Type DELETE to continue"
-              className="bg-gray-900 border-red-700 text-white mb-4 font-mono text-center tracking-widest"
-              autoFocus
-              aria-label="Type DELETE to confirm account deletion"
-            />
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300">Cancel</Button>
-              <Button
-                onClick={advanceToFinalStep}
-                disabled={deleteConfirmText !== "DELETE"}
-                aria-label="Proceed to final confirmation step"
-                className="flex-1 bg-red-700 hover:bg-red-800 text-white font-bold disabled:opacity-30"
-              >
-                Continue →
-              </Button>
-            </div>
-          </>
-        )}
-
-        {/* Step 4 — Final summary + mandatory countdown */}
-        {step === 4 && (
-          <>
-            <div className="bg-red-950/60 border-2 border-red-600/70 rounded-xl p-4 mb-4" role="alert" aria-live="assertive">
-              <p className="text-red-300 font-black text-base mb-3 text-center">🚨 POINT OF NO RETURN</p>
-              <p className="text-gray-300 text-xs mb-2">The following will be <strong className="text-red-400">permanently destroyed</strong> right now:</p>
-              <ul className="text-xs text-gray-400 space-y-1 mb-3 list-none">
-                {[
-                  '🏋️ All workout logs & session history',
-                  '📸 Progress photos',
-                  '📏 Body measurements & AI Brain profile',
-                  '🏆 Achievements, streaks & referral credits',
-                  '🍎 Meal logs & nutrition goals',
-                  '💳 Active subscription (no refund)',
-                ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-2"><span className="flex-shrink-0">{item}</span></li>
-                ))}
-              </ul>
-              <p className="text-red-400 text-xs font-bold text-center border-t border-red-600/40 pt-2">
-                This account (<span className="font-mono">{userEmail}</span>) cannot be recovered by support.
-              </p>
-            </div>
-
-            {/* Countdown ring */}
-            {countdown > 0 ? (
-              <div className="flex flex-col items-center mb-4" aria-live="polite" aria-atomic="true">
-                <div className="w-16 h-16 rounded-full border-4 border-red-600 flex items-center justify-center mb-2 bg-red-900/20">
-                  <span className="text-2xl font-black text-red-400">{countdown}</span>
-                </div>
-                <p className="text-xs text-gray-500">Please read carefully… button unlocks in {countdown}s</p>
-              </div>
-            ) : (
-              <p className="text-xs text-gray-500 text-center mb-4">Button unlocked. You may now delete your account.</p>
-            )}
-
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300" disabled={isDeleting}>
-                Cancel — Keep Account
+              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300" disabled={isVerifying}>
+                Cancel
               </Button>
               <Button
-                onClick={executeDeletion}
-                disabled={countdown > 0 || isDeleting}
-                aria-label="Permanently delete my account and all data"
-                aria-disabled={countdown > 0 || isDeleting}
-                className="flex-1 bg-red-700 hover:bg-red-800 text-white font-black disabled:opacity-30 disabled:cursor-not-allowed"
+                onClick={verifyAndDelete}
+                disabled={code.length < 6 || isVerifying}
+                aria-label="Confirm and permanently delete account"
+                className="flex-1 bg-red-700 hover:bg-red-800 text-white font-bold disabled:opacity-40"
               >
-                {isDeleting ? 'Deleting...' : '🗑 Delete Forever'}
+                {isVerifying ? 'Deleting…' : 'Confirm & Delete'}
               </Button>
             </div>
           </>
@@ -325,6 +229,7 @@ export default function Settings() {
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  // showDeleteAlert → Stage 1 native dialog; showDeleteModal → email-verify flow
 
   const [settings, setSettings] = useState(() => {
     const defaultSettings = {

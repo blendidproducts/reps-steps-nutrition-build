@@ -153,45 +153,84 @@ export function NavigationManagerProvider({ children }) {
   //   3. Re-push on location change: existing behaviour, kept as-is.
 
   const lastBackRef = useRef(0);
+  // Track whether we're currently processing a back navigation to prevent
+  // re-entrant calls that can cause navigation loops in iOS WKWebView.
+  const isHandlingBackRef = useRef(false);
+  // Track the sentinel push ID so we can detect genuine user back-presses
+  // vs. our own sentinel pops (iOS WKWebView sometimes fires popstate for
+  // history entries we push ourselves).
+  const sentinelCountRef = useRef(0);
+
+  const pushSentinel = useCallback(() => {
+    sentinelCountRef.current += 1;
+    window.history.pushState({ __rns_sentinel: true, _sid: sentinelCountRef.current }, "");
+  }, []);
 
   useEffect(() => {
     // Always (re-)push the sentinel whenever the location key changes so
     // navigating forward/backward in-app never leaves us without a sentinel.
-    window.history.pushState({ __rns_sentinel: true }, "");
+    pushSentinel();
 
     const handlePopState = (e) => {
-      // Debounce: ignore events fired within 300 ms of the previous one.
+      // If this popstate was triggered by our own pushState sentinel, ignore it.
+      // iOS WKWebView can fire popstate for programmatic pushState calls.
+      if (e.state?.__rns_sentinel) {
+        // This is a sentinel pop — the user pressed back past our sentinel.
+        // Re-push and handle the intent.
+      } else {
+        // Non-sentinel pop (e.g. browser forward/back controls in desktop preview).
+        // Re-push sentinel and let the browser handle it normally.
+        pushSentinel();
+        return;
+      }
+
+      // Debounce: ignore events fired within 350 ms of the previous one.
+      // iOS WKWebView can double-fire on rapid swipe-back gestures.
       const now = Date.now();
-      if (now - lastBackRef.current < 300) return;
+      if (now - lastBackRef.current < 350) {
+        pushSentinel();
+        return;
+      }
       lastBackRef.current = now;
 
-      if (_interceptors.length > 0) {
-        _interceptors[_interceptors.length - 1].handler();
-        window.history.pushState({ __rns_sentinel: true }, "");
+      // Guard against re-entrant calls (navigation loop prevention).
+      if (isHandlingBackRef.current) {
+        pushSentinel();
         return;
       }
-      const currentPath = location.pathname;
-      if (ROOT_PATHS.has(currentPath)) {
-        // At a root page — just re-push the sentinel so the app stays open.
-        window.history.pushState({ __rns_sentinel: true }, "");
-        return;
+      isHandlingBackRef.current = true;
+
+      try {
+        if (_interceptors.length > 0) {
+          _interceptors[_interceptors.length - 1].handler();
+          pushSentinel();
+          return;
+        }
+        const currentPath = location.pathname;
+        if (ROOT_PATHS.has(currentPath) || currentPath === "/") {
+          // At a root page — keep app open, just re-push sentinel.
+          pushSentinel();
+          return;
+        }
+        // Navigate back within the SPA, then re-push sentinel after a tick
+        // so it lands on top of the new history entry.
+        navigate(-1);
+        setTimeout(pushSentinel, 0);
+      } finally {
+        // Release the re-entrancy guard after a short delay to allow
+        // the navigation and any synchronous React re-renders to settle.
+        setTimeout(() => { isHandlingBackRef.current = false; }, 400);
       }
-      navigate(-1);
-      window.history.pushState({ __rns_sentinel: true }, "");
     };
 
-    // Re-push sentinel when the WebView regains foreground (Android resume).
+    // Re-push sentinel when the WebView regains foreground (Android/iOS resume).
     const handleVisibility = () => {
-      if (!document.hidden) {
-        window.history.pushState({ __rns_sentinel: true }, "");
-      }
+      if (!document.hidden) pushSentinel();
     };
 
-    // Re-push sentinel when the window regains focus (covers some edge cases
-    // where visibilitychange does not fire reliably on older Android WebViews).
-    const handleFocus = () => {
-      window.history.pushState({ __rns_sentinel: true }, "");
-    };
+    // Re-push sentinel when the window regains focus (covers edge cases where
+    // visibilitychange does not fire on older WebViews).
+    const handleFocus = () => { pushSentinel(); };
 
     window.addEventListener("popstate", handlePopState);
     document.addEventListener("visibilitychange", handleVisibility);
@@ -202,7 +241,7 @@ export function NavigationManagerProvider({ children }) {
       window.removeEventListener("focus", handleFocus);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate, location.key]);
+  }, [navigate, location.key, pushSentinel]);
 
   // ── Track current path into its tab stack ────────────────────────────────
   useEffect(() => {
