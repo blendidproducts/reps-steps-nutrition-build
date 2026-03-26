@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import MobileDrawerSelect from "@/components/MobileDrawerSelect";
 import { Textarea } from "@/components/ui/textarea";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -144,57 +144,49 @@ export default function MealPlans() {
                   </div>
                   <div>
                     <Label>Goal Type</Label>
-                    <Select value={newPlan.goal_type} onValueChange={(v) => setNewPlan({...newPlan, goal_type: v})}>
-                      <SelectTrigger className="bg-background border-border">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="weight_loss">Weight Loss</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                        <SelectItem value="muscle_gain">Muscle Gain</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <MobileDrawerSelect
+                      value={newPlan.goal_type}
+                      onValueChange={(v) => setNewPlan({...newPlan, goal_type: v})}
+                      options={[
+                        { value: 'weight_loss', label: 'Weight Loss' },
+                        { value: 'maintenance', label: 'Maintenance' },
+                        { value: 'muscle_gain', label: 'Muscle Gain' },
+                      ]}
+                      placeholder="Select goal type"
+                      label="Goal Type"
+                    />
                   </div>
 
                   {/* Meal Builder */}
                   <div>
                     <Label>Add Meals</Label>
                     <div className="grid grid-cols-3 gap-2 mt-2">
-                      <Select onValueChange={(v) => setNewPlan({...newPlan, _selectedDay: v})}>
-                        <SelectTrigger className="bg-background border-border">
-                          <SelectValue placeholder="Day" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {days.map(d => (
-                            <SelectItem key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select onValueChange={(v) => setNewPlan({...newPlan, _selectedMealType: v})}>
-                        <SelectTrigger className="bg-background border-border">
-                          <SelectValue placeholder="Meal" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {mealTypes.map(m => (
-                            <SelectItem key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select onValueChange={(v) => {
-                        const food = foods.find(f => f.id === v);
-                        if (food && newPlan._selectedDay && newPlan._selectedMealType) {
-                          addMealToPlan(newPlan._selectedDay, newPlan._selectedMealType, food.id, food.name);
-                        }
-                      }}>
-                        <SelectTrigger className="bg-background border-border">
-                          <SelectValue placeholder="Food" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {foods.map(f => (
-                            <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <MobileDrawerSelect
+                        value={newPlan._selectedDay || ""}
+                        onValueChange={(v) => setNewPlan({...newPlan, _selectedDay: v})}
+                        options={days.map(d => ({ value: d, label: d.charAt(0).toUpperCase() + d.slice(1) }))}
+                        placeholder="Day"
+                        label="Day"
+                      />
+                      <MobileDrawerSelect
+                        value={newPlan._selectedMealType || ""}
+                        onValueChange={(v) => setNewPlan({...newPlan, _selectedMealType: v})}
+                        options={mealTypes.map(m => ({ value: m, label: m.charAt(0).toUpperCase() + m.slice(1) }))}
+                        placeholder="Meal"
+                        label="Meal Type"
+                      />
+                      <MobileDrawerSelect
+                        value=""
+                        onValueChange={(v) => {
+                          const food = foods.find(f => f.id === v);
+                          if (food && newPlan._selectedDay && newPlan._selectedMealType) {
+                            addMealToPlan(newPlan._selectedDay, newPlan._selectedMealType, food.id, food.name);
+                          }
+                        }}
+                        options={foods.map(f => ({ value: f.id, label: f.name }))}
+                        placeholder="Food"
+                        label="Food"
+                      />
                     </div>
                   </div>
 

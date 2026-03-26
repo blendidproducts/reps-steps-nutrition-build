@@ -9,6 +9,7 @@
  * Mount <NavigationManager> once inside <Router>, replacing the two separate hooks.
  */
 import React, { createContext, useContext, useCallback, useEffect, useRef } from "react";
+// Note: useCallback is still used for navigateToTab / navigateInTab below.
 import { useNavigate, useLocation } from "react-router-dom";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -153,95 +154,77 @@ export function NavigationManagerProvider({ children }) {
   //   3. Re-push on location change: existing behaviour, kept as-is.
 
   const lastBackRef = useRef(0);
-  // Track whether we're currently processing a back navigation to prevent
-  // re-entrant calls that can cause navigation loops in iOS WKWebView.
+  // Re-entrancy guard: prevents a second popstate from firing while we're
+  // already handling one (can happen in iOS WKWebView on fast swipe-back).
   const isHandlingBackRef = useRef(false);
-  // Track the sentinel push ID so we can detect genuine user back-presses
-  // vs. our own sentinel pops (iOS WKWebView sometimes fires popstate for
-  // history entries we push ourselves).
-  const sentinelCountRef = useRef(0);
-
-  const pushSentinel = useCallback(() => {
-    sentinelCountRef.current += 1;
-    window.history.pushState({ __rns_sentinel: true, _sid: sentinelCountRef.current }, "");
-  }, []);
 
   useEffect(() => {
-    // Always (re-)push the sentinel whenever the location key changes so
-    // navigating forward/backward in-app never leaves us without a sentinel.
-    pushSentinel();
+    // ── Strategy: no sentinel manipulation ──────────────────────────────────
+    // Instead of pushing dummy history entries, we listen for popstate and
+    // call navigate(-1) for in-app back navigation, or simply re-push one
+    // entry only when the user is already at a root so the app cannot close.
+    //
+    // One single dummy entry is pushed only at mount (and on resume) so
+    // pressing back at a root page fires a popstate we can swallow rather
+    // than letting the WebView close the app. This is the minimum viable
+    // sentinel approach — one entry, re-pushed only when needed.
 
-    const handlePopState = (e) => {
-      // If this popstate was triggered by our own pushState sentinel, ignore it.
-      // iOS WKWebView can fire popstate for programmatic pushState calls.
-      if (e.state?.__rns_sentinel) {
-        // This is a sentinel pop — the user pressed back past our sentinel.
-        // Re-push and handle the intent.
-      } else {
-        // Non-sentinel pop (e.g. browser forward/back controls in desktop preview).
-        // Re-push sentinel and let the browser handle it normally.
-        pushSentinel();
-        return;
-      }
+    // Push one guard entry at mount so root-page back-press is interceptable.
+    window.history.pushState({ __rns_guard: true }, "");
 
-      // Debounce: ignore events fired within 350 ms of the previous one.
-      // iOS WKWebView can double-fire on rapid swipe-back gestures.
+    const handlePopState = () => {
       const now = Date.now();
-      if (now - lastBackRef.current < 350) {
-        pushSentinel();
-        return;
-      }
+      // Debounce rapid double-fires (iOS WKWebView, some Android WebViews).
+      if (now - lastBackRef.current < 350) return;
       lastBackRef.current = now;
 
-      // Guard against re-entrant calls (navigation loop prevention).
-      if (isHandlingBackRef.current) {
-        pushSentinel();
-        return;
-      }
+      // Re-entrancy guard.
+      if (isHandlingBackRef.current) return;
       isHandlingBackRef.current = true;
 
+      const currentPath = location.pathname;
+
       try {
+        // 1. Custom interceptors (modals, wizards, etc.) take highest priority.
         if (_interceptors.length > 0) {
           _interceptors[_interceptors.length - 1].handler();
-          pushSentinel();
+          // Re-push guard so the next back press is also interceptable.
+          window.history.pushState({ __rns_guard: true }, "");
           return;
         }
-        const currentPath = location.pathname;
+
+        // 2. At a root/home page: swallow the back press to keep app open.
         if (ROOT_PATHS.has(currentPath) || currentPath === "/") {
-          // At a root page — keep app open, just re-push sentinel.
-          pushSentinel();
+          window.history.pushState({ __rns_guard: true }, "");
           return;
         }
-        // Navigate back within the SPA, then re-push sentinel after a tick
-        // so it lands on top of the new history entry.
+
+        // 3. Inside a sub-page: use React Router to go back.
+        // Re-push the guard after a tick so it sits on top of wherever
+        // React Router lands us.
         navigate(-1);
-        setTimeout(pushSentinel, 0);
+        setTimeout(() => {
+          window.history.pushState({ __rns_guard: true }, "");
+        }, 50);
       } finally {
-        // Release the re-entrancy guard after a short delay to allow
-        // the navigation and any synchronous React re-renders to settle.
         setTimeout(() => { isHandlingBackRef.current = false; }, 400);
       }
     };
 
-    // Re-push sentinel when the WebView regains foreground (Android/iOS resume).
+    // Re-push the guard when the WebView is resumed (Android/iOS background→foreground).
+    // The OS sometimes discards our extra history entry while backgrounded.
     const handleVisibility = () => {
-      if (!document.hidden) pushSentinel();
+      if (!document.hidden) window.history.pushState({ __rns_guard: true }, "");
     };
-
-    // Re-push sentinel when the window regains focus (covers edge cases where
-    // visibilitychange does not fire on older WebViews).
-    const handleFocus = () => { pushSentinel(); };
 
     window.addEventListener("popstate", handlePopState);
     document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("focus", handleFocus);
     return () => {
       window.removeEventListener("popstate", handlePopState);
       document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("focus", handleFocus);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate, location.key, pushSentinel]);
+  }, [navigate, location.key]);
 
   // ── Track current path into its tab stack ────────────────────────────────
   useEffect(() => {
