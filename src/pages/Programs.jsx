@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { WeeklyProgram } from "@/entities/WeeklyProgram";
 import { SavedWorkout } from "@/entities/SavedWorkout";
@@ -7,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import MobileDrawerSelect from "@/components/MobileDrawerSelect";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Plus, Play, Trash2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
@@ -150,26 +149,22 @@ export default function Programs() {
                   <div className="grid gap-3">
                     {days.map(day => (
                       <div key={day} className="flex items-center gap-3">
-                        <span className="w-28 capitalize font-medium">{day}</span>
-                        <Select
-                          value={newProgram.schedule[day] || ''}
-                          onValueChange={(value) => setNewProgram({
-                            ...newProgram,
-                            schedule: {...newProgram.schedule, [day]: value}
-                          })}
-                        >
-                          <SelectTrigger className="flex-1 bg-background border-border">
-                            <SelectValue placeholder="Select workout or rest" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="rest">Rest Day</SelectItem>
-                            {savedWorkouts.map(workout => (
-                              <SelectItem key={workout.id} value={workout.id}>
-                                {workout.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <span className="w-28 capitalize font-medium flex-shrink-0">{day}</span>
+                        <div className="flex-1">
+                          <MobileDrawerSelect
+                            value={newProgram.schedule[day] || ''}
+                            onValueChange={(value) => setNewProgram({
+                              ...newProgram,
+                              schedule: {...newProgram.schedule, [day]: value}
+                            })}
+                            options={[
+                              { value: 'rest', label: 'Rest Day' },
+                              ...savedWorkouts.map(w => ({ value: w.id, label: w.name }))
+                            ]}
+                            placeholder="Select workout or rest"
+                            label={`${day.charAt(0).toUpperCase() + day.slice(1)} workout`}
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>

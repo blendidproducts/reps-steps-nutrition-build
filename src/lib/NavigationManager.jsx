@@ -9,7 +9,6 @@
  * Mount <NavigationManager> once inside <Router>, replacing the two separate hooks.
  */
 import React, { createContext, useContext, useCallback, useEffect, useRef } from "react";
-// Note: useCallback is still used for navigateToTab / navigateInTab below.
 import { useNavigate, useLocation } from "react-router-dom";
 
 // ─────────────────────────────────────────────────────────────────────────────
