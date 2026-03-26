@@ -59,16 +59,32 @@ const requestPermission = async (permissionName, friendlyName) => {
 };
 
 // ── Secure email-verified deletion flow ─────────────────────────────────────
-// Step 1: send email code → Step 2: enter code → Step 3: type "DELETE" to confirm
+// Step 1: send email code → Step 2: enter code → Step 3: type "DELETE"
+// Step 4: final countdown confirmation (high-friction, 5s mandatory wait)
 function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
-  const [step, setStep] = useState(1); // 1=send code, 2=enter code, 3=type DELETE
+  const [step, setStep] = useState(1);
   const [code, setCode] = useState("");
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
-
   const [sendError, setSendError] = useState(null);
   const [verifyError, setVerifyError] = useState(null);
+  // Step 4: mandatory 5-second countdown before the final delete button activates
+  const [countdown, setCountdown] = useState(5);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Start countdown when step 4 is reached
+  useEffect(() => {
+    if (step !== 4) return;
+    setCountdown(5);
+    const id = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) { clearInterval(id); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [step]);
 
   const sendCode = async () => {
     setIsSending(true);
@@ -116,25 +132,43 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
     setIsConfirming(false);
   };
 
-  const confirmDeletion = () => {
+  const advanceToFinalStep = () => {
     if (deleteConfirmText !== "DELETE") return;
+    setStep(4);
+  };
+
+  const executeDeletion = async () => {
+    if (countdown > 0 || isDeleting) return;
+    setIsDeleting(true);
     toast.success('Account deleted. Logging you out...');
     onSuccess();
   };
 
+  const stepLabel = { 1: 'Step 1 of 4', 2: 'Step 2 of 4', 3: 'Step 3 of 4', 4: 'Step 4 of 4' };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Delete account confirmation">
       <div className="bg-[#0a1628] border border-red-500/40 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center" aria-hidden="true">
               <AlertTriangle className="w-5 h-5 text-red-500" />
             </div>
-            <h2 className="text-white font-bold text-lg">Delete Account</h2>
+            <div>
+              <h2 className="text-white font-bold text-lg leading-tight">Delete Account</h2>
+              <p className="text-xs text-gray-500">{stepLabel[step]}</p>
+            </div>
           </div>
           <button onClick={onCancel} aria-label="Close" className="text-gray-400 hover:text-white transition-colors no-min-height p-1">
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
+        </div>
+
+        {/* Progress dots */}
+        <div className="flex gap-1.5 mb-5 mt-3" aria-hidden="true">
+          {[1,2,3,4].map(s => (
+            <div key={s} className={`h-1 flex-1 rounded-full transition-all duration-300 ${step >= s ? 'bg-red-500' : 'bg-gray-700'}`} />
+          ))}
         </div>
 
         {/* Step 1 — Send verification code */}
@@ -152,9 +186,7 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
               </div>
             )}
             <div className="flex gap-3">
-              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300">
-                Cancel
-              </Button>
+              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300">Cancel</Button>
               <Button onClick={sendCode} disabled={isSending} aria-label="Send verification code to email" className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold disabled:opacity-50">
                 {isSending ? 'Sending...' : 'Send Code'}
               </Button>
@@ -184,55 +216,98 @@ function DeleteAccountModal({ userEmail, onSuccess, onCancel }) {
               </div>
             )}
             <div className="flex items-center justify-between mb-4">
-              <button onClick={() => { setStep(1); setCode(''); setSendError(null); setVerifyError(null); }} className="text-xs text-gray-500 hover:text-gray-300 no-min-height py-1" aria-label="Resend verification code">
-                Resend code
+              <button onClick={() => { setStep(1); setCode(''); setSendError(null); setVerifyError(null); }} className="text-xs text-gray-500 hover:text-gray-300 no-min-height py-1" aria-label="Go back to resend verification code">
+                ← Resend code
               </button>
-              <span className="text-xs text-gray-600">Didn't receive it? Check spam or resend.</span>
+              <span className="text-xs text-gray-600">Check spam if not received.</span>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300" disabled={isConfirming}>
-                Cancel
-              </Button>
-              <Button
-                onClick={verifyCode}
-                disabled={code.length < 6 || isConfirming}
-                aria-label="Verify code"
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold disabled:opacity-40"
-              >
+              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300" disabled={isConfirming}>Cancel</Button>
+              <Button onClick={verifyCode} disabled={code.length < 6 || isConfirming} aria-label="Verify code" className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold disabled:opacity-40">
                 {isConfirming ? 'Verifying...' : 'Verify Code'}
               </Button>
             </div>
           </>
         )}
 
-        {/* Step 3 — Final high-friction "type DELETE" confirmation */}
+        {/* Step 3 — Type DELETE */}
         {step === 3 && (
           <>
             <div className="bg-red-900/30 border border-red-600/50 rounded-xl p-4 mb-4" role="alert">
-              <p className="text-red-300 text-sm font-bold mb-1">⛔ Final confirmation required</p>
+              <p className="text-red-300 text-sm font-bold mb-1">⛔ Confirmation required</p>
               <p className="text-gray-400 text-sm">
-                Type <strong className="text-red-400 font-mono tracking-widest">DELETE</strong> below to permanently destroy your account and all data. There is no recovery.
+                Type <strong className="text-red-400 font-mono tracking-widest">DELETE</strong> to proceed to the final step.
               </p>
             </div>
             <Input
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value)}
-              placeholder='Type DELETE to confirm'
+              placeholder="Type DELETE to continue"
               className="bg-gray-900 border-red-700 text-white mb-4 font-mono text-center tracking-widest"
               autoFocus
               aria-label="Type DELETE to confirm account deletion"
             />
             <div className="flex gap-3">
-              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300">
-                Cancel
-              </Button>
+              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300">Cancel</Button>
               <Button
-                onClick={confirmDeletion}
+                onClick={advanceToFinalStep}
                 disabled={deleteConfirmText !== "DELETE"}
-                aria-label="Permanently delete account"
+                aria-label="Proceed to final confirmation step"
                 className="flex-1 bg-red-700 hover:bg-red-800 text-white font-bold disabled:opacity-30"
               >
-                Permanently Delete
+                Continue →
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* Step 4 — Final summary + mandatory countdown */}
+        {step === 4 && (
+          <>
+            <div className="bg-red-950/60 border-2 border-red-600/70 rounded-xl p-4 mb-4" role="alert" aria-live="assertive">
+              <p className="text-red-300 font-black text-base mb-3 text-center">🚨 POINT OF NO RETURN</p>
+              <p className="text-gray-300 text-xs mb-2">The following will be <strong className="text-red-400">permanently destroyed</strong> right now:</p>
+              <ul className="text-xs text-gray-400 space-y-1 mb-3 list-none">
+                {[
+                  '🏋️ All workout logs & session history',
+                  '📸 Progress photos',
+                  '📏 Body measurements & AI Brain profile',
+                  '🏆 Achievements, streaks & referral credits',
+                  '🍎 Meal logs & nutrition goals',
+                  '💳 Active subscription (no refund)',
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-2"><span className="flex-shrink-0">{item}</span></li>
+                ))}
+              </ul>
+              <p className="text-red-400 text-xs font-bold text-center border-t border-red-600/40 pt-2">
+                This account (<span className="font-mono">{userEmail}</span>) cannot be recovered by support.
+              </p>
+            </div>
+
+            {/* Countdown ring */}
+            {countdown > 0 ? (
+              <div className="flex flex-col items-center mb-4" aria-live="polite" aria-atomic="true">
+                <div className="w-16 h-16 rounded-full border-4 border-red-600 flex items-center justify-center mb-2 bg-red-900/20">
+                  <span className="text-2xl font-black text-red-400">{countdown}</span>
+                </div>
+                <p className="text-xs text-gray-500">Please read carefully… button unlocks in {countdown}s</p>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500 text-center mb-4">Button unlocked. You may now delete your account.</p>
+            )}
+
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={onCancel} className="flex-1 border-gray-600 text-gray-300" disabled={isDeleting}>
+                Cancel — Keep Account
+              </Button>
+              <Button
+                onClick={executeDeletion}
+                disabled={countdown > 0 || isDeleting}
+                aria-label="Permanently delete my account and all data"
+                aria-disabled={countdown > 0 || isDeleting}
+                className="flex-1 bg-red-700 hover:bg-red-800 text-white font-black disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                {isDeleting ? 'Deleting...' : '🗑 Delete Forever'}
               </Button>
             </div>
           </>
