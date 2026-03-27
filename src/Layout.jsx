@@ -158,11 +158,25 @@ export default function Layout({ children, currentPageName }) {
         };
       });
 
-      const warmupExercises = [
-        { id: 'warmup-1', name: 'Walk in Place', category: 'warmup', metric: 'time', target_time: 60 },
-        { id: 'warmup-2', name: 'Arm Circles Forward', category: 'warmup', metric: 'time', target_time: 15 },
-        { id: 'warmup-3', name: 'Hip Circles', category: 'warmup', metric: 'time', target_time: 20 }
-      ].map(ex => ({
+      const categories = new Set(exercises.map(ex => ex.category));
+      let baseWarmups = [
+        { id: 'warmup-1', name: 'Walk in Place', category: 'warmup', metric: 'time', target_time: 60 }
+      ];
+
+      if (categories.has('upper_body') || categories.has('full_body')) {
+        baseWarmups.push({ id: 'warmup-upper-1', name: 'Arm Circles Forward', category: 'warmup', metric: 'time', target_time: 30 });
+        baseWarmups.push({ id: 'warmup-upper-2', name: 'Chest Opener Stretch', category: 'warmup', metric: 'time', target_time: 30 });
+      }
+      if (categories.has('lower_body') || categories.has('full_body')) {
+        baseWarmups.push({ id: 'warmup-lower-1', name: 'Hip Circles', category: 'warmup', metric: 'time', target_time: 30 });
+        baseWarmups.push({ id: 'warmup-lower-2', name: 'Leg Swings', category: 'warmup', metric: 'time', target_time: 30 });
+        baseWarmups.push({ id: 'warmup-lower-3', name: 'Toe Touches', category: 'warmup', metric: 'time', target_time: 20 });
+      }
+      if (categories.has('core') || categories.has('full_body') || baseWarmups.length < 3) {
+        baseWarmups.push({ id: 'warmup-core-1', name: 'Torso Twists', category: 'warmup', metric: 'time', target_time: 30 });
+      }
+
+      const warmupExercises = baseWarmups.map(ex => ({
         exercise_id: ex.id,
         exercise_name: ex.name,
         target_reps: 0,
