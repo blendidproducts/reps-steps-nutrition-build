@@ -2,7 +2,7 @@ import React, { memo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useNavigationManager, resolveTabForPath, TAB_ROOTS, pushTabPath } from "@/lib/NavigationManager";
 import { createPageUrl } from "@/utils";
-import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box, Users, Clock, Brain, Watch, ShoppingBag } from "lucide-react";
+import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box, Users, Clock, Brain, Watch, ShoppingBag, ListTodo } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { base44 } from "@/api/base44Client";
 import { PresetProgram } from "@/entities/PresetProgram";
@@ -47,6 +47,7 @@ const navigationItems = [
   { title: "Add-Ons & Pricing", url: createPageUrl("AddOns"), icon: ShoppingBag },
   { title: "Referrals", url: createPageUrl("Referrals"), icon: Gift },
   { title: "Upload 3D Models", url: createPageUrl("Upload3DModels"), icon: Box },
+  { title: "Incomplete Exercises", url: createPageUrl("IncompleteExercises"), icon: ListTodo },
   { title: "Help", url: createPageUrl("Help"), icon: HelpCircle },
   { title: "Settings", url: createPageUrl("Settings"), icon: Settings },
 ];
