@@ -14,7 +14,6 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
-import IncompleteExercises from './pages/IncompleteExercises';
 
 // Fallback shown while a lazy page chunk is loading
 const PageLoader = () => (
@@ -80,7 +79,6 @@ const AuthenticatedApp = () => {
             }
           />
         ))}
-        <Route path="/IncompleteExercises" element={<LayoutWrapper currentPageName="IncompleteExercises"><IncompleteExercises /></LayoutWrapper>} />
         <Route path="*" element={<PageNotFound />} />
       </Routes>
     </Suspense>
