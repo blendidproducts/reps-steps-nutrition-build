@@ -20,6 +20,7 @@ export default function FoodPhotoAnalyzer() {
   const navigate = useNavigate();
   const { plan, loading: planLoading, hasAiAddon } = useNutritionPlan();
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
   const [image, setImage] = useState(null); // base64 preview
   const [imageFile, setImageFile] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -160,28 +161,44 @@ If you can't identify something clearly, make a reasonable estimate.`,
                 </button>
               </div>
             ) : (
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full h-52 flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-gray-300 hover:bg-white/5 transition-all rounded-xl border-2 border-dashed border-white/20 hover:border-orange-500/50"
-              >
+              <div className="w-full h-52 flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-white/20 px-4">
                 <div className="w-16 h-16 bg-orange-500/20 rounded-2xl flex items-center justify-center">
                   <Camera className="w-8 h-8 text-orange-400" />
                 </div>
                 <div className="text-center">
-                  <div className="font-medium text-sm text-white">Take or upload a photo</div>
+                  <div className="font-medium text-sm text-white">Add a food photo</div>
                   <div className="text-xs text-gray-500 mt-0.5">JPG, PNG, HEIC supported</div>
                 </div>
-                <div className="flex gap-2">
-                  <span className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 px-3 py-1 rounded-full">📷 Camera</span>
-                  <span className="text-xs bg-white/10 text-gray-400 border border-white/20 px-3 py-1 rounded-full">📁 Gallery</span>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 px-4 py-2 rounded-full hover:bg-orange-500/30 transition-all"
+                  >
+                    📷 Take Photo
+                  </button>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-xs bg-white/10 text-gray-300 border border-white/20 px-4 py-2 rounded-full hover:bg-white/20 transition-all"
+                  >
+                    📁 Choose from Gallery
+                  </button>
                 </div>
-              </button>
+              </div>
             )}
+            {/* Camera-only input */}
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            {/* Gallery input - no capture attribute */}
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
               onChange={handleFileChange}
               className="hidden"
             />
