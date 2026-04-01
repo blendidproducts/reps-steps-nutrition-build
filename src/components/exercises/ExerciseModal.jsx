@@ -114,9 +114,20 @@ export default function ExerciseModal({ exercise, isOpen, onClose }) {
               <Exercise3DViewer modelUrl={exercise.model_url} exerciseName={exercise.name} />
             ) : (
               <>
-                {exercise.video_url ? (
+                {(exercise.youtube_url || exercise.video_url) ? (
                   <div className="w-full h-full">
-                    {exercise.video_url.includes('youtube.com') || exercise.video_url.includes('youtu.be') ? (
+                    {exercise.youtube_url ? (
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        src={exercise.youtube_url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                        title={exercise.name}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="rounded-lg"
+                      />
+                    ) : exercise.video_url.includes('youtube.com') || exercise.video_url.includes('youtu.be') ? (
                       <iframe
                         width="100%"
                         height="100%"

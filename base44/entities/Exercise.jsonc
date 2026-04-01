@@ -1,0 +1,81 @@
+{
+  "name": "Exercise",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the exercise"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "upper_body",
+        "lower_body",
+        "core",
+        "cardio",
+        "full_body"
+      ],
+      "description": "Exercise category"
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description of the exercise"
+    },
+    "instructions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Step-by-step instructions"
+    },
+    "tips": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Form tips and variations"
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": [
+        "beginner",
+        "intermediate",
+        "advanced"
+      ],
+      "description": "Difficulty level"
+    },
+    "muscle_groups": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Primary muscle groups targeted"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Exercise demonstration image URL"
+    },
+    "model_url": {
+      "type": "string",
+      "description": "3D model GLB file URL for animated exercise guide"
+    },
+    "youtube_url": {
+      "type": "string",
+      "description": "YouTube video link for the exercise"
+    },
+    "metric": {
+      "type": "string",
+      "enum": [
+        "reps",
+        "time"
+      ],
+      "default": "reps",
+      "description": "How the exercise is measured (reps or time in seconds)"
+    }
+  },
+  "required": [
+    "name",
+    "category",
+    "description"
+  ]
+}

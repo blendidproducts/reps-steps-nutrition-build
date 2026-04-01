@@ -350,7 +350,7 @@ export default function ActiveWorkout() {
       const exList = await base44.entities.Exercise.list(); setAllExercises(exList);
       data.exercises = data.exercises.map(we => {
         const d = exList.find(ex => ex.id === we.exercise_id || ex.name === we.exercise_name);
-        return { ...we, image_url: d?.image_url, instructions: d?.instructions, metric: d?.metric || we.metric || 'reps', category: we.category || d?.category || 'full_body', model_url: d?.model_url };
+        return { ...we, image_url: d?.image_url, instructions: d?.instructions, metric: d?.metric || we.metric || 'reps', category: we.category || d?.category || 'full_body', model_url: d?.model_url, video_url: d?.video_url, youtube_url: d?.youtube_url };
       });
       if (data.workout_type === 'time_based' && data.total_duration > 0) {
         const tpe = Math.floor((data.total_duration * 60) / data.exercises.length);
@@ -659,7 +659,7 @@ export default function ActiveWorkout() {
       </div>
 
       {/* All Modals */}
-      <VideoModal show={showHowTo} exerciseName={currentExercise.exercise_name} videoId={getYouTubeVideoId(currentExercise.exercise_name)} instructions={currentExercise.instructions} onClose={() => setShowHowTo(false)} />
+      <VideoModal show={showHowTo} exerciseName={currentExercise.exercise_name} videoId={getYouTubeVideoId(currentExercise.exercise_name)} videoUrl={currentExercise.video_url} youtubeUrl={currentExercise.youtube_url} instructions={currentExercise.instructions} onClose={() => setShowHowTo(false)} />
       <ThreeDViewModal show={show3DView} exerciseName={currentExercise.exercise_name} modelUrl={currentExercise.model_url} instructions={currentExercise.instructions} onClose={() => setShow3DView(false)} />
       <SupersetConfigModal show={showSupersetModal} selections={supersetSelections} onToggle={toggleSupersetSelection} onApply={applySupersets} onClose={() => setShowSupersetModal(false)} />
       <SwapExerciseModal show={showSwapModal} exercises={allExercises} currentCategory={currentExercise.category} searchQuery={swapSearchQuery} onSearch={setSwapSearchQuery} onSwap={swapExercise} onClose={() => setShowSwapModal(false)} />

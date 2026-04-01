@@ -79,8 +79,14 @@ export function AchievementPopup({ popup }) {
   );
 }
 
-export function VideoModal({ show, exerciseName, videoId, instructions, onClose }) {
+export function VideoModal({ show, exerciseName, videoId, videoUrl, youtubeUrl, instructions, onClose }) {
   if (!show) return null;
+  let src = `https://www.youtube.com/embed/${videoId}?rel=0`;
+  if (youtubeUrl) {
+    src = youtubeUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/');
+  } else if (videoUrl && (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be'))) {
+    src = videoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/');
+  }
   return (
     <AnimatePresence>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -92,8 +98,12 @@ export function VideoModal({ show, exerciseName, videoId, instructions, onClose 
               <button onClick={onClose} aria-label="Close video modal" className="no-min-height w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-800 text-gray-400 hover:text-white transition-colors">✕</button>
             </div>
             <div className="w-full aspect-video bg-black rounded-lg mb-3 overflow-hidden">
-              <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${videoId}?rel=0`} title={exerciseName}
-                frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full" />
+              {(!youtubeUrl && videoUrl && !videoUrl.includes('youtube') && !videoUrl.includes('youtu.be')) ? (
+                <video src={videoUrl} controls className="w-full h-full object-cover" />
+              ) : (
+                <iframe width="100%" height="100%" src={src} title={exerciseName}
+                  frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full" />
+              )}
             </div>
             {instructions?.length > 0 && (
               <div className="bg-gray-800/50 rounded-lg p-3 mb-3">
