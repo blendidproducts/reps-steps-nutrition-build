@@ -454,8 +454,9 @@ export default function ActiveWorkout() {
   const ariaTimerAnnouncement = useMemo(() => {
     if (!isActive || isPaused) return "";
     if (isResting) return `Rest: ${restTimer} seconds remaining`;
-    if (isTimeBased) {
-      const left = (currentExercise?.target_time || 0) - exerciseTimer;
+    const currentEx = workout?.exercises?.[currentExerciseIndex];
+    if (currentEx?.metric === 'time') {
+      const left = (currentEx?.target_time || 0) - exerciseTimer;
       // announce every 10 s; don't re-announce same value
       const bucket = Math.floor(left / 10) * 10;
       if (bucket !== prevAnnouncedTimer.current && left > 0) {
@@ -466,10 +467,11 @@ export default function ActiveWorkout() {
     }
     return "";
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [restTimer, exerciseTimer, isResting, isActive, isPaused]);
+  }, [restTimer, exerciseTimer, isResting, isActive, isPaused, workout, currentExerciseIndex]);
 
   const ariaRepAnnouncement = useMemo(() => {
-    if (!isActive || isTimeBased) return "";
+    const currentEx = workout?.exercises?.[currentExerciseIndex];
+    if (!isActive || currentEx?.metric === 'time') return "";
     // announce on every 5th rep boundary
     const bucket = Math.floor(currentReps / 5) * 5;
     if (currentReps > 0 && bucket !== prevAnnouncedReps.current) {
@@ -478,7 +480,7 @@ export default function ActiveWorkout() {
     }
     return "";
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentReps, isActive, isTimeBased]);
+  }, [currentReps, isActive, workout, currentExerciseIndex]);
   const getYouTubeVideoId = (name) => { const map = {'push':'IODxDxX7oi4','squat':'9cYEuFbBLSY','plank':'pSHjTRCQxIw','lunge':'QOVaHwm-Q6U','burpee':'dZgVxmf6jkA','pull':'eGo4IYlbE5g','dip':'yN6Q1UI_xkE','mountain climber':'nmwgirgXLYM','jumping jack':'c4DAnQ6DtF8','crunch':'5ER5Of4EISE'}; const n = name.toLowerCase(); for (const [k,v] of Object.entries(map)) if (n.includes(k)) return v; return 'g_tea8ZNk5A'; };
 
   if (!workout) return (
