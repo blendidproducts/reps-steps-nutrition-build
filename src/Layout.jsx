@@ -47,6 +47,7 @@ const navigationItems = [
   { title: "Add-Ons & Pricing", url: createPageUrl("AddOns"), icon: ShoppingBag },
   { title: "Referrals", url: createPageUrl("Referrals"), icon: Gift },
   { title: "Upload 3D Models", url: createPageUrl("Upload3DModels"), icon: Box },
+  { title: "Missing Assets", url: createPageUrl("MissingAssets"), icon: ListTodo },
   { title: "Help", url: createPageUrl("Help"), icon: HelpCircle },
   { title: "Settings", url: createPageUrl("Settings"), icon: Settings },
 ];
