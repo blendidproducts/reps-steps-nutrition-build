@@ -12,6 +12,7 @@ import { useAxeDev } from '@/hooks/useAxeDev'
 import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
+import MissingAssets from './pages/MissingAssets';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
@@ -79,6 +80,7 @@ const AuthenticatedApp = () => {
             }
           />
         ))}
+        <Route path="/MissingAssets" element={<LayoutWrapper currentPageName="MissingAssets"><MissingAssets /></LayoutWrapper>} />
         <Route path="*" element={<PageNotFound />} />
       </Routes>
     </Suspense>
