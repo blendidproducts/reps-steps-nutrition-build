@@ -1,0 +1,99 @@
+{
+  "name": "ProgramEnrollment",
+  "type": "object",
+  "properties": {
+    "program_id": {
+      "type": "string",
+      "description": "Reference to the program (PresetProgram or NutritionProgram)"
+    },
+    "program_name": {
+      "type": "string",
+      "description": "Name of the program"
+    },
+    "program_type": {
+      "type": "string",
+      "enum": [
+        "workout",
+        "nutrition"
+      ],
+      "description": "Type of program"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the program was started"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the program was completed or cancelled"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "completed",
+        "cancelled"
+      ],
+      "default": "active",
+      "description": "Program enrollment status"
+    },
+    "current_day": {
+      "type": "number",
+      "default": 1,
+      "description": "Current day in the program"
+    },
+    "total_days": {
+      "type": "number",
+      "description": "Total days in the program"
+    },
+    "completed_days": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "default": [],
+      "description": "Array of day numbers that have been completed"
+    },
+    "last_activity_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last time a day was completed"
+    },
+    "completion_percentage": {
+      "type": "number",
+      "description": "Percentage of program completed"
+    },
+    "days_completed_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of days completed"
+    },
+    "achievement_earned": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether completion achievement was awarded"
+    }
+  },
+  "required": [
+    "program_id",
+    "program_name",
+    "program_type",
+    "start_date",
+    "total_days"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

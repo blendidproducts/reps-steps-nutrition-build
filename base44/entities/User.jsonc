@@ -1,0 +1,138 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "user"
+      ],
+      "default": "user"
+    },
+    "is_pro": {
+      "type": "boolean",
+      "default": false
+    },
+    "pro_expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "fitness_level": {
+      "type": "string",
+      "enum": [
+        "beginner",
+        "intermediate",
+        "advanced"
+      ]
+    },
+    "fitness_goal": {
+      "type": "string",
+      "enum": [
+        "weight_loss",
+        "muscle_gain",
+        "endurance",
+        "general_fitness"
+      ]
+    },
+    "active_program": {
+      "type": "object",
+      "properties": {
+        "program_id": {
+          "type": "string"
+        },
+        "program_name": {
+          "type": "string"
+        },
+        "current_day": {
+          "type": "number"
+        },
+        "total_days": {
+          "type": "number"
+        },
+        "started_date": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "referral_code": {
+      "type": "string"
+    },
+    "referred_by": {
+      "type": "string"
+    },
+    "quiz_completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "quiz_answers": {
+      "type": "object"
+    },
+    "current_streak": {
+      "type": "number",
+      "default": 0
+    },
+    "longest_streak": {
+      "type": "number",
+      "default": 0
+    },
+    "last_activity_date": {
+      "type": "string"
+    },
+    "total_workouts_completed": {
+      "type": "number",
+      "default": 0
+    },
+    "total_reps_completed": {
+      "type": "number",
+      "default": 0
+    },
+    "total_steps_completed": {
+      "type": "number",
+      "default": 0
+    },
+    "subscription_status": {
+      "type": "string",
+      "enum": [
+        "free",
+        "pro",
+        "pro_lifetime"
+      ],
+      "default": "free",
+      "description": "Core subscription tier"
+    },
+    "stripe_customer_id": {
+      "type": "string",
+      "description": "Stripe customer ID for this user"
+    },
+    "subscription_start_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "active_products": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "List of active Stripe product keys, e.g. ['pro_monthly', 'fitness_brain']. Used to correctly restore entitlements on cancellation."
+    },
+    "nutrition_plan": {
+      "type": "string",
+      "enum": [
+        "none",
+        "ai_addon",
+        "all_access"
+      ],
+      "default": "none",
+      "description": "Nutrition subscription tier"
+    },
+    "fitness_brain_addon": {
+      "type": "boolean",
+      "default": false,
+      "description": "AI Fitness Brain add-on active"
+    }
+  },
+  "required": []
+}

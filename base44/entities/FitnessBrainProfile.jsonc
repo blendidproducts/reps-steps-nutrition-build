@@ -1,0 +1,119 @@
+{
+  "name": "FitnessBrainProfile",
+  "type": "object",
+  "properties": {
+    "height_cm": {
+      "type": "number",
+      "description": "Height in centimeters"
+    },
+    "weight_kg": {
+      "type": "number",
+      "description": "Current weight in kg"
+    },
+    "age": {
+      "type": "number"
+    },
+    "gender": {
+      "type": "string",
+      "enum": [
+        "male",
+        "female",
+        "other"
+      ]
+    },
+    "body_fat_percent": {
+      "type": "number"
+    },
+    "waist_cm": {
+      "type": "number"
+    },
+    "primary_goal": {
+      "type": "string",
+      "enum": [
+        "fat_loss",
+        "muscle_gain",
+        "body_recomposition",
+        "athletic_performance"
+      ]
+    },
+    "stress_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "moderate",
+        "high"
+      ]
+    },
+    "sleep_quality": {
+      "type": "string",
+      "enum": [
+        "poor",
+        "fair",
+        "good",
+        "excellent"
+      ]
+    },
+    "daily_steps": {
+      "type": "number"
+    },
+    "training_experience": {
+      "type": "string",
+      "enum": [
+        "beginner",
+        "intermediate",
+        "advanced"
+      ]
+    },
+    "ai_mode": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "manual"
+      ],
+      "default": "auto"
+    },
+    "bmr": {
+      "type": "number",
+      "description": "Basal Metabolic Rate"
+    },
+    "tdee": {
+      "type": "number",
+      "description": "Total Daily Energy Expenditure"
+    },
+    "target_calories": {
+      "type": "number"
+    },
+    "target_protein_g": {
+      "type": "number"
+    },
+    "target_carbs_g": {
+      "type": "number"
+    },
+    "target_fat_g": {
+      "type": "number"
+    },
+    "profile_initialized": {
+      "type": "boolean",
+      "default": false
+    },
+    "last_analysis_date": {
+      "type": "string",
+      "format": "date"
+    }
+  },
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  },
+  "required": []
+}

@@ -1,0 +1,48 @@
+{
+  "name": "ProgressPhoto",
+  "type": "object",
+  "properties": {
+    "photo_url": {
+      "type": "string",
+      "description": "URL of the uploaded photo"
+    },
+    "photo_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the photo was taken"
+    },
+    "weight_lbs": {
+      "type": "number",
+      "description": "Weight at the time of photo"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes about progress"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tags like 'front', 'side', 'back'"
+    }
+  },
+  "required": [
+    "photo_url",
+    "photo_date"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

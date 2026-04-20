@@ -1,0 +1,146 @@
+{
+  "name": "NutritionProgram",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the nutrition program"
+    },
+    "description": {
+      "type": "string",
+      "description": "Program description and goals"
+    },
+    "program_type": {
+      "type": "string",
+      "enum": [
+        "weight_loss",
+        "muscle_gain",
+        "budget_friendly",
+        "maintenance"
+      ],
+      "description": "Type of nutrition program"
+    },
+    "duration_days": {
+      "type": "number",
+      "description": "Total days in the program"
+    },
+    "daily_calories_target": {
+      "type": "number",
+      "description": "Target daily calories"
+    },
+    "daily_protein_grams": {
+      "type": "number",
+      "description": "Target daily protein in grams"
+    },
+    "daily_carbs_grams": {
+      "type": "number",
+      "description": "Target daily carbs in grams"
+    },
+    "daily_fat_grams": {
+      "type": "number",
+      "description": "Target daily fat in grams"
+    },
+    "daily_meal_plans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "day_number": {
+            "type": "number"
+          },
+          "day_name": {
+            "type": "string"
+          },
+          "meals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "meal_type": {
+                  "type": "string",
+                  "enum": [
+                    "breakfast",
+                    "lunch",
+                    "dinner",
+                    "snack"
+                  ]
+                },
+                "meal_name": {
+                  "type": "string"
+                },
+                "ingredients": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "calories": {
+                  "type": "number"
+                },
+                "protein": {
+                  "type": "number"
+                },
+                "carbs": {
+                  "type": "number"
+                },
+                "fat": {
+                  "type": "number"
+                },
+                "instructions": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "total_calories": {
+            "type": "number"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Daily meal plans for the program"
+    },
+    "is_preset": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this is a built-in preset"
+    },
+    "thumbnail_url": {
+      "type": "string",
+      "description": "Program thumbnail image"
+    },
+    "tips": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "General tips for the program"
+    }
+  },
+  "required": [
+    "name",
+    "program_type",
+    "daily_meal_plans",
+    "duration_days"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

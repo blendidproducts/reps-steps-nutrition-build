@@ -1,0 +1,79 @@
+{
+  "name": "CommunityPost",
+  "type": "object",
+  "properties": {
+    "caption": {
+      "type": "string",
+      "description": "Post caption or description"
+    },
+    "photo_url": {
+      "type": "string",
+      "description": "URL of the shared photo"
+    },
+    "workout_session_id": {
+      "type": "string",
+      "description": "Optional reference to workout session"
+    },
+    "workout_stats": {
+      "type": "object",
+      "properties": {
+        "total_reps": {
+          "type": "number"
+        },
+        "duration": {
+          "type": "number"
+        },
+        "calories": {
+          "type": "number"
+        }
+      },
+      "description": "Workout stats if shared with post"
+    },
+    "likes_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of likes"
+    },
+    "liked_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "User emails who liked this post"
+    },
+    "is_public": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether post is visible to all users"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Display name of poster"
+    }
+  },
+  "required": [
+    "caption"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "is_public": true
+        },
+        {
+          "created_by": "{{user.email}}"
+        }
+      ]
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

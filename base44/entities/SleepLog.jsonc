@@ -1,0 +1,49 @@
+{
+  "name": "SleepLog",
+  "type": "object",
+  "properties": {
+    "log_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "hours_slept": {
+      "type": "number"
+    },
+    "sleep_quality": {
+      "type": "string",
+      "enum": [
+        "poor",
+        "fair",
+        "good",
+        "excellent"
+      ]
+    },
+    "bedtime": {
+      "type": "string"
+    },
+    "wake_time": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "log_date",
+    "hours_slept"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

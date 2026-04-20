@@ -1,0 +1,73 @@
+{
+  "name": "HormoneLog",
+  "type": "object",
+  "properties": {
+    "log_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "testosterone_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "normal",
+        "high"
+      ],
+      "description": "Subjective or lab-based"
+    },
+    "cortisol_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "normal",
+        "high"
+      ]
+    },
+    "thyroid_indicator": {
+      "type": "string",
+      "enum": [
+        "underactive",
+        "normal",
+        "overactive"
+      ]
+    },
+    "energy_level": {
+      "type": "string",
+      "enum": [
+        "very_low",
+        "low",
+        "moderate",
+        "high",
+        "very_high"
+      ]
+    },
+    "libido": {
+      "type": "string",
+      "enum": [
+        "low",
+        "normal",
+        "high"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "log_date"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "name": "SavedWorkout",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the saved workout"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the workout"
+    },
+    "exercises": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "exercise_id": {
+            "type": "string"
+          },
+          "exercise_name": {
+            "type": "string"
+          },
+          "target_reps": {
+            "type": "number"
+          },
+          "target_time": {
+            "type": "number"
+          },
+          "sets": {
+            "type": "number"
+          },
+          "superset_with_next": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "workout_type": {
+      "type": "string",
+      "enum": [
+        "time_based",
+        "rep_based",
+        "random"
+      ]
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": [
+        "beginner",
+        "intermediate",
+        "advanced"
+      ]
+    },
+    "estimated_duration": {
+      "type": "number",
+      "description": "Estimated duration in minutes"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tags like 'upper body', 'full body', etc."
+    },
+    "is_public": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this workout can be shared publicly"
+    }
+  },
+  "required": [
+    "name",
+    "exercises",
+    "workout_type"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "name": "PresetProgram",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the preset program"
+    },
+    "description": {
+      "type": "string",
+      "description": "Program description and goals"
+    },
+    "duration_days": {
+      "type": "number",
+      "description": "Total days in the program"
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": [
+        "beginner",
+        "intermediate",
+        "advanced"
+      ],
+      "description": "Program difficulty level"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "strength",
+        "cardio",
+        "mixed",
+        "weight_loss",
+        "muscle_gain"
+      ],
+      "description": "Program category"
+    },
+    "daily_plans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "day_number": {
+            "type": "number"
+          },
+          "day_name": {
+            "type": "string"
+          },
+          "is_rest_day": {
+            "type": "boolean"
+          },
+          "workout_name": {
+            "type": "string"
+          },
+          "exercises": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "exercise_name": {
+                  "type": "string"
+                },
+                "target_reps": {
+                  "type": "number"
+                },
+                "sets": {
+                  "type": "number"
+                },
+                "circuit_number": {
+                  "type": "number"
+                },
+                "rest_after_circuit_seconds": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "nutrition_notes": {
+            "type": "string"
+          },
+          "total_reps": {
+            "type": "number"
+          }
+        }
+      },
+      "description": "Daily workout plans"
+    },
+    "is_preset": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this is a built-in preset"
+    },
+    "thumbnail_url": {
+      "type": "string",
+      "description": "Program thumbnail image"
+    }
+  },
+  "required": [
+    "name",
+    "daily_plans",
+    "duration_days"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

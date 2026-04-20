@@ -1,0 +1,92 @@
+{
+  "name": "MealPlan",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the meal plan"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the meal plan"
+    },
+    "goal_type": {
+      "type": "string",
+      "enum": [
+        "muscle_gain",
+        "weight_loss",
+        "maintenance"
+      ],
+      "description": "What goal this plan supports"
+    },
+    "meals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "enum": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday",
+              "sunday"
+            ]
+          },
+          "meal_type": {
+            "type": "string",
+            "enum": [
+              "breakfast",
+              "lunch",
+              "dinner",
+              "snack"
+            ]
+          },
+          "food_name": {
+            "type": "string"
+          },
+          "food_id": {
+            "type": "string"
+          },
+          "servings": {
+            "type": "number"
+          },
+          "recipe_notes": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Meals in this plan"
+    },
+    "total_daily_calories": {
+      "type": "number",
+      "description": "Average daily calories for this plan"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this is the active meal plan"
+    }
+  },
+  "required": [
+    "name",
+    "meals"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

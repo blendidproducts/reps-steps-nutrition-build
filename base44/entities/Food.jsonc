@@ -1,0 +1,89 @@
+{
+  "name": "Food",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the food item"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "protein",
+        "carbs",
+        "vegetables",
+        "fruits",
+        "dairy",
+        "fats",
+        "beverages",
+        "snacks",
+        "other"
+      ],
+      "description": "Food category"
+    },
+    "serving_size": {
+      "type": "string",
+      "description": "Standard serving size (e.g., '100g', '1 cup')"
+    },
+    "calories": {
+      "type": "number",
+      "description": "Calories per serving"
+    },
+    "protein": {
+      "type": "number",
+      "description": "Protein in grams per serving"
+    },
+    "carbs": {
+      "type": "number",
+      "description": "Carbohydrates in grams per serving"
+    },
+    "fat": {
+      "type": "number",
+      "description": "Fat in grams per serving"
+    },
+    "fiber": {
+      "type": "number",
+      "description": "Fiber in grams per serving"
+    },
+    "sugar": {
+      "type": "number",
+      "description": "Sugar in grams per serving"
+    },
+    "is_custom": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this is a user-created food"
+    }
+  },
+  "required": [
+    "name",
+    "calories",
+    "protein",
+    "carbs",
+    "fat"
+  ],
+  "rls": {
+    "create": {
+      "is_custom": true,
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "is_custom": false
+        },
+        {
+          "created_by": "{{user.email}}"
+        }
+      ]
+    },
+    "update": {
+      "is_custom": true,
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "is_custom": true,
+      "created_by": "{{user.email}}"
+    }
+  }
+}

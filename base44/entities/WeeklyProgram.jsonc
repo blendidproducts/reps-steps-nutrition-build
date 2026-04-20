@@ -1,0 +1,64 @@
+{
+  "name": "WeeklyProgram",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the weekly program"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the program"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "When the program starts"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "When the program ends"
+    },
+    "schedule": {
+      "type": "object",
+      "properties": {
+        "monday": {
+          "type": "string",
+          "description": "Saved workout ID"
+        },
+        "tuesday": {
+          "type": "string"
+        },
+        "wednesday": {
+          "type": "string"
+        },
+        "thursday": {
+          "type": "string"
+        },
+        "friday": {
+          "type": "string"
+        },
+        "saturday": {
+          "type": "string"
+        },
+        "sunday": {
+          "type": "string"
+        }
+      }
+    },
+    "goal": {
+      "type": "string",
+      "description": "Program goal (e.g., 'Build strength', 'Lose weight')"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this is the current active program"
+    }
+  },
+  "required": [
+    "name",
+    "schedule"
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "name": "BodyMeasurement",
+  "type": "object",
+  "properties": {
+    "measurement_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "weight_kg": {
+      "type": "number"
+    },
+    "body_fat_percent": {
+      "type": "number"
+    },
+    "waist_cm": {
+      "type": "number"
+    },
+    "chest_cm": {
+      "type": "number"
+    },
+    "hips_cm": {
+      "type": "number"
+    },
+    "left_arm_cm": {
+      "type": "number"
+    },
+    "right_arm_cm": {
+      "type": "number"
+    },
+    "left_thigh_cm": {
+      "type": "number"
+    },
+    "right_thigh_cm": {
+      "type": "number"
+    },
+    "neck_cm": {
+      "type": "number"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "measurement_date"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

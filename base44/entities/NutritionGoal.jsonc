@@ -1,0 +1,60 @@
+{
+  "name": "NutritionGoal",
+  "type": "object",
+  "properties": {
+    "goal_type": {
+      "type": "string",
+      "enum": [
+        "muscle_gain",
+        "weight_loss",
+        "maintenance",
+        "custom"
+      ],
+      "description": "Type of fitness goal"
+    },
+    "daily_calories": {
+      "type": "number",
+      "description": "Target daily calories"
+    },
+    "daily_protein": {
+      "type": "number",
+      "description": "Target daily protein in grams"
+    },
+    "daily_carbs": {
+      "type": "number",
+      "description": "Target daily carbs in grams"
+    },
+    "daily_fat": {
+      "type": "number",
+      "description": "Target daily fat in grams"
+    },
+    "current_weight_lbs": {
+      "type": "number",
+      "description": "Current weight in pounds"
+    },
+    "target_weight_lbs": {
+      "type": "number",
+      "description": "Target weight in pounds"
+    },
+    "activity_level": {
+      "type": "string",
+      "enum": [
+        "sedentary",
+        "light",
+        "moderate",
+        "active",
+        "very_active"
+      ],
+      "description": "Activity level for calorie calculation"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this is the active goal"
+    }
+  },
+  "required": [
+    "goal_type",
+    "daily_calories"
+  ]
+}

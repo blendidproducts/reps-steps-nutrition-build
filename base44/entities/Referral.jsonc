@@ -1,0 +1,49 @@
+{
+  "name": "Referral",
+  "type": "object",
+  "properties": {
+    "referral_code": {
+      "type": "string",
+      "description": "The referral code used"
+    },
+    "referred_user_email": {
+      "type": "string",
+      "description": "Email of the referred user"
+    },
+    "referred_user_id": {
+      "type": "string",
+      "description": "ID of the referred user"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "completed",
+        "rewarded"
+      ],
+      "default": "pending",
+      "description": "Status of the referral"
+    },
+    "reward_granted_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the reward was granted"
+    }
+  },
+  "required": [
+    "referral_code",
+    "referred_user_email"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

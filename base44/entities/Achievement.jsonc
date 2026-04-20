@@ -1,0 +1,78 @@
+{
+  "name": "Achievement",
+  "type": "object",
+  "properties": {
+    "achievement_type": {
+      "type": "string",
+      "description": "Unique identifier for the achievement type"
+    },
+    "title": {
+      "type": "string",
+      "description": "Achievement title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Achievement description"
+    },
+    "icon_url": {
+      "type": "string",
+      "description": "Badge image URL"
+    },
+    "earned_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the achievement was earned"
+    },
+    "progress": {
+      "type": "number",
+      "default": 0,
+      "description": "Current progress towards achievement"
+    },
+    "target": {
+      "type": "number",
+      "description": "Target value to earn achievement"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "initiation",
+        "consistency",
+        "volume",
+        "time_identity",
+        "elite"
+      ],
+      "description": "Achievement category/track"
+    },
+    "is_hidden": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether badge is hidden until prerequisites met"
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Achievement types required to unlock this badge"
+    }
+  },
+  "required": [
+    "achievement_type",
+    "title",
+    "target"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

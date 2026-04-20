@@ -1,0 +1,69 @@
+{
+  "name": "RecoveryLog",
+  "type": "object",
+  "properties": {
+    "log_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "recovery_score": {
+      "type": "number",
+      "description": "0-100 recovery score"
+    },
+    "resting_heart_rate": {
+      "type": "number"
+    },
+    "hrv": {
+      "type": "number",
+      "description": "Heart rate variability"
+    },
+    "muscle_soreness": {
+      "type": "string",
+      "enum": [
+        "none",
+        "mild",
+        "moderate",
+        "severe"
+      ]
+    },
+    "energy_level": {
+      "type": "string",
+      "enum": [
+        "very_low",
+        "low",
+        "moderate",
+        "high",
+        "very_high"
+      ]
+    },
+    "mood": {
+      "type": "string",
+      "enum": [
+        "poor",
+        "fair",
+        "good",
+        "great"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "log_date"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "name": "WorkoutSession",
+  "type": "object",
+  "properties": {
+    "workout_id": {
+      "type": "string",
+      "description": "Reference to the workout"
+    },
+    "start_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the workout started"
+    },
+    "end_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the workout ended"
+    },
+    "duration": {
+      "type": "number",
+      "description": "Total duration in seconds"
+    },
+    "exercises_completed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "exercise_name": {
+            "type": "string"
+          },
+          "reps_completed": {
+            "type": "number"
+          },
+          "time_spent": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "total_reps": {
+      "type": "number",
+      "description": "Total reps completed"
+    },
+    "calories_burned": {
+      "type": "number",
+      "description": "Estimated calories burned"
+    },
+    "notes": {
+      "type": "string",
+      "description": "User notes about the session"
+    },
+    "weight_added_lbs": {
+      "type": "number",
+      "description": "Weight added in LBS (e.g., from a vest)"
+    },
+    "cardio_intervals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "walk",
+              "jog",
+              "sprint"
+            ]
+          },
+          "time": {
+            "type": "number",
+            "description": "Duration in seconds"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Detailed cardio intervals performed during workout"
+    },
+    "cardio_analytics": {
+      "type": "object",
+      "properties": {
+        "walk": {
+          "type": "object",
+          "properties": {
+            "count": {
+              "type": "number"
+            },
+            "total_time": {
+              "type": "number"
+            },
+            "avg_time": {
+              "type": "number"
+            },
+            "total_steps": {
+              "type": "number"
+            },
+            "total_distance_miles": {
+              "type": "number"
+            }
+          }
+        },
+        "jog": {
+          "type": "object",
+          "properties": {
+            "count": {
+              "type": "number"
+            },
+            "total_time": {
+              "type": "number"
+            },
+            "avg_time": {
+              "type": "number"
+            },
+            "total_steps": {
+              "type": "number"
+            },
+            "total_distance_miles": {
+              "type": "number"
+            }
+          }
+        },
+        "sprint": {
+          "type": "object",
+          "properties": {
+            "count": {
+              "type": "number"
+            },
+            "total_time": {
+              "type": "number"
+            },
+            "longest_sprint": {
+              "type": "number"
+            },
+            "shortest_sprint": {
+              "type": "number"
+            },
+            "avg_time": {
+              "type": "number"
+            },
+            "total_steps": {
+              "type": "number"
+            },
+            "total_distance_miles": {
+              "type": "number"
+            }
+          }
+        },
+        "total_steps": {
+          "type": "number",
+          "description": "Total steps across all cardio activities"
+        },
+        "total_distance_miles": {
+          "type": "number",
+          "description": "Total distance in miles across all cardio"
+        }
+      },
+      "description": "Aggregated cardio performance analytics with steps and distance"
+    }
+  },
+  "required": [
+    "workout_id",
+    "start_time"
+  ]
+}

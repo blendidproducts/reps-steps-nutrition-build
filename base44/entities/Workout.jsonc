@@ -1,0 +1,88 @@
+{
+  "name": "Workout",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Custom workout name"
+    },
+    "exercises": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "exercise_id": {
+            "type": "string"
+          },
+          "exercise_name": {
+            "type": "string"
+          },
+          "target_reps": {
+            "type": "number"
+          },
+          "target_time": {
+            "type": "number"
+          },
+          "completed_reps": {
+            "type": "number"
+          },
+          "completed_time": {
+            "type": "number"
+          },
+          "sets": {
+            "type": "number"
+          },
+          "superset_with_next": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    "workout_type": {
+      "type": "string",
+      "enum": [
+        "time_based",
+        "rep_based",
+        "random"
+      ],
+      "description": "Type of workout structure"
+    },
+    "total_duration": {
+      "type": "number",
+      "description": "Total workout time in seconds"
+    },
+    "total_reps": {
+      "type": "number",
+      "description": "Total repetitions completed"
+    },
+    "calories_burned": {
+      "type": "number",
+      "description": "Estimated calories burned"
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": [
+        "beginner",
+        "intermediate",
+        "advanced"
+      ]
+    },
+    "completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "program_id": {
+      "type": "string",
+      "description": "Reference to the program this workout belongs to"
+    },
+    "program_day": {
+      "type": "number",
+      "description": "Which day in the program this workout represents"
+    }
+  },
+  "required": [
+    "exercises",
+    "workout_type"
+  ]
+}

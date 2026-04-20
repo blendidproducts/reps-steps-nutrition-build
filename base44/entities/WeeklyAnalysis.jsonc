@@ -1,0 +1,79 @@
+{
+  "name": "WeeklyAnalysis",
+  "type": "object",
+  "properties": {
+    "week_start_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "week_end_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "weight_start_kg": {
+      "type": "number"
+    },
+    "weight_end_kg": {
+      "type": "number"
+    },
+    "body_fat_start": {
+      "type": "number"
+    },
+    "body_fat_end": {
+      "type": "number"
+    },
+    "avg_calories": {
+      "type": "number"
+    },
+    "avg_sleep_hours": {
+      "type": "number"
+    },
+    "avg_recovery_score": {
+      "type": "number"
+    },
+    "workouts_completed": {
+      "type": "number"
+    },
+    "total_volume": {
+      "type": "number"
+    },
+    "avg_steps": {
+      "type": "number"
+    },
+    "ai_summary": {
+      "type": "string"
+    },
+    "adjustments_made": {
+      "type": "object"
+    },
+    "projected_4wk_weight": {
+      "type": "number"
+    },
+    "projected_12wk_weight": {
+      "type": "number"
+    },
+    "projected_4wk_body_fat": {
+      "type": "number"
+    },
+    "projected_12wk_body_fat": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "week_start_date"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
