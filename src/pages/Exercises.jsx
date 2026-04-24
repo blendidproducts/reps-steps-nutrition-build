@@ -134,7 +134,7 @@ Return a JSON object with this exact structure:
 }
 
 AVAILABLE EXERCISES BY CATEGORY:
-UPPER BODY: Push-ups, Wide Push-ups, Diamond Push-ups, Decline Push-ups, Dips, Tricep Dips, Pull-ups, Arm Circles
+UPPER BODY: Push-ups, Wide Push-ups, Diamond Push-ups, Dips, Tricep Dips, Pull-ups, Arm Circles
 LOWER BODY: Squats, Jump Squats, Lunges, Calf Raises, Wall Sits, Glute Bridges
 CORE: Sit-ups, Crunches, Bicycle Crunches, Russian Twists, Leg Raises, Flutter Kicks, Plank, Mountain Climbers
 FULL BODY: Burpees, Jumping Jacks, High Knees, Butt Kickers
