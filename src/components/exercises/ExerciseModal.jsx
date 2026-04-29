@@ -8,7 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, Target, Lightbulb, Zap, Clock, Play, Box } from "lucide-react";
+import { CheckCircle, Target, Lightbulb, Clock, Play, Box } from "lucide-react";
 import Exercise3DViewer from "@/components/Exercise3DViewer";
 
 const categoryColors = {

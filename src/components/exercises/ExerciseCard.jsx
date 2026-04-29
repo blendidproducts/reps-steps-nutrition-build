@@ -1,10 +1,9 @@
-
 import React from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Circle, HelpCircle, Zap, Target, Users } from "lucide-react";
+import { CheckCircle, Circle, HelpCircle, Zap, Target, Users } from "lucide-react";
 
 const categoryColors = {
   upper_body: "bg-red-900/50 text-red-300 border-red-500/30",
@@ -93,7 +92,7 @@ export default function ExerciseCard({ exercise, isSelected, onSelect, onShowHel
             >
               {isSelected ? (
                 <>
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                  <CheckCircle className="w-3 h-3 mr-1" />
                   Selected
                 </>
               ) : (

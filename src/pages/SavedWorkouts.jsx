@@ -20,7 +20,7 @@ export default function SavedWorkouts() {
 
   const loadWorkouts = async () => {
     setIsLoading(true);
-    const data = await SavedWorkout.list('-created_date');
+    const data = await base44.entities.SavedWorkout.list('-created_date');
     setWorkouts(data);
     setIsLoading(false);
   };
@@ -48,7 +48,7 @@ export default function SavedWorkouts() {
 
   const deleteWorkout = async (id) => {
     if (confirm('Are you sure you want to delete this workout?')) {
-      await SavedWorkout.delete(id);
+      await base44.entities.SavedWorkout.delete(id);
       toast.success('Workout deleted!');
       loadWorkouts();
     }

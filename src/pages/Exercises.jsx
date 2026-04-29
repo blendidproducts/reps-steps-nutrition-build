@@ -3,16 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Search, Filter, ArrowRight, Zap, Star, Dumbbell, RefreshCw } from "lucide-react";
+import { Search, ArrowRight, Zap, Dumbbell, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-import ExerciseCard from "../components/exercises/ExerciseCard";
-import CategoryFilter from "../components/exercises/CategoryFilter";
-import ExerciseModal from "../components/exercises/ExerciseModal";
+import ExerciseCard from "@/components/exercises/ExerciseCard";
+import CategoryFilter from "@/components/exercises/CategoryFilter";
+import ExerciseModal from "@/components/exercises/ExerciseModal";
 import PullToRefresh from "@/components/PullToRefresh";
 
 export default function Exercises() {
@@ -26,13 +26,10 @@ export default function Exercises() {
   const [currentExercise, setCurrentExercise] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPro, setIsPro] = useState(false);
-  const [isUserLoading, setIsUserLoading] = useState(true);
   const [showAIPrompt, setShowAIPrompt] = useState(false);
   const [aiPrompt, setAIPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [aiBodyFocus, setAiBodyFocus] = useState("mixed");
-  const [aiDuration, setAiDuration] = useState(30);
-  const [aiIntensity, setAiIntensity] = useState("moderate");
+  const aiDuration = 30;
 
   useEffect(() => {
     const checkUserStatus = async () => {
@@ -42,7 +39,6 @@ export default function Exercises() {
       } catch (error) {
         setIsPro(false);
       }
-      setIsUserLoading(false);
     };
     checkUserStatus();
     loadExercises();
