@@ -1,7 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { Exercise } from "@/entities/Exercise";
-import { Workout } from "@/entities/Workout";
-import { User } from "@/entities/User";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -60,13 +57,13 @@ export default function WorkoutBuilder() {
   useEffect(() => {
     const initialize = async () => {
       try {
-        const currentUser = await User.me();
+        const currentUser = await base44.auth.me();
         setUser(currentUser);
       } catch (error) {
         setUser({ subscription_status: 'free' });
       }
       
-      const exercises = await Exercise.list();
+      const exercises = await base44.entities.Exercise.list();
       setAllExercises(exercises);
       await loadSelectedExercises();
       
@@ -271,7 +268,7 @@ export default function WorkoutBuilder() {
 
     if (exerciseIds) {
       const ids = exerciseIds.split(',');
-      const exercises = await Exercise.list();
+      const exercises = await base44.entities.Exercise.list();
       const selected = exercises.filter(ex => ids.includes(ex.id)).map(ex => ({
         ...ex,
         superset_with_next: false
@@ -431,7 +428,7 @@ export default function WorkoutBuilder() {
 
     try {
       toast.loading('Creating workout...');
-      const workout = await Workout.create(workoutData);
+      const workout = await base44.entities.Workout.create(workoutData);
       
       if (!workout || !workout.id) {
         throw new Error('Workout created but no ID returned');
@@ -504,7 +501,7 @@ Make it realistic and achievable.`,
 
       // Find exercise IDs from database
       const exerciseNames = response.exercises.map(ex => ex.name);
-      const dbExercises = await Exercise.list();
+      const dbExercises = await base44.entities.Exercise.list();
       
       const selectedExercises = response.exercises.map(aiEx => {
         const dbEx = dbExercises.find(ex => ex.name.toLowerCase() === aiEx.name.toLowerCase());

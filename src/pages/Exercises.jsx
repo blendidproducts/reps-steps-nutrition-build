@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { Exercise } from "@/entities/Exercise";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +9,6 @@ import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { User } from "@/entities/User";
 
 import ExerciseCard from "../components/exercises/ExerciseCard";
 import CategoryFilter from "../components/exercises/CategoryFilter";
@@ -39,7 +37,7 @@ export default function Exercises() {
   useEffect(() => {
     const checkUserStatus = async () => {
       try {
-        const user = await User.me();
+        const user = await base44.auth.me();
         setIsPro(user.is_pro === true || user.subscription_status === 'pro' || user.role === 'admin');
       } catch (error) {
         setIsPro(false);
@@ -69,7 +67,7 @@ export default function Exercises() {
 
   const loadExercises = async () => {
     setIsLoading(true);
-    const data = await Exercise.list();
+    const data = await base44.entities.Exercise.list();
     // Filter out deleted exercises, remove duplicates by name and sort alphabetically
     const uniqueExercises = data.filter((exercise, index, self) => 
       !exercise.is_deleted && index === self.findIndex(e => e.name?.toLowerCase() === exercise.name?.toLowerCase())
@@ -170,7 +168,7 @@ Choose realistic exercises that match the body focus and intensity level.`,
       });
 
       // Find exercise IDs from database
-      const dbExercises = await Exercise.list();
+      const dbExercises = await base44.entities.Exercise.list();
       
       const selectedExercises = response.exercises.map(aiEx => {
         const dbEx = dbExercises.find(ex => ex.name.toLowerCase() === aiEx.name.toLowerCase());

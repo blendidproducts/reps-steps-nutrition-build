@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { User } from "@/entities/User";
+import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -15,7 +15,7 @@ export default function Pricing() {
   React.useEffect(() => {
     const checkUserStatus = async () => {
       try {
-        const user = await User.me();
+        const user = await base44.auth.me();
         setIsPro(user.is_pro === true || user.subscription_status === 'pro' || user.role === 'admin');
       } catch (error) {
         // User not logged in

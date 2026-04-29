@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { MealLog } from "@/entities/MealLog";
-import { NutritionGoal } from "@/entities/NutritionGoal";
-import { NutritionProgram } from "@/entities/NutritionProgram";
+import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,9 +47,9 @@ export default function Nutrition() {
   const loadData = async () => {
     setIsLoading(true);
     const [meals, goals, programs] = await Promise.all([
-      MealLog.filter({ date: today }),
-      NutritionGoal.filter({ is_active: true }),
-      NutritionProgram.list()
+      base44.entities.MealLog.filter({ date: today }),
+      base44.entities.NutritionGoal.filter({ is_active: true }),
+      base44.entities.NutritionProgram.list()
     ]);
     setTodaysMeals(meals);
     if (goals.length > 0) {

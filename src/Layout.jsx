@@ -5,9 +5,6 @@ import { createPageUrl } from "@/utils";
 import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box, Users, Clock, Brain, Watch, ShoppingBag, ListTodo } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { base44 } from "@/api/base44Client";
-import { PresetProgram } from "@/entities/PresetProgram";
-import { Exercise } from "@/entities/Exercise";
-import { Workout } from "@/entities/Workout";
 import ProgramDayPopup from "@/components/ProgramDayPopup";
 import MobileHeader from "@/components/MobileHeader";
 import MobileRouteTransition from "@/components/MobileRouteTransition";
@@ -130,7 +127,7 @@ export default function Layout({ children, currentPageName }) {
 
   const startProgramDay = async () => {
     try {
-      const programs = await PresetProgram.filter({ id: activeProgram.program_id });
+      const programs = await base44.entities.PresetProgram.filter({ id: activeProgram.program_id });
       if (programs.length === 0) return;
       
       const program = programs[0];
@@ -142,7 +139,7 @@ export default function Layout({ children, currentPageName }) {
         return;
       }
 
-      const allExercises = await Exercise.list();
+      const allExercises = await base44.entities.Exercise.list();
       const exercises = day.exercises.map(ex => {
         const dbExercise = allExercises.find(e => e.name.toLowerCase() === ex.exercise_name.toLowerCase());
         return {
@@ -199,7 +196,7 @@ export default function Layout({ children, currentPageName }) {
         program_day: activeProgram.current_day
       };
 
-      const workout = await Workout.create(workoutData);
+      const workout = await base44.entities.Workout.create(workoutData);
       setShowProgramPopup(false);
       navigate(`${createPageUrl("ActiveWorkout")}?workoutId=${workout.id}`);
     } catch (error) {

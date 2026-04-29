@@ -2,8 +2,6 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
-import { PresetProgram } from "@/entities/PresetProgram";
-import { ProgramEnrollment } from "@/entities/ProgramEnrollment";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Brain } from "lucide-react";
@@ -35,7 +33,7 @@ export default function Home() {
       
       // Check for active program and sync with enrollment
       if (currentUser.active_program) {
-        const enrollments = await ProgramEnrollment.filter({ 
+        const enrollments = await base44.entities.ProgramEnrollment.filter({ 
           program_id: currentUser.active_program.program_id,
           status: 'active'
         });
@@ -66,7 +64,7 @@ export default function Home() {
   const handleQuizComplete = async (answers) => {
     try {
       // Find recommended program based on answers
-      const programs = await PresetProgram.list();
+      const programs = await base44.entities.PresetProgram.list();
       let recommended = null;
 
       if (answers.fitness_level === 'beginner' && answers.fitness_goals === 'weight_loss') {
