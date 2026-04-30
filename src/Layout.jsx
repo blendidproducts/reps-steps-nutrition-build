@@ -8,6 +8,7 @@ import { base44 } from "@/api/base44Client";
 import ProgramDayPopup from "@/components/ProgramDayPopup";
 import MobileHeader from "@/components/MobileHeader";
 import MobileRouteTransition from "@/components/MobileRouteTransition";
+import Chatbot from "@/components/Chatbot";
 import ProgramReminderPopup from "@/components/dashboard/ProgramReminderPopup";
 import SyncIndicator from "@/components/SyncIndicator";
 import { useScrollMemory } from "@/hooks/useScrollMemory";
@@ -500,6 +501,7 @@ export default function Layout({ children, currentPageName }) {
 
           {/* Bottom Navigation Bar - Mobile Only */}
           <BottomNav activeTab={activeTab} navigateToTab={navigateToTab} />
+          <Chatbot />
         </main>
       </div>
     </SidebarProvider>
