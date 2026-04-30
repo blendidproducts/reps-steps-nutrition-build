@@ -136,7 +136,7 @@ Here is the conversation history:
           >
             <Button 
               onClick={() => setIsOpen(true)}
-              className="w-20 h-20 rounded-full shadow-xl shadow-brand-blue/30 bg-gradient-to-r from-brand-blue to-blue-600 hover:opacity-90 flex items-center justify-center p-0 ring-4 ring-white/10"
+              className="w-20 h-20 rounded-full shadow-xl shadow-brand-blue/30 bg-[#0066cc] hover:opacity-90 flex items-center justify-center p-0 ring-4 ring-white/10"
             >
               <Bot className="w-10 h-10 text-white" />
             </Button>
