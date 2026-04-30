@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
+import { MessageSquarePlus, X, Send, Bot, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
@@ -136,9 +136,9 @@ Here is the conversation history:
           >
             <Button 
               onClick={() => setIsOpen(true)}
-              className="w-14 h-14 rounded-full shadow-xl shadow-brand-blue/20 bg-brand-blue hover:bg-brand-blue/90 flex items-center justify-center p-0"
+              className="w-20 h-20 rounded-full shadow-xl shadow-brand-blue/30 bg-gradient-to-r from-brand-blue to-blue-600 hover:opacity-90 flex items-center justify-center p-0 ring-4 ring-white/10"
             >
-              <MessageCircle className="w-6 h-6 text-white" />
+              <Bot className="w-10 h-10 text-white" />
             </Button>
           </motion.div>
         )}
