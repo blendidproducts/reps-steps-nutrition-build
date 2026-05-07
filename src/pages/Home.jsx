@@ -1,27 +1,28 @@
-import React from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Brain } from "lucide-react";
+import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Brain, Timer, Info, TrendingUp, Activity, CheckCircle2, Moon, ChevronRight, MoreVertical } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 const FitnessQuiz = React.lazy(() => import("@/components/FitnessQuiz"));
 const MuscleRecovery = React.lazy(() => import("@/components/recovery/MuscleRecovery"));
 
 export default function Home() {
   const navigate = useNavigate();
-  const [isPro, setIsPro] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [showQuiz, setShowQuiz] = React.useState(false);
-  const [recommendedProgram, setRecommendedProgram] = React.useState(null);
-  const [activeProgram, setActiveProgram] = React.useState(null);
-  const [user, setUser] = React.useState(null);
+  const [isPro, setIsPro] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [recommendedProgram, setRecommendedProgram] = useState(null);
+  const [activeProgram, setActiveProgram] = useState(null);
+  const [user, setUser] = useState(null);
 
   const logoUrl = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/d1545e30c_repsandsteps_main_logo_2.png";
   const bannerUrl = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/8866d855e_repsandSteps_name_banner.png";
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadUser();
   }, []);
 
@@ -91,266 +92,198 @@ export default function Home() {
   };
 
   return (
-    <div style={{ backgroundColor: 'transparent', minHeight: '100vh', color: '#f9fafb' }}>
+    <div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb' }} className="pb-24">
       {/* Fitness Quiz Modal */}
       {showQuiz && (
-        <React.Suspense fallback={null}>
+        <Suspense fallback={null}>
           <FitnessQuiz onComplete={handleQuizComplete} />
-        </React.Suspense>
+        </Suspense>
       )}
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="relative z-10 container mx-auto px-4 py-16">
-          <div className="max-w-5xl mx-auto text-center">
-            {/* Logo and Title */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="mb-8 md:mb-12"
-            >
-              <div className="flex justify-center mb-4 md:mb-6">
-                <img src={logoUrl} alt="RepsAndSteps Logo" className="w-20 h-20 md:w-32 md:h-32 drop-shadow-2xl" />
+      <div className="relative rounded-b-[2rem] overflow-hidden mb-6">
+        <div className="absolute inset-0 z-0">
+          <img src="https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=1000&auto=format&fit=crop" alt="Workout Background" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#020817]/40 via-[#020817]/80 to-[#020817]"></div>
+        </div>
+        
+        <div className="relative z-10 pt-16 pb-8 px-6">
+          <Badge className="bg-[#4D15A0]/60 text-purple-300 border-none mb-4 tracking-wider text-[10px] font-bold py-1">AI POWERED</Badge>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-3 leading-tight">
+            AI Workouts <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">Made for You</span>
+          </h1>
+          <p className="text-gray-300 text-sm mb-6 max-w-sm leading-relaxed pr-10">
+            Personalized workouts that adapt to your goals, performance and recovery.
+          </p>
+          
+          <div className="flex justify-between items-end">
+            <div>
+              <Button 
+                onClick={() => navigate(createPageUrl("AIWorkoutGenerator"))}
+                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-full px-6 py-6 text-base font-semibold shadow-lg shadow-purple-500/20 flex items-center justify-between border-0 w-full sm:w-auto mb-3"
+              >
+                <div className="flex items-center gap-2">
+                  <Zap className="w-5 h-5" />
+                  Generate AI Workout
+                </div>
+                <ArrowRight className="w-5 h-5 ml-4" />
+              </Button>
+              <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
+                <Timer className="w-4 h-4" />
+                Takes 30 seconds
               </div>
-              <h1 className="text-2xl md:text-5xl lg:text-6xl font-bold mb-3 md:mb-4">
-                Welcome to <span className="text-brand-blue">REPSANDSTEPS</span>
-              </h1>
-              <p className="text-sm md:text-xl text-gray-300 max-w-3xl mx-auto px-4">
-                Your ultimate calisthenics companion to track every rep and count every step.
-              </p>
-            </motion.div>
+            </div>
 
-            {/* Continue Program Banner */}
-            {activeProgram && (
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.6 }}
-                onClick={() => navigate(createPageUrl("PresetPrograms"))}
-                className="mb-8 cursor-pointer"
-              >
-                <Card className="gradient-bg border-2 border-brand-blue/50 hover:border-brand-blue transition-all shadow-lg shadow-brand-blue/30">
-                  <CardContent className="p-6 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                        <Play className="w-6 h-6 text-white" />
-                      </div>
-                      <div className="text-left">
-                        <div className="text-white font-bold text-lg">CONTINUE PROGRAM</div>
-                        <div className="text-white/80 text-sm">
-                          {activeProgram.completed_days && activeProgram.completed_days.length > 0 && (
-                            <span className="text-green-400">✓ Day {Math.max(...activeProgram.completed_days)} completed • </span>
-                          )}
-                          Day {activeProgram.current_day} of {activeProgram.total_days} - {activeProgram.program_name}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="bg-white/20 rounded-full px-4 py-2">
-                      <div className="text-white font-bold text-xl">{activeProgram.current_day}</div>
-                      <div className="text-white/80 text-xs">DAY</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            {/* Recommended Program Banner */}
-            {recommendedProgram && (
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.3, duration: 0.6 }}
-                className="mb-8"
-              >
-                <Card className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-purple-500/30">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-3 mb-3">
-                      <Star className="w-6 h-6 text-yellow-400" />
-                      <h3 className="text-xl font-bold text-white">Recommended For You</h3>
-                    </div>
-                    <p className="text-gray-300 mb-4">{recommendedProgram.name}</p>
-                    <Button
-                      onClick={() => navigate(createPageUrl("PresetPrograms"))}
-                      className="w-full gradient-bg text-white font-bold"
-                    >
-                      View Program
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            {/* Muscle Recovery */}
-            {user && (
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.35, duration: 0.6 }}
-                className="mb-6 md:mb-8"
-              >
-                <React.Suspense fallback={<div className="h-20 animate-pulse rounded-xl bg-white/5" />}>
-                  <MuscleRecovery />
-                </React.Suspense>
-              </motion.div>
-            )}
-
-            {/* Main Action Buttons */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4, duration: 0.6 }}
-              className="grid gap-3 md:gap-6 mb-6 md:mb-8"
-            >
-              {/* AI Workouts */}
-              <Card 
-                className="bg-gradient-to-r from-brand-blue/20 to-blue-600/20 border-2 border-brand-blue/50 cursor-pointer hover:border-brand-blue hover:shadow-lg hover:shadow-brand-blue/30 transition-all backdrop-blur-sm"
-                onClick={() => navigate(createPageUrl("Exercises"))}
-              >
-                <CardContent className="p-4 md:p-8">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 md:gap-6">
-                      <div className="w-12 h-12 md:w-20 md:h-20 bg-brand-blue rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg shadow-brand-blue/50">
-                        <Zap className="w-6 h-6 md:w-10 md:h-10 text-white" />
-                      </div>
-                      <div className="text-left">
-                        <h3 className="text-lg md:text-3xl font-bold text-white mb-0 md:mb-2">AI Workouts</h3>
-                        <p className="text-gray-300 text-xs md:text-base">Generate custom workouts</p>
-                      </div>
-                    </div>
-                    <ArrowRight className="w-5 h-5 md:w-10 md:h-10 text-brand-blue" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Programs */}
-              <Card 
-                className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-2 border-blue-500/50 cursor-pointer hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/30 transition-all backdrop-blur-sm"
-                onClick={() => navigate(createPageUrl("PresetPrograms"))}
-              >
-                <CardContent className="p-4 md:p-8">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 md:gap-6">
-                      <div className="w-12 h-12 md:w-20 md:h-20 bg-blue-600 rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/50">
-                        <Calendar className="w-6 h-6 md:w-10 md:h-10 text-white" />
-                      </div>
-                      <div className="text-left">
-                        <h3 className="text-lg md:text-3xl font-bold text-white mb-0 md:mb-2">Programs</h3>
-                        <p className="text-gray-300 text-xs md:text-base">Structured plans</p>
-                      </div>
-                    </div>
-                    <ArrowRight className="w-5 h-5 md:w-10 md:h-10 text-blue-400" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Nutrition */}
-              <Card 
-                className="bg-gradient-to-r from-emerald-600/20 to-teal-600/20 border-2 border-emerald-500/50 cursor-pointer hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/30 transition-all backdrop-blur-sm"
-                onClick={() => navigate(createPageUrl("Nutrition"))}
-              >
-                <CardContent className="p-4 md:p-8">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 md:gap-6">
-                      <div className="w-12 h-12 md:w-20 md:h-20 bg-emerald-600 rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-600/50">
-                        <Apple className="w-6 h-6 md:w-10 md:h-10 text-white" />
-                      </div>
-                      <div className="text-left">
-                        <h3 className="text-lg md:text-3xl font-bold text-white mb-0 md:mb-2">Nutrition</h3>
-                        <p className="text-gray-300 text-xs md:text-base">Track meals & calories</p>
-                      </div>
-                    </div>
-                    <ArrowRight className="w-5 h-5 md:w-10 md:h-10 text-emerald-400" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* AI Fitness Brain */}
-              <Card 
-                className="bg-gradient-to-r from-purple-700/20 to-[#00a9ff]/20 border-2 border-purple-500/50 cursor-pointer hover:border-purple-400 hover:shadow-lg hover:shadow-purple-500/30 transition-all backdrop-blur-sm"
-                onClick={() => navigate(createPageUrl("FitnessBrain"))}
-              >
-                <CardContent className="p-4 md:p-8">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 md:gap-6">
-                      <div className="w-12 h-12 md:w-20 md:h-20 bg-gradient-to-br from-purple-600 to-[#00a9ff] rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/50">
-                        <Brain className="w-6 h-6 md:w-10 md:h-10 text-white" />
-                      </div>
-                      <div className="text-left">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-lg md:text-3xl font-bold text-white mb-0 md:mb-1">AI Fitness Brain</h3>
-                          <span className="bg-purple-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">NEW</span>
-                        </div>
-                        <p className="text-gray-300 text-xs md:text-base">24/7 AI trainer + nutritionist</p>
-                      </div>
-                    </div>
-                    <ArrowRight className="w-5 h-5 md:w-10 md:h-10 text-purple-400" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Voice Control Fitness System (VCFS) - Small Bonus Feature Button */}
-              <div className="flex justify-center mt-4">
-                <Button
-                  onClick={() => navigate(createPageUrl("Help") + "?section=vcfs")}
-                  size="sm"
-                  variant="outline"
-                  className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/50 hover:border-purple-400 text-white font-medium px-4 py-2 rounded-lg shadow transition-all relative select-none text-sm"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-                  </svg>
-                  <span>🎤 Voice Control</span>
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold px-1 py-0.5 rounded-full">NEW</span>
-                </Button>
+            {/* AI Match Score Card */}
+            <div className="bg-[#0a0e1a]/95 backdrop-blur-md border border-gray-800 rounded-2xl p-3 shadow-2xl z-20 w-36 transform translate-y-6">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-gray-300 font-medium">AI Match Score</span>
+                <Info className="w-3 h-3 text-blue-400" />
               </div>
-            </motion.div>
-
-            {/* Start Here Button */}
-            {user && !user.quiz_completed && (
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.6, duration: 0.6 }}
-                className="mb-6 md:mb-8"
-              >
-                <Button
-                  onClick={() => setShowQuiz(true)}
-                  className="w-full gradient-bg text-white font-bold h-12 md:h-16 text-base md:text-xl rounded-xl md:rounded-2xl"
-                >
-                  <Target className="w-5 h-5 md:w-6 md:h-6 mr-2 md:mr-3" />
-                  START HERE - Take Fitness Quiz
-                </Button>
-              </motion.div>
-            )}
-
-            {/* Pro Upgrade Banner */}
-            {!isPro && (
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.7, duration: 0.6 }}
-                className="mb-6 md:mb-8"
-              >
-                <Card className="gradient-bg border-2 border-yellow-500/50 shadow-lg shadow-yellow-500/30">
-                  <CardContent className="p-4 md:p-8 text-center">
-                    <Star className="w-10 h-10 md:w-16 md:h-16 text-yellow-400 mx-auto mb-3 md:mb-4 drop-shadow-lg" />
-                    <h3 className="text-xl md:text-3xl font-bold text-white mb-2 md:mb-3">Unlock Pro Features</h3>
-                    <p className="text-white/90 mb-4 md:mb-6 text-sm md:text-lg">Get unlimited AI workouts, all programs, and more</p>
-                    <Button
-                      onClick={() => navigate(createPageUrl("Pricing"))}
-                      className="bg-white text-brand-blue hover:bg-gray-100 font-bold px-6 md:px-10 py-4 md:py-6 text-base md:text-lg shadow-lg"
-                    >
-                      View Pricing
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
+              <div className="text-3xl font-bold text-green-400 mb-0.5">92%</div>
+              <div className="flex items-center gap-1 text-green-400 text-[10px] mb-2 font-medium">
+                <TrendingUp className="w-3 h-3" />
+                Excellent Fit
+              </div>
+              <div className="flex gap-1">
+                 <div className="h-1 w-full bg-green-400 rounded-full"></div>
+                 <div className="h-1 w-full bg-green-400 rounded-full"></div>
+                 <div className="h-1 w-full bg-green-400 rounded-full"></div>
+                 <div className="h-1 w-full bg-green-400 rounded-full"></div>
+                 <div className="h-1 w-full bg-gray-700 rounded-full"></div>
+              </div>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
+
+      {/* Your Readiness */}
+      <div className="px-6 py-4">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <Activity className="w-5 h-5 text-green-400" />
+            <h2 className="text-lg font-bold text-white">Your Readiness</h2>
+          </div>
+          <div className="text-xs text-gray-400 flex items-center gap-1 cursor-pointer hover:text-white transition-colors" onClick={() => navigate(createPageUrl("FitnessBrain"))}>
+            View Details <ChevronRight className="w-3 h-3" />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-[#0a0e1a] border border-gray-800 rounded-xl p-4 flex flex-col justify-between shadow-lg">
+            <div className="flex justify-between items-start mb-3">
+              <span className="text-4xl font-bold text-green-400">1</span>
+              <CheckCircle2 className="w-5 h-5 text-green-400" />
+            </div>
+            <div>
+              <div className="text-green-400 text-xs font-semibold mb-0.5">Ready</div>
+              <div className="text-gray-500 text-[10px]">Go for it!</div>
+            </div>
+          </div>
+
+          <div className="bg-[#0a0e1a] border border-gray-800 rounded-xl p-4 flex flex-col justify-between shadow-lg">
+            <div className="flex justify-between items-start mb-3">
+              <span className="text-4xl font-bold text-orange-400">6</span>
+              <Activity className="w-5 h-5 text-orange-400" />
+            </div>
+            <div>
+              <div className="text-orange-400 text-xs font-semibold mb-0.5">Recovering</div>
+              <div className="text-gray-500 text-[10px]">Take it easy</div>
+            </div>
+          </div>
+
+          <div className="bg-[#0a0e1a] border border-gray-800 rounded-xl p-4 flex flex-col justify-between shadow-lg">
+            <div className="flex justify-between items-start mb-3">
+              <span className="text-4xl font-bold text-blue-400">1</span>
+              <Moon className="w-5 h-5 text-blue-400" />
+            </div>
+            <div>
+              <div className="text-blue-400 text-xs font-semibold mb-0.5">Rested</div>
+              <div className="text-gray-500 text-[10px]">Well recovered</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent AI Workout */}
+      <div className="px-6 py-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold text-white">Recent AI Workout</h2>
+          <div className="text-xs text-gray-400 flex items-center gap-1 cursor-pointer hover:text-white transition-colors" onClick={() => navigate(createPageUrl("SavedWorkouts"))}>
+            View All <ChevronRight className="w-3 h-3" />
+          </div>
+        </div>
+        
+        <div className="bg-[#0a0e1a] border border-gray-800 rounded-2xl overflow-hidden flex flex-col sm:flex-row cursor-pointer hover:border-gray-700 transition-colors shadow-lg group" onClick={() => navigate(createPageUrl("SavedWorkouts"))}>
+          <div className="relative w-full sm:w-2/5 h-40 sm:h-auto">
+            <img src="https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=500&auto=format&fit=crop" alt="Workout" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+              <div className="w-12 h-12 rounded-full border-[3px] border-white flex items-center justify-center backdrop-blur-md bg-black/40">
+                <Play className="w-5 h-5 text-white ml-1" />
+              </div>
+            </div>
+          </div>
+          <div className="p-5 flex-1 flex flex-col justify-center">
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="text-white font-bold text-base leading-tight pr-4">Full Body Strength & Mobility</h3>
+              <MoreVertical className="w-5 h-5 text-gray-500 flex-shrink-0" />
+            </div>
+            <div className="flex items-center gap-4 text-xs text-gray-400 mb-4 font-medium">
+              <div className="flex items-center gap-1.5"><Timer className="w-3.5 h-3.5"/> 45 min</div>
+              <div className="flex items-center gap-1.5"><Activity className="w-3.5 h-3.5"/> Intermediate</div>
+              <div className="flex items-center gap-1.5"><Dumbbell className="w-3.5 h-3.5"/> Equipment</div>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Badge variant="outline" className="border-blue-900/50 text-blue-400 bg-blue-900/20 text-[10px] py-0.5 px-2 rounded-full">Strength</Badge>
+              <Badge variant="outline" className="border-cyan-900/50 text-cyan-400 bg-cyan-900/20 text-[10px] py-0.5 px-2 rounded-full">Mobility</Badge>
+              <Badge variant="outline" className="border-purple-900/50 text-purple-400 bg-purple-900/20 text-[10px] py-0.5 px-2 rounded-full">Core</Badge>
+              <Badge variant="outline" className="border-gray-800 text-gray-400 bg-gray-800/50 text-[10px] py-0.5 px-2 rounded-full">Full Body</Badge>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="px-6 py-2">
+        <h2 className="text-lg font-bold text-white mb-5">Quick Actions</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div 
+            className="bg-[#0a0e1a] border border-blue-900/40 rounded-2xl p-5 flex flex-col items-center text-center cursor-pointer hover:bg-blue-900/20 transition-colors shadow-lg"
+            onClick={() => navigate(createPageUrl("AIWorkoutGenerator"))}
+          >
+            <Zap className="w-8 h-8 text-blue-400 mb-3" />
+            <div className="text-sm font-bold text-blue-400 mb-1">AI Workouts</div>
+            <div className="text-[10px] text-gray-500 font-medium">Generate now</div>
+          </div>
+          
+          <div 
+            className="bg-[#0a0e1a] border border-purple-900/40 rounded-2xl p-5 flex flex-col items-center text-center cursor-pointer hover:bg-purple-900/20 transition-colors shadow-lg"
+            onClick={() => navigate(createPageUrl("PresetPrograms"))}
+          >
+            <Calendar className="w-8 h-8 text-purple-400 mb-3" />
+            <div className="text-sm font-bold text-white mb-1">Programs</div>
+            <div className="text-[10px] text-gray-500 font-medium">View plans</div>
+          </div>
+          
+          <div 
+            className="bg-[#0a0e1a] border border-green-900/40 rounded-2xl p-5 flex flex-col items-center text-center cursor-pointer hover:bg-green-900/20 transition-colors shadow-lg"
+            onClick={() => navigate(createPageUrl("Nutrition"))}
+          >
+            <Apple className="w-8 h-8 text-green-400 mb-3" />
+            <div className="text-sm font-bold text-white mb-1">Nutrition</div>
+            <div className="text-[10px] text-gray-500 font-medium">Track meals</div>
+          </div>
+          
+          <div 
+            className="bg-[#0a0e1a] border border-orange-900/40 rounded-2xl p-5 flex flex-col items-center text-center cursor-pointer hover:bg-orange-900/20 transition-colors shadow-lg"
+            onClick={() => navigate(createPageUrl("Progress"))}
+          >
+            <TrendingUp className="w-8 h-8 text-orange-400 mb-3" />
+            <div className="text-sm font-bold text-white mb-1">Progress</div>
+            <div className="text-[10px] text-gray-500 font-medium">See analytics</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
