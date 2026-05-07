@@ -103,7 +103,7 @@ export default function Home() {
       {/* Hero Section */}
       <div className="relative rounded-b-[2rem] overflow-hidden mb-6">
         <div className="absolute inset-0 z-0">
-          <img src="https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=1000&auto=format&fit=crop" alt="Workout Background" className="w-full h-full object-cover" />
+          <img src="https://media.base44.com/images/public/69b0d8a7555cbcc1f5fe3154/850e6f723_RnS_worlds_Greatest_Stretch.png" alt="Workout Background" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-[#020817]/40 via-[#020817]/80 to-[#020817]"></div>
         </div>
         
@@ -216,7 +216,7 @@ export default function Home() {
         
         <div className="bg-[#0a0e1a] border border-gray-800 rounded-2xl overflow-hidden flex flex-col sm:flex-row cursor-pointer hover:border-gray-700 transition-colors shadow-lg group" onClick={() => navigate(createPageUrl("SavedWorkouts"))}>
           <div className="relative w-full sm:w-2/5 h-40 sm:h-auto">
-            <img src="https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=500&auto=format&fit=crop" alt="Workout" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            <img src="https://media.base44.com/images/public/69b0d8a7555cbcc1f5fe3154/850e6f723_RnS_worlds_Greatest_Stretch.png" alt="Workout" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
             <div className="absolute inset-0 flex items-center justify-center bg-black/30">
               <div className="w-12 h-12 rounded-full border-[3px] border-white flex items-center justify-center backdrop-blur-md bg-black/40">
                 <Play className="w-5 h-5 text-white ml-1" />
