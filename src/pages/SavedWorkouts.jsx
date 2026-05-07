@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Plus, Play, Share2, Trash2, Edit, Clock, Target, Zap } from "lucide-react";
+import { Plus, Play, Share2, Trash2, Clock, Target, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
@@ -143,7 +143,7 @@ export default function SavedWorkouts() {
                       <div className="space-y-3">
                         <div className="flex gap-2 flex-wrap">
                           <Badge variant="outline" className="border-brand-blue/50 text-brand-blue capitalize">
-                            {workout.workout_type.replace('_', ' ')}
+                            {workout.workout_type ? workout.workout_type.replace('_', ' ') : 'Custom'}
                           </Badge>
                           {workout.difficulty && (
                             <Badge variant="outline" className="border-gray-500/50 text-gray-300 capitalize">
