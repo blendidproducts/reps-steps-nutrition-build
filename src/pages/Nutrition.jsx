@@ -156,7 +156,7 @@ export default function Nutrition() {
                   AI Food Analyzer
                   {hasAiAddon
                     ? <span className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">AI ADD-ON</span>
-                    : <span className="bg-gray-600 text-gray-300 text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><Lock className="w-2.5 h-2.5" /> $3.99/mo</span>
+                    : <span className="bg-gray-600 text-gray-300 text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><Lock className="w-2.5 h-2.5" /> $4.99/mo</span>
                   }
                 </div>
                 <p className="text-gray-400 text-xs">Photo your meal — AI tracks calories & macros</p>
@@ -178,7 +178,7 @@ export default function Nutrition() {
                   Link Meal Builder
                   {hasAiAddon
                     ? <span className="bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">AI ADD-ON</span>
-                    : <span className="bg-gray-600 text-gray-300 text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><Lock className="w-2.5 h-2.5" /> $3.99/mo</span>
+                    : <span className="bg-gray-600 text-gray-300 text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><Lock className="w-2.5 h-2.5" /> $4.99/mo</span>
                   }
                 </div>
                 <p className="text-gray-400 text-xs">Paste a recipe or meal plan URL to auto-build</p>
@@ -198,7 +198,7 @@ export default function Nutrition() {
                 </div>
                 <div>
                   <div className="text-white font-bold text-sm">Unlock AI Nutrition Features</div>
-                  <p className="text-gray-400 text-xs">AI Add-On from $3.99/mo · All-Access $29.99/mo</p>
+                  <p className="text-gray-400 text-xs">AI Add-On from $4.99/mo · All-Access $19.99/mo</p>
                 </div>
               </div>
               <ArrowRight className="w-4 h-4 text-orange-400" />

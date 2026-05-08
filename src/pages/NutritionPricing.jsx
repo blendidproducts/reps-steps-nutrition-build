@@ -24,13 +24,13 @@ export default function NutritionPricing() {
   const navigate = useNavigate();
 
   const handleBuyAddon = () => {
-    // Link to the $3.99/mo AI Add-On Stripe product
-    window.open("https://buy.stripe.com/nutrition_ai_addon", "_blank");
+    // Link to the $4.99/mo AI Add-On Stripe product
+    window.open("https://buy.stripe.com/28EbJ16tUcOW59OcoZbQY0k", "_blank");
   };
 
   const handleBuyAllAccess = () => {
-    // Link to the $29.99/mo All-Access Stripe product
-    window.open("https://buy.stripe.com/nutrition_all_access", "_blank");
+    // Link to the $19.99/mo All-Access Stripe product
+    window.open("https://buy.stripe.com/3cI4gz3hI4iq45KbkVbQY0m", "_blank");
   };
 
   return (
@@ -79,7 +79,7 @@ export default function NutritionPricing() {
                   <p className="text-gray-400 text-sm">AI-powered food analysis tools</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-black text-orange-400">$3.99</div>
+                  <div className="text-2xl font-black text-orange-400">$4.99</div>
                   <div className="text-gray-500 text-xs">/month</div>
                 </div>
               </div>
@@ -102,7 +102,7 @@ export default function NutritionPricing() {
                 className="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-bold py-3"
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
-                Get AI Add-On — $3.99/mo
+                Get AI Add-On — $4.99/mo
               </Button>
               <p className="text-xs text-gray-500 text-center">After payment, your plan will be activated automatically.</p>
             </CardFooter>
@@ -125,7 +125,7 @@ export default function NutritionPricing() {
                   <p className="text-gray-400 text-sm">Everything, now and forever</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-black text-emerald-400">$29.99</div>
+                  <div className="text-2xl font-black text-emerald-400">$19.99</div>
                   <div className="text-gray-500 text-xs">/month</div>
                 </div>
               </div>
@@ -148,7 +148,7 @@ export default function NutritionPricing() {
                 className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-3"
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
-                Get All-Access — $29.99/mo
+                Get All-Access — $19.99/mo
               </Button>
               <p className="text-xs text-gray-500 text-center">After payment, your plan will be activated automatically.</p>
             </CardFooter>

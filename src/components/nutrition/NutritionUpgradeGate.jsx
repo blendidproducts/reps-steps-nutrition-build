@@ -19,8 +19,8 @@ import { Lock, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const PLAN_LABELS = {
-  ai_addon:   { name: "AI Nutrition Add-On", price: "$3.99/mo",  color: "from-orange-600 to-amber-600",  badge: "bg-orange-500" },
-  all_access: { name: "Nutrition All-Access", price: "$29.99/mo", color: "from-emerald-600 to-teal-600", badge: "bg-emerald-500" },
+  ai_addon:   { name: "AI Nutrition Add-On", price: "$4.99/mo",  color: "from-orange-600 to-amber-600",  badge: "bg-orange-500" },
+  all_access: { name: "Nutrition All-Access", price: "$19.99/mo", color: "from-emerald-600 to-teal-600", badge: "bg-emerald-500" },
 };
 
 const PLAN_ORDER = ["none", "ai_addon", "all_access"];
