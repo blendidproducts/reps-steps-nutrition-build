@@ -94,6 +94,12 @@ export default function Help() {
     setIsSending(true);
     
     try {
+      await base44.entities.Feedback.create({
+        name: feedbackForm.name,
+        email: feedbackForm.email,
+        message: feedbackForm.message
+      });
+
       await base44.integrations.Core.SendEmail({
         to: 'info@repsandsteps.com',
         subject: `RepsAndSteps Feedback from ${feedbackForm.name}`,
