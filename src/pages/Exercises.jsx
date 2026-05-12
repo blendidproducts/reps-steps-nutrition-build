@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -395,41 +396,44 @@ Choose realistic exercises that match the body focus and intensity level.`,
         )}
 
         {/* Selected Exercises Bar */}
-        <AnimatePresence>
-        {selectedExercises.length > 0 && (
-          <motion.div 
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] md:bottom-6 left-0 right-0 z-[100] px-4 pointer-events-none"
-          >
-            <div className="container mx-auto max-w-2xl pointer-events-auto">
-                <div className="flex justify-between items-center bg-blue-600/95 backdrop-blur-lg border border-blue-400 rounded-xl shadow-2xl p-4">
-                  <div>
-                    <span className="font-bold text-white text-base sm:text-lg">
-                      {selectedExercises.length} exercises selected
-                    </span>
-                    <div className="flex gap-1.5 mt-1.5 flex-wrap">
-                      {selectedExercises.slice(0, 3).map(ex => (
-                        <Badge key={ex.id} variant="secondary" className="text-xs bg-white/20 text-white font-semibold">
-                          {ex.name}
-                        </Badge>
-                      ))}
-                      {selectedExercises.length > 3 && (
-                        <Badge variant="secondary" className="text-xs bg-white/20 text-white font-semibold">+{selectedExercises.length - 3} more</Badge>
-                      )}
+        {createPortal(
+          <AnimatePresence>
+          {selectedExercises.length > 0 && (
+            <motion.div 
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              className="fixed bottom-[calc(80px+env(safe-area-inset-bottom,0px))] md:bottom-6 left-0 right-0 z-[9999] px-4 pointer-events-none"
+            >
+              <div className="container mx-auto max-w-2xl pointer-events-auto">
+                  <div className="flex justify-between items-center bg-blue-600/95 backdrop-blur-lg border border-blue-400 rounded-xl shadow-2xl p-4">
+                    <div>
+                      <span className="font-bold text-white text-base sm:text-lg">
+                        {selectedExercises.length} exercises selected
+                      </span>
+                      <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                        {selectedExercises.slice(0, 3).map(ex => (
+                          <Badge key={ex.id} variant="secondary" className="text-xs bg-white/20 text-white font-semibold">
+                            {ex.name}
+                          </Badge>
+                        ))}
+                        {selectedExercises.length > 3 && (
+                          <Badge variant="secondary" className="text-xs bg-white/20 text-white font-semibold">+{selectedExercises.length - 3} more</Badge>
+                        )}
+                      </div>
                     </div>
+                    <Link to={`${createPageUrl("WorkoutBuilder")}?exercises=${selectedExercises.map(ex => ex.id).join(',')}`}>
+                      <Button className="bg-white text-blue-600 hover:bg-gray-100 font-bold px-6 py-5 shadow-lg touch-manipulation">
+                        Build <ArrowRight className="w-5 h-5 ml-2" />
+                      </Button>
+                    </Link>
                   </div>
-                  <Link to={`${createPageUrl("WorkoutBuilder")}?exercises=${selectedExercises.map(ex => ex.id).join(',')}`}>
-                    <Button className="bg-white text-blue-600 hover:bg-gray-100 font-bold px-6 py-5 shadow-lg touch-manipulation">
-                      Build <ArrowRight className="w-5 h-5 ml-2" />
-                    </Button>
-                  </Link>
-                </div>
-            </div>
-          </motion.div>
+              </div>
+            </motion.div>
+          )}
+          </AnimatePresence>,
+          document.body
         )}
-        </AnimatePresence>
       </div>
       </PullToRefresh>
 
@@ -440,15 +444,16 @@ Choose realistic exercises that match the body focus and intensity level.`,
       />
 
       {/* AI Prompt Modal */}
-      <AnimatePresence>
-        {showAIPrompt && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => !isGenerating && setShowAIPrompt(false)}
-          >
+      {createPortal(
+        <AnimatePresence>
+          {showAIPrompt && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
+              onClick={() => !isGenerating && setShowAIPrompt(false)}
+            >
             <motion.div
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
@@ -503,8 +508,10 @@ Choose realistic exercises that match the body focus and intensity level.`,
               </div>
             </motion.div>
           </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }
