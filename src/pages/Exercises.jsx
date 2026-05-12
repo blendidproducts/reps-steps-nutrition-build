@@ -401,7 +401,7 @@ Choose realistic exercises that match the body focus and intensity level.`,
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="sticky bottom-4 left-0 right-0 z-50 mt-8 pointer-events-none"
+            className="fixed bottom-[calc(60px+env(safe-area-inset-bottom,0px))] md:bottom-6 left-0 right-0 z-[100] px-4 pointer-events-none"
           >
             <div className="container mx-auto max-w-2xl pointer-events-auto">
                 <div className="flex justify-between items-center bg-blue-600/95 backdrop-blur-lg border border-blue-400 rounded-xl shadow-2xl p-4">
