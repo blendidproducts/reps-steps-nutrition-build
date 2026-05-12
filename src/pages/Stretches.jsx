@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,32 +82,29 @@ function ActiveSession({ stretches, onClose }) {
   const [phase, setPhase] = useState("stretch"); // stretch | rest
   const [timeLeft, setTimeLeft] = useState(stretches[0]?.hold || 30);
   const [isRunning, setIsRunning] = useState(false);
-  const timerRef = useRef(null);
 
   const current = stretches[idx];
   const totalSets = current?.sets || 2;
+  const currentHold = current?.hold || 30;
   const restTime = 10;
 
   useEffect(() => {
+    let timer = null;
     if (isRunning) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft(t => {
-          if (t <= 1) {
-            clearInterval(timerRef.current);
-            handleNext();
-            return 0;
-          }
-          return t - 1;
-        });
+      timer = setInterval(() => {
+        setTimeLeft(t => t - 1);
       }, 1000);
-    } else {
-      clearInterval(timerRef.current);
     }
-    return () => clearInterval(timerRef.current);
-  }, [isRunning, idx, set, phase]);
+    return () => clearInterval(timer);
+  }, [isRunning]);
+
+  useEffect(() => {
+    if (timeLeft <= 0 && isRunning) {
+      handleNext();
+    }
+  }, [timeLeft, isRunning]);
 
   const handleNext = () => {
-    clearInterval(timerRef.current);
     if (phase === "stretch") {
       if (set < totalSets) {
         setPhase("rest");
@@ -126,14 +123,16 @@ function ActiveSession({ stretches, onClose }) {
     } else {
       setSet(s => s + 1);
       setPhase("stretch");
-      setTimeLeft(current?.hold || 30);
+      setTimeLeft(currentHold);
     }
     setIsRunning(true);
   };
 
-  const progress = phase === "stretch"
-    ? ((current?.hold - timeLeft) / current?.hold) * 100
+  let progress = phase === "stretch"
+    ? ((currentHold - timeLeft) / currentHold) * 100
     : ((restTime - timeLeft) / restTime) * 100;
+
+  if (isNaN(progress) || !isFinite(progress)) progress = 0;
 
   const isDone = phase === "done";
 
