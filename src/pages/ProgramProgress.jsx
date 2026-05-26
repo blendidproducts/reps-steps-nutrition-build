@@ -109,7 +109,30 @@ export default function ProgramProgress() {
       const dayPlan = program.daily_plans[dayNumber - 1];
       
       if (dayPlan.is_rest_day) {
-        alert('This is a rest day. Take a break and recover!');
+        if (window.confirm('This is a rest day. Would you like to mark it as complete and skip to the next day?')) {
+          const completedDays = enrollment.completed_days || [];
+          if (!completedDays.includes(dayNumber)) {
+            completedDays.push(dayNumber);
+            const nextDay = dayNumber < enrollment.total_days ? dayNumber + 1 : dayNumber;
+            
+            await base44.entities.ProgramEnrollment.update(enrollment.id, {
+              completed_days: completedDays,
+              current_day: nextDay,
+              days_completed_count: (enrollment.days_completed_count || 0) + 1
+            });
+            
+            const user = await base44.auth.me();
+            if (user.active_program && user.active_program.program_id === enrollment.program_id) {
+              await base44.auth.updateMe({
+                active_program: {
+                  ...user.active_program,
+                  current_day: nextDay
+                }
+              });
+            }
+            window.location.reload();
+          }
+        }
         return;
       }
       

@@ -385,22 +385,40 @@ export default function WorkoutBuilder() {
     if (settings.includeWarmup) {
       const categories = new Set(exercisesToUse.map(ex => ex.category));
       let warmupExercises = [
-        { id: 'warmup-1', name: 'Walk in Place', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 60 }
+        { id: 'warmup-1', name: 'High Knees', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 60 }
       ];
 
-      if (categories.has('upper_body') || categories.has('full_body')) {
-        warmupExercises.push({ id: 'warmup-upper-1', name: 'Arm Circles Forward', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 30 });
-        warmupExercises.push({ id: 'warmup-upper-2', name: 'Chest Opener Stretch', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 30 });
+      if (categories.has('upper_body')) {
+        warmupExercises.push({ id: 'warmup-upper-1', name: 'Arm Circles Forward', category: 'warmup', metric: 'reps', difficulty: 'beginner', target_reps: 20 });
+        warmupExercises.push({ id: 'warmup-upper-2', name: 'Arm Circles Backward', category: 'warmup', metric: 'reps', difficulty: 'beginner', target_reps: 20 });
+        warmupExercises.push({ id: 'warmup-upper-3', name: 'Chest Opener Stretch', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 30 });
+        
+        // Always include 1-2 lower body stretches and 1 lower back mobility for upper body workouts
+        warmupExercises.push({ id: 'warmup-lower-1', name: 'Leg Swings', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 30 });
+        warmupExercises.push({ id: 'warmup-core-1', name: 'Torso Twists', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 30 }); 
       }
       
-      if (categories.has('lower_body') || categories.has('full_body')) {
-        warmupExercises.push({ id: 'warmup-lower-1', name: 'Hip Circles', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 30 });
-        warmupExercises.push({ id: 'warmup-lower-2', name: 'Leg Swings', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 30 });
+      if (categories.has('lower_body')) {
+        warmupExercises.push({ id: 'warmup-lower-2', name: 'Hip Circles', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 30 });
+        if (!warmupExercises.find(w => w.id === 'warmup-lower-1')) {
+          warmupExercises.push({ id: 'warmup-lower-1', name: 'Leg Swings', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 30 });
+        }
         warmupExercises.push({ id: 'warmup-lower-3', name: 'Toe Touches', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 20 });
+        // Include supporting full-body mobility exercises
+        warmupExercises.push({ id: 'warmup-full-1', name: 'World\'s Greatest Stretch', category: 'warmup', metric: 'reps', difficulty: 'beginner', target_reps: 10 });
       }
 
-      if (categories.has('core') || categories.has('full_body') || warmupExercises.length < 3) {
-        warmupExercises.push({ id: 'warmup-core-1', name: 'Torso Twists', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 30 });
+      if (categories.has('core') || categories.has('full_body')) {
+        if (!warmupExercises.find(w => w.id === 'warmup-upper-1')) {
+           warmupExercises.push({ id: 'warmup-upper-1', name: 'Arm Circles Forward', category: 'warmup', metric: 'reps', difficulty: 'beginner', target_reps: 20 });
+           warmupExercises.push({ id: 'warmup-upper-2', name: 'Arm Circles Backward', category: 'warmup', metric: 'reps', difficulty: 'beginner', target_reps: 20 });
+        }
+        if (!warmupExercises.find(w => w.id === 'warmup-lower-2')) {
+           warmupExercises.push({ id: 'warmup-lower-2', name: 'Hip Circles', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 30 });
+        }
+        if (!warmupExercises.find(w => w.id === 'warmup-core-1')) {
+          warmupExercises.push({ id: 'warmup-core-1', name: 'Torso Twists', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 30 });
+        }
       }
 
       exercisesToUse = [...warmupExercises, ...exercisesToUse];

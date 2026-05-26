@@ -135,8 +135,36 @@ export default function Layout({ children, currentPageName }) {
       const day = program.daily_plans[activeProgram.current_day - 1];
       
       if (day.is_rest_day) {
-        alert(`Day ${activeProgram.current_day} is a rest day.`);
-        setShowProgramPopup(false);
+        if (window.confirm(`Day ${activeProgram.current_day} is a rest day. Would you like to mark it as complete and skip to the next day?`)) {
+           const user = await base44.auth.me();
+           const enrollments = await base44.entities.ProgramEnrollment.filter({ 
+             program_id: activeProgram.program_id,
+             status: 'active'
+           });
+           if (enrollments.length > 0) {
+             const enrollment = enrollments[0];
+             const completedDays = enrollment.completed_days || [];
+             if (!completedDays.includes(activeProgram.current_day)) {
+               completedDays.push(activeProgram.current_day);
+               const nextDay = activeProgram.current_day < program.duration_days ? activeProgram.current_day + 1 : activeProgram.current_day;
+               await base44.entities.ProgramEnrollment.update(enrollment.id, {
+                 completed_days: completedDays,
+                 current_day: nextDay,
+                 days_completed_count: (enrollment.days_completed_count || 0) + 1
+               });
+               await base44.auth.updateMe({
+                 active_program: {
+                   ...activeProgram,
+                   current_day: nextDay
+                 }
+               });
+             }
+           }
+           setShowProgramPopup(false);
+           window.location.reload();
+        } else {
+           setShowProgramPopup(false);
+        }
         return;
       }
 
@@ -159,31 +187,51 @@ export default function Layout({ children, currentPageName }) {
 
       const categories = new Set(exercises.map(ex => ex.category));
       let baseWarmups = [
-        { id: 'warmup-1', name: 'Walk in Place', category: 'warmup', metric: 'time', target_time: 60 }
+        { id: 'warmup-1', name: 'High Knees', category: 'warmup', metric: 'time', target_time: 60 }
       ];
 
-      if (categories.has('upper_body') || categories.has('full_body')) {
-        baseWarmups.push({ id: 'warmup-upper-1', name: 'Arm Circles Forward', category: 'warmup', metric: 'time', target_time: 30 });
-        baseWarmups.push({ id: 'warmup-upper-2', name: 'Chest Opener Stretch', category: 'warmup', metric: 'time', target_time: 30 });
+      if (categories.has('upper_body')) {
+        baseWarmups.push({ id: 'warmup-upper-1', name: 'Arm Circles Forward', category: 'warmup', metric: 'reps', target_reps: 20 });
+        baseWarmups.push({ id: 'warmup-upper-2', name: 'Arm Circles Backward', category: 'warmup', metric: 'reps', target_reps: 20 });
+        baseWarmups.push({ id: 'warmup-upper-3', name: 'Chest Opener Stretch', category: 'warmup', metric: 'time', target_time: 30 });
+        
+        // Always include 1-2 lower body stretches and 1 lower back mobility for upper body workouts
+        baseWarmups.push({ id: 'warmup-lower-1', name: 'Leg Swings', category: 'warmup', metric: 'time', target_time: 30 });
+        baseWarmups.push({ id: 'warmup-core-1', name: 'Torso Twists', category: 'warmup', metric: 'time', target_time: 30 }); 
       }
-      if (categories.has('lower_body') || categories.has('full_body')) {
-        baseWarmups.push({ id: 'warmup-lower-1', name: 'Hip Circles', category: 'warmup', metric: 'time', target_time: 30 });
-        baseWarmups.push({ id: 'warmup-lower-2', name: 'Leg Swings', category: 'warmup', metric: 'time', target_time: 30 });
+      
+      if (categories.has('lower_body')) {
+        baseWarmups.push({ id: 'warmup-lower-2', name: 'Hip Circles', category: 'warmup', metric: 'time', target_time: 30 });
+        if (!baseWarmups.find(w => w.id === 'warmup-lower-1')) {
+          baseWarmups.push({ id: 'warmup-lower-1', name: 'Leg Swings', category: 'warmup', metric: 'time', target_time: 30 });
+        }
         baseWarmups.push({ id: 'warmup-lower-3', name: 'Toe Touches', category: 'warmup', metric: 'time', target_time: 20 });
+        // Include supporting full-body mobility exercises
+        baseWarmups.push({ id: 'warmup-full-1', name: 'World\'s Greatest Stretch', category: 'warmup', metric: 'reps', target_reps: 10 });
       }
-      if (categories.has('core') || categories.has('full_body') || baseWarmups.length < 3) {
-        baseWarmups.push({ id: 'warmup-core-1', name: 'Torso Twists', category: 'warmup', metric: 'time', target_time: 30 });
+
+      if (categories.has('core') || categories.has('full_body')) {
+        if (!baseWarmups.find(w => w.id === 'warmup-upper-1')) {
+           baseWarmups.push({ id: 'warmup-upper-1', name: 'Arm Circles Forward', category: 'warmup', metric: 'reps', target_reps: 20 });
+           baseWarmups.push({ id: 'warmup-upper-2', name: 'Arm Circles Backward', category: 'warmup', metric: 'reps', target_reps: 20 });
+        }
+        if (!baseWarmups.find(w => w.id === 'warmup-lower-2')) {
+           baseWarmups.push({ id: 'warmup-lower-2', name: 'Hip Circles', category: 'warmup', metric: 'time', target_time: 30 });
+        }
+        if (!baseWarmups.find(w => w.id === 'warmup-core-1')) {
+          baseWarmups.push({ id: 'warmup-core-1', name: 'Torso Twists', category: 'warmup', metric: 'time', target_time: 30 });
+        }
       }
 
       const warmupExercises = baseWarmups.map(ex => ({
         exercise_id: ex.id,
         exercise_name: ex.name,
-        target_reps: 0,
-        target_time: ex.target_time,
+        target_reps: ex.target_reps || 0,
+        target_time: ex.target_time || 0,
         sets: 1,
         completed_reps: 0,
         completed_time: 0,
-        metric: 'time',
+        metric: ex.metric,
         category: 'warmup'
       }));
 
