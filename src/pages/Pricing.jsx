@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,8 +25,8 @@ export default function Pricing() {
   }, []);
 
   const handleStripeCheckout = (plan) => {
-    // Monthly: $9.99/month
-    // Lifetime: $199.99 one-time
+    // WorkoutGENIE Monthly: $19.99/month
+    // Lifetime PRO: $199.99 one-time
     const links = {
       monthly: 'https://buy.stripe.com/7sY8wP4lMg188m0bkVbQY01',
       lifetime: 'https://buy.stripe.com/9B68wPbOecOW8m0dt3bQY0h'
@@ -186,12 +186,12 @@ export default function Pricing() {
               <CardHeader>
                 <CardTitle className="text-2xl flex items-center gap-2">
                   <Star className="w-6 h-6 text-yellow-400" />
-                  Pro Monthly
+                  WorkoutGENIE Pro
                 </CardTitle>
-                <p className="text-gray-400">Flexible subscription</p>
+                <p className="text-gray-400">Monthly subscription</p>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold mb-2">$9.99<span className="text-lg font-normal text-gray-400">/month</span></div>
+                <div className="text-3xl font-bold mb-2">$19.99<span className="text-lg font-normal text-gray-400">/month</span></div>
                 <p className="text-sm text-green-400 mb-6">Cancel anytime</p>
                 <ul className="space-y-3 text-gray-300">
                   {proFeatures.map((feature, i) => (
@@ -215,7 +215,7 @@ export default function Pricing() {
                       className="w-full gradient-bg hover:opacity-90 font-bold"
                     >
                       <ExternalLink className="w-5 h-5 mr-2" />
-                      Get Pro Monthly
+                      Get WorkoutGENIE Pro - $19.99/mo
                     </Button>
 
                     <p className="text-xs text-gray-500 text-center pt-2">

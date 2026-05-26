@@ -72,9 +72,9 @@ const BUNDLES = [
     gradient: "from-[#0066cc] to-blue-700",
     badge: "Most Popular",
     badgeColor: "bg-[#0066cc]",
-    title: "Pro — AI Workouts",
+    title: "WorkoutGENIE Pro",
     subtitle: "Core AI workout features unlocked",
-    price: "$9.99",
+    price: "$19.99",
     period: "/mo",
     stripeUrl: "https://buy.stripe.com/7sY8wP4lMg188m0bkVbQY01",
     features: [
@@ -112,7 +112,7 @@ const BUNDLES = [
     badgeColor: "bg-yellow-500",
     title: "Pro Lifetime",
     subtitle: "Pay once, keep Pro AI Workouts forever",
-    price: "$149.99",
+    price: "$199.99",
     period: " once",
     stripeUrl: "https://buy.stripe.com/9B68wPbOecOW8m0dt3bQY0h",
     features: [
@@ -327,8 +327,8 @@ export default function AddOns() {
           <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
             {[
               { label: "Core App", price: "Free", color: "text-green-400" },
-              { label: "Pro — AI Workouts", price: "$9.99/mo", color: "text-[#00a9ff]" },
-              { label: "Pro Lifetime", price: "$149.99 once", color: "text-yellow-400" },
+              { label: "WorkoutGENIE Pro", price: "$19.99/mo", color: "text-[#00a9ff]" },
+              { label: "Pro Lifetime", price: "$199.99 once", color: "text-yellow-400" },
               { label: "AI Fitness Brain Add-On", price: "+ $4.99/mo", color: "text-blue-400" },
               { label: "AI Nutrition Add-On", price: "+ $4.99/mo", color: "text-orange-400" },
               { label: "Brain + Nutrition Bundle", price: "+ $7.99/mo", color: "text-violet-400" },
