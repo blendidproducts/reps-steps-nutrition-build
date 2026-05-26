@@ -76,7 +76,7 @@ const BUNDLES = [
     subtitle: "Core AI workout features unlocked",
     price: "$19.99",
     period: "/mo",
-    stripeUrl: "https://buy.stripe.com/7sY8wP4lMg188m0bkVbQY01",
+    stripeUrl: "https://buy.stripe.com/28EcN56tUbKSgSw9cNbQY0g",
     features: [
       "WorkoutGenie AI (instant workout builder)",
       "AI Auto Mode workout generator",
@@ -134,7 +134,7 @@ const COACHING_TIERS = [
     price: "$149",
     period: " one-time",
     ctaLabel: "Get Custom Plan",
-    formUrl: "https://forms.gle/Azqxpphow5MDUGPk7",
+    stripeUrl: "https://buy.stripe.com/fZucN5f0q9CKau8coZbQY0n",
     features: [
       "Personalized workout plan for your fitness level & goals",
       "Designed around your schedule",
@@ -153,7 +153,7 @@ const COACHING_TIERS = [
     price: "$297",
     period: "/mo",
     ctaLabel: "Start Coaching",
-    formUrl: "https://forms.gle/Azqxpphow5MDUGPk7",
+    stripeUrl: "https://buy.stripe.com/28E28rf0q8yG45K4WxbQY0o",
     features: [
       "Weekly check-ins & program adjustments",
       "Custom workout & nutrition guidance",
@@ -309,7 +309,7 @@ export default function AddOns() {
                     </div>
                   ))}
                   <Button
-                    onClick={() => window.open(tier.formUrl, "_blank")}
+                    onClick={() => window.open(tier.stripeUrl, "_blank")}
                     className={`w-full mt-3 bg-gradient-to-r ${tier.gradient} text-white font-bold rounded-xl gap-2 hover:opacity-90`}
                   >
                     <ExternalLink className="w-4 h-4" />

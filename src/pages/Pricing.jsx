@@ -28,7 +28,7 @@ export default function Pricing() {
     // WorkoutGENIE Monthly: $19.99/month
     // Lifetime PRO: $199.99 one-time
     const links = {
-      monthly: 'https://buy.stripe.com/7sY8wP4lMg188m0bkVbQY01',
+      monthly: 'https://buy.stripe.com/28EcN56tUbKSgSw9cNbQY0g',
       lifetime: 'https://buy.stripe.com/9B68wPbOecOW8m0dt3bQY0h'
     };
     window.open(links[plan], '_blank');
