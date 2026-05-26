@@ -17,6 +17,11 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
 
+// Paid programs with Stripe links
+const PAID_PROGRAMS = {
+  'TRIMMERFIT': 'https://buy.stripe.com/28E7sL7xY4iq31G88JbQY08'
+};
+
 export default function PresetPrograms() {
   const navigate = useNavigate();
   const [programs, setPrograms] = useState([]);
@@ -546,16 +551,29 @@ export default function PresetPrograms() {
                             return null;
                           })()}
                         </div>
-                        <Button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startProgram(program);
-                          }}
-                          className="w-full mt-4 gradient-bg text-white hover:opacity-90"
-                        >
-                          Start Day 1
-                          <ArrowRight className="w-4 h-4 ml-2" />
-                        </Button>
+                        {PAID_PROGRAMS[program.name] ? (
+                          <Button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(PAID_PROGRAMS[program.name], '_blank');
+                            }}
+                            className="w-full mt-4 bg-gradient-to-r from-yellow-500 to-orange-600 text-white hover:opacity-90"
+                          >
+                            <Zap className="w-4 h-4 mr-2" />
+                            Unlock Program
+                          </Button>
+                        ) : (
+                          <Button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startProgram(program);
+                            }}
+                            className="w-full mt-4 gradient-bg text-white hover:opacity-90"
+                          >
+                            Start Day 1
+                            <ArrowRight className="w-4 h-4 ml-2" />
+                          </Button>
+                        )}
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -839,13 +857,23 @@ export default function PresetPrograms() {
                 );
               })}
 
-              <Button 
-                onClick={() => startProgram(selectedProgram)}
-                className="w-full gradient-bg text-white hover:opacity-90 py-6 text-lg"
-              >
-                <Trophy className="w-5 h-5 mr-2" />
-                Start This Program
-              </Button>
+              {PAID_PROGRAMS[selectedProgram.name] ? (
+                <Button 
+                  onClick={() => window.open(PAID_PROGRAMS[selectedProgram.name], '_blank')}
+                  className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 text-white hover:opacity-90 py-6 text-lg"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  Unlock This Program
+                </Button>
+              ) : (
+                <Button 
+                  onClick={() => startProgram(selectedProgram)}
+                  className="w-full gradient-bg text-white hover:opacity-90 py-6 text-lg"
+                >
+                  <Trophy className="w-5 h-5 mr-2" />
+                  Start This Program
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
