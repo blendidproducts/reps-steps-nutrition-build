@@ -429,7 +429,7 @@ export default function WorkoutBuilder() {
       exercises: exercisesToUse.map((ex, idx) => ({
         exercise_id: ex.id,
         exercise_name: ex.name,
-        target_reps: ex.metric === 'time' ? 0 : settings.defaultReps[0],
+        target_reps: ex.metric === 'time' ? 0 : (ex.target_reps || settings.defaultReps[0]),
         target_time: ex.target_time || 0,
         completed_reps: 0,
         completed_time: 0,
@@ -1006,6 +1006,26 @@ Make it realistic and achievable.`,
                                       <div className="flex-1">
                                         <h4 className="text-white font-semibold">{exercise.name}</h4>
                                         <p className="text-xs text-gray-400 mt-1">{exercise.category}</p>
+                                        
+                                        {exercise.metric !== 'time' && (
+                                          <div className="mt-2 flex items-center gap-2">
+                                            <Label className="text-xs text-gray-400">Exact Reps:</Label>
+                                            <Input 
+                                              type="number" 
+                                              value={exercise.target_reps || settings.defaultReps[0]}
+                                              onChange={(e) => {
+                                                const val = parseInt(e.target.value);
+                                                if (!isNaN(val) && val > 0) {
+                                                  const updated = [...selectedExercises];
+                                                  updated[index] = { ...updated[index], target_reps: val };
+                                                  setSelectedExercises(updated);
+                                                }
+                                              }}
+                                              className="w-16 h-8 text-xs bg-gray-900 border-gray-700 text-center"
+                                              placeholder="Reps"
+                                            />
+                                          </div>
+                                        )}
                                       </div>
                                       <div className="flex gap-2">
                                         <button
