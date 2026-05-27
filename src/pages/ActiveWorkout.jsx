@@ -652,7 +652,12 @@ export default function ActiveWorkout() {
                     <span className={`w-6 h-6 rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0 ${index === currentExerciseIndex ? 'bg-brand-blue text-white' : index < currentExerciseIndex ? 'bg-green-500 text-white' : 'bg-gray-700 text-white'}`}>{index + 1}</span>
                     <span className="font-medium truncate">{exercise.exercise_name}</span>
                   </div>
-                  <div className="text-xs flex-shrink-0 ml-2">{exercise.metric === 'time' ? `${exercise.target_time}s` : `${exercise.target_reps} reps`}</div>
+                  <div className="flex flex-col items-end gap-0.5 flex-shrink-0 ml-2">
+                    <div className="text-xs">{exercise.metric === 'time' ? `${exercise.target_time}s` : `${exercise.target_reps} reps`}</div>
+                    {exercise.metric === 'reps' && (
+                      <div className="text-xs text-brand-blue font-semibold">{exercise.completed_reps || 0} done</div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
