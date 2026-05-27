@@ -346,7 +346,7 @@ export default function ActiveWorkout() {
       const workoutData = await base44.entities.Workout.filter({id: workoutId});
       if (!workoutData?.length) { setLoadingError('Not found'); setTimeout(() => navigate(createPageUrl("Exercises")), 2000); return; }
       const data = workoutData[0];
-      if (!data.exercises?.length) { setLoadingError('No exercises'); setTimeout(() => navigate(createPageUrl("Exercises")), 2000); return; }
+      if (!data.exercises || !data.exercises.length) { setLoadingError('No exercises found in workout'); setTimeout(() => navigate(createPageUrl("Exercises")), 2000); return; }
       const exList = await base44.entities.Exercise.list(); setAllExercises(exList);
       data.exercises = data.exercises.map(we => {
         const d = exList.find(ex => ex.id === we.exercise_id || ex.name === we.exercise_name);
@@ -357,7 +357,7 @@ export default function ActiveWorkout() {
         data.exercises.forEach(ex => { ex.target_time = tpe; });
       }
       setWorkout(data);
-    } catch(e) { setLoadingError(e.message || 'Failed'); setTimeout(() => navigate(createPageUrl("Exercises")), 3000); }
+    } catch(e) { setLoadingError(e.message || 'Failed to load workout'); setTimeout(() => navigate(createPageUrl("Exercises")), 3000); }
   };
 
   const startWorkout = () => {

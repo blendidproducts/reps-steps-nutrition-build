@@ -141,16 +141,16 @@ export default function PresetPrograms() {
       toast.loading('Creating workout...');
       
       const allExercises = await Exercise.list();
-      const exercises = day.exercises.map(ex => {
-        const dbExercise = allExercises.find(e => e.name.toLowerCase() === ex.exercise_name.toLowerCase());
+      const exercises = (day.exercises || []).map(ex => {
+        const dbExercise = allExercises.find(e => e.name.toLowerCase() === ex.exercise_name?.toLowerCase());
         return {
           exercise_id: dbExercise?.id || 'custom',
-          exercise_name: ex.exercise_name,
-          target_reps: ex.target_reps,
+          exercise_name: ex.exercise_name || 'Custom Exercise',
+          target_reps: ex.target_reps || 10,
           sets: ex.sets || 1,
           completed_reps: 0,
           completed_time: 0,
-          metric: 'reps',
+          metric: dbExercise?.metric || 'reps',
           category: dbExercise?.category || 'full_body',
           image_url: dbExercise?.image_url,
           instructions: dbExercise?.instructions
@@ -177,8 +177,8 @@ export default function PresetPrograms() {
         name: `${program.name} - Day ${dayNumber}`,
         exercises: [...warmupExercises, ...exercises],
         workout_type: "rep_based",
-        difficulty: program.difficulty,
-        rest_time: day.exercises[0]?.rest_after_circuit_seconds || 300,
+        difficulty: program.difficulty || 'beginner',
+        rest_time: (day.exercises || [])[0]?.rest_after_circuit_seconds || 300,
         program_id: program.id,
         program_day: dayNumber
       };
