@@ -242,9 +242,20 @@ export default function WorkoutBuilder() {
     const warmupTime = settings.includeWarmup ? 190 : 0; // ~3 minutes for warmup
     
     // Calculate workout time (only actual exercises)
-    const totalSets = selectedExercises.length * settings.defaultSets[0];
-    const workTime = totalSets * settings.defaultReps[0] * 2; // 2 sec per rep
-    const restTime = (totalSets - 1) * settings.restTime[0];
+    let workTime = 0;
+    let totalSets = 0;
+    
+    selectedExercises.forEach(ex => {
+      const sets = ex.sets || settings.defaultSets[0];
+      totalSets += sets;
+      if (ex.metric === 'time' || ex.target_time > 0) {
+        workTime += (ex.target_time || 0) * sets;
+      } else {
+        workTime += (ex.target_reps || settings.defaultReps[0]) * sets * 2; // 2 sec per rep
+      }
+    });
+
+    const restTime = Math.max(0, (totalSets - 1) * settings.restTime[0]);
     const totalSeconds = warmupTime + workTime + restTime;
 
     return Math.ceil(totalSeconds / 60); // Convert to minutes
@@ -433,7 +444,7 @@ export default function WorkoutBuilder() {
         target_time: ex.target_time || 0,
         completed_reps: 0,
         completed_time: 0,
-        sets: ex.category === 'warmup' ? 1 : settings.defaultSets[0],
+        sets: ex.category === 'warmup' ? 1 : (ex.sets || settings.defaultSets[0]),
         superset_with_next: ex.superset_with_next || false,
         category: ex.category || 'full_body',
         metric: ex.metric || 'reps'
@@ -475,13 +486,16 @@ export default function WorkoutBuilder() {
       const response = await base44.integrations.Core.InvokeLLM({
         prompt: `You are a professional fitness trainer. Generate a workout based on this request: "${aiPrompt}"
         
+If the user asks for specific reps (like 200 pushups), make sure target_reps * sets = requested reps (e.g. 20 sets of 10 reps, or 1 set of 200). If they ask for cardio (run, sprint), include it with a target_time in seconds.
+
 Return a JSON object with this exact structure:
 {
   "exercises": [
     {
       "name": "Exercise Name",
-      "category": "upper_body|lower_body|core|full_body",
+      "category": "upper_body|lower_body|core|full_body|cardio",
       "target_reps": 15,
+      "target_time": 0,
       "sets": 3,
       "superset_with_next": false
     }
@@ -491,9 +505,9 @@ Return a JSON object with this exact structure:
   "difficulty": "beginner|intermediate|advanced"
 }
 
-Choose real exercises from this list: Push-ups, Squats, Lunges, Plank, Sit-ups, Burpees, Mountain Climbers, Jumping Jacks, Dips, Pull-ups, Tricep Dips, Leg Raises, Russian Twists, High Knees, Butt Kickers, Jump Squats, Wall Sits, Bicycle Crunches, Flutter Kicks, Crunches.
+Choose real exercises from this list: Push-ups, Squats, Lunges, Plank, Sit-ups, Burpees, Mountain Climbers, Jumping Jacks, Dips, Pull-ups, Tricep Dips, Leg Raises, Russian Twists, High Knees, Butt Kickers, Jump Squats, Wall Sits, Bicycle Crunches, Flutter Kicks, Crunches, Run, Sprint.
 
-Make it realistic and achievable.`,
+Make it realistic, but always respect specific rep/time requests.`,
         response_json_schema: {
           type: "object",
           properties: {
@@ -505,6 +519,7 @@ Make it realistic and achievable.`,
                   name: { type: "string" },
                   category: { type: "string" },
                   target_reps: { type: "number" },
+                  target_time: { type: "number" },
                   sets: { type: "number" },
                   superset_with_next: { type: "boolean" }
                 }
@@ -522,7 +537,16 @@ Make it realistic and achievable.`,
       const dbExercises = await base44.entities.Exercise.list();
       
       const selectedExercises = response.exercises.map(aiEx => {
-        const dbEx = dbExercises.find(ex => ex.name.toLowerCase() === aiEx.name.toLowerCase());
+        let dbEx = dbExercises.find(ex => ex.name.toLowerCase() === aiEx.name.toLowerCase());
+        
+        // If not found in DB, try loose matching
+        if (!dbEx) {
+          dbEx = dbExercises.find(ex => aiEx.name.toLowerCase().includes(ex.name.toLowerCase()) || ex.name.toLowerCase().includes(aiEx.name.toLowerCase()));
+        }
+        // Fallback for run/sprint if still not found
+        if (!dbEx && (aiEx.name.toLowerCase().includes('run') || aiEx.name.toLowerCase().includes('sprint'))) {
+           dbEx = dbExercises.find(ex => ex.name.toLowerCase().includes('high knees')); // use high knees as fallback for cardio if no run exists
+        }
         
         if (!dbEx) {
           console.warn(`Exercise not found in database: ${aiEx.name}`);
@@ -534,9 +558,10 @@ Make it realistic and achievable.`,
           name: aiEx.name,
           category: aiEx.category,
           target_reps: aiEx.target_reps,
+          target_time: aiEx.target_time || 0,
           sets: aiEx.sets,
           superset_with_next: aiEx.superset_with_next || false,
-          metric: dbEx?.metric || 'reps'
+          metric: (aiEx.target_time > 0) ? 'time' : (dbEx?.metric || 'reps')
         };
       }).filter(ex => ex.id); // Remove exercises without valid IDs
 
@@ -1007,22 +1032,59 @@ Make it realistic and achievable.`,
                                         <h4 className="text-white font-semibold">{exercise.name}</h4>
                                         <p className="text-xs text-gray-400 mt-1">{exercise.category}</p>
                                         
-                                        {exercise.metric !== 'time' && (
+                                        {exercise.metric !== 'time' ? (
+                                          <div className="mt-2 flex items-center gap-3">
+                                            <div className="flex items-center gap-2">
+                                              <Label className="text-xs text-gray-400">Sets:</Label>
+                                              <Input 
+                                                type="number" 
+                                                value={exercise.sets || settings.defaultSets[0]}
+                                                onChange={(e) => {
+                                                  const val = parseInt(e.target.value);
+                                                  if (!isNaN(val) && val > 0) {
+                                                    const updated = [...selectedExercises];
+                                                    updated[index] = { ...updated[index], sets: val };
+                                                    setSelectedExercises(updated);
+                                                  }
+                                                }}
+                                                className="w-14 h-8 text-xs bg-gray-900 border-gray-700 text-center"
+                                                placeholder="Sets"
+                                              />
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <Label className="text-xs text-gray-400">Reps:</Label>
+                                              <Input 
+                                                type="number" 
+                                                value={exercise.target_reps || settings.defaultReps[0]}
+                                                onChange={(e) => {
+                                                  const val = parseInt(e.target.value);
+                                                  if (!isNaN(val) && val > 0) {
+                                                    const updated = [...selectedExercises];
+                                                    updated[index] = { ...updated[index], target_reps: val };
+                                                    setSelectedExercises(updated);
+                                                  }
+                                                }}
+                                                className="w-16 h-8 text-xs bg-gray-900 border-gray-700 text-center"
+                                                placeholder="Reps"
+                                              />
+                                            </div>
+                                          </div>
+                                        ) : (
                                           <div className="mt-2 flex items-center gap-2">
-                                            <Label className="text-xs text-gray-400">Exact Reps:</Label>
+                                            <Label className="text-xs text-gray-400">Time (s):</Label>
                                             <Input 
                                               type="number" 
-                                              value={exercise.target_reps || settings.defaultReps[0]}
+                                              value={exercise.target_time || 0}
                                               onChange={(e) => {
                                                 const val = parseInt(e.target.value);
                                                 if (!isNaN(val) && val > 0) {
                                                   const updated = [...selectedExercises];
-                                                  updated[index] = { ...updated[index], target_reps: val };
+                                                  updated[index] = { ...updated[index], target_time: val };
                                                   setSelectedExercises(updated);
                                                 }
                                               }}
                                               className="w-16 h-8 text-xs bg-gray-900 border-gray-700 text-center"
-                                              placeholder="Reps"
+                                              placeholder="Secs"
                                             />
                                           </div>
                                         )}

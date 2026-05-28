@@ -254,7 +254,7 @@ export default function AIWorkoutGenerator() {
         target_time: ex.target_time || 0,
         completed_reps: 0,
         completed_time: 0,
-        sets: ex.category === 'warmup' ? 1 : settings.defaultSets[0],
+        sets: ex.category === 'warmup' ? 1 : (ex.sets || settings.defaultSets[0]),
         superset_with_next: ex.superset_with_next || false,
         category: ex.category || 'full_body',
         metric: ex.metric || 'reps'
@@ -286,15 +286,26 @@ export default function AIWorkoutGenerator() {
   const getEstimatedTime = () => {
     if (!selectedExercises.length) return 0;
     const warmupTime = settings.includeWarmup ? 190 : 0;
-    const totalSets = selectedExercises.length * settings.defaultSets[0];
-    const workTime = totalSets * settings.defaultReps[0] * 2; // 2 sec per rep
-    const restTime = (totalSets - 1) * settings.restTime[0];
+    let workTime = 0;
+    let totalSets = 0;
+    
+    selectedExercises.forEach(ex => {
+      const sets = ex.sets || settings.defaultSets[0];
+      totalSets += sets;
+      if (ex.metric === 'time' || ex.target_time > 0) {
+        workTime += (ex.target_time || 0) * sets;
+      } else {
+        workTime += (ex.target_reps || settings.defaultReps[0]) * sets * 2; // 2 sec per rep
+      }
+    });
+
+    const restTime = Math.max(0, (totalSets - 1) * settings.restTime[0]);
     return Math.ceil((warmupTime + workTime + restTime) / 60);
   };
 
   const getEstimatedTotalReps = () => {
     if (!selectedExercises.length) return 0;
-    return selectedExercises.reduce((total, ex) => total + ((ex.target_reps || settings.defaultReps[0]) * settings.defaultSets[0]), 0);
+    return selectedExercises.reduce((total, ex) => total + ((ex.target_reps || settings.defaultReps[0]) * (ex.sets || settings.defaultSets[0])), 0);
   };
 
   const isTimeValid = () => {
@@ -798,22 +809,59 @@ export default function AIWorkoutGenerator() {
                                         <h4 className="text-white font-semibold text-sm sm:text-base truncate">{exercise.name}</h4>
                                         <p className="text-xs text-gray-400 mt-1">{exercise.category}</p>
                                         
-                                        {exercise.metric !== 'time' && (
+                                        {exercise.metric !== 'time' ? (
+                                          <div className="mt-2 flex items-center gap-3">
+                                            <div className="flex items-center gap-2">
+                                              <Label className="text-xs text-gray-400">Sets:</Label>
+                                              <Input 
+                                                type="number" 
+                                                value={exercise.sets || settings.defaultSets[0]}
+                                                onChange={(e) => {
+                                                  const val = parseInt(e.target.value);
+                                                  if (!isNaN(val) && val > 0) {
+                                                    const updated = [...selectedExercises];
+                                                    updated[index] = { ...updated[index], sets: val };
+                                                    setSelectedExercises(updated);
+                                                  }
+                                                }}
+                                                className="w-14 h-8 text-xs bg-gray-900 border-gray-700 text-center"
+                                                placeholder="Sets"
+                                              />
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <Label className="text-xs text-gray-400">Reps:</Label>
+                                              <Input 
+                                                type="number" 
+                                                value={exercise.target_reps || settings.defaultReps[0]}
+                                                onChange={(e) => {
+                                                  const val = parseInt(e.target.value);
+                                                  if (!isNaN(val) && val > 0) {
+                                                    const updated = [...selectedExercises];
+                                                    updated[index] = { ...updated[index], target_reps: val };
+                                                    setSelectedExercises(updated);
+                                                  }
+                                                }}
+                                                className="w-16 h-8 text-xs bg-gray-900 border-gray-700 text-center"
+                                                placeholder="Reps"
+                                              />
+                                            </div>
+                                          </div>
+                                        ) : (
                                           <div className="mt-2 flex items-center gap-2">
-                                            <Label className="text-xs text-gray-400">Exact Reps:</Label>
+                                            <Label className="text-xs text-gray-400">Time (s):</Label>
                                             <Input 
                                               type="number" 
-                                              value={exercise.target_reps || settings.defaultReps[0]}
+                                              value={exercise.target_time || 0}
                                               onChange={(e) => {
                                                 const val = parseInt(e.target.value);
                                                 if (!isNaN(val) && val > 0) {
                                                   const updated = [...selectedExercises];
-                                                  updated[index] = { ...updated[index], target_reps: val };
+                                                  updated[index] = { ...updated[index], target_time: val };
                                                   setSelectedExercises(updated);
                                                 }
                                               }}
                                               className="w-16 h-8 text-xs bg-gray-900 border-gray-700 text-center"
-                                              placeholder="Reps"
+                                              placeholder="Secs"
                                             />
                                           </div>
                                         )}
