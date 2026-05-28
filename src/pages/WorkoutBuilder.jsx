@@ -1151,7 +1151,7 @@ Make it realistic, but always respect specific rep/time requests.`,
               <CardHeader>
                 <CardTitle className="text-white text-xl">Fine-tune Settings</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-6 pb-40">
                 <div className="space-y-3">
                   <Label className="text-white text-base">Sets per Exercise</Label>
                   <Slider

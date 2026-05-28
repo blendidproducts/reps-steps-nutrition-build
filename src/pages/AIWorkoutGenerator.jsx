@@ -935,7 +935,7 @@ export default function AIWorkoutGenerator() {
                 <CardTitle className="text-white text-lg sm:text-xl">Fine-tune Settings</CardTitle>
                 <p className="text-xs sm:text-sm text-gray-400">Adjust workout parameters</p>
               </CardHeader>
-              <CardContent className="space-y-4 sm:space-y-6">
+              <CardContent className="space-y-4 sm:space-y-6 pb-40">
                 <div className="space-y-3">
                   <Label className="text-white text-sm sm:text-base">Sets per Exercise</Label>
                   <div className="flex items-center gap-3">
