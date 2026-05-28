@@ -168,17 +168,22 @@ export default function AIWorkoutGenerator() {
       const totalSets = numExercises * settings.defaultSets[0];
       const calculatedReps = Math.ceil(selectedReps / totalSets);
       
-      if (calculatedReps !== settings.defaultReps[0]) {
+      const cappedReps = Math.max(5, Math.min(50, calculatedReps));
+      if (cappedReps !== settings.defaultReps[0]) {
         setSettings(prev => ({
           ...prev,
-          defaultReps: [Math.max(5, calculatedReps)]
+          defaultReps: [cappedReps]
         }));
       }
     }
   }, [settings.defaultSets, currentStep, autoReps, selectedReps, selectedExercises]);
 
+  const updateSettings = (updates) => {
+    setSettings(prev => ({ ...prev, ...updates }));
+  };
+
   const updateSetting = (key, value) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+    updateSettings({ [key]: value });
   };
 
   const removeExercise = (index) => {
@@ -937,13 +942,13 @@ export default function AIWorkoutGenerator() {
                     <Slider
                       value={settings.defaultSets}
                       onValueChange={(value) => {
-                        updateSetting('defaultSets', value);
-                        // If manual reps target is set, recalculate reps per set
+                        const updates = { defaultSets: value };
                         if (!autoReps && selectedReps && selectedReps > 0 && selectedExercises.length > 0) {
                           const totalSets = selectedExercises.length * value[0];
                           const calculatedReps = Math.ceil(selectedReps / totalSets);
-                          updateSetting('defaultReps', [Math.max(5, Math.min(30, calculatedReps))]);
+                          updates.defaultReps = [Math.max(5, Math.min(50, calculatedReps))];
                         }
+                        updateSettings(updates);
                       }}
                       min={1}
                       max={5}
@@ -955,12 +960,13 @@ export default function AIWorkoutGenerator() {
                       value={settings.defaultSets[0]}
                       onChange={(e) => {
                         const val = Math.max(0, Math.min(1000, parseInt(e.target.value) || 0));
-                        updateSetting('defaultSets', [val]);
+                        const updates = { defaultSets: [val] };
                         if (!autoReps && selectedReps && selectedReps > 0 && selectedExercises.length > 0) {
                           const totalSets = selectedExercises.length * val;
                           const calculatedReps = Math.ceil(selectedReps / totalSets);
-                          updateSetting('defaultReps', [Math.max(5, Math.min(30, calculatedReps))]);
+                          updates.defaultReps = [Math.max(5, Math.min(50, calculatedReps))];
                         }
+                        updateSettings(updates);
                       }}
                       className="w-20 bg-gray-800 border-gray-700 text-white text-center font-bold"
                       min={0}
