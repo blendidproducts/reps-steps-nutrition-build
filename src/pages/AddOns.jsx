@@ -38,7 +38,7 @@ const ADD_ONS = [
     subtitle: "Photo-based calorie tracking + meal builder",
     price: "$4.99",
     period: "/mo",
-    stripeUrl: "https://buy.stripe.com/28EbJ16tUcOW59OcoZbQY0k",
+    stripeUrl: "https://buy.stripe.com/8x28wP2dE9CKcCggFfbQY0p",
     features: [
       "AI Food Photo Analyzer",
       "Snap a meal — get instant macros",
