@@ -25,7 +25,7 @@ export default function NutritionPricing() {
 
   const handleBuyAddon = () => {
     // Link to the $4.99/mo AI Add-On Stripe product
-    window.open("https://buy.stripe.com/28EbJ16tUcOW59OcoZbQY0k", "_blank");
+    window.open("https://buy.stripe.com/8x28wP2dE9CKcCggFfbQY0p", "_blank");
   };
 
   const handleBuyAllAccess = () => {
