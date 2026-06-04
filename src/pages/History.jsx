@@ -3,7 +3,8 @@ import { WorkoutSession } from "@/entities/WorkoutSession";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Target, TrendingUp, Share2, Footprints } from "lucide-react";
+import { Calendar, Clock, Target, TrendingUp, Share2, Footprints, Download, Upload } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 import { format } from "date-fns";
 import { createPageUrl } from "@/utils";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -112,6 +113,99 @@ export default function History() {
     return `${mins}m ${secs}s`;
   };
 
+  const exportWorkoutToTCX = (session) => {
+    const startTime = new Date(session.start_time).toISOString();
+    const duration = session.duration || 0;
+    const calories = Math.round(session.calories_burned || 0);
+    const distanceMeters = (session.cardio_analytics?.total_distance_miles || 0) * 1609.34;
+    
+    const tcx = `<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+  <Activities>
+    <Activity Sport="Other">
+      <Id>${startTime}</Id>
+      <Lap StartTime="${startTime}">
+        <TotalTimeSeconds>${duration}</TotalTimeSeconds>
+        <DistanceMeters>${distanceMeters}</DistanceMeters>
+        <Calories>${calories}</Calories>
+        <Intensity>Active</Intensity>
+        <TriggerMethod>Manual</TriggerMethod>
+      </Lap>
+      <Notes>${session.notes || 'Exported from Reps & Steps'}</Notes>
+    </Activity>
+  </Activities>
+</TrainingCenterDatabase>`;
+
+    const blob = new Blob([tcx], { type: 'application/vnd.garmin.tcx+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Workout_${startTime.split('T')[0]}.tcx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Workout exported as TCX!');
+  };
+
+  const handleImportTCX = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target.result;
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(text, "text/xml");
+        
+        const activities = xmlDoc.getElementsByTagName('Activity');
+        if (activities.length === 0) throw new Error("No activities found in TCX");
+        
+        let importedCount = 0;
+        for (let i = 0; i < activities.length; i++) {
+          const activity = activities[i];
+          const idNode = activity.getElementsByTagName('Id')[0];
+          const startTime = idNode ? idNode.textContent : new Date().toISOString();
+          
+          let duration = 0;
+          let distanceMeters = 0;
+          let calories = 0;
+          
+          const laps = activity.getElementsByTagName('Lap');
+          for (let j = 0; j < laps.length; j++) {
+            const timeNode = laps[j].getElementsByTagName('TotalTimeSeconds')[0];
+            const distNode = laps[j].getElementsByTagName('DistanceMeters')[0];
+            const calNode = laps[j].getElementsByTagName('Calories')[0];
+            
+            if (timeNode) duration += parseFloat(timeNode.textContent);
+            if (distNode) distanceMeters += parseFloat(distNode.textContent);
+            if (calNode) calories += parseFloat(calNode.textContent);
+          }
+          
+          await base44.entities.WorkoutSession.create({
+            workout_id: "imported_tcx",
+            start_time: startTime,
+            end_time: new Date(new Date(startTime).getTime() + duration * 1000).toISOString(),
+            duration: Math.round(duration),
+            calories_burned: Math.round(calories),
+            notes: "Imported from TCX",
+            cardio_analytics: {
+              total_distance_miles: parseFloat((distanceMeters / 1609.34).toFixed(2))
+            }
+          });
+          importedCount++;
+        }
+        
+        toast.success(`Imported ${importedCount} workout(s) successfully!`);
+        loadHistory();
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to parse TCX file. Make sure it is a valid TCX format.');
+      }
+      e.target.value = '';
+    };
+    reader.readAsText(file);
+  };
+
   const shareWorkout = async (session) => {
     const text = `Just completed a ${formatTime(session.duration)} workout with Reps & Steps! Crushed ${session.total_reps} reps. 🔥 #RepsAndSteps #Calisthenics`;
     try {
@@ -136,10 +230,20 @@ export default function History() {
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb', paddingBottom: '80px' }}>
       <div className="gradient-bg text-white py-8">
         <div className="container mx-auto px-4">
-          <h1 className="text-3xl font-bold mb-2">Workout History</h1>
-          <p className="text-lg text-white/90">
-            Track your fitness journey and celebrate your progress.
-          </p>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Workout History</h1>
+              <p className="text-lg text-white/90">
+                Track your fitness journey and celebrate your progress.
+              </p>
+            </div>
+            <div>
+              <Button onClick={() => document.getElementById('tcx-upload').click()} variant="secondary" className="gap-2 bg-white/20 hover:bg-white/30 text-white border-0">
+                <Upload className="w-4 h-4" /> Import TCX
+              </Button>
+              <input type="file" id="tcx-upload" className="hidden" accept=".tcx,.xml" onChange={handleImportTCX} />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -280,9 +384,14 @@ export default function History() {
                         
                       </div>
                       
-                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); shareWorkout(session); }} aria-label="Share this workout" className="ml-2 text-gray-400 hover:text-brand-blue">
-                        <Share2 className="w-4 h-4" aria-hidden="true" />
-                      </Button>
+                      <div className="flex flex-col gap-1 ml-2">
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); shareWorkout(session); }} aria-label="Share this workout" className="text-gray-400 hover:text-brand-blue h-8 w-8">
+                          <Share2 className="w-4 h-4" aria-hidden="true" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); exportWorkoutToTCX(session); }} aria-label="Export to TCX" className="text-gray-400 hover:text-emerald-400 h-8 w-8">
+                          <Download className="w-4 h-4" aria-hidden="true" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
