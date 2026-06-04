@@ -7,6 +7,7 @@ import { Calendar, Clock, Target, TrendingUp, Share2, Footprints, Download, Uplo
 import { base44 } from "@/api/base44Client";
 import { format } from "date-fns";
 import { createPageUrl } from "@/utils";
+import JSZip from 'jszip';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import MobileDrawerSelect from "@/components/MobileDrawerSelect";
 import { toast } from "sonner";
@@ -113,7 +114,7 @@ export default function History() {
     return `${mins}m ${secs}s`;
   };
 
-  const exportWorkoutToTCX = (session) => {
+  const generateTCX = (session) => {
     const startTime = new Date(session.start_time).toISOString();
     const duration = session.duration || 0;
     const calories = Math.round(session.calories_burned || 0);
@@ -123,7 +124,7 @@ export default function History() {
     const sportType = distanceMeters > 0 ? "Run" : "Strength";
     
     // Using Garmin schema as it is the standard format for TCX that most platforms (including COROS) accept.
-    const tcx = `<?xml version="1.0" encoding="UTF-8"?>
+    return `<?xml version="1.0" encoding="UTF-8"?>
 <TrainingCenterDatabase
   xsi:schemaLocation="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd"
   xmlns:ns5="http://www.garmin.com/xmlschemas/ActivityGoals/v1"
@@ -162,6 +163,11 @@ export default function History() {
     </Activity>
   </Activities>
 </TrainingCenterDatabase>`;
+  };
+
+  const exportWorkoutToTCX = (session) => {
+    const tcx = generateTCX(session);
+    const startTime = new Date(session.start_time).toISOString();
 
     const blob = new Blob([tcx], { type: 'application/vnd.garmin.tcx+xml' });
     const url = URL.createObjectURL(blob);
@@ -171,6 +177,40 @@ export default function History() {
     a.click();
     URL.revokeObjectURL(url);
     toast.success('Workout exported as TCX!');
+  };
+
+  const exportAllWorkoutsToZip = async () => {
+    if (!sessions || sessions.length === 0) {
+      toast.error('No workouts to export.');
+      return;
+    }
+    
+    toast.loading('Generating zip file...');
+    
+    try {
+      const zip = new JSZip();
+      
+      sessions.forEach(session => {
+        const tcx = generateTCX(session);
+        const startTime = new Date(session.start_time).toISOString();
+        zip.file(`Workout_${startTime.split('T')[0]}_${session.id}.tcx`, tcx);
+      });
+      
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `All_Workouts_Export.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      toast.dismiss();
+      toast.success('All workouts exported to ZIP!');
+    } catch (error) {
+      console.error('Failed to generate zip:', error);
+      toast.dismiss();
+      toast.error('Failed to export workouts.');
+    }
   };
 
   const handleImportTCX = async (e) => {
@@ -264,7 +304,10 @@ export default function History() {
                 Track your fitness journey and celebrate your progress.
               </p>
             </div>
-            <div>
+            <div className="flex gap-2">
+              <Button onClick={exportAllWorkoutsToZip} variant="secondary" className="gap-2 bg-brand-blue/20 hover:bg-brand-blue/30 text-brand-blue border-0">
+                <Download className="w-4 h-4" /> Export All
+              </Button>
               <Button onClick={() => document.getElementById('tcx-upload').click()} variant="secondary" className="gap-2 bg-white/20 hover:bg-white/30 text-white border-0">
                 <Upload className="w-4 h-4" /> Import TCX
               </Button>
