@@ -1,9 +1,9 @@
 import { useEffect, useRef, useCallback } from "react";
 
 // Step detection thresholds (tuned for walking/jogging/sprinting)
-const ACCEL_THRESHOLD = 1.2;       // Minimum acceleration spike to count as a step (m/s²)
-const MIN_STEP_INTERVAL_MS = 250;  // Minimum time between steps (prevents double-counting) ~240 steps/min max
-const SMOOTHING_WINDOW = 3;        // Number of samples to average for noise reduction
+const ACCEL_THRESHOLD = 2.5;       // Increased threshold to prevent over-counting minor bumps
+const MIN_STEP_INTERVAL_MS = 330;  // Increased to prevent double-counting (~180 steps/min max)
+const SMOOTHING_WINDOW = 5;        // Increased smoothing window for better noise reduction
 
 export default function StepTracker({ isActive, onStepUpdate }) {
   const stepsRef = useRef(0);

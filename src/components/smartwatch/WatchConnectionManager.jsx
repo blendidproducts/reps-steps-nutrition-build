@@ -30,6 +30,7 @@ export default function WatchConnectionManager({
   const [manualHR, setManualHR] = useState("");
   const [manualSteps, setManualSteps] = useState("");
   const [manualCal, setManualCal] = useState("");
+  const [manualDistance, setManualDistance] = useState("");
   const [manualSleep, setManualSleep] = useState("");
 
   const connectBluetooth = async () => {
@@ -50,7 +51,8 @@ export default function WatchConnectionManager({
           { namePrefix: platform.id === "garmin" ? "Garmin" :
                         platform.id === "apple" ? "Apple Watch" :
                         platform.id === "samsung" ? "Galaxy" :
-                        platform.id === "fitbit" ? "Charge" : "" }
+                        platform.id === "fitbit" ? "Charge" : 
+                        platform.id === "coros" ? "COROS" : "" }
         ],
         optionalServices: [HEART_RATE_SERVICE, BATTERY_SERVICE, DEVICE_INFO_SERVICE]
       });
@@ -134,6 +136,7 @@ export default function WatchConnectionManager({
       heartRate: manualHR ? parseInt(manualHR) : null,
       steps: manualSteps ? parseInt(manualSteps) : null,
       calories: manualCal ? parseInt(manualCal) : null,
+      distance: manualDistance ? parseFloat(manualDistance) : null,
       sleep: manualSleep ? parseFloat(manualSleep) : null,
       source: "manual"
     });
@@ -246,6 +249,7 @@ export default function WatchConnectionManager({
               { label: "Heart Rate (BPM)", key: "hr", state: manualHR, setter: setManualHR, placeholder: "72", type: "number" },
               { label: "Steps Today", key: "steps", state: manualSteps, setter: setManualSteps, placeholder: "8000", type: "number" },
               { label: "Calories Burned", key: "cal", state: manualCal, setter: setManualCal, placeholder: "450", type: "number" },
+              { label: "Distance (mi)", key: "distance", state: manualDistance, setter: setManualDistance, placeholder: "3.1", type: "number" },
               { label: "Sleep Hours", key: "sleep", state: manualSleep, setter: setManualSleep, placeholder: "7.5", type: "number" },
             ].map(field => (
               <div key={field.key}>
@@ -262,7 +266,7 @@ export default function WatchConnectionManager({
           </div>
           <Button
             onClick={connectManual}
-            disabled={!manualHR && !manualSteps && !manualCal && !manualSleep}
+            disabled={!manualHR && !manualSteps && !manualCal && !manualDistance && !manualSleep}
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
           >
             <CheckCircle className="w-4 h-4 mr-2" /> Save & Sync Data

@@ -6,13 +6,14 @@ import { format } from "date-fns";
 import {
   Heart, Footprints, Flame, Moon, Activity,
   RefreshCw, Save, CheckCircle, TrendingUp,
-  Battery, Wifi, WifiOff, Zap
+  Battery, Wifi, WifiOff, Zap, MapPin
 } from "lucide-react";
 
 const METRIC = [
   { key: "heartRate", label: "Heart Rate", unit: "BPM", icon: Heart, color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20" },
   { key: "steps", label: "Steps", unit: "", icon: Footprints, color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
   { key: "calories", label: "Calories", unit: "kcal", icon: Flame, color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/20" },
+  { key: "distance", label: "GPS Distance", unit: "mi", icon: MapPin, color: "text-indigo-400", bg: "bg-indigo-500/10", border: "border-indigo-500/20" },
   { key: "sleep", label: "Sleep", unit: "hrs", icon: Moon, color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/20" },
   { key: "recovery", label: "Recovery", unit: "/100", icon: Activity, color: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/20" },
 ];
@@ -22,6 +23,7 @@ export default function WatchDataSync({ connectedDevice, onDataUpdate, onSyncCom
     heartRate: liveData?.heartRate || null,
     steps: liveData?.steps || null,
     calories: liveData?.calories || null,
+    distance: liveData?.distance || null,
     sleep: liveData?.sleep || null,
     recovery: null,
     battery: liveData?.battery || null
@@ -98,6 +100,7 @@ export default function WatchDataSync({ connectedDevice, onDataUpdate, onSyncCom
         heartRate: data.heartRate,
         steps: data.steps,
         calories: data.calories,
+        distance: data.distance,
         sleep: data.sleep,
         recovery: data.recovery
       };

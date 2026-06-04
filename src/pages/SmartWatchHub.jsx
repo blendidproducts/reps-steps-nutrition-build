@@ -49,6 +49,17 @@ const WATCH_PLATFORMS = [
     setupNote: "Enable developer mode or use Galaxy Wearable app"
   },
   {
+    id: "coros",
+    name: "COROS PRO",
+    description: "Connect COROS PRO & other GPS sport watches",
+    icon: "🧭",
+    color: "from-zinc-700 to-zinc-900",
+    border: "border-zinc-500",
+    supportedData: ["Heart Rate", "Steps", "Calories", "Sleep", "GPS"],
+    connectMethod: "bluetooth",
+    setupNote: "Ensure COROS watch is in Bluetooth pairing mode"
+  },
+  {
     id: "fitbit",
     name: "Fitbit / Google Fit",
     description: "Charge, Versa, Sense & Pixel Watch series",
@@ -349,6 +360,13 @@ export default function SmartWatchHub() {
                             <Flame className="w-3 h-3 text-orange-400 mx-auto mb-0.5" />
                             <div className="text-white font-bold">{record.calories}</div>
                             <div className="text-gray-500">Cal</div>
+                          </div>
+                        )}
+                        {record.distance && (
+                          <div className="bg-indigo-500/10 rounded-lg p-2 text-center">
+                            <Zap className="w-3 h-3 text-indigo-400 mx-auto mb-0.5" />
+                            <div className="text-white font-bold">{record.distance}</div>
+                            <div className="text-gray-500">mi</div>
                           </div>
                         )}
                       </div>
