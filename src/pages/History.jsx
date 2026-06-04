@@ -119,10 +119,20 @@ export default function History() {
     const calories = Math.round(session.calories_burned || 0);
     const distanceMeters = (session.cardio_analytics?.total_distance_miles || 0) * 1609.34;
     
+    // COROS supports Run, Bike, Pool Swim, Strength, Multisports, etc.
+    const sportType = distanceMeters > 0 ? "Run" : "Strength";
+    
+    // Using Garmin schema as it is the standard format for TCX that most platforms (including COROS) accept.
     const tcx = `<?xml version="1.0" encoding="UTF-8"?>
-<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+<TrainingCenterDatabase
+  xsi:schemaLocation="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd"
+  xmlns:ns5="http://www.garmin.com/xmlschemas/ActivityGoals/v1"
+  xmlns:ns3="http://www.garmin.com/xmlschemas/ActivityExtension/v2"
+  xmlns:ns2="http://www.garmin.com/xmlschemas/UserProfile/v2"
+  xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ns4="http://www.garmin.com/xmlschemas/ProfileExtension/v1">
   <Activities>
-    <Activity Sport="Other">
+    <Activity Sport="${sportType}">
       <Id>${startTime}</Id>
       <Lap StartTime="${startTime}">
         <TotalTimeSeconds>${duration}</TotalTimeSeconds>
@@ -130,8 +140,25 @@ export default function History() {
         <Calories>${calories}</Calories>
         <Intensity>Active</Intensity>
         <TriggerMethod>Manual</TriggerMethod>
+        <Track>
+          <Trackpoint>
+            <Time>${startTime}</Time>
+          </Trackpoint>
+        </Track>
       </Lap>
-      <Notes>${session.notes || 'Exported from Reps & Steps'}</Notes>
+      <Creator xsi:type="Application_t">
+        <Name>Reps &amp; Steps</Name>
+        <Build>
+          <Version>
+            <VersionMajor>1</VersionMajor>
+            <VersionMinor>0</VersionMinor>
+            <BuildMajor>0</BuildMajor>
+            <BuildMinor>0</BuildMinor>
+          </Version>
+        </Build>
+        <LangID>en</LangID>
+        <PartNumber>000-00000-00</PartNumber>
+      </Creator>
     </Activity>
   </Activities>
 </TrainingCenterDatabase>`;
