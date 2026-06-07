@@ -1,97 +1,227 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
-const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET");
-
 /**
- * Maps Stripe Payment Link URLs → what fields to set on the user.
- * Multiple products can grant the same fields (e.g. all_access grants everything).
+ * Stripe webhook — activates / revokes entitlements on the Base44 User entity.
  *
- * Fields used on the User entity:
- *   subscription_status    – "free" | "pro" | "pro_lifetime"
- *   fitness_brain_addon    – boolean (true = AI Fitness Brain active)
- *   nutrition_plan         – "none" | "ai_addon" | "all_access"
- *   stripe_customer_id     – Stripe customer ID
- *   subscription_start_date – ISO date string
- *   active_products        – array of product keys for cancellation tracking
+ * Handles: checkout.session.completed (purchase) and
+ *          customer.subscription.deleted (cancellation).
+ *
+ * ── REQUIRED SETUP ─────────────────────────────────────────────────────────
+ * STRIPE_WEBHOOK_SECRET  (required) — signing secret from the Stripe webhook.
+ * STRIPE_SECRET_KEY      (optional) — enables reliable line-item/price lookup.
+ *
+ * ── HOW PRODUCT DETECTION WORKS (read this) ────────────────────────────────
+ * The OLD version tried to match the buy.stripe.com URL suffix by string-
+ * searching the event JSON. That suffix never appears in the webhook payload,
+ * so every purchase fell through to a generic "pro" grant — add-on buyers got
+ * full Pro and their add-on fields were never set. This version detects the
+ * product in priority order:
+ *
+ *   1. session.metadata.product_key      ← RECOMMENDED. Set this on each
+ *                                           Stripe Payment Link (one-time, in
+ *                                           the dashboard). Most reliable.
+ *   2. line item price ID                 ← used if STRIPE_SECRET_KEY is set
+ *                                           and PRICE_TO_KEY is filled in.
+ *   3. amount_total match                 ← optional fallback, AMOUNT_TO_KEY.
+ *   4. legacy URL-suffix scan             ← best-effort, usually misses.
+ *   5. FALLBACK_GRANT_PRO_ON_UNKNOWN      ← if still unknown.
+ *
+ * Once you've added product_key metadata to every link, detection is exact and
+ * you can set FALLBACK_GRANT_PRO_ON_UNKNOWN = false for strictness.
  */
-const PRODUCT_MAP = {
-  // Pro Monthly
-  "7sY8wP4lMg188m0bkVbQY01": {
-    key: "pro_monthly",
-    updates: { subscription_status: "pro" }
-  },
-  // Pro Lifetime
-  "9B68wPbOecOW8m0dt3bQY0h": {
-    key: "pro_lifetime",
-    updates: { subscription_status: "pro_lifetime" }
-  },
-  // 7-Day Trial
-  "aFa7sL4lM5muau82OpbQY0i": {
-    key: "pro_trial",
-    updates: { subscription_status: "pro" }
-  },
-  // AI Fitness Brain Add-On
-  "cNi3cvcSi6qy45Kex7bQY0j": {
-    key: "fitness_brain",
-    updates: { fitness_brain_addon: true }
-  },
-  // AI Nutrition Add-On
-  "28EbJ16tUcOW59OcoZbQY0k": {
-    key: "nutrition_ai",
-    updates: { nutrition_plan: "ai_addon" }
-  },
-  // Brain + Nutrition Bundle
-  "14A9ATf0qcOW31G9cNbQY0l": {
-    key: "brain_nutrition_bundle",
-    updates: { fitness_brain_addon: true, nutrition_plan: "ai_addon" }
-  },
-  // All-Access
-  "3cI4gz3hI4iq45KbkVbQY0m": {
-    key: "all_access",
-    updates: { subscription_status: "pro", fitness_brain_addon: true, nutrition_plan: "all_access" }
-  },
+
+const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY"); // optional
+
+// If we can't identify the product, grant generic Pro (true) or grant nothing
+// and log for manual follow-up (false). Now that every Payment Link has
+// product_key metadata (subscriptions, add-ons, AND one-time programs), this is
+// false: an unrecognized purchase logs an error instead of wrongly granting Pro.
+const FALLBACK_GRANT_PRO_ON_UNKNOWN = false;
+
+const TRIAL_DAYS = 7;
+const SIGNATURE_TOLERANCE_SECONDS = 60 * 5; // reject events older than 5 min
+
+/**
+ * The catalog — keyed by a stable semantic product_key.
+ * `updates` are the fields written to the User entity on purchase.
+ */
+const PRODUCT_CATALOG: Record<string, { updates: Record<string, any>; trial?: boolean; oneTime?: boolean }> = {
+  // ── Subscriptions & add-ons (change in-app entitlements) ──
+  pro_monthly:            { updates: { subscription_status: "pro" } },
+  pro_lifetime:           { updates: { subscription_status: "pro_lifetime" } },
+  pro_trial:              { updates: { subscription_status: "pro" }, trial: true },
+  fitness_brain:          { updates: { fitness_brain_addon: true } },
+  nutrition_ai:           { updates: { nutrition_plan: "ai_addon" } },
+  brain_nutrition_bundle: { updates: { fitness_brain_addon: true, nutrition_plan: "ai_addon" } },
+  all_access:             { updates: { subscription_status: "pro", fitness_brain_addon: true, nutrition_plan: "all_access" } },
+
+  // ── One-time PDF programs & coaching (record-only) ──
+  // Fulfilled by Stripe's instant PDF download after payment; they unlock
+  // nothing in-app, so updates are empty. They're listed here ONLY so the
+  // webhook recognizes them and does NOT fall through to a Pro grant. The
+  // purchase is still recorded in active_products for your records.
+  nutrition_guide:            { updates: {}, oneTime: true },
+  womens_8week:               { updates: {}, oneTime: true },
+  trimmerfit_300:             { updates: {}, oneTime: true },
+  waist_goal:                 { updates: {}, oneTime: true },
+  beginner_reset:             { updates: {}, oneTime: true },
+  beginner_4week:             { updates: {}, oneTime: true },
+  bundle_complete:            { updates: {}, oneTime: true },
+  trimmerfit_advanced:        { updates: {}, oneTime: true }, // website-only $49 program
+  vip_4week:                  { updates: {}, oneTime: true }, // website-only $500 coaching package
+  coaching_custom_plan:       { updates: {}, oneTime: true },
+  coaching_personal_training: { updates: {}, oneTime: true },
 };
 
 /**
- * When a specific product subscription is cancelled, revert only its fields.
- * We do NOT revert fields that might be granted by another active product.
+ * When a product is cancelled, which fields it "owns" and should give back.
+ * After removing the cancelled product we REBUILD entitlements from whatever
+ * products remain active, so overlapping grants (e.g. all_access) are safe.
  */
-const CANCELLATION_REVERTS = {
-  "pro_monthly":            { subscription_status: "free" },
-  "pro_trial":              { subscription_status: "free" },
-  "fitness_brain":          { fitness_brain_addon: false },
-  "nutrition_ai":           { nutrition_plan: "none" },
-  "brain_nutrition_bundle": { fitness_brain_addon: false, nutrition_plan: "none" },
-  "all_access":             { subscription_status: "free", fitness_brain_addon: false, nutrition_plan: "none" },
+const FIELD_DEFAULTS: Record<string, any> = {
+  subscription_status: "free",
+  fitness_brain_addon: false,
+  nutrition_plan: "none",
 };
 
-/**
- * Extract the payment link suffix (last segment) from session metadata or payment_link field.
- * Stripe stores the payment link ID like "plink_XXXX" but the readable part we use
- * is the last segment of the buy.stripe.com URL — which Stripe puts in
- * session.payment_link or line_item price metadata.
- * We match against our PRODUCT_MAP keys which are the URL suffixes.
- */
-function detectProduct(session) {
-  // Stripe attaches the payment link ID to the session
-  const paymentLink = session.payment_link; // e.g. "plink_abc123"
-  
-  // Also check metadata if manually set
-  const metaKey = session.metadata?.product_key;
-  if (metaKey && PRODUCT_MAP[metaKey]) return PRODUCT_MAP[metaKey];
+// OPTIONAL: map Stripe Price IDs → product_key (needs STRIPE_SECRET_KEY).
+// Fill these from your Stripe dashboard (Products → each price's price_xxx id).
+const PRICE_TO_KEY: Record<string, string> = {
+  // "price_123abc": "pro_monthly",
+};
 
-  // The most reliable: check the success_url or the payment link itself
-  // Stripe payment links have a client_reference_id we can use, or we match
-  // the payment_link field against a lookup we build from known link suffixes.
-  // Since our PRODUCT_MAP keys ARE the URL suffixes (the part after buy.stripe.com/),
-  // we check if any key appears in the payment_link string or any session URL.
-  const searchStr = JSON.stringify(session);
-  for (const [key, product] of Object.entries(PRODUCT_MAP)) {
-    if (searchStr.includes(key)) {
-      return product;
+// OPTIONAL: map exact amount_total (in cents) → product_key. Brittle if you
+// change prices, but a useful last-resort. Leave empty to skip.
+const AMOUNT_TO_KEY: Record<string, string> = {
+  // 1999: "pro_monthly",
+};
+
+// LEGACY/REFERENCE: buy.stripe.com URL suffix → product_key. Detection is
+// metadata-first; this map is a documented reference + best-effort fallback.
+const LINK_SUFFIX_TO_KEY: Record<string, string> = {
+  // Subscriptions & add-ons
+  "7sY8wP4lMg188m0bkVbQY01": "pro_monthly",          // Reps & Steps PRO ($9.99/mo) — CANONICAL
+  "28EcN56tUbKSgSw9cNbQY0g": "pro_monthly",          // legacy WorkoutGENIE ($19.99/mo) — retired; keeps existing subs on Pro
+  "aFa7sL4lM5muau82OpbQY0i": "pro_trial",            // $3.99 one-time
+  "9B68wPbOecOW8m0dt3bQY0h": "pro_lifetime",
+  "3cI4gz3hI4iq45KbkVbQY0m": "all_access",
+  "cNi3cvcSi6qy45Kex7bQY0j": "fitness_brain",
+  "8x28wP2dE9CKcCggFfbQY0p": "nutrition_ai",          // website canonical
+  "28EbJ16tUcOW59OcoZbQY0k": "nutrition_ai",          // app legacy alias — verify which is the live $4.99 link
+  "14A9ATf0qcOW31G9cNbQY0l": "brain_nutrition_bundle",
+  // One-time programs
+  "28E7sL7xY4iq31G88JbQY08": "trimmerfit_300",
+  "8x2cN519AbKS59OgFfbQY05": "waist_goal",
+  "7sYcN5bOe8yGcCgbkVbQY0e": "nutrition_guide",
+  "7sYbJ1aKa3em9q4fBbbQY0d": "womens_8week",
+  "dRmdR99G66qy9q43StbQY0f": "trimmerfit_advanced",
+  "14A7sLcSidT059OgFfbQY03": "beginner_reset",
+  "bJe9AT2dE2aiau8gFfbQY02": "beginner_4week",
+  "8x29ATdWm5mu0Ty4WxbQY0a": "bundle_complete",
+  // Coaching
+  "fZucN5f0q9CKau8coZbQY0n": "coaching_custom_plan",
+  "28E28rf0q8yG45K4WxbQY0o": "coaching_personal_training",
+  "aEUcNVaXy5VvaXu288": "vip_4week",
+};
+
+/** Constant-time string compare to avoid timing leaks on the signature. */
+async function safeEqualHex(a: string, b: string): Promise<boolean> {
+  const crypto = await import("node:crypto");
+  const ba = Buffer.from(a, "hex");
+  const bb = Buffer.from(b, "hex");
+  if (ba.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ba, bb);
+}
+
+/** Verify the Stripe-Signature header (HMAC-SHA256 + timestamp tolerance). */
+async function verifySignature(signature: string | null, body: string): Promise<boolean> {
+  if (!signature || !STRIPE_WEBHOOK_SECRET) return false;
+  const parts = Object.fromEntries(
+    signature.split(",").map((kv) => kv.split("=").map((s) => s.trim())) as [string, string][],
+  );
+  const timestamp = parts["t"];
+  const v1 = parts["v1"];
+  if (!timestamp || !v1) return false;
+
+  // Replay protection.
+  const age = Math.abs(Math.floor(Date.now() / 1000) - Number(timestamp));
+  if (!Number.isFinite(age) || age > SIGNATURE_TOLERANCE_SECONDS) return false;
+
+  const crypto = await import("node:crypto");
+  const expected = crypto
+    .createHmac("sha256", STRIPE_WEBHOOK_SECRET)
+    .update(`${timestamp}.${body}`, "utf8")
+    .digest("hex");
+
+  return safeEqualHex(v1, expected);
+}
+
+/** Fetch line items for a session to read its price IDs (needs secret key). */
+async function fetchPriceKeys(sessionId: string): Promise<string | null> {
+  if (!STRIPE_SECRET_KEY || Object.keys(PRICE_TO_KEY).length === 0) return null;
+  try {
+    const res = await fetch(
+      `https://api.stripe.com/v1/checkout/sessions/${sessionId}/line_items?limit=10`,
+      { headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` } },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    for (const item of data.data || []) {
+      const priceId = item?.price?.id;
+      if (priceId && PRICE_TO_KEY[priceId]) return PRICE_TO_KEY[priceId];
     }
+  } catch (e) {
+    console.error("Price lookup failed:", e?.message);
   }
-  
+  return null;
+}
+
+/** Resolve the product_key for a completed checkout session. */
+async function detectProductKey(session: any): Promise<string | null> {
+  // 1. Explicit metadata (recommended).
+  const metaKey = session.metadata?.product_key;
+  if (metaKey && PRODUCT_CATALOG[metaKey]) return metaKey;
+
+  // 2. Price ID via Stripe API.
+  const byPrice = await fetchPriceKeys(session.id);
+  if (byPrice && PRODUCT_CATALOG[byPrice]) return byPrice;
+
+  // 3. Exact amount match.
+  const amt = String(session.amount_total ?? "");
+  if (AMOUNT_TO_KEY[amt] && PRODUCT_CATALOG[AMOUNT_TO_KEY[amt]]) return AMOUNT_TO_KEY[amt];
+
+  // 4. Legacy URL-suffix scan (best effort).
+  const blob = JSON.stringify(session);
+  for (const [suffix, key] of Object.entries(LINK_SUFFIX_TO_KEY)) {
+    if (blob.includes(suffix)) return key;
+  }
+
+  return null;
+}
+
+/** Build the User-entity updates for a given product key. */
+function buildUpdates(key: string) {
+  const entry = PRODUCT_CATALOG[key];
+  const updates: Record<string, any> = { ...entry.updates };
+  if (entry.trial) {
+    updates.trial_expires_date = new Date(Date.now() + TRIAL_DAYS * 86400000).toISOString();
+  }
+  return updates;
+}
+
+/** Find the target user by client_reference_id (preferred) then email. */
+async function findUser(base44: any, opts: { refId?: string | null; email?: string | null }) {
+  if (opts.refId) {
+    try {
+      const byId = await base44.asServiceRole.entities.User.filter({ id: opts.refId });
+      if (byId.length > 0) return byId[0];
+    } catch (_) { /* fall through to email */ }
+  }
+  if (opts.email) {
+    const byEmail = await base44.asServiceRole.entities.User.filter({ email: opts.email });
+    if (byEmail.length > 0) return byEmail[0];
+  }
   return null;
 }
 
@@ -100,119 +230,101 @@ Deno.serve(async (req) => {
     const signature = req.headers.get("stripe-signature");
     const body = await req.text();
 
-    if (!signature || !STRIPE_WEBHOOK_SECRET) {
-      return Response.json({ error: 'Missing signature or webhook secret' }, { status: 400 });
-    }
-
-    // Verify webhook signature
-    const crypto = await import('node:crypto');
-    const timestamp = signature.split(',').find(s => s.startsWith('t=')).split('=')[1];
-    const signatureHash = signature.split(',').find(s => s.startsWith('v1=')).split('=')[1];
-
-    const signedPayload = `${timestamp}.${body}`;
-    const expectedSignature = crypto
-      .createHmac('sha256', STRIPE_WEBHOOK_SECRET)
-      .update(signedPayload, 'utf8')
-      .digest('hex');
-
-    if (signatureHash !== expectedSignature) {
-      return Response.json({ error: 'Invalid signature' }, { status: 401 });
+    if (!(await verifySignature(signature, body))) {
+      return Response.json({ error: "Invalid or missing signature" }, { status: 401 });
     }
 
     const event = JSON.parse(body);
     const base44 = createClientFromRequest(req);
 
-    // ── PURCHASE ──────────────────────────────────────────────────────────────
-    if (event.type === 'checkout.session.completed') {
+    // ── PURCHASE ────────────────────────────────────────────────────────────
+    if (event.type === "checkout.session.completed") {
       const session = event.data.object;
-      const customerEmail = session.customer_email || session.customer_details?.email;
+      const email = session.customer_email || session.customer_details?.email || null;
+      const refId = session.client_reference_id || null;
 
-      if (!customerEmail) {
-        return Response.json({ error: 'No customer email found' }, { status: 400 });
+      const user = await findUser(base44, { refId, email });
+      if (!user) {
+        console.error(`No user for purchase. refId=${refId} email=${email} session=${session.id}`);
+        return Response.json({ error: "User not found" }, { status: 404 });
       }
 
-      const users = await base44.asServiceRole.entities.User.filter({ email: customerEmail });
-      if (users.length === 0) {
-        return Response.json({ error: 'User not found' }, { status: 404 });
-      }
-
-      const user = users[0];
-      const product = detectProduct(session);
-
-      if (!product) {
-        // Unknown product — fall back to generic pro upgrade so nothing breaks
-        console.warn('Unknown product for session:', session.id, 'falling back to pro');
-        await base44.asServiceRole.entities.User.update(user.id, {
-          subscription_status: 'pro',
-          stripe_customer_id: session.customer,
-          subscription_start_date: new Date().toISOString(),
-        });
-        return Response.json({ success: true, message: 'Fallback: user upgraded to pro' });
-      }
-
-      // Build the update: product fields + bookkeeping
+      const key = await detectProductKey(session);
       const currentProducts = Array.isArray(user.active_products) ? user.active_products : [];
-      const newProducts = [...new Set([...currentProducts, product.key])];
 
+      if (!key) {
+        if (!FALLBACK_GRANT_PRO_ON_UNKNOWN) {
+          console.error(`UNKNOWN product, no grant. session=${session.id}. Add product_key metadata to this link.`);
+          return Response.json({ received: true, warning: "unknown product, not granted" });
+        }
+        console.warn(`UNKNOWN product, falling back to pro. session=${session.id}`);
+        await base44.asServiceRole.entities.User.update(user.id, {
+          subscription_status: "pro",
+          stripe_customer_id: session.customer,
+          subscription_start_date: user.subscription_start_date || new Date().toISOString(),
+        });
+        return Response.json({ success: true, message: "Fallback: pro granted" });
+      }
+
+      const newProducts = [...new Set([...currentProducts, key])];
       await base44.asServiceRole.entities.User.update(user.id, {
-        ...product.updates,
+        ...buildUpdates(key),
         stripe_customer_id: session.customer,
         subscription_start_date: user.subscription_start_date || new Date().toISOString(),
         active_products: newProducts,
       });
 
-      console.log(`Activated [${product.key}] for ${customerEmail}. Active: ${newProducts.join(', ')}`);
-      return Response.json({ success: true, message: `Activated: ${product.key}` });
+      console.log(`Activated [${key}] for ${user.email}. Active: ${newProducts.join(", ")}`);
+      return Response.json({ success: true, message: `Activated: ${key}` });
     }
 
     // ── CANCELLATION ──────────────────────────────────────────────────────────
-    if (event.type === 'customer.subscription.deleted') {
+    if (event.type === "customer.subscription.deleted") {
       const subscription = event.data.object;
       const customerId = subscription.customer;
 
       const users = await base44.asServiceRole.entities.User.filter({ stripe_customer_id: customerId });
       if (users.length === 0) {
-        return Response.json({ error: 'User not found' }, { status: 404 });
+        console.error(`No user for cancellation. customer=${customerId}`);
+        return Response.json({ error: "User not found" }, { status: 404 });
       }
-
       const user = users[0];
 
-      // Detect which product this subscription belongs to via metadata or description
-      const subStr = JSON.stringify(subscription);
-      let cancelledKey = null;
-      for (const key of Object.keys(PRODUCT_MAP)) {
-        if (subStr.includes(key)) { cancelledKey = PRODUCT_MAP[key].key; break; }
-      }
-
-      // Remove from active_products
-      const currentProducts = Array.isArray(user.active_products) ? user.active_products : [];
-      const remainingProducts = currentProducts.filter(p => p !== cancelledKey);
-
-      // Rebuild entitlements from remaining active products
-      let rebuiltUpdates = {
-        subscription_status: 'free',
-        fitness_brain_addon: false,
-        nutrition_plan: 'none',
-        active_products: remainingProducts,
-      };
-
-      for (const key of remainingProducts) {
-        // Find the product entry by key
-        const entry = Object.values(PRODUCT_MAP).find(p => p.key === key);
-        if (entry) {
-          Object.assign(rebuiltUpdates, entry.updates);
+      // Identify the cancelled product: metadata first, then price, then suffix.
+      let cancelledKey: string | null = subscription.metadata?.product_key || null;
+      if (!cancelledKey || !PRODUCT_CATALOG[cancelledKey]) {
+        const blob = JSON.stringify(subscription);
+        cancelledKey = null;
+        for (const [suffix, key] of Object.entries(LINK_SUFFIX_TO_KEY)) {
+          if (blob.includes(suffix)) { cancelledKey = key; break; }
+        }
+        for (const [priceId, key] of Object.entries(PRICE_TO_KEY)) {
+          if (blob.includes(priceId)) { cancelledKey = key; break; }
         }
       }
 
-      await base44.asServiceRole.entities.User.update(user.id, rebuiltUpdates);
+      const currentProducts = Array.isArray(user.active_products) ? user.active_products : [];
+      const remaining = cancelledKey
+        ? currentProducts.filter((p: string) => p !== cancelledKey)
+        : currentProducts;
 
-      console.log(`Cancelled [${cancelledKey}] for user ${user.email}. Remaining: ${remainingProducts.join(', ')}`);
-      return Response.json({ success: true, message: `Cancelled: ${cancelledKey}` });
+      // Reset owned fields to defaults, then re-apply everything still active.
+      const rebuilt: Record<string, any> = { ...FIELD_DEFAULTS, active_products: remaining };
+      for (const key of remaining) {
+        const entry = PRODUCT_CATALOG[key];
+        if (entry) Object.assign(rebuilt, entry.updates);
+      }
+      // A surviving trial keeps its expiry; a cancelled/ended one is cleared.
+      rebuilt.trial_expires_date = remaining.includes("pro_trial") ? user.trial_expires_date : null;
+
+      await base44.asServiceRole.entities.User.update(user.id, rebuilt);
+      console.log(`Cancelled [${cancelledKey || "unknown"}] for ${user.email}. Remaining: ${remaining.join(", ")}`);
+      return Response.json({ success: true, message: `Cancelled: ${cancelledKey || "unknown"}` });
     }
 
     return Response.json({ received: true });
   } catch (error) {
-    console.error('Webhook error:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error("Webhook error:", error?.message, error?.stack);
+    return Response.json({ error: error?.message || "Webhook failure" }, { status: 500 });
   }
 });
