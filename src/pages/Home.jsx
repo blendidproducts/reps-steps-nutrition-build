@@ -82,6 +82,13 @@ export default function Home() {
         quiz_completed: true,
         recommended_program_id: recommended?.id
       });
+      
+      // Notify admins
+      try {
+        await base44.functions.invoke("notifyQuizCompleted", { answers });
+      } catch (err) {
+        console.error("Failed to notify admins:", err);
+      }
 
       setRecommendedProgram(recommended);
       setShowQuiz(false);
