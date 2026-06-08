@@ -30,8 +30,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
  * you can set FALLBACK_GRANT_PRO_ON_UNKNOWN = false for strictness.
  */
 
-const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET");
-const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY"); // optional
+const STRIPE_WEBHOOK_SECRET = Deno.env.get("whsec_1IIEgnHMZ4SiMzrZEy4IiowX1DQrnUEH");
+const STRIPE_SECRET_KEY = Deno.env.get("whsec_1IIEgnHMZ4SiMzrZEy4IiowX1DQrnUEH"); // optional
 
 // If we can't identify the product, grant generic Pro (true) or grant nothing
 // and log for manual follow-up (false). Now that every Payment Link has
