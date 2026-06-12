@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Brain, Timer, Info, TrendingUp, Activity, CheckCircle2, Moon, ChevronRight, MoreVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import GithubReleasesWidget from "@/components/dashboard/GithubReleasesWidget";
 const FitnessQuiz = React.lazy(() => import("@/components/FitnessQuiz"));
 const MuscleRecovery = React.lazy(() => import("@/components/recovery/MuscleRecovery"));
 
@@ -290,6 +291,11 @@ export default function Home() {
             <div className="text-[10px] text-gray-500 font-medium">See analytics</div>
           </div>
         </div>
+      </div>
+
+      {/* Github Releases Widget */}
+      <div className="px-6 py-4">
+        <GithubReleasesWidget />
       </div>
     </div>
   );
