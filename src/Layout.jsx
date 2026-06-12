@@ -310,6 +310,9 @@ export default function Layout({ children, currentPageName }) {
     }
   };
 
+  // Hide chrome (header + bottom nav) on full-screen workout pages
+  const isFullScreenWorkout = location.pathname.includes('ARTPWorkout') || location.pathname.includes('ActiveWorkout');
+
   return (
     <SidebarProvider>
       <style>
@@ -478,9 +481,9 @@ export default function Layout({ children, currentPageName }) {
             />
           )}
 
-          {/* Mobile Menu Bar - hidden on desktop since sidebar handles it */}
+          {/* Mobile Menu Bar - hidden on desktop and on full-screen workout pages */}
           <div
-            className="md:hidden sticky top-0 z-50 bg-[#0a1628]/95 backdrop-blur-lg border-b-2 border-brand-blue/40 shadow-lg"
+            className={`md:hidden sticky top-0 z-50 bg-[#0a1628]/95 backdrop-blur-lg border-b-2 border-brand-blue/40 shadow-lg ${isFullScreenWorkout ? 'hidden' : ''}`}
             style={{ paddingTop: "var(--safe-top, env(safe-area-inset-top, 0px))" }}
           >
             <div className="flex items-center justify-between px-3 py-3">
@@ -547,8 +550,8 @@ export default function Layout({ children, currentPageName }) {
             </MobileRouteTransition>
           </div>
 
-          {/* Bottom Navigation Bar - Mobile Only */}
-          <BottomNav activeTab={activeTab} navigateToTab={navigateToTab} />
+          {/* Bottom Navigation Bar - Mobile Only (hidden on full-screen workout pages) */}
+          {!isFullScreenWorkout && <BottomNav activeTab={activeTab} navigateToTab={navigateToTab} />}
           <Chatbot />
         </main>
       </div>
