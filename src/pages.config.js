@@ -50,6 +50,7 @@ const FoodPhotoAnalyzer   = React.lazy(() => import('./pages/FoodPhotoAnalyzer')
 const SmartWatchHub       = React.lazy(() => import('./pages/SmartWatchHub'));
 const NutritionPricing    = React.lazy(() => import('./pages/NutritionPricing'));
 const AddOns              = React.lazy(() => import('./pages/AddOns'));
+const ARTPWorkout         = React.lazy(() => import('./pages/ARTPWorkout'));
 
 export const PAGES = {
   "AIWorkoutGenerator":  AIWorkoutGenerator,
@@ -91,6 +92,7 @@ export const PAGES = {
   "SmartWatchHub":       SmartWatchHub,
   "NutritionPricing":    NutritionPricing,
   "AddOns":              AddOns,
+  "ARTPWorkout":         ARTPWorkout,
 };
 
 export const pagesConfig = {
