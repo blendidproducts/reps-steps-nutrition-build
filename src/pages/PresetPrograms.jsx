@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Calendar, Target, Zap, Trophy, ArrowRight, Check, Eye, X, ArrowLeft, Play, Clock, Flame, Apple, Utensils, PlayCircle } from "lucide-react";
+import { Calendar, Target, Zap, Trophy, ArrowRight, Check, Eye, X, ArrowLeft, Play, Clock, Flame, Apple, Utensils, PlayCircle, Brain } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
@@ -470,6 +470,58 @@ export default function PresetPrograms() {
         {/* Workout Programs Grid */}
         {activeTab === 'workout' && (
           <>
+            {/* ── ARTP Featured Card — always shown at top of workout tab ── */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6"
+            >
+              <div className="relative rounded-2xl overflow-hidden border-2 border-blue-500/60 bg-gradient-to-br from-blue-950/80 via-[#0d1a2e] to-purple-950/60 shadow-2xl shadow-blue-500/20">
+                {/* FEATURED ribbon */}
+                <div className="absolute top-0 right-0 bg-gradient-to-l from-blue-500 to-purple-500 text-white font-black text-xs px-4 py-1.5 rounded-bl-xl">
+                  ⭐ FEATURED
+                </div>
+
+                <div className="p-5 space-y-4">
+                  {/* Title row */}
+                  <div className="flex items-start gap-3 pr-20">
+                    <div className="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0">
+                      <Brain className="w-6 h-6 text-blue-400" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-white font-black text-lg leading-tight">AI Rep Tracking Program</h3>
+                        <span className="bg-blue-500/20 text-blue-400 text-[10px] font-bold border border-blue-500/30 rounded-full px-2 py-0.5">PRO</span>
+                      </div>
+                      <p className="text-blue-300/70 text-xs font-semibold tracking-wide mt-0.5">ARTP · 10 Exercises · Full Body</p>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    The only program that uses <strong className="text-blue-300">AI body tracking on every single exercise</strong>. No buttons, no setup — move and the camera counts your reps automatically. Choose AMRAP or timed mode.
+                  </p>
+
+                  {/* Feature pills */}
+                  <div className="flex gap-2 flex-wrap">
+                    <span className="bg-blue-500/15 text-blue-300 text-xs font-semibold border border-blue-500/25 rounded-full px-3 py-1">🧠 MediaPipe AI</span>
+                    <span className="bg-green-500/15 text-green-300 text-xs font-semibold border border-green-500/25 rounded-full px-3 py-1">⚡ Auto-Tracking</span>
+                    <span className="bg-purple-500/15 text-purple-300 text-xs font-semibold border border-purple-500/25 rounded-full px-3 py-1">🏋️ 10 Exercises</span>
+                    <span className="bg-orange-500/15 text-orange-300 text-xs font-semibold border border-orange-500/25 rounded-full px-3 py-1">🔥 AMRAP or Timed</span>
+                  </div>
+
+                  {/* CTA */}
+                  <button
+                    onClick={() => navigate(createPageUrl("ARTPWorkout"))}
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white font-black text-base active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30"
+                  >
+                    <Play className="w-5 h-5" />
+                    LAUNCH AI PROGRAM
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+
             {isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array(3).fill(0).map((_, i) => (

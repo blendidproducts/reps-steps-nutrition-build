@@ -165,6 +165,90 @@ export default function Home() {
         </div>
       </div>
 
+      {/* ── ARTP — AI Rep Tracking Program ──────────────────────────────── */}
+      <div className="px-6 mb-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+        >
+          <div
+            onClick={() => navigate(createPageUrl("ARTPWorkout"))}
+            className="relative rounded-2xl overflow-hidden cursor-pointer group active:scale-[0.99] transition-transform"
+            style={{
+              background: "linear-gradient(135deg, #0a1a2e 0%, #0d1a0a 40%, #0a0a2e 100%)",
+              border: "2px solid rgba(0,169,255,0.55)",
+              boxShadow: "0 0 40px rgba(0,169,255,0.18), 0 8px 32px rgba(0,0,0,0.45)",
+            }}
+          >
+            {/* Animated glow ring */}
+            <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+              style={{ boxShadow: "inset 0 0 30px rgba(0,169,255,0.12)" }} />
+
+            {/* AI PROGRAM badge */}
+            <div className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full px-2.5 py-1"
+              style={{ background: "rgba(0,169,255,0.18)", border: "1px solid rgba(0,169,255,0.45)" }}>
+              <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#00a9ff" }} />
+              <span className="text-[10px] font-bold tracking-widest" style={{ color: "#00a9ff" }}>AI PROGRAM</span>
+            </div>
+
+            <div className="p-5">
+              {/* Icon + headline */}
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: "linear-gradient(135deg, #00a9ff, #7c3aed)",
+                    boxShadow: "0 0 22px rgba(0,169,255,0.4)",
+                  }}
+                >
+                  <Zap className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold tracking-widest uppercase mb-1" style={{ color: "#00a9ff" }}>
+                    Main Feature
+                  </p>
+                  <h2 className="text-2xl font-black text-white leading-tight">
+                    AI Workout Program
+                  </h2>
+                  <p className="text-gray-300 text-sm mt-1 leading-snug">
+                    Camera tracks your reps. Guided sets, rest &amp; steps.
+                  </p>
+                </div>
+              </div>
+
+              {/* Feature pills */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {["Auto Rep Count", "Step Tracker", "10 Exercises", "AMRAP + Timed"].map((tag) => (
+                  <span
+                    key={tag}
+                    className="text-[10px] font-semibold px-2.5 py-1 rounded-full"
+                    style={{
+                      background: "rgba(0,169,255,0.12)",
+                      border: "1px solid rgba(0,169,255,0.3)",
+                      color: "#7dd3fc",
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+
+              {/* CTA Button */}
+              <button
+                className="w-full py-3.5 rounded-xl font-bold text-sm tracking-wide text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                style={{
+                  background: "linear-gradient(135deg, #00a9ff, #7c3aed)",
+                  boxShadow: "0 4px 15px rgba(0,169,255,0.35)",
+                }}
+              >
+                <Play className="w-4 h-4 fill-white" />
+                START AI WORKOUT
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
       {/* Your Readiness */}
       <div className="px-6 py-4">
         <div className="flex items-center justify-between mb-5">
