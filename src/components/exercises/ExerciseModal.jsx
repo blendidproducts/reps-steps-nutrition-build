@@ -8,8 +8,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, Target, Lightbulb, Clock, Play, Box } from "lucide-react";
+import { CheckCircle, Target, Lightbulb, Zap, Clock, Play, Box, Activity } from "lucide-react";
 import Exercise3DViewer from "@/components/Exercise3DViewer";
+const RepTracker = React.lazy(() => import("@/components/workout/RepTracker"));
 
 const categoryColors = {
   upper_body: "bg-red-900/50 text-red-300 border-red-500/30",
@@ -27,6 +28,7 @@ const difficultyColors = {
 
 export default function ExerciseModal({ exercise, isOpen, onClose }) {
   const [show3D, setShow3D] = useState(false);
+  const [showRepTracker, setShowRepTracker] = useState(false);
   
   if (!exercise) return null;
 
@@ -88,11 +90,20 @@ export default function ExerciseModal({ exercise, isOpen, onClose }) {
         
         <div className="space-y-4 pt-4">
           {/* View Options */}
+          {/* AI Body Tracking — primary full-width CTA */}
+          <button
+            onClick={() => setShowRepTracker(true)}
+            className="w-full mb-3 py-3 rounded-xl bg-gradient-to-r from-green-600 to-teal-500 text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-green-500/30"
+          >
+            <Activity className="w-4 h-4" />
+            AI BODY TRACKING — Count My Reps
+            <span className="bg-white/20 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">LIVE</span>
+          </button>
           <div className="flex justify-center gap-3 mb-4">
             <Button
               onClick={() => setShow3D(false)}
               size="sm"
-              className={`${!show3D ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300'} hover:opacity-90`}
+              className={`flex-1 ${!show3D ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-300'} hover:opacity-90`}
             >
               <Play className="w-4 h-4 mr-2" />
               VIDEO
@@ -101,13 +112,22 @@ export default function ExerciseModal({ exercise, isOpen, onClose }) {
               <Button
                 onClick={() => setShow3D(true)}
                 size="sm"
-                className={`${show3D ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300'} hover:opacity-90`}
+                className={`flex-1 ${show3D ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300'} hover:opacity-90`}
               >
                 <Box className="w-4 h-4 mr-2" />
                 3D
               </Button>
             )}
           </div>
+          {showRepTracker && (
+            <React.Suspense fallback={null}>
+              <RepTracker
+                exerciseName={exercise.name}
+                onComplete={() => setShowRepTracker(false)}
+                onClose={() => setShowRepTracker(false)}
+              />
+            </React.Suspense>
+          )}
 
           <div className="w-full h-64 bg-background rounded-lg flex items-center justify-center overflow-hidden mb-4">
             {show3D && exercise.model_url ? (
