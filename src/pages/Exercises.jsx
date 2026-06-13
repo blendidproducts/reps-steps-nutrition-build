@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { Exercise } from "@/entities/Exercise";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Search, ArrowRight, Zap, Dumbbell, RefreshCw } from "lucide-react";
+import { Search, Filter, ArrowRight, Zap, Star, Dumbbell, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
+import { checkIsPro } from "@/lib/proCheck";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { User } from "@/entities/User";
 
-import ExerciseCard from "@/components/exercises/ExerciseCard";
-import CategoryFilter from "@/components/exercises/CategoryFilter";
-import ExerciseModal from "@/components/exercises/ExerciseModal";
+import ExerciseCard from "../components/exercises/ExerciseCard";
+import CategoryFilter from "../components/exercises/CategoryFilter";
+import ExerciseModal from "../components/exercises/ExerciseModal";
 import PullToRefresh from "@/components/PullToRefresh";
 
 export default function Exercises() {
@@ -27,19 +29,23 @@ export default function Exercises() {
   const [currentExercise, setCurrentExercise] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPro, setIsPro] = useState(false);
+  const [isUserLoading, setIsUserLoading] = useState(true);
   const [showAIPrompt, setShowAIPrompt] = useState(false);
   const [aiPrompt, setAIPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const aiDuration = 30;
+  const [aiBodyFocus, setAiBodyFocus] = useState("mixed");
+  const [aiDuration, setAiDuration] = useState(30);
+  const [aiIntensity, setAiIntensity] = useState("moderate");
 
   useEffect(() => {
     const checkUserStatus = async () => {
       try {
-        const user = await base44.auth.me();
-        setIsPro(user.is_pro === true || user.subscription_status === 'pro' || user.role === 'admin');
+        const user = await User.me();
+        setIsPro(checkIsPro(user));
       } catch (error) {
         setIsPro(false);
       }
+      setIsUserLoading(false);
     };
     checkUserStatus();
     loadExercises();
@@ -62,18 +68,66 @@ export default function Exercises() {
     setFilteredExercises(filtered);
   }, [exercises, selectedCategory, searchQuery]);
 
-  const loadExercises = async () => {
+  const CACHE_KEY = 'rns_exercises_cache';
+  const CACHE_TTL = 60 * 60 * 1000; // 1 hour — persists across app restarts in localStorage
+
+  const processExercises = (data) => {
+    return data
+      .filter((exercise, index, self) =>
+        !exercise.is_deleted &&
+        index === self.findIndex(e => e.name?.toLowerCase() === exercise.name?.toLowerCase())
+      )
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  };
+
+  const loadExercises = async (forceRefresh = false) => {
+    // Serve from cache instantly if fresh
+    if (!forceRefresh) {
+      try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        if (raw) {
+          const { data, ts } = JSON.parse(raw);
+          if (Date.now() - ts < CACHE_TTL && data?.length > 0) {
+            setExercises(data);
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch (_) { /* corrupt cache — ignore and fetch fresh */ }
+    }
+
     setIsLoading(true);
-    const data = await base44.entities.Exercise.list();
-    // Filter out deleted exercises, remove duplicates by name and sort alphabetically
-    const uniqueExercises = data.filter((exercise, index, self) => 
-      !exercise.is_deleted && index === self.findIndex(e => e.name?.toLowerCase() === exercise.name?.toLowerCase())
-    );
-    const sortedExercises = uniqueExercises.sort((a, b) => 
-      (a.name || '').localeCompare(b.name || '')
-    );
-    setExercises(sortedExercises);
-    setIsLoading(false);
+    try {
+      const data = await Exercise.list();
+      const sorted = processExercises(data);
+      setExercises(sorted);
+      // Only cache if we actually got exercises — never cache an empty result
+      if (sorted.length > 0) {
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({ data: sorted, ts: Date.now() }));
+        } catch (_) { /* storage full — skip cache write */ }
+      } else {
+        // Empty database — clear any stale cache and surface the seed tool
+        try { localStorage.removeItem(CACHE_KEY); } catch (_) {}
+      }
+    } catch (error) {
+      console.error("Failed to load exercises:", error);
+      // Try to fall back to stale cache rather than showing nothing
+      try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        if (raw) {
+          const { data } = JSON.parse(raw);
+          if (data?.length > 0) {
+            setExercises(data);
+            toast.error("Showing cached exercises — couldn't reach server.");
+            return;
+          }
+        }
+      } catch (_) {}
+      toast.error("Could not load exercises. Please check your connection and try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const toggleExerciseSelection = (exercise) => {
@@ -129,7 +183,7 @@ Return a JSON object with this exact structure:
 }
 
 AVAILABLE EXERCISES BY CATEGORY:
-UPPER BODY: Push-ups, Wide Push-ups, Diamond Push-ups, Tricep Dips, Pull-ups, Arm Circles
+UPPER BODY: Push-ups, Wide Push-ups, Diamond Push-ups, Decline Push-ups, Dips, Tricep Dips, Pull-ups, Arm Circles
 LOWER BODY: Squats, Jump Squats, Lunges, Calf Raises, Wall Sits, Glute Bridges
 CORE: Sit-ups, Crunches, Bicycle Crunches, Russian Twists, Leg Raises, Flutter Kicks, Plank, Mountain Climbers
 FULL BODY: Burpees, Jumping Jacks, High Knees, Butt Kickers
@@ -164,16 +218,34 @@ Choose realistic exercises that match the body focus and intensity level.`,
         }
       });
 
+      // Normalize response — InvokeLLM may return a string or parsed object
+      let parsedResponse = response;
+      if (typeof response === 'string') {
+        try {
+          parsedResponse = JSON.parse(response);
+        } catch {
+          toast.error('AI returned an unexpected format. Please try again.');
+          setIsGenerating(false);
+          return;
+        }
+      }
+
+      if (!parsedResponse?.exercises?.length) {
+        toast.error('No exercises generated. Try rephrasing your prompt.');
+        setIsGenerating(false);
+        return;
+      }
+
       // Find exercise IDs from database
-      const dbExercises = await base44.entities.Exercise.list();
-      
-      const selectedExercises = response.exercises.map(aiEx => {
+      const dbExercises = await Exercise.list();
+
+      const selectedExercises = parsedResponse.exercises.map(aiEx => {
         const dbEx = dbExercises.find(ex => ex.name.toLowerCase() === aiEx.name.toLowerCase());
         return dbEx;
       }).filter(Boolean);
 
       if (selectedExercises.length === 0) {
-        toast.error('No matching exercises found');
+        toast.error('No matching exercises found in library. Try different exercise names.');
         setIsGenerating(false);
         return;
       }
@@ -183,10 +255,10 @@ Choose realistic exercises that match the body focus and intensity level.`,
       const params = new URLSearchParams({
         exercises: exerciseIds,
         ai: 'true',
-        duration: response.estimated_duration || 30,
-        sets: response.exercises[0]?.sets || 3,
-        reps: response.exercises[0]?.target_reps || 15,
-        difficulty: response.difficulty || 'intermediate'
+        duration: parsedResponse.estimated_duration || 30,
+        sets: parsedResponse.exercises[0]?.sets || 3,
+        reps: parsedResponse.exercises[0]?.target_reps || 15,
+        difficulty: parsedResponse.difficulty || 'intermediate'
       });
       navigate(`${createPageUrl("WorkoutBuilder")}?${params.toString()}`);
       
@@ -198,7 +270,7 @@ Choose realistic exercises that match the body focus and intensity level.`,
   };
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb', paddingBottom: '100px' }}>
+    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
       {/* Header */}
       <div className="gradient-bg text-white py-3 sm:py-4 md:py-6 backdrop-blur-lg bg-gradient-to-r from-blue-600/90 to-blue-800/90">
         <div className="container mx-auto px-3 sm:px-4 lg:px-6 max-w-3xl">
@@ -332,7 +404,7 @@ Choose realistic exercises that match the body focus and intensity level.`,
         </div>
       </div>
 
-      <PullToRefresh onRefresh={loadExercises}>
+      <PullToRefresh onRefresh={() => loadExercises(true)}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         {/* Search and Filters */}
         <div className="bg-card/90 backdrop-blur-lg rounded-xl shadow-lg p-3 sm:p-4 mb-4 sm:mb-6 sticky top-0 z-10 select-none">
@@ -347,15 +419,13 @@ Choose realistic exercises that match the body focus and intensity level.`,
               />
             </div>
             <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4">
-              <CategoryFilter 
+              <CategoryFilter
                 selected={selectedCategory}
                 onSelect={setSelectedCategory}
               />
             </div>
           </div>
         </div>
-        
-        {/* Selected Exercises Bar removed from here */}
 
 
         {/* Exercise Grid */}
@@ -388,52 +458,29 @@ Choose realistic exercises that match the body focus and intensity level.`,
           </motion.div>
         )}
 
-        {filteredExercises.length === 0 && !isLoading && (
+        {filteredExercises.length === 0 && !isLoading && exercises.length === 0 && (
+          /* Database is empty — show restore prompt */
+          <div className="text-center py-12 px-6 space-y-4">
+            <div className="text-5xl mb-2">🏋️</div>
+            <p className="text-white text-lg font-semibold">Exercise library is empty</p>
+            <p className="text-gray-400 text-sm">The exercise database needs to be restored. This takes about 10 seconds.</p>
+            <button
+              onClick={() => navigate(createPageUrl("ExerciseSeed"))}
+              className="inline-block mt-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition-colors"
+            >
+              Restore All Exercises →
+            </button>
+          </div>
+        )}
+
+        {filteredExercises.length === 0 && !isLoading && exercises.length > 0 && (
           <div className="text-center py-12 text-gray-500">
             <p className="text-lg">No exercises found.</p>
             <p>Try adjusting your search or filters.</p>
           </div>
         )}
-
       </div>
       </PullToRefresh>
-
-      {/* Selected Exercises Bar */}
-      <AnimatePresence>
-      {selectedExercises.length > 0 && (
-        <motion.div 
-          initial={{ y: 100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 100, opacity: 0 }}
-          className="sticky bottom-[calc(80px+env(safe-area-inset-bottom,0px))] md:bottom-6 left-0 right-0 z-[9999] px-4 pointer-events-none pb-2"
-        >
-          <div className="container mx-auto max-w-2xl pointer-events-auto">
-              <div className="flex justify-between items-center bg-blue-600/95 backdrop-blur-lg border border-blue-400 rounded-xl shadow-2xl p-4">
-                <div>
-                  <span className="font-bold text-white text-base sm:text-lg">
-                    {selectedExercises.length} exercises selected
-                  </span>
-                  <div className="flex gap-1.5 mt-1.5 flex-wrap">
-                    {selectedExercises.slice(0, 3).map(ex => (
-                      <Badge key={ex.id} variant="secondary" className="text-xs bg-white/20 text-white font-semibold">
-                        {ex.name}
-                      </Badge>
-                    ))}
-                    {selectedExercises.length > 3 && (
-                      <Badge variant="secondary" className="text-xs bg-white/20 text-white font-semibold">+{selectedExercises.length - 3} more</Badge>
-                    )}
-                  </div>
-                </div>
-                <Link to={`${createPageUrl("WorkoutBuilder")}?exercises=${selectedExercises.map(ex => ex.id).join(',')}`}>
-                  <Button className="bg-white text-blue-600 hover:bg-gray-100 font-bold px-6 py-5 shadow-lg touch-manipulation">
-                    Build <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
-                </Link>
-              </div>
-          </div>
-        </motion.div>
-      )}
-      </AnimatePresence>
 
       <ExerciseModal
         exercise={currentExercise}
@@ -442,16 +489,16 @@ Choose realistic exercises that match the body focus and intensity level.`,
       />
 
       {/* AI Prompt Modal */}
-      {createPortal(
-        <AnimatePresence>
-          {showAIPrompt && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
-              onClick={() => !isGenerating && setShowAIPrompt(false)}
-            >
+      <AnimatePresence>
+        {showAIPrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[10000] p-4"
+            style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 16px)", paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)" }}
+            onClick={() => !isGenerating && setShowAIPrompt(false)}
+          >
             <motion.div
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
@@ -506,10 +553,49 @@ Choose realistic exercises that match the body focus and intensity level.`,
               </div>
             </motion.div>
           </motion.div>
-          )}
-        </AnimatePresence>,
-        document.getElementById('root') || document.body
-      )}
+        )}
+      </AnimatePresence>
+
+      {/* ── BUILD Bar — sticky bottom, isolated from scroll grid ── */}
+      <AnimatePresence>
+        {selectedExercises.length > 0 && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 35 }}
+            className="sticky bottom-0 z-50 px-3 pt-2 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/95 to-transparent"
+            style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)" }}
+          >
+            <div className="container mx-auto max-w-2xl">
+              <div className="flex justify-between items-center bg-gradient-to-r from-blue-500 to-blue-400 border border-blue-300/60 rounded-xl shadow-2xl shadow-blue-500/50 px-3 py-2.5">
+                <div className="min-w-0 flex-1 mr-3">
+                  <span className="font-bold text-white text-sm">
+                    {selectedExercises.length} exercise{selectedExercises.length !== 1 ? 's' : ''} selected
+                  </span>
+                  <div className="flex gap-1 mt-0.5 flex-wrap">
+                    {selectedExercises.slice(0, 2).map(ex => (
+                      <Badge key={ex.id} variant="secondary" className="text-[10px] bg-white/25 text-white font-semibold truncate max-w-[90px]">
+                        {ex.name}
+                      </Badge>
+                    ))}
+                    {selectedExercises.length > 2 && (
+                      <Badge variant="secondary" className="text-[10px] bg-white/25 text-white font-semibold">
+                        +{selectedExercises.length - 2} more
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <Link to={`${createPageUrl("WorkoutBuilder")}?exercises=${selectedExercises.map(ex => ex.id).join(',')}`}>
+                  <button className="flex items-center gap-1.5 bg-white text-blue-600 font-bold text-sm px-4 py-2.5 rounded-lg active:scale-95 transition-transform shadow-md flex-shrink-0">
+                    BUILD <ArrowRight className="w-4 h-4" />
+                  </button>
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
