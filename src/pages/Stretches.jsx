@@ -67,6 +67,24 @@ const STRETCH_PROGRAMS = [
       { name: "Downward Dog", hold: 60, sets: 3 },
       { name: "Seated Butterfly Stretch", hold: 60, sets: 3 },
     ]
+  },
+  {
+    id: "mobility-extras",
+    name: "Mobility Extras",
+    description: "Targeted stretches for grip, IT band, lats, and wrists not covered by the core programs",
+    duration_days: 7,
+    difficulty: "beginner",
+    color: "from-teal-600 to-cyan-700",
+    stretches: [
+      { name: "Calf Stretch (wall)", hold: 30, sets: 2 },
+      { name: "IT Band Stretch", hold: 30, sets: 2 },
+      { name: "Thread the Needle", hold: 30, sets: 2 },
+      { name: "Seated Forward Fold", hold: 30, sets: 2 },
+      { name: "Overhead Lat Stretch", hold: 30, sets: 2 },
+      { name: "Overhead Tricep Stretch", hold: 30, sets: 2 },
+      { name: "Knees to Chest", hold: 30, sets: 2 },
+      { name: "Forearm Stretch", hold: 20, sets: 2 },
+    ]
   }
 ];
 
