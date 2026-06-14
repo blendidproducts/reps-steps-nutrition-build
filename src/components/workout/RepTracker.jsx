@@ -280,7 +280,10 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     document.addEventListener("visibilitychange", handleVisibility);
 
     // Capacitor app state (more reliable than visibilitychange on Android)
-    import("@capacitor/app").then(({ App }) => {
+    // Dynamic + vite-ignored: only resolves inside a Capacitor native shell.
+    // No-ops (and safely fails) on plain web builds where @capacitor/app isn't installed.
+    const capacitorAppPkg = "@capacitor/app";
+    import(/* @vite-ignore */ capacitorAppPkg).then(({ App }) => {
       App.addListener("appStateChange", ({ isActive }) => {
         if (isActive) recover();
       }).then(h => { appListener = h; }).catch(() => {});
@@ -751,7 +754,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
                         {ex.mode === "time"               && <span className="ml-1 text-[10px] text-gray-500">(timed)</span>}
                         {ex.trackable === 'experimental'  && <span className="ml-1 text-[10px] text-yellow-500">~</span>}
                         {ex.trackable === false           && <span className="ml-1 text-[10px] text-gray-600">✋</span>}
-                      </button>
+                           </button>
                     ))}
                   </div>
                 </div>
