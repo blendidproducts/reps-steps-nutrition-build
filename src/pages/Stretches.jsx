@@ -14,6 +14,7 @@ const CATEGORIES = [
   { id: "lower_body", label: "Lower Body" },
   { id: "core", label: "Core" },
   { id: "full_body", label: "Full Body" },
+  { id: "mobility", label: "Mobility" },
 ];
 
 const STRETCH_PROGRAMS = [

@@ -25,29 +25,38 @@ export default function Pricing() {
   }, []);
 
   const handleStripeCheckout = (plan) => {
-    // WorkoutGENIE Monthly: $19.99/month
+    // WorkoutGENIE Pro Monthly: $9.99/month  (canonical pro_monthly link)
     // Lifetime PRO: $199.99 one-time
+    // All-Access: $19.99/month (Pro + AI Fitness Brain + AI Nutrition)
     const links = {
-      monthly: 'https://buy.stripe.com/28EcN56tUbKSgSw9cNbQY0g',
-      lifetime: 'https://buy.stripe.com/9B68wPbOecOW8m0dt3bQY0h'
+      monthly:   'https://buy.stripe.com/7sY8wP4lMg188m0bkVbQY01',
+      lifetime:  'https://buy.stripe.com/9B68wPbOecOW8m0dt3bQY0h',
+      allaccess: 'https://buy.stripe.com/3cI4gz3hI4iq45KbkVbQY0m'
     };
     window.open(links[plan], '_blank');
   };
 
   const freeFeatures = [
     "Access to 20+ exercises",
-    "Rep-based & Time-based workouts", 
+    "Rep-based & Time-based workouts",
     "Workout history tracking",
     "Manual workout creation"
   ];
 
   const proFeatures = [
     "Everything in Free, plus:",
-    "AI Randomizer for unique workouts",
+    "AI Workout Builder — build your own workouts",
+    "🧞 WorkoutGenie AI — instant workout generation",
+    "All preset workout programs",
+    "All nutrition programs (meal plans)",
+    "Full stretching & flexibility library + programs",
     "Advanced workout statistics",
-    "Priority customer support",
-    "Early access to new features"
+    "Priority customer support"
   ];
+
+  // Note: AI Fitness Brain and AI Nutrition (AI food analyzer, link meal
+  // builder) are NOT part of Pro — they're separate add-ons ($4.99/mo each),
+  // or bundled into All-Access ($19.99/mo). Pro = builder + programs + stretches.
 
   return (
     <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
@@ -188,11 +197,11 @@ export default function Pricing() {
                   <Star className="w-6 h-6 text-yellow-400" />
                   WorkoutGENIE Pro
                 </CardTitle>
-                <p className="text-gray-400">Monthly subscription</p>
+                <p className="text-gray-400">Builder + programs + stretches</p>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold mb-2">$19.99<span className="text-lg font-normal text-gray-400">/month</span></div>
-                <p className="text-sm text-green-400 mb-6">Cancel anytime</p>
+                <div className="text-3xl font-bold mb-2">$9.99<span className="text-lg font-normal text-gray-400">/month</span></div>
+                <p className="text-sm text-green-400 mb-6">Cancel anytime · AI brains sold separately</p>
                 <ul className="space-y-3 text-gray-300">
                   {proFeatures.map((feature, i) => (
                     <li key={i} className="flex items-center gap-3 font-medium">
@@ -215,8 +224,15 @@ export default function Pricing() {
                       className="w-full gradient-bg hover:opacity-90 font-bold"
                     >
                       <ExternalLink className="w-5 h-5 mr-2" />
-                      Get WorkoutGENIE Pro - $19.99/mo
+                      Get WorkoutGENIE Pro - $9.99/mo
                     </Button>
+
+                    <button
+                      onClick={() => handleStripeCheckout('allaccess')}
+                      className="w-full text-xs text-brand-blue hover:text-brand-blue/80 underline pt-1"
+                    >
+                      Want the AI Fitness Brain + AI Nutrition too? Get All-Access — $19.99/mo
+                    </button>
 
                     <p className="text-xs text-gray-500 text-center pt-2">
                       After payment, webhook auto-activates Pro status

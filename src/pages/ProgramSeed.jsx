@@ -35,7 +35,7 @@ function withTimeout(promise, ms = 10000) {
 const START_HERE_PROGRAM = {
   name: "Start Here",
   description: "Perfect for absolute beginners — learn the basics, build the habit, and get comfortable with foundational bodyweight movements over your first week.",
-  category: "full_body",
+  category: "mixed",
   difficulty: "beginner",
   duration_days: 7,
   is_preset: true,
@@ -191,9 +191,375 @@ const FOUNDATIONS_NUTRITION_PROGRAM = {
   ],
 };
 
+// ── Beginner Strength Foundation (7 days) ───
+const BEGINNER_STRENGTH_PROGRAM = {
+  name: "Beginner Strength Foundation",
+  description: "Build foundational strength and master proper form with simple bodyweight movements. A balanced first month-style week covering push, pull, legs and core.",
+  category: "strength",
+  difficulty: "beginner",
+  duration_days: 7,
+  is_preset: true,
+  program_type: "workout",
+  thumbnail_url: "",
+  daily_plans: [
+    {
+      day_number: 1, day_name: "Day 1", workout_name: "Upper Body Push", is_rest_day: false, total_reps: 70,
+      exercises: [
+        { exercise_name: "Incline Push-Up", sets: 3, target_reps: 8, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Push-Up", sets: 2, target_reps: 6, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Tricep Dip", sets: 3, target_reps: 8, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Pike Push-Up", sets: 2, target_reps: 5, target_time: 0, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Plank", sets: 2, target_reps: 0, target_time: 20, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 2, day_name: "Day 2", workout_name: "Lower Body Strength", is_rest_day: false, total_reps: 147,
+      exercises: [
+        { exercise_name: "Squat", sets: 3, target_reps: 12, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Reverse Lunge", sets: 3, target_reps: 10, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Glute Bridge", sets: 3, target_reps: 12, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Calf Raise", sets: 3, target_reps: 15, target_time: 0, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Wall Sit", sets: 2, target_reps: 0, target_time: 25, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 3, day_name: "Day 3", workout_name: "Rest & Recovery", is_rest_day: true, total_reps: 0,
+      exercises: [],
+    },
+    {
+      day_number: 4, day_name: "Day 4", workout_name: "Pull & Core", is_rest_day: false, total_reps: 90,
+      exercises: [
+        { exercise_name: "Australian Row", sets: 3, target_reps: 8, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Superman", sets: 3, target_reps: 12, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Dead Bug", sets: 3, target_reps: 10, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Plank", sets: 2, target_reps: 0, target_time: 25, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Side Plank", sets: 2, target_reps: 0, target_time: 15, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 5, day_name: "Day 5", workout_name: "Full-Body Strength", is_rest_day: false, total_reps: 132,
+      exercises: [
+        { exercise_name: "Squat", sets: 3, target_reps: 12, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Push-Up", sets: 3, target_reps: 8, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Glute Bridge", sets: 3, target_reps: 12, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Mountain Climber", sets: 3, target_reps: 0, target_time: 20, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Crunch", sets: 3, target_reps: 12, target_time: 0, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 6, day_name: "Day 6", workout_name: "Rest & Recovery", is_rest_day: true, total_reps: 0,
+      exercises: [],
+    },
+    {
+      day_number: 7, day_name: "Day 7", workout_name: "Conditioning Finisher", is_rest_day: false, total_reps: 46,
+      exercises: [
+        { exercise_name: "Jumping Jack", sets: 3, target_reps: 0, target_time: 30, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "High Knee", sets: 3, target_reps: 0, target_time: 20, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Squat", sets: 2, target_reps: 15, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Push-Up", sets: 2, target_reps: 8, target_time: 0, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Plank", sets: 2, target_reps: 0, target_time: 25, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+  ],
+};
+
+// ── Intermediate Build Phase (7 days) ───
+const INTERMEDIATE_BUILD_PROGRAM = {
+  name: "Intermediate Build Phase",
+  description: "Increase volume and intensity progressively to build muscle. Push/pull/legs split with higher sets and reps for steady progressive overload.",
+  category: "muscle_gain",
+  difficulty: "intermediate",
+  duration_days: 7,
+  is_preset: true,
+  program_type: "workout",
+  thumbnail_url: "",
+  daily_plans: [
+    {
+      day_number: 1, day_name: "Day 1", workout_name: "Push Hypertrophy", is_rest_day: false, total_reps: 162,
+      exercises: [
+        { exercise_name: "Push-Up", sets: 4, target_reps: 12, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Decline Push-Up", sets: 3, target_reps: 10, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Diamond Push-Up", sets: 3, target_reps: 8, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Pike Push-Up", sets: 3, target_reps: 8, target_time: 0, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Tricep Dip", sets: 3, target_reps: 12, target_time: 0, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 2, day_name: "Day 2", workout_name: "Leg Volume", is_rest_day: false, total_reps: 251,
+      exercises: [
+        { exercise_name: "Squat", sets: 4, target_reps: 15, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Bulgarian Split Squat", sets: 3, target_reps: 10, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Reverse Lunge", sets: 3, target_reps: 12, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Glute Bridge", sets: 3, target_reps: 15, target_time: 0, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Calf Raise", sets: 4, target_reps: 20, target_time: 0, circuit_number: 5, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Wall Sit", sets: 2, target_reps: 0, target_time: 40, circuit_number: 6, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 3, day_name: "Day 3", workout_name: "Pull & Core", is_rest_day: false, total_reps: 132,
+      exercises: [
+        { exercise_name: "Pull-Up", sets: 4, target_reps: 6, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Australian Row", sets: 3, target_reps: 10, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Chin-Up", sets: 3, target_reps: 6, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Hollow Body Hold", sets: 3, target_reps: 0, target_time: 25, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Russian Twist", sets: 3, target_reps: 20, target_time: 0, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 4, day_name: "Day 4", workout_name: "Rest & Recovery", is_rest_day: true, total_reps: 0,
+      exercises: [],
+    },
+    {
+      day_number: 5, day_name: "Day 5", workout_name: "Upper Hypertrophy", is_rest_day: false, total_reps: 172,
+      exercises: [
+        { exercise_name: "Wide Push-Up", sets: 4, target_reps: 12, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Decline Push-Up", sets: 3, target_reps: 10, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Australian Row", sets: 4, target_reps: 10, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Pike Push-Up", sets: 3, target_reps: 8, target_time: 0, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Plank to Push-Up", sets: 3, target_reps: 10, target_time: 0, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 6, day_name: "Day 6", workout_name: "Lower & Core", is_rest_day: false, total_reps: 216,
+      exercises: [
+        { exercise_name: "Jump Squat", sets: 4, target_reps: 12, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Lunge", sets: 3, target_reps: 12, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Step Up", sets: 3, target_reps: 12, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Bicycle Crunch", sets: 3, target_reps: 20, target_time: 0, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Leg Raise", sets: 3, target_reps: 12, target_time: 0, circuit_number: 5, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Plank", sets: 3, target_reps: 0, target_time: 40, circuit_number: 6, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 7, day_name: "Day 7", workout_name: "Rest & Recovery", is_rest_day: true, total_reps: 0,
+      exercises: [],
+    },
+  ],
+};
+
+// ── Trimmer Fit 300 (7 days) ───
+const TRIMMER_FIT_300_PROGRAM = {
+  name: "Trimmer Fit 300",
+  description: "High-intensity conditioning and strength circuits built to torch calories and build work capacity. Fast-paced full-body sessions for advanced trainees.",
+  category: "weight_loss",
+  difficulty: "advanced",
+  duration_days: 7,
+  is_preset: true,
+  program_type: "workout",
+  thumbnail_url: "",
+  daily_plans: [
+    {
+      day_number: 1, day_name: "Day 1", workout_name: "Full-Body 300 Circuit", is_rest_day: false, total_reps: 180,
+      exercises: [
+        { exercise_name: "Burpee", sets: 3, target_reps: 10, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Jump Squat", sets: 3, target_reps: 15, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Push-Up", sets: 3, target_reps: 15, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Mountain Climber", sets: 3, target_reps: 0, target_time: 30, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Sit-Up", sets: 3, target_reps: 20, target_time: 0, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 2, day_name: "Day 2", workout_name: "HIIT Cardio", is_rest_day: false, total_reps: 30,
+      exercises: [
+        { exercise_name: "Jumping Jack", sets: 4, target_reps: 0, target_time: 40, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "High Knee", sets: 4, target_reps: 0, target_time: 30, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Butt Kicker", sets: 3, target_reps: 0, target_time: 30, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Burpee", sets: 3, target_reps: 10, target_time: 0, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Jump Rope", sets: 4, target_reps: 0, target_time: 40, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 3, day_name: "Day 3", workout_name: "Strength Circuit", is_rest_day: false, total_reps: 224,
+      exercises: [
+        { exercise_name: "Squat", sets: 4, target_reps: 20, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Push-Up", sets: 4, target_reps: 15, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Reverse Lunge", sets: 3, target_reps: 16, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Tricep Dip", sets: 3, target_reps: 12, target_time: 0, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Plank", sets: 3, target_reps: 0, target_time: 45, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 4, day_name: "Day 4", workout_name: "Rest & Recovery", is_rest_day: true, total_reps: 0,
+      exercises: [],
+    },
+    {
+      day_number: 5, day_name: "Day 5", workout_name: "Conditioning 300", is_rest_day: false, total_reps: 144,
+      exercises: [
+        { exercise_name: "Burpee", sets: 3, target_reps: 12, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Box Jump", sets: 3, target_reps: 12, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Mountain Climber", sets: 3, target_reps: 0, target_time: 30, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Bicycle Crunch", sets: 3, target_reps: 24, target_time: 0, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Bear Crawl", sets: 3, target_reps: 0, target_time: 30, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 6, day_name: "Day 6", workout_name: "Core & Cardio", is_rest_day: false, total_reps: 132,
+      exercises: [
+        { exercise_name: "Russian Twist", sets: 4, target_reps: 24, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "V-Up", sets: 3, target_reps: 12, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Flutter Kick", sets: 3, target_reps: 0, target_time: 30, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Plank", sets: 3, target_reps: 0, target_time: 45, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "High Knee", sets: 3, target_reps: 0, target_time: 30, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 7, day_name: "Day 7", workout_name: "Rest & Recovery", is_rest_day: true, total_reps: 0,
+      exercises: [],
+    },
+  ],
+};
+
+// ── Advanced Endurance (7 days) ───
+const ADVANCED_ENDURANCE_PROGRAM = {
+  name: "Advanced Endurance",
+  description: "Build elite-level cardiovascular capacity and muscular endurance with long intervals and high-rep circuits. For advanced athletes chasing stamina.",
+  category: "cardio",
+  difficulty: "advanced",
+  duration_days: 7,
+  is_preset: true,
+  program_type: "workout",
+  thumbnail_url: "",
+  daily_plans: [
+    {
+      day_number: 1, day_name: "Day 1", workout_name: "Cardio Engine", is_rest_day: false, total_reps: 0,
+      exercises: [
+        { exercise_name: "Running in Place", sets: 4, target_reps: 0, target_time: 60, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Jumping Jack", sets: 4, target_reps: 0, target_time: 45, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "High Knee", sets: 4, target_reps: 0, target_time: 40, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Jump Rope", sets: 4, target_reps: 0, target_time: 60, circuit_number: 4, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 2, day_name: "Day 2", workout_name: "Muscular Endurance", is_rest_day: false, total_reps: 300,
+      exercises: [
+        { exercise_name: "Squat", sets: 4, target_reps: 25, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Push-Up", sets: 4, target_reps: 18, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Lunge", sets: 4, target_reps: 20, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Australian Row", sets: 4, target_reps: 12, target_time: 0, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Plank", sets: 3, target_reps: 0, target_time: 60, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 3, day_name: "Day 3", workout_name: "Mixed Intervals", is_rest_day: false, total_reps: 108,
+      exercises: [
+        { exercise_name: "Burpee", sets: 4, target_reps: 12, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Mountain Climber", sets: 4, target_reps: 0, target_time: 40, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Jump Squat", sets: 4, target_reps: 15, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Butt Kicker", sets: 3, target_reps: 0, target_time: 40, circuit_number: 4, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 4, day_name: "Day 4", workout_name: "Rest & Recovery", is_rest_day: true, total_reps: 0,
+      exercises: [],
+    },
+    {
+      day_number: 5, day_name: "Day 5", workout_name: "Long Circuit", is_rest_day: false, total_reps: 370,
+      exercises: [
+        { exercise_name: "Squat", sets: 3, target_reps: 20, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Push-Up", sets: 3, target_reps: 15, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Step Up", sets: 3, target_reps: 16, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Calf Raise", sets: 4, target_reps: 25, target_time: 0, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Bicycle Crunch", sets: 3, target_reps: 24, target_time: 0, circuit_number: 5, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Superman", sets: 3, target_reps: 15, target_time: 0, circuit_number: 6, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 6, day_name: "Day 6", workout_name: "Cardio Finisher", is_rest_day: false, total_reps: 24,
+      exercises: [
+        { exercise_name: "Jump Rope", sets: 5, target_reps: 0, target_time: 60, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "High Knee", sets: 4, target_reps: 0, target_time: 40, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Inchworm", sets: 3, target_reps: 8, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Bear Crawl", sets: 3, target_reps: 0, target_time: 40, circuit_number: 4, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 7, day_name: "Day 7", workout_name: "Rest & Recovery", is_rest_day: true, total_reps: 0,
+      exercises: [],
+    },
+  ],
+};
+
+// ── Advanced Strength Program (7 days) ───
+const ADVANCED_STRENGTH_PROGRAM = {
+  name: "Advanced Strength Program",
+  description: "Maximum strength development through advanced compound bodyweight movements and skill work. Heavy, low-rep calisthenics for experienced athletes.",
+  category: "strength",
+  difficulty: "advanced",
+  duration_days: 7,
+  is_preset: true,
+  program_type: "workout",
+  thumbnail_url: "",
+  daily_plans: [
+    {
+      day_number: 1, day_name: "Day 1", workout_name: "Maximal Push", is_rest_day: false, total_reps: 172,
+      exercises: [
+        { exercise_name: "Handstand Push-Up", sets: 4, target_reps: 5, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Decline Push-Up", sets: 4, target_reps: 10, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Diamond Push-Up", sets: 4, target_reps: 10, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Pike Push-Up", sets: 3, target_reps: 8, target_time: 0, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Tricep Dip", sets: 4, target_reps: 12, target_time: 0, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 2, day_name: "Day 2", workout_name: "Maximal Lower", is_rest_day: false, total_reps: 210,
+      exercises: [
+        { exercise_name: "Pistol Squat", sets: 4, target_reps: 6, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Bulgarian Split Squat", sets: 4, target_reps: 10, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Jump Squat", sets: 4, target_reps: 12, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Dragon Squat", sets: 3, target_reps: 6, target_time: 0, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Calf Raise", sets: 4, target_reps: 20, target_time: 0, circuit_number: 5, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Wall Sit", sets: 3, target_reps: 0, target_time: 45, circuit_number: 6, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 3, day_name: "Day 3", workout_name: "Rest & Recovery", is_rest_day: true, total_reps: 0,
+      exercises: [],
+    },
+    {
+      day_number: 4, day_name: "Day 4", workout_name: "Maximal Pull", is_rest_day: false, total_reps: 118,
+      exercises: [
+        { exercise_name: "Pull-Up", sets: 5, target_reps: 6, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Chin-Up", sets: 4, target_reps: 6, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Australian Row", sets: 4, target_reps: 10, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Bar Hang / Dead Hang", sets: 3, target_reps: 0, target_time: 30, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Toes to Bar", sets: 3, target_reps: 8, target_time: 0, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 5, day_name: "Day 5", workout_name: "Core & Skill", is_rest_day: false, total_reps: 117,
+      exercises: [
+        { exercise_name: "Hollow Body Hold", sets: 4, target_reps: 0, target_time: 30, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "L-Sit / Pike Hold", sets: 4, target_reps: 0, target_time: 20, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Handstand Hold", sets: 3, target_reps: 0, target_time: 20, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Russian Twist", sets: 3, target_reps: 24, target_time: 0, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "V-Up", sets: 3, target_reps: 15, target_time: 0, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 6, day_name: "Day 6", workout_name: "Full-Body Power", is_rest_day: false, total_reps: 189,
+      exercises: [
+        { exercise_name: "Box Jump", sets: 4, target_reps: 10, target_time: 0, circuit_number: 1, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Muscle-Up", sets: 3, target_reps: 3, target_time: 0, circuit_number: 2, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Push-Up", sets: 4, target_reps: 15, target_time: 0, circuit_number: 3, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Squat", sets: 4, target_reps: 20, target_time: 0, circuit_number: 4, rest_after_circuit_seconds: 60 },
+        { exercise_name: "Plank", sets: 3, target_reps: 0, target_time: 45, circuit_number: 5, rest_after_circuit_seconds: 60 },
+      ],
+    },
+    {
+      day_number: 7, day_name: "Day 7", workout_name: "Rest & Recovery", is_rest_day: true, total_reps: 0,
+      exercises: [],
+    },
+  ],
+};
+
 const SEED_ITEMS = [
-  { kind: "workout",   label: "Start Here (7-Day Workout Program)", data: START_HERE_PROGRAM },
-  { kind: "nutrition", label: "Foundations Nutrition Plan (7-Day)",  data: FOUNDATIONS_NUTRITION_PROGRAM },
+  { kind: "workout",   label: "Start Here (7-Day Workout Program)",              data: START_HERE_PROGRAM },
+  { kind: "workout",   label: "Beginner Strength Foundation (7-Day Workout Program)", data: BEGINNER_STRENGTH_PROGRAM },
+  { kind: "workout",   label: "Intermediate Build Phase (7-Day Workout Program)",     data: INTERMEDIATE_BUILD_PROGRAM },
+  { kind: "workout",   label: "Trimmer Fit 300 (7-Day Workout Program)",              data: TRIMMER_FIT_300_PROGRAM },
+  { kind: "workout",   label: "Advanced Endurance (7-Day Workout Program)",           data: ADVANCED_ENDURANCE_PROGRAM },
+  { kind: "workout",   label: "Advanced Strength Program (7-Day Workout Program)",    data: ADVANCED_STRENGTH_PROGRAM },
+  { kind: "nutrition", label: "Foundations Nutrition Plan (7-Day)",              data: FOUNDATIONS_NUTRITION_PROGRAM },
 ];
 
 export default function ProgramSeed() {

@@ -80,12 +80,12 @@ const SEED_EXERCISES = [
   { name: "Inchworm",     category: "full_body", difficulty: "intermediate", description: "Walk hands to plank and back. Muscles: Hamstrings, Core, Shoulders. Cues: Walk hands out to plank, keep legs straight, walk back." },
   { name: "Bear Crawl",   category: "full_body", difficulty: "intermediate", description: "Quadruped crawl with knees hovering. Muscles: Core, Shoulders, Quads. Cues: Knees 1 inch off floor, opposite hand and foot move together." },
   { name: "Box Jump",     category: "full_body", difficulty: "intermediate", description: "Explosive jump onto elevated surface. Muscles: Quads, Glutes, Calves. Cues: Load hips, explode up, land softly with bent knees." },
-  // MOBILITY
-  { name: "Arm Circle",   category: "mobility", difficulty: "beginner", description: "Full shoulder rotation warm-up. Muscles: Shoulders, Rotator Cuff. Cues: Make large circles, raise arm fully overhead each revolution." },
-  { name: "Hip Circle",   category: "mobility", difficulty: "beginner", description: "Standing hip rotation. Muscles: Hip Flexors, Glutes. Cues: Full circular motion, keep feet planted, rotate both directions." },
-  { name: "Cat-Cow",      category: "mobility", difficulty: "beginner", description: "Spinal flexion and extension on all fours. Muscles: Spine, Core. Cues: Exhale arch (cat), inhale sag (cow), slow and controlled." },
-  { name: "Quad Stretch", category: "mobility", difficulty: "beginner", description: "Standing quad and hip flexor stretch. Muscles: Quadriceps, Hip Flexors. Cues: Pull foot to glute, keep knees together, stand tall." },
-  { name: "Toe Touch",    category: "mobility", difficulty: "beginner", description: "Standing hamstring stretch. Muscles: Hamstrings, Lower Back. Cues: Straight legs, reach for toes, slow stretch." },
+  // MOBILITY  (metric:"time" so they appear in the Stretches > Mobility tab, which lists Exercise records with metric:"time")
+  { name: "Arm Circle",   category: "mobility", difficulty: "beginner", metric: "time", target_time: 30, description: "Full shoulder rotation warm-up. Muscles: Shoulders, Rotator Cuff. Cues: Make large circles, raise arm fully overhead each revolution." },
+  { name: "Hip Circle",   category: "mobility", difficulty: "beginner", metric: "time", target_time: 30, description: "Standing hip rotation. Muscles: Hip Flexors, Glutes. Cues: Full circular motion, keep feet planted, rotate both directions." },
+  { name: "Cat-Cow",      category: "mobility", difficulty: "beginner", metric: "time", target_time: 30, description: "Spinal flexion and extension on all fours. Muscles: Spine, Core. Cues: Exhale arch (cat), inhale sag (cow), slow and controlled." },
+  { name: "Quad Stretch", category: "mobility", difficulty: "beginner", metric: "time", target_time: 30, description: "Standing quad and hip flexor stretch. Muscles: Quadriceps, Hip Flexors. Cues: Pull foot to glute, keep knees together, stand tall." },
+  { name: "Toe Touch",    category: "mobility", difficulty: "beginner", metric: "time", target_time: 30, description: "Standing hamstring stretch. Muscles: Hamstrings, Lower Back. Cues: Straight legs, reach for toes, slow stretch." },
   // NEW -- added from Drive media gap analysis (2026-06-12)
   { name: "Toes to Bar",     category: "core",       difficulty: "advanced",     description: "Hanging leg raise touching toes to the bar overhead. Muscles: Abs, Hip Flexors, Lats, Grip. Cues: Controlled swing, keep legs straight, touch toes to bar, lower with control -- avoid kipping with momentum only." },
   { name: "Superman",        category: "core",       difficulty: "beginner",     description: "Prone back extension lifting arms and legs off the floor. Muscles: Lower Back, Glutes, Shoulders. Cues: Lie face down, lift arms and legs simultaneously, hold briefly at the top, squeeze glutes and lower back." },
@@ -140,9 +140,11 @@ export default function ExerciseSeed() {
   const abortRef       = useRef(false);   // lets the user cancel mid-run
 
   const [dbNames,      setDbNames]      = useState([]);   // lowercased names in DB
+  const [dbRecords,    setDbRecords]    = useState([]);   // full records (for repair)
   const [checking,     setChecking]     = useState(true);
   const [checkError,   setCheckError]   = useState(null);
   const [seeding,      setSeeding]      = useState(false);
+  const [repairing,    setRepairing]    = useState(false);
   const [currentName,  setCurrentName]  = useState("");
   const [log,          setLog]          = useState([]);
   const [done,         setDone]         = useState(false);
@@ -157,10 +159,9 @@ export default function ExerciseSeed() {
     setDone(false);
     try {
       const data = await withTimeout(base44.entities.Exercise.list(), 15000);
-      const names = (data || [])
-        .filter(e => !e.is_deleted)
-        .map(e => (e.name || "").toLowerCase().trim());
-      setDbNames(names);
+      const live = (data || []).filter(e => !e.is_deleted);
+      setDbRecords(live);
+      setDbNames(live.map(e => (e.name || "").toLowerCase().trim()));
     } catch (err) {
       setCheckError(err.message || "Could not reach database.");
     }
@@ -170,6 +171,66 @@ export default function ExerciseSeed() {
   const missing = SEED_EXERCISES.filter(
     ex => !dbNames.includes(ex.name.toLowerCase().trim())
   );
+
+  // ── Repair: existing records whose metric/target_time/category drifted ──────
+  // Re-running the seed only CREATES missing records and never overwrites — so a
+  // stretch already in the DB without metric:"time" stays invisible in the
+  // Stretches library. This pass patches just those 3 fields on existing records.
+  const findRec = (name) =>
+    dbRecords.find(r => (r.name || "").toLowerCase().trim() === name.toLowerCase().trim());
+
+  const needsRepair = SEED_EXERCISES.filter(seed => {
+    if (!seed.metric) return false;
+    const rec = findRec(seed.name);
+    if (!rec) return false;
+    return rec.metric !== seed.metric
+        || rec.target_time !== seed.target_time
+        || rec.category !== seed.category;
+  });
+
+  const repairOne = async (seed) => {
+    try {
+      const rec = findRec(seed.name);
+      if (!rec) return { ok: false, error: "not found" };
+      await withTimeout(
+        base44.entities.Exercise.update(rec.id, {
+          metric: seed.metric,
+          target_time: seed.target_time,
+          category: seed.category,
+        }),
+        10000
+      );
+      setDbRecords(prev => prev.map(r =>
+        r.id === rec.id
+          ? { ...r, metric: seed.metric, target_time: seed.target_time, category: seed.category }
+          : r
+      ));
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message || "Unknown error" };
+    }
+  };
+
+  const repairAll = async () => {
+    if (needsRepair.length === 0) return;
+    abortRef.current = false;
+    setRepairing(true);
+    setLog([]);
+    setDone(false);
+    const newLog = [];
+    for (const seed of needsRepair) {
+      if (abortRef.current) { newLog.push("⛔ Stopped by user."); setLog([...newLog]); break; }
+      setCurrentName(seed.name);
+      const r = await repairOne(seed);
+      newLog.push(r.ok ? `🔧 ${seed.name}` : `❌ ${seed.name} — ${r.error}`);
+      setLog([...newLog]);
+      await new Promise(res => setTimeout(res, 350));
+    }
+    setCurrentName("");
+    setRepairing(false);
+    setDone(true);
+    try { sessionStorage.removeItem("rns_exercises_cache"); } catch (_) {}
+  };
 
   // ── Create a single exercise with a hard timeout ─────────────────────────
   const createOne = async (ex) => {
@@ -302,10 +363,36 @@ export default function ExerciseSeed() {
               </div>
 
               {/* Restore button */}
-              {missing.length > 0 && !seeding && !done && (
+              {missing.length > 0 && !seeding && !repairing && !done && (
                 <Button onClick={seedAll} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 text-base">
                   Restore All {missing.length} Missing Exercises
                 </Button>
+              )}
+
+              {/* Repair button — patches metric/target_time/category on existing stretch records */}
+              {needsRepair.length > 0 && !seeding && !repairing && !done && (
+                <div className="bg-amber-950/30 border border-amber-600/40 rounded-lg p-3 space-y-2">
+                  <p className="text-amber-300 text-sm font-semibold">
+                    {needsRepair.length} stretch{needsRepair.length !== 1 ? "es" : ""} need a quick fix
+                  </p>
+                  <p className="text-amber-400/70 text-xs">
+                    These already exist but are missing the timed-stretch flag, so they do not show in the Stretches library. This patches them in place.
+                  </p>
+                  <Button onClick={repairAll} className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5">
+                    Fix {needsRepair.length} Stretch Record{needsRepair.length !== 1 ? "s" : ""}
+                  </Button>
+                </div>
+              )}
+
+              {/* Active repair progress */}
+              {repairing && (
+                <div className="bg-amber-950/40 border border-amber-500/30 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <RefreshCw className="w-4 h-4 text-amber-400 animate-spin shrink-0" />
+                    <p className="text-amber-300 text-sm font-semibold truncate">Fixing: {currentName}</p>
+                  </div>
+                  <p className="text-amber-400/60 text-xs">{log.length} of {needsRepair.length} processed</p>
+                </div>
               )}
 
               {/* Active seeding progress */}
@@ -359,6 +446,7 @@ export default function ExerciseSeed() {
             {log.map((line, i) => (
               <p key={i} className={`text-xs font-mono leading-5 ${
                 line.startsWith("✅") ? "text-green-400" :
+                line.startsWith("🔧") ? "text-amber-400" :
                 line.startsWith("⛔") ? "text-yellow-400" : "text-red-400"
               }`}>{line}</p>
             ))}
