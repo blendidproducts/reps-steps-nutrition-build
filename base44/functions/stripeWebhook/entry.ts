@@ -101,6 +101,7 @@ const AMOUNT_TO_KEY: Record<string, string> = {
 // metadata-first; this map is a documented reference + best-effort fallback.
 const LINK_SUFFIX_TO_KEY: Record<string, string> = {
   // Subscriptions & add-ons
+  "cNi4gzdWmdT09q460BbQY0q": "pro_monthly",          // Reps and Steps PRO ($9.99/mo) — CURRENT canonical link
   "7sY8wP4lMg188m0bkVbQY01": "pro_monthly",          // Reps & Steps PRO ($9.99/mo) — CANONICAL
   "28EcN56tUbKSgSw9cNbQY0g": "pro_monthly",          // legacy WorkoutGENIE ($19.99/mo) — retired; keeps existing subs on Pro
   "aFa7sL4lM5muau82OpbQY0i": "pro_trial",            // $3.99 one-time

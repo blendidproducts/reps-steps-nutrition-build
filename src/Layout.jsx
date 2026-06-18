@@ -2,7 +2,7 @@ import React, { memo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useNavigationManager, resolveTabForPath, TAB_ROOTS, pushTabPath } from "@/lib/NavigationManager";
 import { createPageUrl } from "@/utils";
-import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box, Users, Clock, Brain, Watch, ShoppingBag, ListTodo } from "lucide-react";
+import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box, Users, Clock, Brain, Watch, ShoppingBag, ListTodo, FileText } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { base44 } from "@/api/base44Client";
 import ProgramDayPopup from "@/components/ProgramDayPopup";
@@ -35,6 +35,7 @@ const navigationItems = [
   { title: "Nutrition", url: createPageUrl("Nutrition"), icon: Apple },
   { title: "Saved Workouts", url: createPageUrl("SavedWorkouts"), icon: BookmarkPlus },
   { title: "Preset Programs", url: createPageUrl("PresetPrograms"), icon: Calendar },
+  { title: "Program Guides", url: createPageUrl("Guides"), icon: FileText },
   { title: "History", url: createPageUrl("History"), icon: History },
   { title: "Progress", url: createPageUrl("Progress"), icon: Camera },
   { title: "Achievements", url: createPageUrl("Achievements"), icon: Trophy },

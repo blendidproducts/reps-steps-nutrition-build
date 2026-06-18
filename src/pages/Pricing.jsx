@@ -29,7 +29,7 @@ export default function Pricing() {
     // Lifetime PRO: $199.99 one-time
     // All-Access: $19.99/month (Pro + AI Fitness Brain + AI Nutrition)
     const links = {
-      monthly:   'https://buy.stripe.com/7sY8wP4lMg188m0bkVbQY01',
+      monthly:   'https://buy.stripe.com/cNi4gzdWmdT09q460BbQY0q',
       lifetime:  'https://buy.stripe.com/9B68wPbOecOW8m0dt3bQY0h',
       allaccess: 'https://buy.stripe.com/3cI4gz3hI4iq45KbkVbQY0m'
     };

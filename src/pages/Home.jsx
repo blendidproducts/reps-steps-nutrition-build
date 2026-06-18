@@ -249,6 +249,56 @@ export default function Home() {
         </motion.div>
       </div>
 
+      {/* ── Go Pro promo ($9.99/mo) — hidden for existing Pro members ── */}
+      {!isPro && (
+        <div className="px-6 mb-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.5 }}
+            className="relative rounded-2xl overflow-hidden border border-[#00a9ff]/40"
+            style={{ background: "linear-gradient(135deg, #0a1f3c 0%, #0a0e1a 100%)" }}
+          >
+            <div className="absolute top-3 right-3">
+              <Badge className="bg-gradient-to-r from-[#00a9ff] to-indigo-500 text-white text-[10px] font-bold">
+                BEST VALUE
+              </Badge>
+            </div>
+            <div className="p-5">
+              <p className="text-[11px] font-bold tracking-widest uppercase mb-1" style={{ color: "#00a9ff" }}>
+                Go Pro
+              </p>
+              <h2 className="text-2xl font-black text-white leading-tight">
+                WorkoutGENIE Pro — <span style={{ color: "#00a9ff" }}>$9.99</span>
+                <span className="text-base font-normal text-gray-400">/mo</span>
+              </h2>
+              <p className="text-gray-300 text-sm mt-1 leading-snug">
+                Build your own workouts with the AI Builder, generate instant routines with WorkoutGenie, and unlock every workout program, nutrition plan, and stretch.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {["AI Workout Builder", "🧞 WorkoutGenie", "All Programs", "All Stretches"].map((f) => (
+                  <span key={f} className="text-[11px] font-semibold text-gray-200 bg-white/10 rounded-full px-2.5 py-1">
+                    {f}
+                  </span>
+                ))}
+              </div>
+              <Button
+                onClick={() => window.open("https://buy.stripe.com/cNi4gzdWmdT09q460BbQY0q", "_blank")}
+                className="w-full mt-4 bg-gradient-to-r from-[#00a9ff] to-indigo-500 hover:opacity-90 text-white font-bold py-3"
+              >
+                <Zap className="w-5 h-5 mr-2" /> Get Pro — $9.99/mo
+              </Button>
+              <button
+                onClick={() => navigate(createPageUrl("Pricing"))}
+                className="w-full text-xs text-gray-400 hover:text-white mt-2"
+              >
+                See all plans &amp; the AI add-ons
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Your Readiness */}
       <div className="px-6 py-4">
         <div className="flex items-center justify-between mb-5">
