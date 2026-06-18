@@ -135,6 +135,49 @@ const CAT_LABEL = {
   core: "Core", full_body: "Full Body", mobility: "Mobility",
 };
 
+// ── Stretch media + auto-generated instructions ─────────────────────────────
+// Drive thumbnail hotlinks for stretches that have a photo. image_url is only
+// written to records that have NONE, so a later upload via /ExerciseImages
+// always wins. If a Drive thumbnail does not load, upload via /ExerciseImages.
+const STRETCH_MEDIA = {
+  "Arm Circle": "https://drive.google.com/thumbnail?id=10SG2TmEgrSe-saQgtDRWvf9EoRsfiNJU&sz=w1000",
+  "Cat-Cow": "https://drive.google.com/thumbnail?id=1R8JxRE2pW96hyrN6o01BAdhX5xZ3nirF&sz=w1000",
+  "Chest Opener Stretch": "https://drive.google.com/thumbnail?id=1FicCCfxOno1wD_1zrwPByZ3c0HkEEubk&sz=w1000",
+  "Child's Pose": "https://drive.google.com/thumbnail?id=19ngTSxp3CwMq1U2FwvOy7ULg1lztifz9&sz=w1000",
+  "Cobra Stretch": "https://drive.google.com/thumbnail?id=17wvzDeknvG4er4Gg4Or9OUnfOyYzK-Hu&sz=w1000",
+  "Doorway Chest Stretch": "https://drive.google.com/thumbnail?id=1HLaMdd4rhypqhXE9jTMJpuBW3F1t6VwQ&sz=w1000",
+  "Downward Dog": "https://drive.google.com/thumbnail?id=1Y-eY4BIuSCoMChju-T89cfktFrT6yxdQ&sz=w1000",
+  "Hip Circle": "https://drive.google.com/thumbnail?id=1-zoFEYlvws8frKUNOz46aotZh7uegeQR&sz=w1000",
+  "Hip Flexor Lunge Stretch": "https://drive.google.com/thumbnail?id=1OazPkvAwlMjLF8v94o__rmnxxecIDud7&sz=w1000",
+  "Neck Side Stretch": "https://drive.google.com/thumbnail?id=1p-um_wLixGO9f-XpmoNEaz-yYn7xmrrI&sz=w1000",
+  "Pigeon Pose": "https://drive.google.com/thumbnail?id=1_qrrBA034xvGXlOfvWb8maFTcg4x46yB&sz=w1000",
+  "Quad Stretch": "https://drive.google.com/thumbnail?id=1vFmD1mYSrZeI6PdqOMKivyCK0CsvWAiW&sz=w1000",
+  "Seated Butterfly Stretch": "https://drive.google.com/thumbnail?id=1vBCQXfgi3V4ELCEhs-Mh43Mvuwrjor9i&sz=w1000",
+  "Seated Spinal Twist": "https://drive.google.com/thumbnail?id=12nKWxlJYD8nJfKpl6M6KQu5Y3SXoFCqi&sz=w1000",
+  "Shoulder Cross-Body Stretch": "https://drive.google.com/thumbnail?id=1V8nvGBjTHmDAdtOV31631Bka1CCeLQeZ&sz=w1000",
+  "Standing Hamstring Stretch": "https://drive.google.com/thumbnail?id=18ZjCtVhfWtD2FD35z4gn-ZDHLBJ_Gz9F&sz=w1000",
+  "Standing Quadriceps Stretch": "https://drive.google.com/thumbnail?id=1_PAtLcCw3IsiXCszPCxnD6w2z4VkJcVI&sz=w1000",
+  "Toe Touch": "https://drive.google.com/thumbnail?id=1hDqDNn9nm2FTH6SJCHdNpm67R-wrohbs&sz=w1000",
+  "World's Greatest Stretch": "https://drive.google.com/thumbnail?id=1hj1HrtRMB0w_K2e9WJGEs_sd6PMECw1I&sz=w1000",
+};
+
+// Build step-by-step instructions + tips for a timed stretch from its "Cues:" text.
+function stretchExtras(ex) {
+  const desc = ex.description || "";
+  const cues = (desc.split(/Cues:/i)[1] || "").trim();
+  const instructions = cues
+    ? cues.replace(/\.$/, "").split(/,\s+|\.\s+/).map(t => t.trim()).filter(Boolean)
+        .map(t => t.charAt(0).toUpperCase() + t.slice(1))
+    : [];
+  const tips = [
+    "Move slowly into the stretch and breathe steadily — never bounce or jerk.",
+    "Stretch to gentle tension, not pain. Ease off if anything feels sharp.",
+    "Hold for the full time, then repeat on the other side if it is one-sided.",
+  ];
+  const image_url = STRETCH_MEDIA[ex.name] || "";
+  return image_url ? { instructions, tips, image_url } : { instructions, tips };
+}
+
 export default function ExerciseSeed() {
   const navigate       = useNavigate();
   const abortRef       = useRef(false);   // lets the user cancel mid-run
@@ -183,28 +226,35 @@ export default function ExerciseSeed() {
     if (!seed.metric) return false;
     const rec = findRec(seed.name);
     if (!rec) return false;
+    const extras = stretchExtras(seed);
+    const missingInstr = extras.instructions.length > 0 && (!rec.instructions || rec.instructions.length === 0);
+    const missingImg = !!extras.image_url && !rec.image_url;
     return rec.metric !== seed.metric
         || rec.target_time !== seed.target_time
-        || rec.category !== seed.category;
+        || rec.category !== seed.category
+        || missingInstr
+        || missingImg;
   });
 
   const repairOne = async (seed) => {
     try {
       const rec = findRec(seed.name);
       if (!rec) return { ok: false, error: "not found" };
-      await withTimeout(
-        base44.entities.Exercise.update(rec.id, {
-          metric: seed.metric,
-          target_time: seed.target_time,
-          category: seed.category,
-        }),
-        10000
-      );
-      setDbRecords(prev => prev.map(r =>
-        r.id === rec.id
-          ? { ...r, metric: seed.metric, target_time: seed.target_time, category: seed.category }
-          : r
-      ));
+      const extras = stretchExtras(seed);
+      const updates = {
+        metric: seed.metric,
+        target_time: seed.target_time,
+        category: seed.category,
+      };
+      if (extras.instructions.length && (!rec.instructions || rec.instructions.length === 0)) {
+        updates.instructions = extras.instructions;
+        updates.tips = extras.tips;
+      }
+      if (extras.image_url && !rec.image_url) {
+        updates.image_url = extras.image_url;
+      }
+      await withTimeout(base44.entities.Exercise.update(rec.id, updates), 10000);
+      setDbRecords(prev => prev.map(r => (r.id === rec.id ? { ...r, ...updates } : r)));
       return { ok: true };
     } catch (err) {
       return { ok: false, error: err.message || "Unknown error" };
@@ -241,7 +291,7 @@ export default function ExerciseSeed() {
           category:    ex.category,
           difficulty:  ex.difficulty,
           description: ex.description,
-          ...(ex.metric ? { metric: ex.metric, target_time: ex.target_time } : {}),
+          ...(ex.metric ? { metric: ex.metric, target_time: ex.target_time, ...stretchExtras(ex) } : {}),
         }),
         10000   // 10-second hard timeout per exercise
       );

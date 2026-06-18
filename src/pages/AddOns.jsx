@@ -74,13 +74,15 @@ const BUNDLES = [
     badgeColor: "bg-[#0066cc]",
     title: "WorkoutGENIE Pro",
     subtitle: "Core AI workout features unlocked",
-    price: "$19.99",
+    price: "$9.99",
     period: "/mo",
-    stripeUrl: "https://buy.stripe.com/28EcN56tUbKSgSw9cNbQY0g",
+    stripeUrl: "https://buy.stripe.com/cNi4gzdWmdT09q460BbQY0q",
     features: [
       "WorkoutGenie AI (instant workout builder)",
       "AI Auto Mode workout generator",
-      "Preset programs & advanced analytics",
+      "All preset workout programs",
+      "All nutrition programs (meal plans)",
+      "Full stretch library & programs",
       "Unlimited saved workouts",
       "Priority support",
     ],
@@ -327,7 +329,7 @@ export default function AddOns() {
           <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
             {[
               { label: "Core App", price: "Free", color: "text-green-400" },
-              { label: "WorkoutGENIE Pro", price: "$19.99/mo", color: "text-[#00a9ff]" },
+              { label: "WorkoutGENIE Pro", price: "$9.99/mo", color: "text-[#00a9ff]" },
               { label: "Pro Lifetime", price: "$199.99 once", color: "text-yellow-400" },
               { label: "AI Fitness Brain Add-On", price: "+ $4.99/mo", color: "text-blue-400" },
               { label: "AI Nutrition Add-On", price: "+ $4.99/mo", color: "text-orange-400" },

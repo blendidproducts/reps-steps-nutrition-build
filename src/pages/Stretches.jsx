@@ -354,6 +354,15 @@ export default function Stretches() {
                       onClick={() => setSelectedExercise(selectedExercise?.id === exercise.id ? null : exercise)}>
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
+                          {exercise.image_url && (
+                            <img
+                              src={exercise.image_url}
+                              alt={exercise.name}
+                              loading="lazy"
+                              onError={(e) => { e.currentTarget.style.display = "none"; }}
+                              className="w-12 h-12 rounded-lg object-cover border border-gray-700 mr-3 shrink-0"
+                            />
+                          )}
                           <div className="flex-1 min-w-0">
                             <h3 className="text-white font-semibold text-sm truncate">{exercise.name}</h3>
                             <p className="text-gray-400 text-xs mt-0.5">{exercise.description}</p>
