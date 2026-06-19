@@ -44,7 +44,7 @@ const CONNECTIONS = [
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function RepTracker({ exerciseName, targetReps, onComplete, onClose, defaultFacingMode = "environment", exerciseEmoji = "", setLabel = "", paused = false, onPause, autoAdvance = false }) {
+export default function RepTracker({ exerciseName, targetReps, onComplete, onClose, defaultFacingMode = "user", exerciseEmoji = "", setLabel = "", paused = false, onPause, autoAdvance = false }) {
   const initialConfig = matchExercise(exerciseName);
 
   const videoRef       = useRef(null);
