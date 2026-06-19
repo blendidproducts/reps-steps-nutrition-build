@@ -139,27 +139,7 @@ const CAT_LABEL = {
 // Drive thumbnail hotlinks for stretches that have a photo. image_url is only
 // written to records that have NONE, so a later upload via /ExerciseImages
 // always wins. If a Drive thumbnail does not load, upload via /ExerciseImages.
-const STRETCH_MEDIA = {
-  "Arm Circle": "https://drive.google.com/thumbnail?id=10SG2TmEgrSe-saQgtDRWvf9EoRsfiNJU&sz=w1000",
-  "Cat-Cow": "https://drive.google.com/thumbnail?id=1R8JxRE2pW96hyrN6o01BAdhX5xZ3nirF&sz=w1000",
-  "Chest Opener Stretch": "https://drive.google.com/thumbnail?id=1FicCCfxOno1wD_1zrwPByZ3c0HkEEubk&sz=w1000",
-  "Child's Pose": "https://drive.google.com/thumbnail?id=19ngTSxp3CwMq1U2FwvOy7ULg1lztifz9&sz=w1000",
-  "Cobra Stretch": "https://drive.google.com/thumbnail?id=17wvzDeknvG4er4Gg4Or9OUnfOyYzK-Hu&sz=w1000",
-  "Doorway Chest Stretch": "https://drive.google.com/thumbnail?id=1HLaMdd4rhypqhXE9jTMJpuBW3F1t6VwQ&sz=w1000",
-  "Downward Dog": "https://drive.google.com/thumbnail?id=1Y-eY4BIuSCoMChju-T89cfktFrT6yxdQ&sz=w1000",
-  "Hip Circle": "https://drive.google.com/thumbnail?id=1-zoFEYlvws8frKUNOz46aotZh7uegeQR&sz=w1000",
-  "Hip Flexor Lunge Stretch": "https://drive.google.com/thumbnail?id=1OazPkvAwlMjLF8v94o__rmnxxecIDud7&sz=w1000",
-  "Neck Side Stretch": "https://drive.google.com/thumbnail?id=1p-um_wLixGO9f-XpmoNEaz-yYn7xmrrI&sz=w1000",
-  "Pigeon Pose": "https://drive.google.com/thumbnail?id=1_qrrBA034xvGXlOfvWb8maFTcg4x46yB&sz=w1000",
-  "Quad Stretch": "https://drive.google.com/thumbnail?id=1vFmD1mYSrZeI6PdqOMKivyCK0CsvWAiW&sz=w1000",
-  "Seated Butterfly Stretch": "https://drive.google.com/thumbnail?id=1vBCQXfgi3V4ELCEhs-Mh43Mvuwrjor9i&sz=w1000",
-  "Seated Spinal Twist": "https://drive.google.com/thumbnail?id=12nKWxlJYD8nJfKpl6M6KQu5Y3SXoFCqi&sz=w1000",
-  "Shoulder Cross-Body Stretch": "https://drive.google.com/thumbnail?id=1V8nvGBjTHmDAdtOV31631Bka1CCeLQeZ&sz=w1000",
-  "Standing Hamstring Stretch": "https://drive.google.com/thumbnail?id=18ZjCtVhfWtD2FD35z4gn-ZDHLBJ_Gz9F&sz=w1000",
-  "Standing Quadriceps Stretch": "https://drive.google.com/thumbnail?id=1_PAtLcCw3IsiXCszPCxnD6w2z4VkJcVI&sz=w1000",
-  "Toe Touch": "https://drive.google.com/thumbnail?id=1hDqDNn9nm2FTH6SJCHdNpm67R-wrohbs&sz=w1000",
-  "World's Greatest Stretch": "https://drive.google.com/thumbnail?id=1hj1HrtRMB0w_K2e9WJGEs_sd6PMECw1I&sz=w1000",
-};
+const STRETCH_MEDIA = {}; // Drive links removed — they do not hotlink reliably. Use /ExerciseImages to upload hosted photos.
 
 // Build step-by-step instructions + tips for a timed stretch from its "Cues:" text.
 function stretchExtras(ex) {
