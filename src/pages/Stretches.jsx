@@ -129,6 +129,23 @@ const STRETCH_LIBRARY = [
 // do not hotlink reliably, so we skip them and show a clean card instead.
 const isUsableImg = (u) => !!u;
 
+// Turn a YouTube / Drive / direct video URL into an inline-embeddable player spec.
+function videoEmbed(url) {
+  if (!url) return null;
+  if (/youtube\.com|youtu\.be/.test(url)) {
+    const src = url
+      .replace("watch?v=", "embed/")
+      .replace("youtu.be/", "www.youtube.com/embed/")
+      .split("&")[0];
+    return { type: "iframe", src };
+  }
+  if (/drive\.google\.com/.test(url)) {
+    const m = url.match(/\/d\/([A-Za-z0-9_-]+)/);
+    return m ? { type: "iframe", src: `https://drive.google.com/file/d/${m[1]}/preview` } : null;
+  }
+  return { type: "video", src: url };
+}
+
 function formatTime(s) {
   const m = Math.floor(s / 60);
   const sec = s % 60;
@@ -142,6 +159,7 @@ function ActiveSession({ stretches, onClose }) {
   const [timeLeft, setTimeLeft] = useState(stretches[0]?.hold || 30);
   const [isRunning, setIsRunning] = useState(false);
   const [show3D, setShow3D] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
   const timerRef = useRef(null);
   const audioCtxRef = useRef(null);
 
@@ -166,7 +184,7 @@ function ActiveSession({ stretches, onClose }) {
 
   const current = stretches[idx];
   const currentImg = current?.image_url;
-  useEffect(() => { setShow3D(false); }, [idx]);
+  useEffect(() => { setShow3D(false); setShowVideo(false); }, [idx]);
   const totalSets = current?.sets || 2;
   const restTime = 10;
 
@@ -297,9 +315,9 @@ function ActiveSession({ stretches, onClose }) {
             {phase !== "rest" && (current?.youtube_url || current?.video_url || current?.model_url) && (
               <div className="flex gap-2 mb-3">
                 {(current?.youtube_url || current?.video_url) && (
-                  <Button onClick={() => window.open(current.youtube_url || current.video_url, "_blank")}
+                  <Button onClick={() => setShowVideo(v => !v)}
                     variant="outline" className="flex-1 border-gray-600 text-white hover:bg-gray-800 h-11">
-                    <Youtube className="w-4 h-4 mr-2" /> Video
+                    <Youtube className="w-4 h-4 mr-2" /> {showVideo ? "Hide Video" : "Video"}
                   </Button>
                 )}
                 {current?.model_url && (
@@ -310,6 +328,28 @@ function ActiveSession({ stretches, onClose }) {
                 )}
               </div>
             )}
+
+            {phase !== "rest" && showVideo && (current?.youtube_url || current?.video_url) && (() => {
+              const v = videoEmbed(current.youtube_url || current.video_url);
+              if (!v) return null;
+              return (
+                <div className="mb-4 rounded-xl overflow-hidden border border-gray-700 bg-black aspect-video">
+                  {v.type === "iframe" ? (
+                    <iframe
+                      src={v.src}
+                      title={current?.name}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <video src={v.src} controls className="w-full h-full">
+                      Your browser does not support the video tag.
+                    </video>
+                  )}
+                </div>
+              );
+            })()}
 
             {phase !== "rest" && show3D && current?.model_url && (
               <div className="mb-4 rounded-xl overflow-hidden border border-gray-700" style={{ height: 240 }}>
