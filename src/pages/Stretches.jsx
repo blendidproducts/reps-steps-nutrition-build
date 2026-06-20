@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Play, Timer, ChevronDown, ChevronUp, X, SkipForward, RotateCcw } from "lucide-react";
+import { Search, Play, Timer, ChevronDown, ChevronUp, X, SkipForward, RotateCcw, Youtube, Box } from "lucide-react";
+import Exercise3DViewer from "@/components/Exercise3DViewer";
 
 const CATEGORIES = [
   { id: "all", label: "All" },
@@ -126,7 +127,7 @@ const STRETCH_LIBRARY = [
 
 // Only render images that will actually load. Google Drive view/thumbnail links
 // do not hotlink reliably, so we skip them and show a clean card instead.
-const isUsableImg = (u) => !!u && !/drive\.google\.com/.test(u);
+const isUsableImg = (u) => !!u;
 
 function formatTime(s) {
   const m = Math.floor(s / 60);
@@ -140,6 +141,7 @@ function ActiveSession({ stretches, onClose }) {
   const [phase, setPhase] = useState("stretch"); // stretch | rest
   const [timeLeft, setTimeLeft] = useState(stretches[0]?.hold || 30);
   const [isRunning, setIsRunning] = useState(false);
+  const [show3D, setShow3D] = useState(false);
   const timerRef = useRef(null);
   const audioCtxRef = useRef(null);
 
@@ -163,7 +165,8 @@ function ActiveSession({ stretches, onClose }) {
   };
 
   const current = stretches[idx];
-  const currentImg = (STRETCH_LIBRARY.find(s => s.name.toLowerCase() === (current?.name || "").toLowerCase()) || {}).image_url;
+  const currentImg = current?.image_url;
+  useEffect(() => { setShow3D(false); }, [idx]);
   const totalSets = current?.sets || 2;
   const restTime = 10;
 
@@ -219,8 +222,8 @@ function ActiveSession({ stretches, onClose }) {
   const isDone = phase === "done";
 
   return (
-    <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="fixed inset-0 bg-black/95 z-50 overflow-y-auto p-4">
+      <div className="w-full max-w-md mx-auto my-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-white font-bold text-lg">Active Session</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
@@ -289,6 +292,49 @@ function ActiveSession({ stretches, onClose }) {
                 <Progress value={progress} className="h-2 mb-4" />
               </CardContent>
             </Card>
+
+            {/* Media + how-to (hidden during rest) */}
+            {phase !== "rest" && (current?.youtube_url || current?.video_url || current?.model_url) && (
+              <div className="flex gap-2 mb-3">
+                {(current?.youtube_url || current?.video_url) && (
+                  <Button onClick={() => window.open(current.youtube_url || current.video_url, "_blank")}
+                    variant="outline" className="flex-1 border-gray-600 text-white hover:bg-gray-800 h-11">
+                    <Youtube className="w-4 h-4 mr-2" /> Video
+                  </Button>
+                )}
+                {current?.model_url && (
+                  <Button onClick={() => setShow3D(v => !v)}
+                    variant="outline" className="flex-1 border-gray-600 text-white hover:bg-gray-800 h-11">
+                    <Box className="w-4 h-4 mr-2" /> {show3D ? "Hide 3D" : "3D"}
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {phase !== "rest" && show3D && current?.model_url && (
+              <div className="mb-4 rounded-xl overflow-hidden border border-gray-700" style={{ height: 240 }}>
+                <Exercise3DViewer modelUrl={current.model_url} exerciseName={current.name} />
+              </div>
+            )}
+
+            {phase !== "rest" && current?.instructions?.length > 0 && (
+              <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 mb-4 text-left">
+                <p className="text-white font-semibold text-sm mb-2">How to do it</p>
+                <ol className="space-y-1.5">
+                  {current.instructions.map((step, i) => (
+                    <li key={i} className="text-gray-300 text-xs flex gap-2">
+                      <span className="text-blue-400 font-bold shrink-0">{i + 1}.</span><span>{step}</span>
+                    </li>
+                  ))}
+                </ol>
+                {current?.tips?.length > 0 && (
+                  <div className="mt-3 bg-blue-500/10 rounded-lg p-3">
+                    <p className="text-blue-400 text-xs font-semibold mb-1">Tips</p>
+                    {current.tips.map((t, i) => (<p key={i} className="text-gray-300 text-xs">• {t}</p>))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Controls */}
             <div className="flex gap-3">
@@ -371,11 +417,14 @@ export default function Stretches() {
   };
 
   const startProgram = (program) => {
-    setActiveSession(program.stretches.map(s => ({ name: s.name, hold: s.hold, sets: s.sets })));
+    setActiveSession(program.stretches.map(s => {
+      const ex = exercises.find(e => (e.name || "").toLowerCase() === s.name.toLowerCase()) || {};
+      return { ...ex, name: s.name, hold: s.hold, sets: s.sets };
+    }));
   };
 
   const startLibraryStretch = (exercise) => {
-    setActiveSession([{ name: exercise.name, hold: exercise.target_time || 30, sets: 3 }]);
+    setActiveSession([{ ...exercise, hold: exercise.target_time || 30, sets: 3 }]);
   };
 
   const difficultyColor = {
