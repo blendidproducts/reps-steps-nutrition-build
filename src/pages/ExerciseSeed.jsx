@@ -141,6 +141,17 @@ const CAT_LABEL = {
 // always wins. If a Drive thumbnail does not load, upload via /ExerciseImages.
 const STRETCH_MEDIA = {}; // Drive links removed — they do not hotlink reliably. Use /ExerciseImages to upload hosted photos.
 
+// Drive-hosted demo videos (open in Drive's player via the session "Video" button).
+// Paste a real YouTube link per stretch any time via /ExerciseImages to override.
+const STRETCH_VIDEO = {
+  "Arm Circle": "https://drive.google.com/file/d/1EoTc8pVfoPWAGqKUN6ItDlrK2DbZ3k9i/view",
+  "Cat-Cow": "https://drive.google.com/file/d/12JsZC3kXSTzN6b7e24au-EWwH-VbcevU/view",
+  "Chest Opener Stretch": "https://drive.google.com/file/d/1udhh3VgtlTWIaDk36TRWCvTrj67wNLDR/view",
+  "Hip Circle": "https://drive.google.com/file/d/12H1c8kN37ndhV-0QPzhtknZ6a86qCm0E/view",
+  "Quad Stretch": "https://drive.google.com/file/d/1_Qd5M_602Hp6nmQ3CLe-P0UOTJUEY2jK/view",
+  "Shoulder Cross-Body Stretch": "https://drive.google.com/file/d/1f_-KSHQg4U1xM0EuSHVGy8jpxcaSvYjB/view",
+};
+
 // Build step-by-step instructions + tips for a timed stretch from its "Cues:" text.
 function stretchExtras(ex) {
   const desc = ex.description || "";
@@ -155,7 +166,11 @@ function stretchExtras(ex) {
     "Hold for the full time, then repeat on the other side if it is one-sided.",
   ];
   const image_url = STRETCH_MEDIA[ex.name] || "";
-  return image_url ? { instructions, tips, image_url } : { instructions, tips };
+  const video_url = STRETCH_VIDEO[ex.name] || "";
+  const out = { instructions, tips };
+  if (image_url) out.image_url = image_url;
+  if (video_url) out.video_url = video_url;
+  return out;
 }
 
 export default function ExerciseSeed() {
@@ -209,11 +224,13 @@ export default function ExerciseSeed() {
     const extras = stretchExtras(seed);
     const missingInstr = extras.instructions.length > 0 && (!rec.instructions || rec.instructions.length === 0);
     const missingImg = !!extras.image_url && !rec.image_url;
+    const missingVid = !!extras.video_url && !rec.video_url && !rec.youtube_url;
     return rec.metric !== seed.metric
         || rec.target_time !== seed.target_time
         || rec.category !== seed.category
         || missingInstr
-        || missingImg;
+        || missingImg
+        || missingVid;
   });
 
   const repairOne = async (seed) => {
@@ -232,6 +249,9 @@ export default function ExerciseSeed() {
       }
       if (extras.image_url && !rec.image_url) {
         updates.image_url = extras.image_url;
+      }
+      if (extras.video_url && !rec.video_url && !rec.youtube_url) {
+        updates.video_url = extras.video_url;
       }
       await withTimeout(base44.entities.Exercise.update(rec.id, updates), 10000);
       setDbRecords(prev => prev.map(r => (r.id === rec.id ? { ...r, ...updates } : r)));
