@@ -22,13 +22,17 @@ import {
   RefreshCw,
   Trash2,
   Link as LinkIcon,
-  GripVertical
+  GripVertical,
+  Mic,
+  Sparkles
 } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function AIWorkoutGenerator() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
+  const [promptText, setPromptText] = useState("");
+  const [isListening, setIsListening] = useState(false);
   const [workoutLevel, setWorkoutLevel] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
@@ -231,6 +235,68 @@ export default function AIWorkoutGenerator() {
     setCurrentStep(currentStep + 1);
   };
 
+  // ── WorkoutGenie prompt: type or speak a request, get a workout ──────────────
+  const parsePrompt = (text) => {
+    const t = (text || "").toLowerCase();
+    let level = "beginner";
+    if (/advanc|hard|elite|expert|tough/.test(t)) level = "advanced";
+    else if (/intermediate|medium|moderate/.test(t)) level = "intermediate";
+    let cat = "mix";
+    if (/upper|arm|chest|push|pull|back|shoulder|bicep|tricep/.test(t)) cat = "upper";
+    else if (/lower|leg|squat|glute|quad|calf|lunge|hamstring/.test(t)) cat = "lower";
+    const timeMatch = t.match(/(\d+)\s*(min|minute)/);
+    const time = timeMatch ? Math.max(5, parseInt(timeMatch[1], 10)) : 20;
+    const repMatch = t.match(/(\d+)\s*reps?/);
+    const reps = repMatch ? parseInt(repMatch[1], 10) : null;
+    return { level, cat, time, reps };
+  };
+
+  const generateFromPrompt = (text) => {
+    const req = (text ?? promptText).trim();
+    if (!req) { toast.error("Tell me what workout you want, e.g. \"quick 15 min upper body\""); return; }
+    if (!allExercises.length) { toast.error("Still loading exercises — try again in a second."); return; }
+    const { level, cat, time, reps } = parsePrompt(req);
+    setWorkoutLevel(level);
+    setSelectedCategory(cat);
+    setSelectedTime(time);
+    setIsFreeTime(false);
+    if (reps) { setAutoReps(false); setSelectedReps(reps); }
+
+    let filtered = [];
+    if (cat === "upper") filtered = allExercises.filter(ex => ex.category === "upper_body" && ex.metric !== "time");
+    else if (cat === "lower") filtered = allExercises.filter(ex => ex.category === "lower_body" && ex.metric !== "time");
+    else filtered = allExercises.filter(ex => ["upper_body", "lower_body", "core", "full_body"].includes(ex.category) && ex.metric !== "time");
+    if (level === "beginner") filtered = filtered.filter(ex => ex.difficulty === "beginner" || ex.difficulty === "intermediate");
+    else if (level === "intermediate") filtered = filtered.filter(ex => ex.difficulty !== "advanced");
+
+    const numExercises = Math.min(Math.max(5, Math.floor(time / 5)), filtered.length);
+    const shuffled = [...filtered].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, numExercises).map(ex => ({ ...ex, superset_with_next: false }));
+    if (!selected.length) { toast.error("No matching exercises found — try different words."); return; }
+    setSelectedExercises(selected);
+    toast.success(`Built a ${level} ${cat === "mix" ? "full-body" : cat} workout (${selected.length} moves)`);
+    setCurrentStep(3);
+  };
+
+  const startVoicePrompt = () => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { toast.error("Voice input is not supported in this browser — please type instead."); return; }
+    const rec = new SR();
+    rec.lang = "en-US";
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    setIsListening(true);
+    rec.onresult = (e) => {
+      const said = e.results[0][0].transcript;
+      setPromptText(said);
+      setIsListening(false);
+      generateFromPrompt(said);
+    };
+    rec.onerror = () => { setIsListening(false); toast.error("Didn't catch that — try again or type it."); };
+    rec.onend = () => setIsListening(false);
+    try { rec.start(); } catch (_) { setIsListening(false); }
+  };
+
   const startWorkout = async () => {
     if (selectedExercises.length === 0) {
       toast.error('No exercises selected');
@@ -412,6 +478,45 @@ export default function AIWorkoutGenerator() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -50 }}
           >
+            {/* WorkoutGenie prompt — type or speak what you want */}
+            <Card className="bg-gradient-to-br from-[#0a1f3c] to-gray-900 border-[#00a9ff]/40 rounded-xl mb-4">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-5 h-5 text-[#00a9ff]" />
+                  <h3 className="text-white font-bold">Ask WorkoutGenie</h3>
+                </div>
+                <p className="text-gray-400 text-xs sm:text-sm mb-3">
+                  Type or speak what you want — e.g. "quick 15 minute upper body" or "advanced leg day".
+                </p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={promptText}
+                    onChange={(e) => setPromptText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") generateFromPrompt(); }}
+                    placeholder="Describe your workout..."
+                    className="flex-1 bg-gray-900 border-gray-700 text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={startVoicePrompt}
+                    aria-label="Speak your workout request"
+                    className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center border transition-all ${
+                      isListening ? "bg-red-600 border-red-400 animate-pulse" : "bg-gray-800 border-white/15 hover:bg-gray-700"
+                    }`}
+                  >
+                    <Mic className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+                <Button
+                  onClick={() => generateFromPrompt()}
+                  className="w-full mt-3 bg-[#00a9ff] hover:bg-[#0090e0] text-white font-bold"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" /> Generate my workout
+                </Button>
+                <p className="text-center text-gray-500 text-xs mt-3">— or build it step by step below —</p>
+              </CardContent>
+            </Card>
+
             <Card className="bg-gray-900 border-gray-800 rounded-xl">
               <CardHeader>
                 <CardTitle className="text-white text-xl sm:text-2xl flex items-center gap-2">

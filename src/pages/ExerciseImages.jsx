@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import {
-  ChevronLeft, ImageIcon, CheckCircle, XCircle, Loader2, RefreshCw, Search
+  ChevronLeft, ImageIcon, CheckCircle, XCircle, Loader2, RefreshCw, Search, Youtube, Check
 } from "lucide-react";
 
 const CAT_LABEL = {
@@ -38,6 +38,8 @@ export default function ExerciseImages() {
   const [uploadingFor,setUploadingFor]= useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [hideDone,    setHideDone]    = useState(false);
+  const [videoDrafts, setVideoDrafts] = useState({});   // exerciseId -> url being typed
+  const [savingVideoFor, setSavingVideoFor] = useState(null);
 
   useEffect(() => { loadExercises(); }, []);
 
@@ -77,6 +79,19 @@ export default function ExerciseImages() {
       alert(`Upload failed: ${err.message || "Unknown error"}`);
     } finally {
       setUploadingFor(null);
+    }
+  };
+
+  const handleSaveVideo = async (exerciseId) => {
+    const url = (videoDrafts[exerciseId] ?? "").trim();
+    setSavingVideoFor(exerciseId);
+    try {
+      await base44.entities.Exercise.update(exerciseId, { youtube_url: url });
+      setExercises(prev => prev.map(e => (e.id === exerciseId ? { ...e, youtube_url: url } : e)));
+    } catch (err) {
+      alert(`Couldn't save video link: ${err.message || "Unknown error"}`);
+    } finally {
+      setSavingVideoFor(null);
     }
   };
 
@@ -161,10 +176,11 @@ export default function ExerciseImages() {
                 return (
                   <div
                     key={ex.id}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${
+                    className={`flex flex-col gap-2 px-4 py-3 rounded-xl border ${
                       hasImage ? "bg-[#111] border-green-900/40" : "bg-red-950/10 border-red-900/40"
                     }`}
                   >
+                   <div className="flex items-center gap-3">
                     {/* Thumbnail / status icon */}
                     {hasImage ? (
                       <img src={ex.image_url} alt={ex.name} className="w-10 h-10 rounded-lg object-cover shrink-0 border border-gray-700" />
@@ -197,6 +213,27 @@ export default function ExerciseImages() {
                         ? <Loader2 className="w-4 h-4 animate-spin" />
                         : hasImage ? "Replace" : "Upload"}
                     </button>
+                   </div>
+
+                   {/* YouTube / video link per exercise */}
+                   <div className="flex items-center gap-2">
+                     <Youtube className="w-4 h-4 text-red-500 shrink-0" />
+                     <Input
+                       value={videoDrafts[ex.id] ?? ex.youtube_url ?? ""}
+                       onChange={(e) => setVideoDrafts(d => ({ ...d, [ex.id]: e.target.value }))}
+                       placeholder="Paste YouTube link (optional)"
+                       className="flex-1 h-9 bg-[#0d0d0d] border-gray-700 text-white text-xs"
+                     />
+                     <button
+                       onClick={() => handleSaveVideo(ex.id)}
+                       disabled={savingVideoFor === ex.id}
+                       className="text-xs text-blue-400 hover:text-blue-300 shrink-0 font-semibold disabled:opacity-50 flex items-center gap-1"
+                     >
+                       {savingVideoFor === ex.id
+                         ? <Loader2 className="w-4 h-4 animate-spin" />
+                         : <><Check className="w-3.5 h-3.5" /> Save</>}
+                     </button>
+                   </div>
                   </div>
                 );
               })}

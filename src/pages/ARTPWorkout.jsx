@@ -1492,7 +1492,7 @@ function ARTPWorkoutInner() {
             setLabel={totalSets > 1 ? `Set ${currentSet}/${totalSets}` : ""}
             targetReps={mode === "goal" ? repGoalPerEx : mode === "time" ? targetRepsPerEx : 0}
             autoAdvance={mode === "goal"}
-            defaultFacingMode="environment"
+            defaultFacingMode="user"
             paused={isPaused || showMidRest}
             onPause={isPaused ? handleResume : handlePause}
             onComplete={handleRepTrackerComplete}
