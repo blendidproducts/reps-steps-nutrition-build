@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Play, Timer, ChevronDown, ChevronUp, X, SkipForward, RotateCcw, Youtube, Box, Lightbulb, CheckCircle2 } from "lucide-react";
+import { Search, Play, Timer, ChevronDown, ChevronUp, X, SkipForward, RotateCcw, Youtube, Box, Lightbulb, CheckCircle2, Video, ChevronLeft } from "lucide-react";
 import Exercise3DViewer from "@/components/Exercise3DViewer";
 
 const CATEGORIES = [
@@ -240,150 +240,136 @@ function ActiveSession({ stretches, onClose }) {
   const isDone = phase === "done";
 
   return (
-    <div className="fixed inset-0 bg-black/95 z-50 overflow-y-auto p-4">
-      <div className="w-full max-w-md mx-auto my-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-white font-bold text-lg">Active Session</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">
-            <X className="w-6 h-6" />
+    <div className="fixed inset-0 bg-[#020817] z-50 overflow-y-auto">
+      <div className="w-full max-w-md mx-auto px-4 pb-10 pt-5">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5">
+          <button onClick={onClose} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-white">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="text-center">
+            <h2 className="text-white font-bold text-lg leading-tight">Active Session</h2>
+            <p className="text-gray-400 text-xs">{isDone ? "Complete" : `Stretch ${idx + 1} of ${stretches.length}`}</p>
+          </div>
+          <button onClick={onClose} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-white">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {isDone ? (
-          <div className="text-center py-12">
+          <div className="text-center py-16">
             <div className="text-6xl mb-4">🎉</div>
             <h3 className="text-white text-2xl font-bold mb-2">Session Complete!</h3>
             <p className="text-gray-400 mb-6">Great job! You completed all stretches.</p>
-            <Button onClick={onClose} className="bg-green-600 hover:bg-green-700 text-white">Done</Button>
+            <Button onClick={onClose} className="bg-[#00a9ff] hover:bg-[#0090e0] text-white font-bold">Done</Button>
           </div>
         ) : (
           <>
-            {/* Progress */}
-            <div className="flex justify-between text-xs text-gray-400 mb-1">
-              <span>Stretch {idx + 1} of {stretches.length}</span>
-              <span>Set {set} of {totalSets}</span>
+            {/* Progress + set */}
+            <div className="flex items-center gap-3 mb-5">
+              <Progress value={(idx / stretches.length) * 100} className="h-1.5 flex-1" />
+              <span className="text-gray-400 text-xs whitespace-nowrap">Set {set} of {totalSets}</span>
             </div>
-            <Progress value={(idx / stretches.length) * 100} className="h-1.5 mb-6" />
 
-            {/* Current stretch */}
-            <Card className="bg-gray-900 border-gray-700 mb-6">
-              <CardContent className="p-6 text-center">
-                <Badge className={phase === "rest" ? "bg-yellow-600 mb-3" : "bg-blue-600 mb-3"}>
+            {/* Main card: image + timer side by side */}
+            <div className="bg-[#0e1525] border border-white/10 rounded-2xl p-4 mb-4">
+              <div className="flex items-center gap-3 mb-4">
+                <Badge className={phase === "rest" ? "bg-amber-500 text-white" : "bg-[#00a9ff] text-white"}>
                   {phase === "rest" ? "REST" : "HOLD"}
                 </Badge>
-                <h3 className="text-white text-xl font-bold mb-2">
+                <h3 className="text-white text-2xl font-bold truncate">
                   {phase === "rest" ? "Rest & Breathe" : current?.name}
                 </h3>
-                {phase === "rest" && (
-                  <p className="text-gray-400 text-sm mb-3">
-                    Next: {current?.name} — Set {set + 1}
-                  </p>
-                )}
-
+              </div>
+              <div className="flex items-center gap-4">
                 {phase !== "rest" && isUsableImg(currentImg) && (
-                  <img
-                    src={currentImg}
-                    alt={current?.name}
+                  <img src={currentImg} alt={current?.name}
                     onError={(e) => { e.currentTarget.style.display = "none"; }}
-                    className="w-32 h-32 mx-auto rounded-xl object-cover border border-gray-700 mb-3"
-                  />
+                    className="w-32 h-32 sm:w-40 sm:h-40 rounded-xl object-cover border border-white/10 shrink-0" />
                 )}
-
-                {/* Timer circle */}
-                <div className="relative w-36 h-36 mx-auto mb-4">
+                <div className="relative flex-1 aspect-square max-w-[170px] mx-auto">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="#374151" strokeWidth="8" />
-                    <circle cx="50" cy="50" r="42" fill="none"
-                      stroke={phase === "rest" ? "#d97706" : "#3b82f6"}
-                      strokeWidth="8"
-                      strokeDasharray={`${2 * Math.PI * 42}`}
-                      strokeDashoffset={`${2 * Math.PI * 42 * (1 - progress / 100)}`}
-                      strokeLinecap="round"
-                      style={{ transition: "stroke-dashoffset 1s linear" }}
-                    />
+                    <circle cx="50" cy="50" r="44" fill="none" stroke="#1e293b" strokeWidth="6" />
+                    <circle cx="50" cy="50" r="44" fill="none"
+                      stroke={phase === "rest" ? "#f59e0b" : "#00a9ff"} strokeWidth="6"
+                      strokeDasharray={`${2 * Math.PI * 44}`}
+                      strokeDashoffset={`${2 * Math.PI * 44 * (1 - progress / 100)}`}
+                      strokeLinecap="round" style={{ transition: "stroke-dashoffset 1s linear" }} />
                   </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-white text-3xl font-bold">{timeLeft}</span>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-white text-4xl font-black leading-none">{timeLeft}</span>
+                    <span className="text-gray-400 text-xs font-semibold tracking-wider mt-1">SEC</span>
                   </div>
                 </div>
-
-                <Progress value={progress} className="h-2 mb-4" />
-              </CardContent>
-            </Card>
-
-            {/* Media + how-to (hidden during rest) */}
-            {phase !== "rest" && (current?.youtube_url || current?.video_url || current?.model_url) && (
-              <div className="flex gap-2 mb-3">
-                {(current?.youtube_url || current?.video_url) && (
-                  <Button onClick={() => setShowVideo(v => !v)}
-                    variant="outline" className="flex-1 border-gray-600 text-white hover:bg-gray-800 h-11">
-                    <Youtube className="w-4 h-4 mr-2" /> {showVideo ? "Hide Video" : "Video"}
-                  </Button>
-                )}
-                {current?.model_url && (
-                  <Button onClick={() => setShow3D(v => !v)}
-                    variant="outline" className="flex-1 border-gray-600 text-white hover:bg-gray-800 h-11">
-                    <Box className="w-4 h-4 mr-2" /> {show3D ? "Hide 3D" : "3D"}
-                  </Button>
-                )}
               </div>
-            )}
+              {phase === "rest" && (
+                <p className="text-gray-400 text-sm text-center mt-3">Next: {current?.name} — Set {set + 1}</p>
+              )}
+            </div>
 
-            {phase !== "rest" && showVideo && (current?.youtube_url || current?.video_url) && (() => {
-              const v = videoEmbed(current.youtube_url || current.video_url);
-              if (!v) return null;
-              return (
-                <div className="mb-4 rounded-xl overflow-hidden border border-gray-700 bg-black aspect-video">
-                  {v.type === "iframe" ? (
-                    <iframe
-                      src={v.src}
-                      title={current?.name}
-                      className="w-full h-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  ) : (
-                    <video src={v.src} controls className="w-full h-full">
-                      Your browser does not support the video tag.
-                    </video>
-                  )}
-                </div>
-              );
-            })()}
-
-            {phase !== "rest" && show3D && current?.model_url && (
-              <div className="mb-4 rounded-xl overflow-hidden border border-gray-700" style={{ height: 240 }}>
-                <Exercise3DViewer modelUrl={current.model_url} exerciseName={current.name} />
-              </div>
-            )}
-
-            {phase !== "rest" && current?.instructions?.length > 0 && (
-              <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 mb-4 text-left">
-                <p className="text-white font-semibold text-sm mb-2">How to do it</p>
-                <ol className="space-y-1.5">
-                  {current.instructions.map((step, i) => (
-                    <li key={i} className="text-gray-300 text-xs flex gap-2">
-                      <span className="text-blue-400 font-bold shrink-0">{i + 1}.</span><span>{step}</span>
-                    </li>
+            {/* TIPS */}
+            {phase !== "rest" && current?.tips?.length > 0 && (
+              <div className="bg-[#0e1525] border border-white/10 rounded-2xl p-4 mb-4">
+                <p className="text-[#00a9ff] font-bold text-sm mb-3 flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4" /> TIPS
+                </p>
+                <div className="space-y-2.5">
+                  {current.tips.map((t, i) => (
+                    <div key={i} className="flex gap-2.5 text-gray-300 text-sm">
+                      <CheckCircle2 className="w-4 h-4 text-[#00a9ff] shrink-0 mt-0.5" /><span>{t}</span>
+                    </div>
                   ))}
-                </ol>
-                {current?.tips?.length > 0 && (
-                  <div className="mt-3 bg-blue-500/10 rounded-lg p-3">
-                    <p className="text-blue-400 text-xs font-semibold mb-1">Tips</p>
-                    {current.tips.map((t, i) => (<p key={i} className="text-gray-300 text-xs">• {t}</p>))}
+                </div>
+              </div>
+            )}
+
+            {/* Video toggle + embed */}
+            {phase !== "rest" && (current?.youtube_url || current?.video_url) && (
+              <>
+                <button onClick={() => setShowVideo(v => !v)}
+                  className="w-full mb-3 h-12 rounded-2xl bg-[#0e1525] border border-white/10 text-white font-semibold flex items-center justify-center gap-2 hover:bg-white/5">
+                  <Video className="w-5 h-5" /> {showVideo ? "Hide Video" : "Video"}
+                </button>
+                {showVideo && (() => {
+                  const v = videoEmbed(current.youtube_url || current.video_url);
+                  if (!v) return null;
+                  return (
+                    <div className="mb-4 rounded-2xl overflow-hidden border border-white/10 bg-black aspect-video">
+                      {v.type === "iframe" ? (
+                        <iframe src={v.src} title={current?.name} className="w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                      ) : (
+                        <video src={v.src} controls className="w-full h-full">Your browser does not support the video tag.</video>
+                      )}
+                    </div>
+                  );
+                })()}
+              </>
+            )}
+
+            {/* 3D toggle + viewer */}
+            {phase !== "rest" && current?.model_url && (
+              <>
+                <button onClick={() => setShow3D(v => !v)}
+                  className="w-full mb-3 h-12 rounded-2xl bg-[#0e1525] border border-white/10 text-white font-semibold flex items-center justify-center gap-2 hover:bg-white/5">
+                  <Box className="w-5 h-5" /> {show3D ? "Hide 3D" : "3D Model"}
+                </button>
+                {show3D && (
+                  <div className="mb-4 rounded-2xl overflow-hidden border border-white/10" style={{ height: 240 }}>
+                    <Exercise3DViewer modelUrl={current.model_url} exerciseName={current.name} />
                   </div>
                 )}
-              </div>
+              </>
             )}
 
             {/* Controls */}
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-1">
               <Button onClick={() => { armAudio(); setIsRunning(r => !r); }}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold h-12">
-                {isRunning ? "Pause" : <><Play className="w-4 h-4 mr-2" />Start</>}
+                className="flex-1 bg-[#3b6fff] hover:bg-[#2f5fe6] text-white font-bold h-14 rounded-2xl text-base">
+                {isRunning ? "Pause" : <><Play className="w-5 h-5 mr-2 fill-white" /> Start</>}
               </Button>
               <Button onClick={handleNext} variant="outline"
-                className="border-gray-600 text-white hover:bg-gray-800 h-12 px-4">
+                className="border-white/15 bg-white/5 text-white hover:bg-white/10 h-14 px-5 rounded-2xl">
                 <SkipForward className="w-5 h-5" />
               </Button>
             </div>
