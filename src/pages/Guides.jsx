@@ -57,7 +57,7 @@ export default function Guides() {
     .filter(s => s.items.length > 0);
 
   return (
-    <div style={{ backgroundColor: "#0a0a0a", minHeight: "100vh", color: "#f9fafb", paddingBottom: "100px" }}>
+    <div style={{ backgroundColor: "#020817", minHeight: "100vh", color: "#f9fafb", paddingBottom: "100px" }}>
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-6 px-4">
         <div className="max-w-2xl mx-auto">

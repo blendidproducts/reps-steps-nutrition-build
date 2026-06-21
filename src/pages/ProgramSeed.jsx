@@ -647,7 +647,7 @@ export default function ProgramSeed() {
   const failCount    = log.filter(l => l.startsWith("❌")).length;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white pb-24">
+    <div className="min-h-screen bg-[#020817] text-white pb-24">
 
       {/* Header */}
       <div className="bg-[#111] border-b border-gray-800 px-4 py-4 flex items-center gap-3 sticky top-0 z-10">

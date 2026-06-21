@@ -111,7 +111,7 @@ function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl })
 
   // Safe-area: use 56px minimum so notch/punch-hole phones don't clip the header
   return (
-    <div className="fixed inset-0 bg-[#0a0a0a] overflow-y-auto"
+    <div className="fixed inset-0 bg-[#020817] overflow-y-auto"
       style={{ zIndex: 99998, paddingTop: "max(env(safe-area-inset-top, 0px), 56px)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}>
 
       {/* Ghost emoji background */}
@@ -616,7 +616,7 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
   }
 
   return (
-    <div className="fixed inset-0 bg-[#0a0a0a] flex flex-col overflow-y-auto"
+    <div className="fixed inset-0 bg-[#020817] flex flex-col overflow-y-auto"
       style={{ zIndex: 99990, paddingTop: "env(safe-area-inset-top, 20px)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" }}>
       <div className="max-w-md mx-auto w-full px-5 pt-6 space-y-5 pb-10">
 
@@ -721,7 +721,7 @@ class ARTPErrorBoundary extends Component {
   render() {
     if (this.state.error) {
       return (
-        <div className="fixed inset-0 bg-[#0a0a0a] flex flex-col items-center justify-center px-6 text-center"
+        <div className="fixed inset-0 bg-[#020817] flex flex-col items-center justify-center px-6 text-center"
           style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 48px)" }}>
           <AlertTriangle className="w-14 h-14 text-red-400 mb-4" />
           <h2 className="text-white text-xl font-bold mb-2">Couldn't load workout</h2>
@@ -1088,7 +1088,7 @@ function ARTPWorkoutInner() {
 
   // ── PHASE: setup ───────────────────────────────────────────────────
   if (phase === "setup") return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col text-white">
+    <div className="min-h-screen bg-[#020817] flex flex-col text-white">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 bg-[#111] border-b border-gray-800 sticky top-0 z-10"
         style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 52px)", paddingBottom: "12px" }}>
@@ -1339,7 +1339,7 @@ function ARTPWorkoutInner() {
         initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 400, damping: 35 }}
         className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-3"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 16px) + 8px)", background: "linear-gradient(to top, #0a0a0a 70%, transparent)" }}
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 16px) + 8px)", background: "linear-gradient(to top, #020817 70%, transparent)" }}
       >
         <button
           onClick={handleStart}
@@ -1372,7 +1372,7 @@ function ARTPWorkoutInner() {
 
       {/* ── Countdown ─────────────────────────────────────────────── */}
       {phase === "countdown" && createPortal(
-        <div className="fixed inset-0 bg-[#0a0a0a] flex flex-col items-center justify-center"
+        <div className="fixed inset-0 bg-[#020817] flex flex-col items-center justify-center"
           style={{ zIndex: 99999, paddingTop: "max(env(safe-area-inset-top, 0px), 52px)", paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)" }}>
           <AnimatePresence mode="wait">
             <motion.div key={countdownSecs} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 1.5, opacity: 0 }} transition={{ duration: 0.35 }} className="text-center">
@@ -1492,7 +1492,7 @@ function ARTPWorkoutInner() {
             setLabel={totalSets > 1 ? `Set ${currentSet}/${totalSets}` : ""}
             targetReps={mode === "goal" ? repGoalPerEx : mode === "time" ? targetRepsPerEx : 0}
             autoAdvance={mode === "goal"}
-            defaultFacingMode="user"
+            defaultFacingMode="environment"
             paused={isPaused || showMidRest}
             onPause={isPaused ? handleResume : handlePause}
             onComplete={handleRepTrackerComplete}

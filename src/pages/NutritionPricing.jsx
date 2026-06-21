@@ -34,7 +34,7 @@ export default function NutritionPricing() {
   };
 
   return (
-    <div style={{ backgroundColor: "#0a0a0a", minHeight: "100vh", color: "#f9fafb", paddingBottom: "100px" }}>
+    <div style={{ backgroundColor: "#020817", minHeight: "100vh", color: "#f9fafb", paddingBottom: "100px" }}>
       {/* Header */}
       <div className="bg-gradient-to-r from-emerald-700 to-teal-700 text-white py-6 px-4">
         <div className="max-w-2xl mx-auto flex items-center gap-3">

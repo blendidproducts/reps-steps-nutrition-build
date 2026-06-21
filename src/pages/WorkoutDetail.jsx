@@ -43,7 +43,7 @@ export default function WorkoutDetail() {
 
   if (isLoading) {
     return (
-      <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center">
+      <div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-brand-blue mx-auto mb-4"></div>
           <div className="text-xl">Loading workout details...</div>
@@ -57,7 +57,7 @@ export default function WorkoutDetail() {
   }
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb', paddingBottom: '80px' }}>
+    <div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb', paddingBottom: '80px' }}>
       {/* Mobile Header with Back Button */}
       <div className="md:hidden sticky top-0 z-40 bg-[#0a1628]/95 backdrop-blur-lg border-b border-brand-blue/30 px-4 py-3 select-none">
         <div className="flex items-center gap-3">

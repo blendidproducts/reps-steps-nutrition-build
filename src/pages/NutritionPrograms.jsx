@@ -52,14 +52,14 @@ export default function NutritionPrograms() {
 
   if (loading) {
     return (
-      <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-6">
+      <div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-6">
         <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-brand-blue"></div>
       </div>
     );
   }
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="pb-20">
+    <div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb' }} className="pb-20">
       <div className="container mx-auto px-4 py-6 max-w-6xl">
         {/* Header */}
         <div className="mb-8">

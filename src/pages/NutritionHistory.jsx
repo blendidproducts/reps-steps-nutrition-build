@@ -72,7 +72,7 @@ export default function NutritionHistory() {
   } : { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
+    <div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb' }}>
       {/* Header */}
       <div className="gradient-bg text-white py-8">
         <div className="container mx-auto px-4">

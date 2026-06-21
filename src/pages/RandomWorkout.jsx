@@ -52,7 +52,7 @@ export default function RandomWorkout() {
   }, [navigate]);
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-4">
+    <div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-4">
       <div className="text-center">
         <div className="relative w-24 h-24 mx-auto mb-6">
           <div className="absolute inset-0 bg-brand-blue/50 rounded-full animate-ping"></div>

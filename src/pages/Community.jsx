@@ -121,7 +121,7 @@ export default function Community() {
   };
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb', paddingBottom: '100px' }}>
+    <div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb', paddingBottom: '100px' }}>
       {/* Header */}
       <div className="gradient-bg text-white py-6 backdrop-blur-lg">
         <div className="container mx-auto px-4 max-w-2xl">

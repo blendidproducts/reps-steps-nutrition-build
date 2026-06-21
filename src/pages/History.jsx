@@ -294,7 +294,7 @@ export default function History() {
   };
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb', paddingBottom: '80px' }}>
+    <div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb', paddingBottom: '80px' }}>
       <div className="gradient-bg text-white py-8">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

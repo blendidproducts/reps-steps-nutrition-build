@@ -101,7 +101,7 @@ export default function Upload3DModels() {
   );
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
+    <div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb' }}>
       <div className="gradient-bg text-white py-8">
         <div className="container mx-auto px-4">
           <h1 className="text-3xl font-bold mb-2">Upload 3D Exercise Models</h1>

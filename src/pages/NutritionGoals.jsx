@@ -140,14 +140,14 @@ export default function NutritionGoals() {
 
   if (isLoading) {
     return (
-      <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center">
+      <div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue"></div>
       </div>
     );
   }
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
+    <div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb' }}>
       {/* Header */}
       <div className="gradient-bg text-white py-8">
         <div className="container mx-auto px-4">

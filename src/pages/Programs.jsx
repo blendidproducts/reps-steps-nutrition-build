@@ -80,7 +80,7 @@ export default function Programs() {
   };
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
+    <div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb' }}>
       <div className="gradient-bg text-white py-8">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">

@@ -270,7 +270,7 @@ Choose realistic exercises that match the body focus and intensity level.`,
   };
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }}>
+    <div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb' }}>
       {/* Header */}
       <div className="gradient-bg text-white py-3 sm:py-4 md:py-6 backdrop-blur-lg bg-gradient-to-r from-blue-600/90 to-blue-800/90">
         <div className="container mx-auto px-3 sm:px-4 lg:px-6 max-w-3xl">
@@ -564,7 +564,7 @@ Choose realistic exercises that match the body focus and intensity level.`,
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             transition={{ type: "spring", stiffness: 400, damping: 35 }}
-            className="sticky bottom-0 z-50 px-3 pt-2 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/95 to-transparent"
+            className="sticky bottom-0 z-50 px-3 pt-2 bg-gradient-to-t from-[#020817] via-[#020817]/95 to-transparent"
             style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)" }}
           >
             <div className="container mx-auto max-w-2xl">

@@ -484,7 +484,7 @@ export default function ActiveWorkout() {
   const getYouTubeVideoId = (name) => { const map = {'push':'IODxDxX7oi4','squat':'9cYEuFbBLSY','plank':'pSHjTRCQxIw','lunge':'QOVaHwm-Q6U','burpee':'dZgVxmf6jkA','pull':'eGo4IYlbE5g','dip':'yN6Q1UI_xkE','mountain climber':'nmwgirgXLYM','jumping jack':'c4DAnQ6DtF8','crunch':'5ER5Of4EISE'}; const n = name.toLowerCase(); for (const [k,v] of Object.entries(map)) if (n.includes(k)) return v; return 'g_tea8ZNk5A'; };
 
   if (!workout) return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-6">
+    <div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-6">
       <div className="text-center">
         {loadingError ? (<div><div className="text-6xl mb-4">⚠️</div><div className="text-xl text-red-400 mb-2">Error: {loadingError}</div><Button onClick={() => { localStorage.clear(); navigate(createPageUrl("Exercises")); }} className="bg-blue-600 hover:bg-blue-700">Go Back</Button></div>)
         : (<div><div className="animate-spin rounded-full h-16 w-16 border-b-4 border-brand-blue mx-auto mb-4"></div><div className="text-xl">Loading workout...</div></div>)}
@@ -493,7 +493,7 @@ export default function ActiveWorkout() {
   );
 
   const currentExercise = workout.exercises[currentExerciseIndex];
-  if (!currentExercise) return (<div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-6"><div className="text-center"><div className="text-6xl mb-4">⚠️</div><div className="text-xl text-red-400 mb-2">Invalid workout data</div><Button onClick={() => navigate(createPageUrl("Exercises"))} className="bg-blue-600 hover:bg-blue-700">Go Back</Button></div></div>);
+  if (!currentExercise) return (<div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-6"><div className="text-center"><div className="text-6xl mb-4">⚠️</div><div className="text-xl text-red-400 mb-2">Invalid workout data</div><Button onClick={() => navigate(createPageUrl("Exercises"))} className="bg-blue-600 hover:bg-blue-700">Go Back</Button></div></div>);
 
   const isTimeBased = currentExercise.metric === 'time';
   const totalSets = workout.exercises.reduce((s,ex) => s + (ex.sets||1), 0);
@@ -502,7 +502,7 @@ export default function ActiveWorkout() {
   const timeProgress = isTimeBased && currentExercise.target_time ? (exerciseTimer / currentExercise.target_time) * 100 : 0;
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', minHeight: '100vh', color: '#f9fafb' }} className="overflow-x-hidden">
+    <div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb' }} className="overflow-x-hidden">
       {/* aria-live regions — visually hidden, announce dynamic changes to screen readers */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {ariaTimerAnnouncement}

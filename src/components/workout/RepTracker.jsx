@@ -379,7 +379,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
   // ════════════════════════════════════════════════════════════════
   if (isManualMode) {
     return createPortal(
-      <div style={{ zIndex: 9999, position: 'fixed', inset: 0 }} className="bg-[#0a0a0a] flex flex-col select-none">
+      <div style={{ zIndex: 9999, position: 'fixed', inset: 0 }} className="bg-[#020817] flex flex-col select-none">
 
         {/* Top bar */}
         <div
@@ -432,7 +432,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
         </button>
 
         {/* Bottom bar */}
-        <div className="bg-[#0a0a0a]/95 backdrop-blur-sm border-t border-white/10 px-4 pt-3 flex flex-col gap-2"
+        <div className="bg-[#020817]/95 backdrop-blur-sm border-t border-white/10 px-4 pt-3 flex flex-col gap-2"
           style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 12px) + 12px)' }}>
           {exerciseConfig?.formCues?.length > 0 && (
             <div className="w-full">
@@ -504,7 +504,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
       <AnimatePresence>
         {isLoading && (
           <motion.div key="loading" initial={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-[#0a0a0a] flex flex-col items-center justify-center z-20">
+            className="absolute inset-0 bg-[#020817] flex flex-col items-center justify-center z-20">
             <div className="w-16 h-16 border-4 border-[#00a9ff]/30 border-t-[#00a9ff] rounded-full animate-spin mb-6" />
             <p className="text-white text-lg font-bold mb-2">Loading Body Tracker</p>
             <p className="text-gray-400 text-sm text-center px-8">
@@ -517,7 +517,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
 
       {/* Error */}
       {loadError && !isLoading && (
-        <div className="absolute inset-0 bg-[#0a0a0a] flex flex-col items-center justify-center z-20 p-6">
+        <div className="absolute inset-0 bg-[#020817] flex flex-col items-center justify-center z-20 p-6">
           <AlertTriangle className="w-16 h-16 text-red-400 mb-4" />
           <p className="text-white text-xl font-bold mb-2">Body Tracking Unavailable</p>
           <p className="text-gray-400 text-sm text-center mb-6">{loadError}</p>
@@ -687,7 +687,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
           </div>
 
           {/* Bottom bar */}
-          <div className="bg-[#0a0a0a]/95 backdrop-blur-sm border-t border-white/10 px-4 pt-2 flex flex-col gap-2"
+          <div className="bg-[#020817]/95 backdrop-blur-sm border-t border-white/10 px-4 pt-2 flex flex-col gap-2"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 12px) + 12px)' }}>
             {exerciseConfig?.formCues?.length > 0 && (
               <div className="w-full">
