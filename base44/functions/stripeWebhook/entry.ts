@@ -134,12 +134,11 @@ const LINK_SUFFIX_TO_KEY: Record<string, string> = {
 };
 
 /** Constant-time string compare to avoid timing leaks on the signature. */
-async function safeEqualHex(a: string, b: string): Promise<boolean> {
-  const crypto = await import("node:crypto");
-  const ba = Buffer.from(a, "hex");
-  const bb = Buffer.from(b, "hex");
-  if (ba.length !== bb.length) return false;
-  return crypto.timingSafeEqual(ba, bb);
+function safeEqualHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
 }
 
 /** Verify the Stripe-Signature header (HMAC-SHA256 + timestamp tolerance). */
@@ -156,11 +155,18 @@ async function verifySignature(signature: string | null, body: string): Promise<
   const age = Math.abs(Math.floor(Date.now() / 1000) - Number(timestamp));
   if (!Number.isFinite(age) || age > SIGNATURE_TOLERANCE_SECONDS) return false;
 
-  const crypto = await import("node:crypto");
-  const expected = crypto
-    .createHmac("sha256", STRIPE_WEBHOOK_SECRET)
-    .update(`${timestamp}.${body}`, "utf8")
-    .digest("hex");
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(STRIPE_WEBHOOK_SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sigBuf = await crypto.subtle.sign("HMAC", key, enc.encode(`${timestamp}.${body}`));
+  const expected = Array.from(new Uint8Array(sigBuf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 
   return safeEqualHex(v1, expected);
 }

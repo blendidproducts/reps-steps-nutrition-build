@@ -49,6 +49,9 @@ _Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-06-26_
 - Stripe → Pro WORKS. Webhook endpoint = this app's URL + correct STRIPE_WEBHOOK_SECRET. Sets `subscription_status='pro'`.
 - Orange WorkoutGenie card now routes to AIWorkoutGenerator (was a black-screen modal).
 
+
+- Webhook signature verification rewritten to **Web Crypto** (Deno-native) — removed Node `crypto`/`Buffer` (cleared a High security flag). Same HMAC-SHA256 algorithm; re-test with a Stripe Resend → expect 200.
+
 ## Gotchas
 - Connected-folder editor can truncate large files — edit in a sandbox clone, esbuild-verify, then byte-copy into sync.
 - Drive image hotlinks work but can be flaky; `/ExerciseImages` uploads override and are most reliable.
