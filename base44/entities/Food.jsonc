@@ -64,26 +64,26 @@
   ],
   "rls": {
     "create": {
-      "is_custom": true,
-      "created_by": "{{user.email}}"
+      "data.is_custom": true,
+      "created_by_id": "{{user.id}}"
     },
     "read": {
       "$or": [
         {
-          "is_custom": false
+          "data.is_custom": false
         },
         {
-          "created_by": "{{user.email}}"
+          "created_by_id": "{{user.id}}"
         }
       ]
     },
     "update": {
-      "is_custom": true,
-      "created_by": "{{user.email}}"
+      "data.is_custom": true,
+      "created_by_id": "{{user.id}}"
     },
     "delete": {
-      "is_custom": true,
-      "created_by": "{{user.email}}"
+      "data.is_custom": true,
+      "created_by_id": "{{user.id}}"
     }
   }
 }

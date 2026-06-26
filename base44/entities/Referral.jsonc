@@ -37,13 +37,13 @@
   "rls": {
     "create": {},
     "read": {
-      "created_by": "{{user.email}}"
+      "created_by_id": "{{user.id}}"
     },
     "update": {
-      "created_by": "{{user.email}}"
+      "created_by_id": "{{user.id}}"
     },
     "delete": {
-      "created_by": "{{user.email}}"
+      "created_by_id": "{{user.id}}"
     }
   }
 }

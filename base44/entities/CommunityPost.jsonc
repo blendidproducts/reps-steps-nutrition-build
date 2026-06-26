@@ -57,23 +57,23 @@
   ],
   "rls": {
     "create": {
-      "created_by": "{{user.email}}"
+      "created_by_id": "{{user.id}}"
     },
     "read": {
       "$or": [
         {
-          "is_public": true
+          "data.is_public": true
         },
         {
-          "created_by": "{{user.email}}"
+          "created_by_id": "{{user.id}}"
         }
       ]
     },
     "update": {
-      "created_by": "{{user.email}}"
+      "created_by_id": "{{user.id}}"
     },
     "delete": {
-      "created_by": "{{user.email}}"
+      "created_by_id": "{{user.id}}"
     }
   }
 }
