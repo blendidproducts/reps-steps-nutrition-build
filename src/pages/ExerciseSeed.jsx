@@ -152,6 +152,69 @@ const STRETCH_VIDEO = {
   "Shoulder Cross-Body Stretch": "https://drive.google.com/file/d/1f_-KSHQg4U1xM0EuSHVGy8jpxcaSvYjB/view",
 };
 
+// Drive photo per exercise (auto-fills image_url for any exercise missing one).
+// Uploads via /ExerciseImages always take precedence.
+const EXERCISE_MEDIA = {
+  "Push-Up": "https://drive.google.com/thumbnail?id=1HMWpziu0AUp0jsJSVNcjYzW8GLzIpfT7&sz=w1000",
+  "Diamond Push-Up": "https://drive.google.com/thumbnail?id=1S6ngmhYrIe2qfEEsW3Zkc6lWrmVueotg&sz=w1000",
+  "Wide Push-Up": "https://drive.google.com/thumbnail?id=1ALG00vEoYVg2aLCTayrPcpB5XppFE874&sz=w1000",
+  "Pike Push-Up": "https://drive.google.com/thumbnail?id=1zU_KlJ5Ff3HoJS4Pv0pvTMetvcSmTkiK&sz=w1000",
+  "Decline Push-Up": "https://drive.google.com/thumbnail?id=10KMg3tMfxg_A60lWOVWj0HRjEHMj_AbP&sz=w1000",
+  "Incline Push-Up": "https://drive.google.com/thumbnail?id=1eC7vLGZe-va22XVDnJbxInFo6a5B2SMw&sz=w1000",
+  "Pull-Up": "https://drive.google.com/thumbnail?id=16KeHPC2IdVzONfFp8Ed1sRWUW-I3XUtM&sz=w1000",
+  "Chin-Up": "https://drive.google.com/thumbnail?id=1k61uADO3Gp-0haD9eTWTtCzLq9Jqk_Z2&sz=w1000",
+  "Squat": "https://drive.google.com/thumbnail?id=1VgYXaDXmZmOPagKK2hsI8VG-m_Ci1YN1&sz=w1000",
+  "Jump Squat": "https://drive.google.com/thumbnail?id=1DKTa1XAzoZrFhkZN4JcgU9B1oazUjygb&sz=w1000",
+  "Sumo Squat": "https://drive.google.com/thumbnail?id=1-2FfSvBOf-0uvmYZcdw_ISo_tUiMouy9&sz=w1000",
+  "Lunge": "https://drive.google.com/thumbnail?id=11Q7MJQJsGYYx93RZOcoz1xLIu5d8zgRp&sz=w1000",
+  "Step Up": "https://drive.google.com/thumbnail?id=12wunZ_b9KrzhoORx1Hl40dpyAWabJ_ZS&sz=w1000",
+  "Glute Bridge": "https://drive.google.com/thumbnail?id=1NtWZYNKWT5bjcPngUOFn0YnOHNNNdLKS&sz=w1000",
+  "Donkey Kick": "https://drive.google.com/thumbnail?id=1FVw6s6SXjvqy3vdpWvC1kGizWFg_fSIx&sz=w1000",
+  "Calf Raise": "https://drive.google.com/thumbnail?id=1NZu7GenvR35Wzo3p6IwYzhxP0yUsr5Ye&sz=w1000",
+  "Wall Sit": "https://drive.google.com/thumbnail?id=1gsmdE_mWZa2oL5NEzM0NbrW1r2noGXCJ&sz=w1000",
+  "Pistol Squat": "https://drive.google.com/thumbnail?id=1085tSRtM7t7Sa6FE2mJeM6iBQQt5C0j4&sz=w1000",
+  "Sit-Up": "https://drive.google.com/thumbnail?id=1ssZL-3MsPknSRXMdHEg0SuYF2ouVHNtq&sz=w1000",
+  "Crunch": "https://drive.google.com/thumbnail?id=1CiFEIBsbFcxaEvuvzLwHPjOsT-B4HfSh&sz=w1000",
+  "Leg Raise": "https://drive.google.com/thumbnail?id=1njnM73yydzMjHbR1fhHGwKDyYiGNEe5z&sz=w1000",
+  "Plank": "https://drive.google.com/thumbnail?id=147ghs-7mY0CMOOfeBZz33dyGfRvqRADB&sz=w1000",
+  "Side Plank": "https://drive.google.com/thumbnail?id=1_9mHQkUc_twvzGpmD2IuyzOMcPhYGaD3&sz=w1000",
+  "Bicycle Crunch": "https://drive.google.com/thumbnail?id=1Y7x6-02h411VHCK3K8QUe7uN1HNJCpxn&sz=w1000",
+  "Mountain Climber": "https://drive.google.com/thumbnail?id=1XZAKxB01uAEDgND8_uzoEgO_6pmKKhv4&sz=w1000",
+  "Flutter Kick": "https://drive.google.com/thumbnail?id=1198ctXKnzua9b9ytShpEXAwDZojP2RvO&sz=w1000",
+  "Dead Bug": "https://drive.google.com/thumbnail?id=1rBV7HZ3xhTvCqVl-g0DMstJf2qq_o7S5&sz=w1000",
+  "Hollow Body Hold": "https://drive.google.com/thumbnail?id=1XFIiHd1iM8OaP6HiyZ4OwVxbIznPDThc&sz=w1000",
+  "V-Up": "https://drive.google.com/thumbnail?id=1lWBdTxgTfSNkyid-vY7Qaizpa_k3Zbw4&sz=w1000",
+  "Russian Twist": "https://drive.google.com/thumbnail?id=1DJLHV-8KQwTxOuT87-MmrTb4AwtCEgec&sz=w1000",
+  "L-Sit / Pike Hold": "https://drive.google.com/thumbnail?id=1NlrhJbQeZ2mdFH0hSCoaye4KnSUxdIeg&sz=w1000",
+  "Burpee": "https://drive.google.com/thumbnail?id=1WJ2kHAB7bqHD-fVKNhZYoMs9S0sg9zPB&sz=w1000",
+  "Jumping Jack": "https://drive.google.com/thumbnail?id=1-FlHLUqPkA5Vu-HcPGbYa0KaFng2ZJ1k&sz=w1000",
+  "High Knee": "https://drive.google.com/thumbnail?id=1O5jDwBZwpyYwuvRLwFErSkVhTvWe7KIq&sz=w1000",
+  "Butt Kicker": "https://drive.google.com/thumbnail?id=1ep19xplANPlJVunzH500CfggOCHRj3ob&sz=w1000",
+  "Inchworm": "https://drive.google.com/thumbnail?id=1ZJ65kWoYJ-qyIrA2NOMgpQ5kcPfSUdB6&sz=w1000",
+  "Bear Crawl": "https://drive.google.com/thumbnail?id=1FHYwfY-xAwJulLVzoyGsQghU-b-pxkuc&sz=w1000",
+  "Box Jump": "https://drive.google.com/thumbnail?id=1o2XBNwydIUx1_gyNC3hfC54Pe4MiPlkz&sz=w1000",
+  "Arm Circle": "https://drive.google.com/thumbnail?id=10SG2TmEgrSe-saQgtDRWvf9EoRsfiNJU&sz=w1000",
+  "Hip Circle": "https://drive.google.com/thumbnail?id=1-zoFEYlvws8frKUNOz46aotZh7uegeQR&sz=w1000",
+  "Cat-Cow": "https://drive.google.com/thumbnail?id=1R8JxRE2pW96hyrN6o01BAdhX5xZ3nirF&sz=w1000",
+  "Quad Stretch": "https://drive.google.com/thumbnail?id=1vFmD1mYSrZeI6PdqOMKivyCK0CsvWAiW&sz=w1000",
+  "Toe Touch": "https://drive.google.com/thumbnail?id=1hDqDNn9nm2FTH6SJCHdNpm67R-wrohbs&sz=w1000",
+  "Standing Hamstring Stretch": "https://drive.google.com/thumbnail?id=14bEzJeKkmDdbdJ_vwTqR8Ss0BNUhd8nn&sz=w1000",
+  "Hip Flexor Lunge Stretch": "https://drive.google.com/thumbnail?id=1OazPkvAwlMjLF8v94o__rmnxxecIDud7&sz=w1000",
+  "Seated Butterfly Stretch": "https://drive.google.com/thumbnail?id=1vBCQXfgi3V4ELCEhs-Mh43Mvuwrjor9i&sz=w1000",
+  "Chest Opener Stretch": "https://drive.google.com/thumbnail?id=1FicCCfxOno1wD_1zrwPByZ3c0HkEEubk&sz=w1000",
+  "Neck Side Stretch": "https://drive.google.com/thumbnail?id=1p-um_wLixGO9f-XpmoNEaz-yYn7xmrrI&sz=w1000",
+  "Child's Pose": "https://drive.google.com/thumbnail?id=19ngTSxp3CwMq1U2FwvOy7ULg1lztifz9&sz=w1000",
+  "Pigeon Pose": "https://drive.google.com/thumbnail?id=1_qrrBA034xvGXlOfvWb8maFTcg4x46yB&sz=w1000",
+  "World's Greatest Stretch": "https://drive.google.com/thumbnail?id=1hj1HrtRMB0w_K2e9WJGEs_sd6PMECw1I&sz=w1000",
+  "Downward Dog": "https://drive.google.com/thumbnail?id=1Y-eY4BIuSCoMChju-T89cfktFrT6yxdQ&sz=w1000",
+  "Seated Spinal Twist": "https://drive.google.com/thumbnail?id=12nKWxlJYD8nJfKpl6M6KQu5Y3SXoFCqi&sz=w1000",
+  "Doorway Chest Stretch": "https://drive.google.com/thumbnail?id=1HLaMdd4rhypqhXE9jTMJpuBW3F1t6VwQ&sz=w1000",
+  "Cobra Stretch": "https://drive.google.com/thumbnail?id=17wvzDeknvG4er4Gg4Or9OUnfOyYzK-Hu&sz=w1000",
+  "Standing Quadriceps Stretch": "https://drive.google.com/thumbnail?id=1_PAtLcCw3IsiXCszPCxnD6w2z4VkJcVI&sz=w1000",
+  "Shoulder Cross-Body Stretch": "https://drive.google.com/thumbnail?id=1V8nvGBjTHmDAdtOV31631Bka1CCeLQeZ&sz=w1000",
+};
+
+
 // Build step-by-step instructions + tips for a timed stretch from its "Cues:" text.
 function stretchExtras(ex) {
   const desc = ex.description || "";
@@ -183,6 +246,7 @@ export default function ExerciseSeed() {
   const [checkError,   setCheckError]   = useState(null);
   const [seeding,      setSeeding]      = useState(false);
   const [repairing,    setRepairing]    = useState(false);
+  const [imageFilling, setImageFilling] = useState(false);
   const [currentName,  setCurrentName]  = useState("");
   const [log,          setLog]          = useState([]);
   const [done,         setDone]         = useState(false);
@@ -278,6 +342,41 @@ export default function ExerciseSeed() {
     }
     setCurrentName("");
     setRepairing(false);
+    setDone(true);
+    try { sessionStorage.removeItem("rns_exercises_cache"); } catch (_) {}
+  };
+
+  // ── Image fill: set image_url on any exercise that has a Drive photo but no image ──
+  const needsImage = SEED_EXERCISES.filter(seed => {
+    const url = EXERCISE_MEDIA[seed.name];
+    if (!url) return false;
+    const rec = findRec(seed.name);
+    return rec && !rec.image_url;
+  });
+
+  const fillImagesAll = async () => {
+    if (needsImage.length === 0) return;
+    abortRef.current = false;
+    setImageFilling(true);
+    setLog([]);
+    setDone(false);
+    const newLog = [];
+    for (const seed of needsImage) {
+      if (abortRef.current) { newLog.push("⛔ Stopped by user."); setLog([...newLog]); break; }
+      setCurrentName(seed.name);
+      try {
+        const rec = findRec(seed.name);
+        await withTimeout(base44.entities.Exercise.update(rec.id, { image_url: EXERCISE_MEDIA[seed.name] }), 10000);
+        setDbRecords(prev => prev.map(r => (r.id === rec.id ? { ...r, image_url: EXERCISE_MEDIA[seed.name] } : r)));
+        newLog.push(`🖼️ ${seed.name}`);
+      } catch (err) {
+        newLog.push(`❌ ${seed.name} — ${err.message || "error"}`);
+      }
+      setLog([...newLog]);
+      await new Promise(res => setTimeout(res, 300));
+    }
+    setCurrentName("");
+    setImageFilling(false);
     setDone(true);
     try { sessionStorage.removeItem("rns_exercises_cache"); } catch (_) {}
   };
@@ -413,7 +512,7 @@ export default function ExerciseSeed() {
               </div>
 
               {/* Restore button */}
-              {missing.length > 0 && !seeding && !repairing && !done && (
+              {missing.length > 0 && !seeding && !repairing && !imageFilling && !done && (
                 <Button onClick={seedAll} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 text-base">
                   Restore All {missing.length} Missing Exercises
                 </Button>
@@ -431,6 +530,31 @@ export default function ExerciseSeed() {
                   <Button onClick={repairAll} className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5">
                     Fix {needsRepair.length} Stretch Record{needsRepair.length !== 1 ? "s" : ""}
                   </Button>
+                </div>
+              )}
+
+              {/* Image fill button — sets photos on exercises missing them */}
+              {needsImage.length > 0 && !seeding && !repairing && !imageFilling && !done && (
+                <div className="bg-cyan-950/30 border border-cyan-600/40 rounded-lg p-3 space-y-2">
+                  <p className="text-cyan-300 text-sm font-semibold">
+                    {needsImage.length} exercise{needsImage.length !== 1 ? "s" : ""} can get a photo
+                  </p>
+                  <p className="text-cyan-400/70 text-xs">
+                    These have a photo available but no image set. This fills them in automatically.
+                  </p>
+                  <Button onClick={fillImagesAll} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5">
+                    Add {needsImage.length} Missing Photo{needsImage.length !== 1 ? "s" : ""}
+                  </Button>
+                </div>
+              )}
+
+              {imageFilling && (
+                <div className="bg-cyan-950/40 border border-cyan-500/30 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <RefreshCw className="w-4 h-4 text-cyan-400 animate-spin shrink-0" />
+                    <p className="text-cyan-300 text-sm font-semibold truncate">Adding photo: {currentName}</p>
+                  </div>
+                  <p className="text-cyan-400/60 text-xs">{log.length} of {needsImage.length} processed</p>
                 </div>
               )}
 
@@ -497,6 +621,7 @@ export default function ExerciseSeed() {
               <p key={i} className={`text-xs font-mono leading-5 ${
                 line.startsWith("✅") ? "text-green-400" :
                 line.startsWith("🔧") ? "text-amber-400" :
+                line.startsWith("🖼️") ? "text-cyan-400" :
                 line.startsWith("⛔") ? "text-yellow-400" : "text-red-400"
               }`}>{line}</p>
             ))}

@@ -49,6 +49,7 @@ const SIGNATURE_TOLERANCE_SECONDS = 60 * 5; // reject events older than 5 min
 const PRODUCT_CATALOG: Record<string, { updates: Record<string, any>; trial?: boolean; oneTime?: boolean }> = {
   // ── Subscriptions & add-ons (change in-app entitlements) ──
   pro_monthly:            { updates: { subscription_status: "pro" } },
+  pro_annual:             { updates: { subscription_status: "pro" } },
   pro_lifetime:           { updates: { subscription_status: "pro_lifetime" } },
   pro_trial:              { updates: { subscription_status: "pro" }, trial: true },
   fitness_brain:          { updates: { fitness_brain_addon: true } },
@@ -101,7 +102,8 @@ const AMOUNT_TO_KEY: Record<string, string> = {
 // metadata-first; this map is a documented reference + best-effort fallback.
 const LINK_SUFFIX_TO_KEY: Record<string, string> = {
   // Subscriptions & add-ons
-  "cNi4gzdWmdT09q460BbQY0q": "pro_monthly",          // Reps and Steps PRO ($9.99/mo) — CURRENT canonical link
+  "cNi4gzdWmdT09q460BbQY0q": "pro_monthly",
+  "fZu8wPcSi5muau8fBbbQY0r": "pro_annual",            // PRO Product Annual ($99/yr, 60-day trial)          // Reps and Steps PRO ($9.99/mo) — CURRENT canonical link
   "7sY8wP4lMg188m0bkVbQY01": "pro_monthly",          // Reps & Steps PRO ($9.99/mo) — CANONICAL
   "28EcN56tUbKSgSw9cNbQY0g": "pro_monthly",          // legacy WorkoutGENIE ($19.99/mo) — retired; keeps existing subs on Pro
   "aFa7sL4lM5muau82OpbQY0i": "pro_trial",            // $3.99 one-time

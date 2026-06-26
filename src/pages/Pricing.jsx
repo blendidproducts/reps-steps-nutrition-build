@@ -11,6 +11,7 @@ export default function Pricing() {
   const navigate = useNavigate();
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [isPro, setIsPro] = useState(false);
+  const [annual, setAnnual] = useState(false);
 
   React.useEffect(() => {
     const checkUserStatus = async () => {
@@ -30,6 +31,7 @@ export default function Pricing() {
     // All-Access: $19.99/month (Pro + AI Fitness Brain + AI Nutrition)
     const links = {
       monthly:   'https://buy.stripe.com/cNi4gzdWmdT09q460BbQY0q',
+      annual:    'https://buy.stripe.com/fZu8wPcSi5muau8fBbbQY0r',
       lifetime:  'https://buy.stripe.com/9B68wPbOecOW8m0dt3bQY0h',
       allaccess: 'https://buy.stripe.com/3cI4gz3hI4iq45KbkVbQY0m'
     };
@@ -200,8 +202,16 @@ export default function Pricing() {
                 <p className="text-gray-400">Builder + programs + stretches</p>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold mb-2">$9.99<span className="text-lg font-normal text-gray-400">/month</span></div>
-                <p className="text-sm text-green-400 mb-6">Cancel anytime · AI brains sold separately</p>
+                <div className="flex bg-white/5 rounded-lg p-1 gap-1 mb-3 text-sm">
+                  <button onClick={() => setAnnual(false)} className={`flex-1 py-1.5 rounded-md font-semibold transition-all ${!annual ? "bg-brand-blue text-white" : "text-gray-400"}`}>Monthly</button>
+                  <button onClick={() => setAnnual(true)} className={`flex-1 py-1.5 rounded-md font-semibold transition-all ${annual ? "bg-brand-blue text-white" : "text-gray-400"}`}>Annual <span className="text-green-400 text-xs">save 17%</span></button>
+                </div>
+                {annual ? (
+                  <div className="text-3xl font-bold mb-2">$99<span className="text-lg font-normal text-gray-400">/year</span></div>
+                ) : (
+                  <div className="text-3xl font-bold mb-2">$9.99<span className="text-lg font-normal text-gray-400">/month</span></div>
+                )}
+                <p className="text-sm text-green-400 mb-6">{annual ? "~$8.25/mo billed yearly · 60-day free trial" : "Cancel anytime · AI brains sold separately"}</p>
                 <ul className="space-y-3 text-gray-300">
                   {proFeatures.map((feature, i) => (
                     <li key={i} className="flex items-center gap-3 font-medium">
@@ -220,11 +230,11 @@ export default function Pricing() {
                 ) : (
                   <>
                     <Button
-                      onClick={() => handleStripeCheckout('monthly')}
+                      onClick={() => handleStripeCheckout(annual ? 'annual' : 'monthly')}
                       className="w-full gradient-bg hover:opacity-90 font-bold"
                     >
                       <ExternalLink className="w-5 h-5 mr-2" />
-                      Get WorkoutGENIE Pro - $9.99/mo
+                      {annual ? "Get Pro Annual - $99/yr (60-day trial)" : "Get WorkoutGENIE Pro - $9.99/mo"}
                     </Button>
 
                     <button
