@@ -88,6 +88,24 @@ const BUNDLES = [
     ],
   },
   {
+    id: "pro_annual",
+    icon: Star,
+    gradient: "from-emerald-600 to-green-700",
+    badge: "Best Value",
+    badgeColor: "bg-emerald-500",
+    title: "WorkoutGENIE Pro — Annual",
+    subtitle: "Same Pro, billed yearly — save ~17%",
+    price: "$99",
+    period: "/yr",
+    stripeUrl: "https://buy.stripe.com/fZu8wPcSi5muau8fBbbQY0r",
+    features: [
+      "Everything in WorkoutGENIE Pro",
+      "60-day free trial",
+      "2 months free vs paying monthly",
+      "One charge a year (lower card fees)",
+    ],
+  },
+  {
     id: "all_access",
     icon: Zap,
     gradient: "from-emerald-500 to-teal-600",
@@ -330,6 +348,7 @@ export default function AddOns() {
             {[
               { label: "Core App", price: "Free", color: "text-green-400" },
               { label: "WorkoutGENIE Pro", price: "$9.99/mo", color: "text-[#00a9ff]" },
+              { label: "WorkoutGENIE Pro — Annual", price: "$99/yr", color: "text-emerald-400" },
               { label: "Pro Lifetime", price: "$199.99 once", color: "text-yellow-400" },
               { label: "AI Fitness Brain Add-On", price: "+ $4.99/mo", color: "text-blue-400" },
               { label: "AI Nutrition Add-On", price: "+ $4.99/mo", color: "text-orange-400" },

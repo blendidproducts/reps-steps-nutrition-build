@@ -25,6 +25,17 @@ _Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-06-26_
 ## Outstanding (in-app, Jace's side)
 1. Push → Publish.  2. `/ProgramSeed` → Add 6 programs + nutrition.  3. `/ExerciseSeed` → Fix Stretch Records → Add Missing Photos.  4. `/ExerciseImages` → upload the ~26 exercises with no photo; paste YouTube links.  5. Test $9.99/$99 purchase (Free→Pro).  6. QA pass (connect Claude-in-Chrome to walk the live app).
 
+## Security (Base44 scanner — addressed 2026-06-26)
+- **Exposed secrets (fixed in code):** `stripeWebhook/entry.ts` now reads `STRIPE_WEBHOOK_SECRET` and `STRIPE_SECRET_KEY` from env-var NAMES (was passing the secret value as the key + committing it).
+  - **STRIPE_WEBHOOK_SECRET** = required. Stripe → Developers → Webhooks → your endpoint → "Signing secret" (`whsec_…`). If no endpoint exists, create one pointing to the Base44 stripeWebhook function URL (subscribe to `checkout.session.completed` + `customer.subscription.deleted`). **Rotate it** — the old value leaked in the public repo.
+  - **STRIPE_SECRET_KEY** = OPTIONAL. Only used for price-ID lookup; the app grants Pro via `product_key` metadata without it. Safe to leave unset. If you do set it: Stripe → Developers → API keys → Secret key (`sk_live_…`).
+  - Set these in Base44 → app → Environment variables / Secrets.
+- **Unauthenticated function (fixed in code):** `mergeDuplicateExercise/entry.ts` now requires `user.role === 'admin'`.
+- **RLS (6 entities):** use Base44 "Fix All" — Exercise = public read / admin write; MealLog, NutritionGoal, WeeklyProgram, Workout, WorkoutSession = record-creator only. Confirm you're admin so seed tools still work.
+- **X-Frame-Options:** use Base44 "Fix" (anti-clickjacking on auth/payment pages).
+- **Stripe webhook endpoint (confirmed):** `https://repsandsteps.base44.app/api/functions/stripeWebhook` (Stripe destination "sophisticated-radiance", Active, 2 events). `STRIPE_WEBHOOK_SECRET` added in Base44 → Settings → **Secrets**.
+- **Status 2026-06-26:** Exposed secrets + unauthenticated function = RESOLVED. RLS = "Fix All" applied across all entities (owner-only for personal data; public-read for CommunityPost/preset Food). X-Frame-Options via "Fix". Re-scan should be 0 criticals.
+
 ## Gotchas
 - Connected-folder editor can truncate large files — edit in a sandbox clone, esbuild-verify, then byte-copy into sync.
 - Drive image hotlinks work but can be flaky; `/ExerciseImages` uploads override and are most reliable.
