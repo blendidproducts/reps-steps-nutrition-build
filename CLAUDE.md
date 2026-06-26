@@ -45,6 +45,10 @@ _Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-06-26_
 - ARTP (AI Rep Tracking Program) is **Pro-gated** in `src/pages/ARTPWorkout.jsx` via `checkIsPro`. Free build-your-own workout stays free.
 - **Dev bypass REMOVED:** `src/lib/proCheck.js` `DEV_EMAILS = []`. Pro access is now real (is_pro / subscription_status==='pro' / role==='admin'). Ensure jacetrimmer@gmail.com is **admin** in Base44 to retain access.
 
+## Payment confirmed (2026-06-26)
+- Stripe → Pro WORKS. Webhook endpoint = this app's URL + correct STRIPE_WEBHOOK_SECRET. Sets `subscription_status='pro'`.
+- Orange WorkoutGenie card now routes to AIWorkoutGenerator (was a black-screen modal).
+
 ## Gotchas
 - Connected-folder editor can truncate large files — edit in a sandbox clone, esbuild-verify, then byte-copy into sync.
 - Drive image hotlinks work but can be flaky; `/ExerciseImages` uploads override and are most reliable.

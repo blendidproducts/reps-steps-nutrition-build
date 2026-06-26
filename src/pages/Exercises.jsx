@@ -311,8 +311,10 @@ Choose realistic exercises that match the body focus and intensity level.`,
           >
             <button
               onClick={() => {
+                // Route to the working WorkoutGenie generator (same as AI Auto Mode's
+                // "Ask WorkoutGenie"). Avoids the old pop-up modal that black-screened.
                 if (isPro) {
-                  setShowAIPrompt(true);
+                  navigate(createPageUrl("AIWorkoutGenerator"));
                 } else {
                   navigate(createPageUrl("Pricing"));
                 }

@@ -95,7 +95,12 @@ const PRICE_TO_KEY: Record<string, string> = {
 // OPTIONAL: map exact amount_total (in cents) → product_key. Brittle if you
 // change prices, but a useful last-resort. Leave empty to skip.
 const AMOUNT_TO_KEY: Record<string, string> = {
-  // 1999: "pro_monthly",
+  "999":   "pro_monthly",   // $9.99/mo
+  "1999":  "all_access",    // $19.99/mo (Pro + both AI add-ons)
+  "19999": "pro_lifetime",  // $199.99 once
+  "399":   "pro_trial",     // $3.99 7-day trial
+  // NOTE: annual ($99 = 9900) starts with a 14-day trial, so amount_total is 0
+  // at signup — it is matched by product_key metadata, not by amount.
 };
 
 // LEGACY/REFERENCE: buy.stripe.com URL suffix → product_key. Detection is
