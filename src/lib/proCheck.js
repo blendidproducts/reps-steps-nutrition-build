@@ -5,9 +5,8 @@
  * without needing a subscription. Remove this list before public launch.
  */
 
-const DEV_EMAILS = [
-  "jacetrimmer@gmail.com",
-];
+// Dev bypass removed for launch — Pro access is now real (is_pro / subscription_status / admin).
+const DEV_EMAILS = [];
 
 export function checkIsPro(user) {
   if (!user) return false;

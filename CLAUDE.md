@@ -41,6 +41,10 @@ _Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-06-26_
 - **Stripe webhook points to `https://repsandsteps.base44.app/api/functions/stripeWebhook`** — VERIFY this hits the SAME app/backend users use, or Pro won't activate. Test purchase confirms it.
 - Plan: connect custom domain **`app.repsandsteps.com`** (CNAME at registrar → Base44 Domains → Connect existing domain), then point the Stripe webhook at the final URL + re-copy its signing secret to `STRIPE_WEBHOOK_SECRET`. See DOMAIN-SETUP.md.
 
+## Access / gating (2026-06-26)
+- ARTP (AI Rep Tracking Program) is **Pro-gated** in `src/pages/ARTPWorkout.jsx` via `checkIsPro`. Free build-your-own workout stays free.
+- **Dev bypass REMOVED:** `src/lib/proCheck.js` `DEV_EMAILS = []`. Pro access is now real (is_pro / subscription_status==='pro' / role==='admin'). Ensure jacetrimmer@gmail.com is **admin** in Base44 to retain access.
+
 ## Gotchas
 - Connected-folder editor can truncate large files — edit in a sandbox clone, esbuild-verify, then byte-copy into sync.
 - Drive image hotlinks work but can be flaky; `/ExerciseImages` uploads override and are most reliable.
