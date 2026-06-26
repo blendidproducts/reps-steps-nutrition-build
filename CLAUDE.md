@@ -16,7 +16,7 @@ _Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-06-26_
 
 ## Stripe (entitlements via base44/functions/stripeWebhook/entry.ts)
 - Monthly Pro **$9.99/mo** → `buy.stripe.com/cNi4gzdWmdT09q460BbQY0q` · metadata `product_key=pro_monthly`
-- Annual Pro **$99/yr (60-day trial)** → `buy.stripe.com/fZu8wPcSi5muau8fBbbQY0r` · metadata `product_key=pro_annual`
+- Annual Pro **$99/yr (14-day trial)** → `buy.stripe.com/7sY6oH7xYg18dGkgFfbQY0s` · metadata `product_key=pro_annual`
 - `pro_monthly` + `pro_annual` → `subscription_status: "pro"`. Fitness Brain & AI Nutrition are SEPARATE add-ons. All-Access ($19.99) = Pro + both. Staying on Stripe.
 
 ## Built so far (through ~round 12)
@@ -35,6 +35,11 @@ _Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-06-26_
 - **X-Frame-Options:** use Base44 "Fix" (anti-clickjacking on auth/payment pages).
 - **Stripe webhook endpoint (confirmed):** `https://repsandsteps.base44.app/api/functions/stripeWebhook` (Stripe destination "sophisticated-radiance", Active, 2 events). `STRIPE_WEBHOOK_SECRET` added in Base44 → Settings → **Secrets**.
 - **Status 2026-06-26:** Exposed secrets + unauthenticated function = RESOLVED. RLS = "Fix All" applied across all entities (owner-only for personal data; public-read for CommunityPost/preset Food). X-Frame-Options via "Fix". Re-scan should be 0 criticals.
+
+## Domain & webhook URL (open item, 2026-06-26)
+- App built-in URL is `reps-steps-nutrition-build-copy-992a9659.base44.app` (the "copy" is cosmetic).
+- **Stripe webhook points to `https://repsandsteps.base44.app/api/functions/stripeWebhook`** — VERIFY this hits the SAME app/backend users use, or Pro won't activate. Test purchase confirms it.
+- Plan: connect custom domain **`app.repsandsteps.com`** (CNAME at registrar → Base44 Domains → Connect existing domain), then point the Stripe webhook at the final URL + re-copy its signing secret to `STRIPE_WEBHOOK_SECRET`. See DOMAIN-SETUP.md.
 
 ## Gotchas
 - Connected-folder editor can truncate large files — edit in a sandbox clone, esbuild-verify, then byte-copy into sync.

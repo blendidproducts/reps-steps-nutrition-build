@@ -31,7 +31,7 @@ export default function Pricing() {
     // All-Access: $19.99/month (Pro + AI Fitness Brain + AI Nutrition)
     const links = {
       monthly:   'https://buy.stripe.com/cNi4gzdWmdT09q460BbQY0q',
-      annual:    'https://buy.stripe.com/fZu8wPcSi5muau8fBbbQY0r',
+      annual:    'https://buy.stripe.com/7sY6oH7xYg18dGkgFfbQY0s',
       lifetime:  'https://buy.stripe.com/9B68wPbOecOW8m0dt3bQY0h',
       allaccess: 'https://buy.stripe.com/3cI4gz3hI4iq45KbkVbQY0m'
     };
@@ -211,7 +211,7 @@ export default function Pricing() {
                 ) : (
                   <div className="text-3xl font-bold mb-2">$9.99<span className="text-lg font-normal text-gray-400">/month</span></div>
                 )}
-                <p className="text-sm text-green-400 mb-6">{annual ? "~$8.25/mo billed yearly · 60-day free trial" : "Cancel anytime · AI brains sold separately"}</p>
+                <p className="text-sm text-green-400 mb-6">{annual ? "~$8.25/mo billed yearly · 14-day free trial" : "Cancel anytime · AI brains sold separately"}</p>
                 <ul className="space-y-3 text-gray-300">
                   {proFeatures.map((feature, i) => (
                     <li key={i} className="flex items-center gap-3 font-medium">

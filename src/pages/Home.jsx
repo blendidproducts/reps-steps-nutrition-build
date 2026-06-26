@@ -289,10 +289,10 @@ export default function Home() {
                 <Zap className="w-5 h-5 mr-2" /> Get Pro — $9.99/mo
               </Button>
               <button
-                onClick={() => window.open("https://buy.stripe.com/fZu8wPcSi5muau8fBbbQY0r", "_blank")}
+                onClick={() => window.open("https://buy.stripe.com/7sY6oH7xYg18dGkgFfbQY0s", "_blank")}
                 className="w-full text-xs text-green-400 hover:text-green-300 mt-2 font-semibold"
               >
-                Or go Annual — $99/yr · save ~17% + 60-day free trial
+                Or go Annual — $99/yr · save ~17% + 14-day free trial
               </button>
               <button
                 onClick={() => navigate(createPageUrl("Pricing"))}

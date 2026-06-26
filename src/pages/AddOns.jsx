@@ -97,10 +97,10 @@ const BUNDLES = [
     subtitle: "Same Pro, billed yearly — save ~17%",
     price: "$99",
     period: "/yr",
-    stripeUrl: "https://buy.stripe.com/fZu8wPcSi5muau8fBbbQY0r",
+    stripeUrl: "https://buy.stripe.com/7sY6oH7xYg18dGkgFfbQY0s",
     features: [
       "Everything in WorkoutGENIE Pro",
-      "60-day free trial",
+      "14-day free trial",
       "2 months free vs paying monthly",
       "One charge a year (lower card fees)",
     ],
