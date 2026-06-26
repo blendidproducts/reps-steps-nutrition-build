@@ -33,24 +33,22 @@ _Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-06-26_
 - **Unauthenticated function (fixed in code):** `mergeDuplicateExercise/entry.ts` now requires `user.role === 'admin'`.
 - **RLS (6 entities):** use Base44 "Fix All" — Exercise = public read / admin write; MealLog, NutritionGoal, WeeklyProgram, Workout, WorkoutSession = record-creator only. Confirm you're admin so seed tools still work.
 - **X-Frame-Options:** use Base44 "Fix" (anti-clickjacking on auth/payment pages).
-- **Stripe webhook endpoint (confirmed):** `https://repsandsteps.base44.app/api/functions/stripeWebhook` (Stripe destination "sophisticated-radiance", Active, 2 events). `STRIPE_WEBHOOK_SECRET` added in Base44 → Settings → **Secrets**.
+- **Stripe webhook endpoint (working):** `https://reps-steps-nutrition-build-copy-992a9659.base44.app/api/functions/stripeWebhook` (Stripe destination "sophisticated-radiance", Active, 2 events). Repointed from the old `repsandsteps.base44.app` — that mismatch caused early test events to 401. `STRIPE_WEBHOOK_SECRET` set in Base44 → Settings → Secrets.
 - **Status 2026-06-26:** Exposed secrets + unauthenticated function = RESOLVED. RLS = "Fix All" applied across all entities (owner-only for personal data; public-read for CommunityPost/preset Food). X-Frame-Options via "Fix". Re-scan should be 0 criticals.
 
-## Domain & webhook URL (open item, 2026-06-26)
-- App built-in URL is `reps-steps-nutrition-build-copy-992a9659.base44.app` (the "copy" is cosmetic).
-- **Stripe webhook points to `https://repsandsteps.base44.app/api/functions/stripeWebhook`** — VERIFY this hits the SAME app/backend users use, or Pro won't activate. Test purchase confirms it.
-- Plan: connect custom domain **`app.repsandsteps.com`** (CNAME at registrar → Base44 Domains → Connect existing domain), then point the Stripe webhook at the final URL + re-copy its signing secret to `STRIPE_WEBHOOK_SECRET`. See DOMAIN-SETUP.md.
+## Domain (future polish)
+- App built-in URL is `reps-steps-nutrition-build-copy-992a9659.base44.app` (the "copy" is cosmetic; users won't see it once a custom domain is live).
+- Webhook URL is RESOLVED (points to this app, confirmed 200 — see Payment confirmed).
+- Optional: connect custom domain **`app.repsandsteps.com`** (CNAME at registrar → Base44 Domains → Connect existing domain), then repoint the Stripe webhook at the custom domain + re-copy its signing secret to `STRIPE_WEBHOOK_SECRET`. See DOMAIN-SETUP.md.
 
 ## Access / gating (2026-06-26)
 - ARTP (AI Rep Tracking Program) is **Pro-gated** in `src/pages/ARTPWorkout.jsx` via `checkIsPro`. Free build-your-own workout stays free.
 - **Dev bypass REMOVED:** `src/lib/proCheck.js` `DEV_EMAILS = []`. Pro access is now real (is_pro / subscription_status==='pro' / role==='admin'). Ensure jacetrimmer@gmail.com is **admin** in Base44 to retain access.
 
 ## Payment confirmed (2026-06-26)
-- Stripe → Pro WORKS. Webhook endpoint = this app's URL + correct STRIPE_WEBHOOK_SECRET. Sets `subscription_status='pro'`.
-- Orange WorkoutGenie card now routes to AIWorkoutGenerator (was a black-screen modal).
-
-
-- Webhook signature verification rewritten to **Web Crypto** (Deno-native) — removed Node `crypto`/`Buffer` (cleared a High security flag). Same HMAC-SHA256 algorithm; re-test with a Stripe Resend → expect 200.
+- Stripe → Pro WORKS end-to-end: test $9.99 returned webhook 200 `{"success":true,"message":"Activated: pro_monthly"}`. Webhook sets `subscription_status='pro'` (the `is_pro` column staying blank is expected — app reads subscription_status).
+- Webhook signature verification rewritten to **Web Crypto** (Deno-native) — removed Node `crypto`/`Buffer`, cleared a High security flag. Same HMAC-SHA256 algorithm; after any change, Resend a Stripe event and expect 200.
+- Orange WorkoutGenie card routes to AIWorkoutGenerator (the old pop-up modal black-screened).
 
 ## Gotchas
 - Connected-folder editor can truncate large files — edit in a sandbox clone, esbuild-verify, then byte-copy into sync.
