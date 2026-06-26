@@ -9,6 +9,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Admin-only: this uses asServiceRole to modify/delete Workout data app-wide.
+    if (user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden — admin only' }, { status: 403 });
+    }
+
     // Define all duplicate mappings
     const mergeRules = [
       {
