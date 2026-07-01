@@ -56,7 +56,7 @@ _Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-06-27_
 - **Conditioning moves (High Knee, Jumping Jack, Jump Squat, Butt Kicker):** added a **manual tap rep counter** (`ManualRepCounter`) shown alongside the timer; taps write to `pendingReps` so they're recorded. Pose model can't count these.
 - **WorkoutGenie:** orange card on Exercises page routes to AIWorkoutGenerator (old pop-up modal black-screened).
 - **Landing page** (`repsandsteps-landing.html`, not in repo — lives in Documents\Pers\RepsAndSteps): navy/blue, Stripe links wired, real logo/banner images.
-- **OPEN: logo** — header uses `repsandsteps_main_logo_2.png` + name banner (supabase). Jace flagged it may be the wrong/outdated logo; awaiting a corrected logo file to swap in app header + landing page.
+- **Logo (RESOLVED):** new logo `src/assets/RnS_LOGO.png` bundled into the app; `Layout.jsx` imports it for the header icon (name banner unchanged). Landing page has it base64-embedded. Source file kept in `Documents\Pers\RepsAndSteps\images\`.
 
 ## Gotchas
 - Connected-folder editor can truncate large files — edit in a sandbox clone, esbuild-verify, then byte-copy into sync.

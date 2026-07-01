@@ -2,6 +2,7 @@ import React, { memo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useNavigationManager, resolveTabForPath, TAB_ROOTS, pushTabPath } from "@/lib/NavigationManager";
 import { createPageUrl } from "@/utils";
+import rnsLogo from "@/assets/RnS_LOGO.png";
 import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box, Users, Clock, Brain, Watch, ShoppingBag, ListTodo, FileText } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { base44 } from "@/api/base44Client";
@@ -62,7 +63,7 @@ export default function Layout({ children, currentPageName }) {
   const [workoutTimer, setWorkoutTimer] = React.useState(0);
   const [showProgramPopup, setShowProgramPopup] = React.useState(false);
   const [activeProgram, setActiveProgram] = React.useState(null);
-  const logoUrl = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/d1545e30c_repsandsteps_main_logo_2.png";
+  const logoUrl = rnsLogo;
   const bannerUrl = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68c0ea2d30925fc79e7bb2af/8866d855e_repsandSteps_name_banner.png";
 
   React.useEffect(() => {
