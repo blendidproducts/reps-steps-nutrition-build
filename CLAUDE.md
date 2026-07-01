@@ -1,5 +1,5 @@
 # Reps & Steps — Project Context (CLAUDE.md)
-_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-06-27_
+_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-01_
 
 > This file lives at the repo root so any machine that clones the repo (and any Claude session opened on it) has full project context.
 
@@ -19,11 +19,19 @@ _Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-06-27_
 - Annual Pro **$99/yr (14-day trial)** → `buy.stripe.com/7sY6oH7xYg18dGkgFfbQY0s` · metadata `product_key=pro_annual`
 - `pro_monthly` + `pro_annual` → `subscription_status: "pro"`. Fitness Brain & AI Nutrition are SEPARATE add-ons. All-Access ($19.99) = Pro + both. Staying on Stripe.
 
+## Status 2026-07-01 (where Jace left off)
+- **DONE:** Push → Publish. Live-purchase test + QA pass complete — $9.99/$99 Free→Pro confirmed working on the live app.
+- **DONE:** `/ProgramSeed` (6 programs + nutrition) and `/ExerciseSeed` (Fix Stretch Records → Add Missing Photos) both run on the live Base44 app — confirmed 2026-07-01.
+- **PARTIAL:** Exercise images + YouTube links — some exercises still missing photos and/or video links (`/ExerciseImages`).
+
+## Next steps (in order)
+1. **Test Active Session clock/timer stopping** — latest updates changed the active workout clock and timer; verify the timer stops correctly during a live session.
+2. **Test AI add-on purchases** — Fitness Brain and AI Nutrition are separate Stripe add-ons; run a purchase test for each and confirm the webhook grants the right entitlement (they are NOT covered by `pro_monthly`/`pro_annual`).
+3. **Finish `/ExerciseImages`** — upload remaining missing exercise photos; paste remaining YouTube links.
+4. Optional polish: custom domain `app.repsandsteps.com` (see Domain below).
+
 ## Built so far (through ~round 12)
 6 workout programs + nutrition (ProgramSeed); Stretches page rebuilt (always-populated library, Mobility tab, instructions, images, inline YouTube, 3D, timer audio, error boundary); Active Session redesigned to mockup (image+timer side-by-side, TIPS, navy full-screen); $9.99 + $99/yr annual toggle on Pricing/Home/AddOns; WorkoutGenie prompt box; front camera default; per-exercise YouTube field + "Add Missing Photos" auto-fill (57 of 83) in admin tools; Program Guides (PDF) page; unified navy (#020817)/blue (#00a9ff) theme.
-
-## Outstanding (in-app, Jace's side)
-1. Push → Publish.  2. `/ProgramSeed` → Add 6 programs + nutrition.  3. `/ExerciseSeed` → Fix Stretch Records → Add Missing Photos.  4. `/ExerciseImages` → upload the ~26 exercises with no photo; paste YouTube links.  5. Test $9.99/$99 purchase (Free→Pro).  6. QA pass (connect Claude-in-Chrome to walk the live app).
 
 ## Security (Base44 scanner — addressed 2026-06-26)
 - **Exposed secrets (fixed in code):** `stripeWebhook/entry.ts` now reads `STRIPE_WEBHOOK_SECRET` and `STRIPE_SECRET_KEY` from env-var NAMES (was passing the secret value as the key + committing it).
@@ -45,21 +53,11 @@ _Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-06-27_
 - ARTP (AI Rep Tracking Program) is **Pro-gated** in `src/pages/ARTPWorkout.jsx` via `checkIsPro`. Free build-your-own workout stays free.
 - **Dev bypass REMOVED:** `src/lib/proCheck.js` `DEV_EMAILS = []`. Pro access is now real (is_pro / subscription_status==='pro' / role==='admin'). Ensure jacetrimmer@gmail.com is **admin** in Base44 to retain access.
 
-## Payment confirmed (2026-06-26)
+## Payment confirmed (2026-06-26; re-verified in live QA by 2026-07-01)
 - Stripe → Pro WORKS end-to-end: test $9.99 returned webhook 200 `{"success":true,"message":"Activated: pro_monthly"}`. Webhook sets `subscription_status='pro'` (the `is_pro` column staying blank is expected — app reads subscription_status).
 - Webhook signature verification rewritten to **Web Crypto** (Deno-native) — removed Node `crypto`/`Buffer`, cleared a High security flag. Same HMAC-SHA256 algorithm; after any change, Resend a Stripe event and expect 200.
 - Orange WorkoutGenie card routes to AIWorkoutGenerator (the old pop-up modal black-screened).
-
-## Recent app fixes (2026-06-27)
-- **ARTP camera:** now opens the **front-facing camera immediately** (ARTPWorkout passed defaultFacingMode="user"; RepTracker default is also "user").
-- **Active Recovery timer:** rewritten as a **wall-clock** countdown in `GuidedRestScreen` (ARTPWorkout) so it no longer freezes when the screen dims / app backgrounds. +/- adjust and cardio-pause preserved.
-- **Conditioning moves (High Knee, Jumping Jack, Jump Squat, Butt Kicker):** added a **manual tap rep counter** (`ManualRepCounter`) shown alongside the timer; taps write to `pendingReps` so they're recorded. Pose model can't count these.
-- **WorkoutGenie:** orange card on Exercises page routes to AIWorkoutGenerator (old pop-up modal black-screened).
-- **Landing page** (`repsandsteps-landing.html`, not in repo — lives in Documents\Pers\RepsAndSteps): navy/blue, Stripe links wired, real logo/banner images.
-- **Logo (RESOLVED):** new logo `src/assets/RnS_LOGO.png` bundled into the app; `Layout.jsx` imports it for the header icon (name banner unchanged). Landing page has it base64-embedded. Source file kept in `Documents\Pers\RepsAndSteps\images\`.
-
-## Agents
-- `AGENTS.md` (repo root) — Loop-Engineering agent fleet (Builder/Scout/Growth/Orchestrator) for growth. Run in a new session on the **Fable 5** model.
+- **AI add-ons (Fitness Brain, AI Nutrition) purchase flow NOT yet tested** — see Next steps.
 
 ## Gotchas
 - Connected-folder editor can truncate large files — edit in a sandbox clone, esbuild-verify, then byte-copy into sync.
