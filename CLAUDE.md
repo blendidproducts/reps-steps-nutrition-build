@@ -58,6 +58,9 @@ _Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-06-27_
 - **Landing page** (`repsandsteps-landing.html`, not in repo — lives in Documents\Pers\RepsAndSteps): navy/blue, Stripe links wired, real logo/banner images.
 - **Logo (RESOLVED):** new logo `src/assets/RnS_LOGO.png` bundled into the app; `Layout.jsx` imports it for the header icon (name banner unchanged). Landing page has it base64-embedded. Source file kept in `Documents\Pers\RepsAndSteps\images\`.
 
+## Agents
+- `AGENTS.md` (repo root) — Loop-Engineering agent fleet (Builder/Scout/Growth/Orchestrator) for growth. Run in a new session on the **Fable 5** model.
+
 ## Gotchas
 - Connected-folder editor can truncate large files — edit in a sandbox clone, esbuild-verify, then byte-copy into sync.
 - Drive image hotlinks work but can be flaky; `/ExerciseImages` uploads override and are most reliable.
