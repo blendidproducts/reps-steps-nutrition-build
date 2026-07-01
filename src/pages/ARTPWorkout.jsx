@@ -197,18 +197,29 @@ function GuidedRestScreen({ nextExercise, prevExercise, nextSetNum, totalSets, i
   const [cardioTotal,  setCardioTotal] = useState(0);   // total seconds of cardio this rest
   const timerRef    = useRef(null);
   const cardioRef   = useRef(null);
+  const endRef      = useRef(Date.now() + REST_DEFAULT * 1000); // wall-clock target
+  const frozenRef   = useRef(REST_DEFAULT);                     // remaining while cardio pauses it
 
-  // Rest countdown (pauses during active cardio)
+  // Rest countdown — wall-clock so it survives screen dim / backgrounding.
   useEffect(() => {
     if (cardioMode) { clearInterval(timerRef.current); return; }
-    timerRef.current = setInterval(() => {
-      setRestSecs(s => {
-        if (s <= 1) { clearInterval(timerRef.current); return 0; }
-        return s - 1;
-      });
-    }, 1000);
+    const tick = () => {
+      const rem = Math.max(0, Math.ceil((endRef.current - Date.now()) / 1000));
+      setRestSecs(rem);
+      if (rem <= 0) clearInterval(timerRef.current);
+    };
+    tick();
+    timerRef.current = setInterval(tick, 250);
     return () => clearInterval(timerRef.current);
   }, [cardioMode]);
+
+  // Adjust rest by seconds (moves the wall-clock target, min 5s).
+  const adjustRest = (delta) => {
+    const cur = Math.max(0, Math.ceil((endRef.current - Date.now()) / 1000));
+    const next = Math.max(5, cur + delta);
+    endRef.current = Date.now() + next * 1000;
+    setRestSecs(next);
+  };
 
   // Auto-advance when rest hits 0
   useEffect(() => {
@@ -229,11 +240,16 @@ function GuidedRestScreen({ nextExercise, prevExercise, nextSetNum, totalSets, i
   }, [cardioMode]);
 
   const startCardio = (type) => {
+    frozenRef.current = Math.max(0, Math.ceil((endRef.current - Date.now()) / 1000)); // freeze remaining
     setCardioMode(type);
     setCardioTimer(0);
     speak(`${type}ing! Let's go!`, 1.1, 1.1);
   };
-  const stopCardio  = () => { clearInterval(cardioRef.current); setCardioMode(null); };
+  const stopCardio  = () => {
+    clearInterval(cardioRef.current);
+    endRef.current = Date.now() + frozenRef.current * 1000; // resume where it paused
+    setCardioMode(null);
+  };
 
   const urgentRest  = restSecs <= 5 && restSecs > 0;
 
@@ -275,11 +291,11 @@ function GuidedRestScreen({ nextExercise, prevExercise, nextSetNum, totalSets, i
                 {/* Timer row */}
                 <div className="flex items-center justify-center gap-3 mb-2">
                   <div className="flex flex-col gap-1.5">
-                    <button onClick={() => setRestSecs(s => Math.max(5, s - 15))} disabled={restSecs <= 5}
+                    <button onClick={() => adjustRest(-15)} disabled={restSecs <= 5}
                       className="w-9 h-9 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors disabled:opacity-40">
                       <Minus className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setRestSecs(s => Math.max(5, s - 30))} disabled={restSecs <= 30}
+                    <button onClick={() => adjustRest(-30)} disabled={restSecs <= 30}
                       className="w-9 h-9 bg-red-600/50 hover:bg-red-600 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors disabled:opacity-40">
                       -30
                     </button>
@@ -290,11 +306,11 @@ function GuidedRestScreen({ nextExercise, prevExercise, nextSetNum, totalSets, i
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <button onClick={() => setRestSecs(s => s + 15)}
+                    <button onClick={() => adjustRest(15)}
                       className="w-9 h-9 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center transition-colors">
                       <Plus className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setRestSecs(s => s + 30)}
+                    <button onClick={() => adjustRest(30)}
                       className="w-9 h-9 bg-blue-600/50 hover:bg-blue-600 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors">
                       +30
                     </button>
@@ -748,6 +764,27 @@ class ARTPErrorBoundary extends Component {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
+// ── Manual tap counter — for conditioning moves the pose model can't count ──
+function ManualRepCounter({ onCount }) {
+  const [count, setCount] = React.useState(0);
+  const bump = (d) => setCount((c) => { const n = Math.max(0, c + d); onCount(n); return n; });
+  return (
+    <div className="fixed left-1/2 -translate-x-1/2 z-[99985]"
+      style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 104px)" }}>
+      <div className="bg-black/80 backdrop-blur-md border border-[#00a9ff]/40 rounded-2xl px-3 py-2 flex items-center gap-3 shadow-2xl">
+        <button onClick={() => bump(-1)} aria-label="minus one rep"
+          className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl font-bold flex items-center justify-center active:scale-95">−</button>
+        <div className="text-center min-w-[60px]">
+          <div className="text-white text-3xl font-black leading-none tabular-nums">{count}</div>
+          <div className="text-[10px] text-gray-400 font-semibold tracking-wider">REPS</div>
+        </div>
+        <button onClick={() => bump(1)} aria-label="add one rep"
+          className="w-14 h-14 rounded-full bg-[#00a9ff] hover:bg-[#0090e0] text-white text-3xl font-black flex items-center justify-center active:scale-95 shadow-lg shadow-[#00a9ff]/30">+</button>
+      </div>
+    </div>
+  );
+}
+
 function ARTPWorkoutInner() {
   const navigate = useNavigate();
 
@@ -1492,12 +1529,18 @@ function ARTPWorkoutInner() {
             setLabel={totalSets > 1 ? `Set ${currentSet}/${totalSets}` : ""}
             targetReps={mode === "goal" ? repGoalPerEx : mode === "time" ? targetRepsPerEx : 0}
             autoAdvance={mode === "goal"}
-            defaultFacingMode="environment"
+            defaultFacingMode="user"
             paused={isPaused || showMidRest}
             onPause={isPaused ? handleResume : handlePause}
             onComplete={handleRepTrackerComplete}
             onClose={handleEndWorkout}
           />
+          {CONDITIONING_EXERCISES.has(currentEx?.name) && (
+            <ManualRepCounter
+              key={`mc-${exerciseIndex}-set${currentSet}`}
+              onCount={(n) => { pendingReps.current = n; }}
+            />
+          )}
         </>
       )}
     </>
