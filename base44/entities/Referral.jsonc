@@ -41,7 +41,17 @@
       }
     },
     "read": {
-      "created_by_id": "{{user.id}}"
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.referred_user_id": "{{user.id}}"
+        },
+        {
+          "data.referred_user_email": "{{user.email}}"
+        }
+      ]
     },
     "update": {
       "created_by_id": "{{user.id}}"
