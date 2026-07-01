@@ -1,5 +1,5 @@
 # Reps & Steps — Project Context (CLAUDE.md)
-_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-06-26_
+_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-06-27_
 
 > This file lives at the repo root so any machine that clones the repo (and any Claude session opened on it) has full project context.
 
@@ -49,6 +49,14 @@ _Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-06-26_
 - Stripe → Pro WORKS end-to-end: test $9.99 returned webhook 200 `{"success":true,"message":"Activated: pro_monthly"}`. Webhook sets `subscription_status='pro'` (the `is_pro` column staying blank is expected — app reads subscription_status).
 - Webhook signature verification rewritten to **Web Crypto** (Deno-native) — removed Node `crypto`/`Buffer`, cleared a High security flag. Same HMAC-SHA256 algorithm; after any change, Resend a Stripe event and expect 200.
 - Orange WorkoutGenie card routes to AIWorkoutGenerator (the old pop-up modal black-screened).
+
+## Recent app fixes (2026-06-27)
+- **ARTP camera:** now opens the **front-facing camera immediately** (ARTPWorkout passed defaultFacingMode="user"; RepTracker default is also "user").
+- **Active Recovery timer:** rewritten as a **wall-clock** countdown in `GuidedRestScreen` (ARTPWorkout) so it no longer freezes when the screen dims / app backgrounds. +/- adjust and cardio-pause preserved.
+- **Conditioning moves (High Knee, Jumping Jack, Jump Squat, Butt Kicker):** added a **manual tap rep counter** (`ManualRepCounter`) shown alongside the timer; taps write to `pendingReps` so they're recorded. Pose model can't count these.
+- **WorkoutGenie:** orange card on Exercises page routes to AIWorkoutGenerator (old pop-up modal black-screened).
+- **Landing page** (`repsandsteps-landing.html`, not in repo — lives in Documents\Pers\RepsAndSteps): navy/blue, Stripe links wired, real logo/banner images.
+- **OPEN: logo** — header uses `repsandsteps_main_logo_2.png` + name banner (supabase). Jace flagged it may be the wrong/outdated logo; awaiting a corrected logo file to swap in app header + landing page.
 
 ## Gotchas
 - Connected-folder editor can truncate large files — edit in a sandbox clone, esbuild-verify, then byte-copy into sync.
