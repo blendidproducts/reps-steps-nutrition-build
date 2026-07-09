@@ -9,11 +9,13 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
   Play, Pause, Square, SkipForward, Plus, Minus, Timer, Target, Footprints,
-  Route, Zap, RefreshCw, Link as LinkIcon, Search, Box
+  Route, Zap, RefreshCw, Link as LinkIcon, Search, Box, Camera
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import StepTracker from "@/components/StepTracker";
+import RepTracker from "@/components/workout/RepTracker";
+import { matchExercise } from "@/lib/exerciseTracking";
 import RestScreen from "@/components/workout/RestScreen";
 import ActiveRecoveryScreen from "@/components/workout/ActiveRecoveryScreen";
 import {
@@ -33,6 +35,7 @@ export default function ActiveWorkout() {
   const [elapsedTimer, setElapsedTimer] = useState(0);
   const [currentReps, setCurrentReps] = useState(0);
   const [repInput, setRepInput] = useState("");
+  const [showRepTracker, setShowRepTracker] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState(null);
   const [totalReps, setTotalReps] = useState(0);
   const [exerciseTimer, setExerciseTimer] = useState(0);
@@ -496,6 +499,16 @@ export default function ActiveWorkout() {
   if (!currentExercise) return (<div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb' }} className="flex items-center justify-center p-6"><div className="text-center"><div className="text-6xl mb-4">⚠️</div><div className="text-xl text-red-400 mb-2">Invalid workout data</div><Button onClick={() => navigate(createPageUrl("Exercises"))} className="bg-blue-600 hover:bg-blue-700">Go Back</Button></div></div>);
 
   const isTimeBased = currentExercise.metric === 'time';
+
+  // ── AI body-tracking availability for the current exercise ──────────────────
+  const aiConfig = matchExercise(currentExercise?.exercise_name);
+  const isAiTrackable = !isTimeBased && aiConfig && aiConfig.trackable !== false;
+  const aiIsExperimental = aiConfig?.trackable === 'experimental';
+  // When the camera tracker finishes, record its rep count like a manual entry.
+  const handleAiTrackerComplete = (reps) => {
+    if (typeof reps === 'number' && reps >= 0) setQuickReps(reps);
+    setShowRepTracker(false);
+  };
   const totalSets = workout.exercises.reduce((s,ex) => s + (ex.sets||1), 0);
   const completedSets = workout.exercises.slice(0, currentExerciseIndex).reduce((s,ex) => s + (ex.sets||1), 0) + (currentSet - 1);
   const progress = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
@@ -594,6 +607,17 @@ export default function ActiveWorkout() {
                       <Button size="lg" variant="outline" onClick={() => { const n = Math.max(0,currentReps-5); const d = n-currentReps; setCurrentReps(n); setTotalReps(p => p+d); const ue = [...workout.exercises]; ue[currentExerciseIndex].completed_reps = Math.max(0,(ue[currentExerciseIndex].completed_reps||0)+d); setWorkout({...workout, exercises: ue}); }} className="flex-1 h-12 bg-gray-800 border-gray-700 text-base font-bold">-5</Button>
                       <Button size="lg" variant="outline" onClick={() => { const n = currentReps+5; setCurrentReps(n); setTotalReps(p => p+5); const ue = [...workout.exercises]; ue[currentExerciseIndex].completed_reps = (ue[currentExerciseIndex].completed_reps||0)+5; setWorkout({...workout, exercises: ue}); }} className="flex-1 h-12 bg-gray-800 border-gray-700 text-base font-bold">+5</Button>
                     </div>
+                    {isAiTrackable && (
+                      <button
+                        onClick={() => setShowRepTracker(true)}
+                        className="mt-3 w-full h-12 rounded-lg flex items-center justify-center gap-2 font-bold text-white text-sm active:scale-95 transition-transform"
+                        style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)", boxShadow: "0 4px 14px rgba(59,130,246,0.35)" }}
+                      >
+                        <Camera className="w-4 h-4" />
+                        Enable AI Rep Tracking
+                        {aiIsExperimental && <span className="text-[9px] bg-yellow-400/90 text-black rounded px-1 py-0.5 font-black ml-1">BETA</span>}
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center bg-gray-900/50 rounded-lg p-3 w-full sm:w-auto sm:min-w-[180px]">
@@ -671,6 +695,19 @@ export default function ActiveWorkout() {
       <SupersetConfigModal show={showSupersetModal} selections={supersetSelections} onToggle={toggleSupersetSelection} onApply={applySupersets} onClose={() => setShowSupersetModal(false)} />
       <SwapExerciseModal show={showSwapModal} exercises={allExercises} currentCategory={currentExercise.category} searchQuery={swapSearchQuery} onSearch={setSwapSearchQuery} onSwap={swapExercise} onClose={() => setShowSwapModal(false)} />
       <VoiceCoachModal show={showVoiceHelp} isVoiceActive={isVoiceActive} onActivate={() => { setShowVoiceHelp(false); if (!isVoiceActive) toggleVoiceControl(); }} onClose={() => setShowVoiceHelp(false)} />
+
+      {/* AI body-tracking overlay — launched from the reps counter in program/regular mode */}
+      {showRepTracker && (
+        <RepTracker
+          exerciseName={currentExercise.exercise_name}
+          targetReps={currentExercise.target_reps || 0}
+          exerciseEmoji={aiConfig?.emoji || ""}
+          setLabel={`Set ${currentSet} of ${currentExercise.sets || 1}`}
+          defaultFacingMode="user"
+          onComplete={handleAiTrackerComplete}
+          onClose={() => setShowRepTracker(false)}
+        />
+      )}
     </div>
   );
 }

@@ -107,7 +107,7 @@ export const EXERCISE_LIBRARY = [
     name: 'Diamond Push-Up',
     keywords: ['diamond push', 'diamond push-up', 'tricep push'],
     mode: 'reps',
-    trackable: false,
+    trackable: true,
     category: 'Push',
     color: '#f97316',
     getAngle: (lm) => {
@@ -126,7 +126,7 @@ export const EXERCISE_LIBRARY = [
     name: 'Wide Push-Up',
     keywords: ['wide push', 'wide grip push'],
     mode: 'reps',
-    trackable: false,
+    trackable: true,
     category: 'Push',
     color: '#ef4444',
     getAngle: (lm) => {
@@ -145,7 +145,7 @@ export const EXERCISE_LIBRARY = [
     name: 'Pike Push-Up',
     keywords: ['pike push', 'pike push-up'],
     mode: 'reps',
-    trackable: false,
+    trackable: 'experimental',
     category: 'Push',
     color: '#f97316',
     getAngle: (lm) => {
@@ -164,7 +164,7 @@ export const EXERCISE_LIBRARY = [
     name: 'Decline Push-Up',
     keywords: ['decline push', 'feet elevated push'],
     mode: 'reps',
-    trackable: false,
+    trackable: 'experimental',
     category: 'Push',
     color: '#ef4444',
     getAngle: (lm) => {
@@ -183,7 +183,7 @@ export const EXERCISE_LIBRARY = [
     name: 'Incline Push-Up',
     keywords: ['incline push', 'hands elevated push'],
     mode: 'reps',
-    trackable: false,
+    trackable: true,
     category: 'Push',
     color: '#ef4444',
     getAngle: (lm) => {
@@ -221,7 +221,7 @@ export const EXERCISE_LIBRARY = [
     name: 'Tricep Dip',
     keywords: ['tricep dip', 'chair dip', 'bench dip'],
     mode: 'reps',
-    trackable: false,
+    trackable: true,
     category: 'Push',
     color: '#f97316',
     getAngle: (lm) => {
@@ -236,11 +236,36 @@ export const EXERCISE_LIBRARY = [
     formCues: ['Hips close to chair/bench', 'Lower until 90° elbow angle', 'Full extension at top'],
   },
   {
+    id: 'tricep_extension',
+    name: 'Tricep Extension',
+    keywords: ['tricep extension', 'triceps extension', 'overhead tricep', 'skull crusher'],
+    mode: 'reps',
+    trackable: true,
+    category: 'Push',
+    color: '#f97316',
+    getAngle: (lm) => {
+      // Elbow flexion/extension — same joint chain as a push-up/dip.
+      const lVis = (lm[11]?.visibility ?? 0) + (lm[13]?.visibility ?? 0) + (lm[15]?.visibility ?? 0);
+      const rVis = (lm[12]?.visibility ?? 0) + (lm[14]?.visibility ?? 0) + (lm[16]?.visibility ?? 0);
+      const L = getAngle(lm[11], lm[13], lm[15]);
+      const R = getAngle(lm[12], lm[14], lm[16]);
+      if (lVis < 1.0) return R;
+      if (rVis < 1.0) return L;
+      return (L + R) / 2;
+    },
+    upThreshold: 155,    // arms fully extended (locked out)
+    downThreshold: 75,   // elbow bent — forearm lowered
+    direction: 'down_then_up',
+    minRepIntervalMs: 600,
+    primaryJoint: 'Elbow',
+    formCues: ['Keep upper arms still', 'Bend only at the elbow', 'Full lockout at the top counts the rep', 'Side view tracks best'],
+  },
+  {
     id: 'handstand_pushup',
     name: 'Handstand Push-Up',
     keywords: ['handstand push', 'hspu'],
     mode: 'reps',
-    trackable: false,
+    trackable: 'experimental',
     category: 'Push',
     color: '#ef4444',
     getAngle: (lm) => {
@@ -444,7 +469,7 @@ export const EXERCISE_LIBRARY = [
     name: 'Bulgarian Split Squat',
     keywords: ['bulgarian', 'split squat', 'rear foot elevated'],
     mode: 'reps',
-    trackable: false,
+    trackable: true,
     category: 'Legs',
     color: '#15803d',
     getAngle: (lm) => getAngle(lm[23], lm[25], lm[27]),
@@ -459,7 +484,7 @@ export const EXERCISE_LIBRARY = [
     name: 'Step Up',
     keywords: ['step up', 'box step'],
     mode: 'reps',
-    trackable: false,
+    trackable: true,
     category: 'Legs',
     color: '#22c55e',
     getAngle: (lm) => getAngle(lm[23], lm[25], lm[27]),
@@ -549,7 +574,7 @@ export const EXERCISE_LIBRARY = [
     name: 'Pistol Squat',
     keywords: ['pistol squat', 'single leg squat'],
     mode: 'reps',
-    trackable: false,
+    trackable: 'experimental',
     category: 'Legs',
     color: '#16a34a',
     getAngle: (lm) => getAngle(lm[23], lm[25], lm[27]),

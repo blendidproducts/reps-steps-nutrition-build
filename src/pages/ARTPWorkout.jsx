@@ -29,7 +29,7 @@ import {
   Save, Edit2, CheckCircle, Link as LinkIcon,
   Footprints, Route, Square, Plus, Minus, SkipForward,
   AlertTriangle, Activity, Repeat, BarChart2, Camera,
-  Pause, Target,
+  Pause, Target, Flame,
 } from "lucide-react";
 
 // ── Body-trackable exercises (AI pose detection verified) ────────────────────
@@ -46,6 +46,17 @@ const ALL_EXERCISES = [
   { name: "Sumo Squat",    cue: "Side view · wide stance · toes at 45°",               emoji: "🏋️", cameraTip: "Place phone at hip height to side" },
   { name: "Leg Raise",     cue: "Side view · press lower back down · legs straight",    emoji: "📐", cameraTip: "Place phone to your side on the floor" },
   { name: "Butt Kicker",   cue: "Side view · kick heels to glutes · light on feet",     emoji: "👟", cameraTip: "Place phone at hip height to side" },
+  // ── Push-up variations (elbow tracking) ──
+  { name: "Wide Push-Up",    cue: "Side view · hands wider than shoulders · chest to floor",  emoji: "💪", cameraTip: "Place phone on floor beside you" },
+  { name: "Diamond Push-Up", cue: "Side view · hands form a diamond · elbows tight",          emoji: "🔺", cameraTip: "Place phone on floor beside you" },
+  { name: "Incline Push-Up", cue: "Side view · hands on elevated surface · lower chest",       emoji: "📈", cameraTip: "Place phone on floor beside you" },
+  { name: "Decline Push-Up", cue: "Side view · feet elevated · upper-chest focus",             emoji: "📉", cameraTip: "Place phone on floor beside you", beta: true },
+  { name: "Tricep Dip",      cue: "Side view · lower until 90° elbow · full extension up",      emoji: "🪑", cameraTip: "Place phone at hip height to side" },
+  { name: "Tricep Extension",cue: "Side view · bend only at the elbow · full lockout",          emoji: "💪", cameraTip: "Place phone at hip height to side" },
+  // ── Squat variations (knee tracking) ──
+  { name: "Bulgarian Split Squat", cue: "Side view · rear foot elevated · deep range",         emoji: "🦵", cameraTip: "Place phone at hip height to side" },
+  { name: "Step Up",         cue: "Side view · drive through heel · full hip extension",        emoji: "🪜", cameraTip: "Place phone at hip height to side" },
+  { name: "Pistol Squat",    cue: "Side view · one leg forward · control the descent",          emoji: "🦩", cameraTip: "Place phone at hip height to side", beta: true },
 ];
 
 const TIME_OPTIONS  = [{ label: "30s", seconds: 30 }, { label: "45s", seconds: 45 }, { label: "60s", seconds: 60 }, { label: "90s", seconds: 90 }];
@@ -56,6 +67,18 @@ const SAVE_KEY      = "artp_saved_program";
 
 // Conditioning preset: cardio/explosive movements
 const CONDITIONING_EXERCISES = new Set(["Jumping Jack", "High Knee", "Jump Squat", "Butt Kicker"]);
+
+// ── Warm-up routine — optional guided mobility sequence before the ARTP circuit ──
+// Light, no-equipment moves to raise heart rate and loosen joints. Each runs on a
+// timer and auto-advances; the user can skip any move or the whole warm-up.
+const WARMUP_ROUTINE = [
+  { name: "Arm Circles",        seconds: 30, emoji: "🔄", cue: "Big forward then backward circles — loosen the shoulders" },
+  { name: "Hip Circles",        seconds: 30, emoji: "🌀", cue: "Hands on hips — slow circles each direction" },
+  { name: "Bodyweight Squats",  seconds: 30, emoji: "🦵", cue: "Slow and controlled — warm up the knees and hips" },
+  { name: "Toe Touches",        seconds: 30, emoji: "🙆", cue: "Reach for your toes — gentle hamstring stretch" },
+  { name: "Marching High Knees",seconds: 30, emoji: "🏃", cue: "March in place — drive knees up, pump the arms" },
+];
+const WARMUP_TOTAL_SECS = WARMUP_ROUTINE.reduce((t, m) => t + m.seconds, 0);
 
 /** Speak a phrase via TTS — safe no-op if speech not available */
 function speak(text, rate = 1.05, pitch = 1.05) {
@@ -785,6 +808,83 @@ function ManualRepCounter({ onCount }) {
   );
 }
 
+// ── Warm-up Screen — guided timed mobility sequence ──────────────────────────
+function WarmupScreen({ onFinish, onSkipAll }) {
+  const [idx, setIdx]   = useState(0);
+  const [secs, setSecs] = useState(WARMUP_ROUTINE[0].seconds);
+  const move = WARMUP_ROUTINE[idx];
+  const isLast = idx >= WARMUP_ROUTINE.length - 1;
+
+  // Announce each move
+  useEffect(() => {
+    speak(`${move.name}. ${move.cue}`, 1.05, 1.05);
+  }, [idx]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Per-move countdown — auto-advances, finishes warm-up after the last move
+  useEffect(() => {
+    const t = setInterval(() => {
+      setSecs((s) => {
+        if (s <= 1) {
+          clearInterval(t);
+          if (isLast) { speak("Warm-up complete! Let's go.", 1.1, 1.1); onFinish(); }
+          else { setIdx((i) => i + 1); setSecs(WARMUP_ROUTINE[idx + 1].seconds); }
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [idx, isLast]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const nextMove = () => {
+    if (isLast) onFinish();
+    else { setIdx((i) => i + 1); setSecs(WARMUP_ROUTINE[idx + 1].seconds); }
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 bg-[#020817] flex flex-col text-white"
+      style={{ zIndex: 99999, paddingTop: "max(env(safe-area-inset-top, 0px), 52px)", paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)" }}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 pb-3">
+        <div className="flex items-center gap-2">
+          <Flame className="w-5 h-5 text-orange-400" />
+          <span className="text-sm font-bold uppercase tracking-widest text-orange-400">Warm-Up</span>
+        </div>
+        <button onClick={onSkipAll} className="text-gray-400 text-xs font-semibold border border-gray-700 rounded-full px-3 py-1.5 active:scale-95">
+          Skip warm-up
+        </button>
+      </div>
+
+      {/* Progress dots */}
+      <div className="flex items-center justify-center gap-1.5 mb-6">
+        {WARMUP_ROUTINE.map((_, i) => (
+          <span key={i} className={`h-1.5 rounded-full transition-all ${i === idx ? "w-6 bg-orange-400" : i < idx ? "w-1.5 bg-orange-400/60" : "w-1.5 bg-gray-700"}`} />
+        ))}
+      </div>
+
+      {/* Current move */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+        <div className="text-[120px] leading-none mb-4">{move.emoji}</div>
+        <h2 className="text-3xl font-black mb-2">{move.name}</h2>
+        <p className="text-gray-400 text-sm max-w-xs leading-relaxed mb-8">{move.cue}</p>
+        <div className="text-7xl font-black tabular-nums text-orange-400">{secs}</div>
+        <p className="text-gray-600 text-xs mt-1 uppercase tracking-widest">seconds</p>
+      </div>
+
+      {/* Controls */}
+      <div className="px-4 space-y-2">
+        <button onClick={nextMove}
+          className="w-full py-4 rounded-2xl font-black text-lg text-white active:scale-95 transition-transform flex items-center justify-center gap-2"
+          style={{ background: "linear-gradient(135deg, #f97316, #ea580c)", boxShadow: "0 8px 24px rgba(249,115,22,0.35)" }}>
+          <SkipForward className="w-5 h-5" /> {isLast ? "Start Workout" : "Next Move"}
+        </button>
+        <p className="text-gray-600 text-[11px] text-center">Move {idx + 1} of {WARMUP_ROUTINE.length} · auto-advances</p>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function ARTPWorkoutInner() {
   const navigate = useNavigate();
 
@@ -835,6 +935,7 @@ function ARTPWorkoutInner() {
   const [targetRepsPerEx, setTargetRepsPerEx] = useState(12);
   const [repGoalPerEx,   setRepGoalPerEx]   = useState(20); // used in "goal" mode
   const [showMidRest,    setShowMidRest]    = useState(false);
+  const [warmupEnabled,  setWarmupEnabled]  = useState(() => localStorage.getItem("artp_warmup") === "1");
 
   const timerRef      = useRef(null);
   const elapsedRef    = useRef(null);
@@ -1037,7 +1138,7 @@ function ARTPWorkoutInner() {
     setElapsedSecs(0); setTotalSteps(0); setIsPaused(false);
     pendingReps.current = 0;
     stepBaseRef.current = 0; stepLastRef.current = 0;
-    setPhase("countdown");
+    setPhase(warmupEnabled ? "warmup" : "countdown");
   };
 
   const handleRestart = () => {
@@ -1253,6 +1354,22 @@ function ARTPWorkoutInner() {
           </p>
         </div>
 
+        {/* Warm-up toggle */}
+        <button
+          onClick={() => setWarmupEnabled(v => { const nv = !v; localStorage.setItem("artp_warmup", nv ? "1" : "0"); return nv; })}
+          className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 transition-all active:scale-[0.99] ${warmupEnabled ? "border-orange-400/60 bg-orange-500/10" : "border-gray-700 bg-[#111]"}`}>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${warmupEnabled ? "bg-orange-500/20" : "bg-gray-800"}`}>
+            <Flame className={`w-5 h-5 ${warmupEnabled ? "text-orange-400" : "text-gray-600"}`} />
+          </div>
+          <div className="flex-1 min-w-0 text-left">
+            <p className="text-white font-bold text-sm">Warm-up routine</p>
+            <p className="text-gray-500 text-[11px]">{Math.round(WARMUP_TOTAL_SECS / 60 * 10) / 10} min mobility before you start</p>
+          </div>
+          <div className={`w-12 h-7 rounded-full p-1 transition-colors flex-shrink-0 ${warmupEnabled ? "bg-orange-500" : "bg-gray-700"}`}>
+            <div className={`w-5 h-5 rounded-full bg-white transition-transform ${warmupEnabled ? "translate-x-5" : "translate-x-0"}`} />
+          </div>
+        </button>
+
         {/* Superset info */}
         <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
           <LinkIcon className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
@@ -1406,6 +1523,14 @@ function ARTPWorkoutInner() {
 
       {/* Persistent step badge */}
       {stepBadgePortal}
+
+      {/* ── Warm-up ───────────────────────────────────────────────── */}
+      {phase === "warmup" && (
+        <WarmupScreen
+          onFinish={() => { setCountdownSecs(3); setPhase("countdown"); }}
+          onSkipAll={() => { setCountdownSecs(3); setPhase("countdown"); }}
+        />
+      )}
 
       {/* ── Countdown ─────────────────────────────────────────────── */}
       {phase === "countdown" && createPortal(
