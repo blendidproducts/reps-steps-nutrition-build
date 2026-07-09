@@ -575,6 +575,15 @@ export default function ActiveWorkout() {
                 <Button onClick={() => setShowHowTo(true)} size="sm" className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-1 px-3 py-1 h-8"><Play className="w-3 h-3" /><span className="text-xs font-bold">VIDEO</span></Button>
                 <Button onClick={() => setShow3DView(true)} size="sm" className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1 px-3 py-1 h-8"><Box className="w-3 h-3" /><span className="text-xs font-bold">3D</span></Button>
               </div>
+              {isAiTrackable && (
+                <div className="flex justify-center mb-2">
+                  <Button onClick={() => setShowRepTracker(true)} size="sm" className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-1.5 px-4 py-1 h-8">
+                    <Camera className="w-3.5 h-3.5" />
+                    <span className="text-xs font-bold">AI REP TRACKING</span>
+                    {aiIsExperimental && <span className="text-[9px] bg-yellow-400/90 text-black rounded px-1 py-0.5 font-black ml-0.5">BETA</span>}
+                  </Button>
+                </div>
+              )}
               <div className="mb-2">
                 <Badge variant="outline" className="border-brand-blue/50 text-brand-blue text-[10px] sm:text-xs leading-tight">
                   {currentSet < (currentExercise.sets || 1) ? `Set ${currentSet} of ${currentExercise.sets || 1} → Next: Set ${currentSet + 1}` : currentExerciseIndex < workout.exercises.length - 1 ? `Set ${currentSet} completed → Next: ${workout.exercises[currentExerciseIndex + 1]?.exercise_name}` : `Final Set ${currentSet} - Last Exercise!`}
@@ -607,17 +616,6 @@ export default function ActiveWorkout() {
                       <Button size="lg" variant="outline" onClick={() => { const n = Math.max(0,currentReps-5); const d = n-currentReps; setCurrentReps(n); setTotalReps(p => p+d); const ue = [...workout.exercises]; ue[currentExerciseIndex].completed_reps = Math.max(0,(ue[currentExerciseIndex].completed_reps||0)+d); setWorkout({...workout, exercises: ue}); }} className="flex-1 h-12 bg-gray-800 border-gray-700 text-base font-bold">-5</Button>
                       <Button size="lg" variant="outline" onClick={() => { const n = currentReps+5; setCurrentReps(n); setTotalReps(p => p+5); const ue = [...workout.exercises]; ue[currentExerciseIndex].completed_reps = (ue[currentExerciseIndex].completed_reps||0)+5; setWorkout({...workout, exercises: ue}); }} className="flex-1 h-12 bg-gray-800 border-gray-700 text-base font-bold">+5</Button>
                     </div>
-                    {isAiTrackable && (
-                      <button
-                        onClick={() => setShowRepTracker(true)}
-                        className="mt-3 w-full h-12 rounded-lg flex items-center justify-center gap-2 font-bold text-white text-sm active:scale-95 transition-transform"
-                        style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)", boxShadow: "0 4px 14px rgba(59,130,246,0.35)" }}
-                      >
-                        <Camera className="w-4 h-4" />
-                        Enable AI Rep Tracking
-                        {aiIsExperimental && <span className="text-[9px] bg-yellow-400/90 text-black rounded px-1 py-0.5 font-black ml-1">BETA</span>}
-                      </button>
-                    )}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center bg-gray-900/50 rounded-lg p-3 w-full sm:w-auto sm:min-w-[180px]">

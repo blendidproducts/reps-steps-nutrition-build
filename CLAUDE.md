@@ -1,5 +1,5 @@
 # Reps & Steps — Project Context (CLAUDE.md)
-_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-01_
+_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-09_
 
 > This file lives at the repo root so any machine that clones the repo (and any Claude session opened on it) has full project context.
 
@@ -19,16 +19,24 @@ _Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-01_
 - Annual Pro **$99/yr (14-day trial)** → `buy.stripe.com/7sY6oH7xYg18dGkgFfbQY0s` · metadata `product_key=pro_annual`
 - `pro_monthly` + `pro_annual` → `subscription_status: "pro"`. Fitness Brain & AI Nutrition are SEPARATE add-ons. All-Access ($19.99) = Pro + both. Staying on Stripe.
 
-## Status 2026-07-01 (where Jace left off)
+## Status 2026-07-09 (where Jace left off)
 - **DONE:** Push → Publish. Live-purchase test + QA pass complete — $9.99/$99 Free→Pro confirmed working on the live app.
 - **DONE:** `/ProgramSeed` (6 programs + nutrition) and `/ExerciseSeed` (Fix Stretch Records → Add Missing Photos) both run on the live Base44 app — confirmed 2026-07-01.
+- **DONE (round 13, 2026-07-09):** ARTP exercise expansion + AI tracking in program mode + ARTP warm-up. See "Round 13" below.
 - **PARTIAL:** Exercise images + YouTube links — some exercises still missing photos and/or video links (`/ExerciseImages`).
 
+## Round 13 — ARTP expansion & AI tracking everywhere (2026-07-09)
+Three changes, built in the sync folder and esbuild-verified:
+1. **More trackable variations** (`src/lib/exerciseTracking.js`): flipped push-up variations Wide / Diamond / Incline and Tricep Dip to `trackable: true`; added a new **Tricep Extension** entry (elbow-tracked); squat variations Bulgarian Split Squat + Step Up → `trackable: true`. Decline / Pike / Handstand push-ups and Pistol Squat set to `'experimental'` (tracked but Beta-flagged — awkward camera angles are less reliable). All added to `ALL_EXERCISES` in `ARTPWorkout.jsx` so they appear in the ARTP builder.
+2. **AI tracking in program/regular mode** (`src/pages/ActiveWorkout.jsx`): the reps counter now shows an "Enable AI Rep Tracking" button whenever the current exercise is body-trackable (via `matchExercise`). It launches `RepTracker` inline; on completion the counted reps flow into the set. Experimental exercises show a BETA tag.
+3. **ARTP warm-up** (`src/pages/ARTPWorkout.jsx`): optional guided mobility warm-up (`WARMUP_ROUTINE`, ~2.5 min) with a toggle on the setup screen (remembered in `localStorage` key `artp_warmup`). Runs as a new `warmup` phase before the countdown, with skip-move and skip-all controls.
+
 ## Next steps (in order)
-1. **Test Active Session clock/timer stopping** — latest updates changed the active workout clock and timer; verify the timer stops correctly during a live session.
-2. **Test AI add-on purchases** — Fitness Brain and AI Nutrition are separate Stripe add-ons; run a purchase test for each and confirm the webhook grants the right entitlement (they are NOT covered by `pro_monthly`/`pro_annual`).
-3. **Finish `/ExerciseImages`** — upload remaining missing exercise photos; paste remaining YouTube links.
-4. Optional polish: custom domain `app.repsandsteps.com` (see Domain below).
+1. **QA round 13 on the live app** — ARTP: new variations appear + count reps; warm-up toggle runs the sequence then flows into the workout. Program mode: "Enable AI Rep Tracking" button appears on trackable exercises and records reps. Sanity-check the Beta variations (decline/pike/pistol) count reasonably.
+2. **Test Active Session clock/timer stopping** — verify the timer stops correctly during a live session.
+3. **Test AI add-on purchases** — Fitness Brain and AI Nutrition are separate Stripe add-ons; run a purchase test for each and confirm the webhook grants the right entitlement (they are NOT covered by `pro_monthly`/`pro_annual`).
+4. **Finish `/ExerciseImages`** — upload remaining missing exercise photos; paste remaining YouTube links.
+5. Optional polish: custom domain `app.repsandsteps.com` (see Domain below).
 
 ## Built so far (through ~round 12)
 6 workout programs + nutrition (ProgramSeed); Stretches page rebuilt (always-populated library, Mobility tab, instructions, images, inline YouTube, 3D, timer audio, error boundary); Active Session redesigned to mockup (image+timer side-by-side, TIPS, navy full-screen); $9.99 + $99/yr annual toggle on Pricing/Home/AddOns; WorkoutGenie prompt box; front camera default; per-exercise YouTube field + "Add Missing Photos" auto-fill (57 of 83) in admin tools; Program Guides (PDF) page; unified navy (#020817)/blue (#00a9ff) theme.
@@ -69,4 +77,5 @@ _Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-01_
 - `src/pages/ExerciseSeed.jsx` / `ProgramSeed.jsx` / `ExerciseImages.jsx` — admin seeding tools
 - `src/pages/Pricing.jsx` / `Home.jsx` / `AddOns.jsx` — pricing & promo
 - `base44/functions/stripeWebhook/entry.ts` — Stripe → entitlements
+- `src/lib/exerciseTracking.js` — AI pose rep-tracking engine (EXERCISE_LIBRARY, matchExercise, RepCounter)
 - `src/index.css` — theme tokens
