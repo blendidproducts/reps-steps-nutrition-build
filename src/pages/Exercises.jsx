@@ -429,6 +429,30 @@ Choose realistic exercises that match the body focus and intensity level.`,
           </div>
         </div>
 
+        {/* Select all / Clear all toolbar */}
+        {!isLoading && filteredExercises.length > 0 && (
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <span className="text-xs text-gray-400 font-semibold">
+              {selectedExercises.length > 0 ? `${selectedExercises.length} selected` : `${filteredExercises.length} exercises`}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setSelectedExercises(prev => {
+                  const ids = new Set(prev.map(e => e.id));
+                  return [...prev, ...filteredExercises.filter(e => !ids.has(e.id))];
+                })}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold text-blue-300 bg-blue-500/10 border border-blue-500/40 active:scale-95 transition-transform">
+                Select all
+              </button>
+              <button
+                onClick={() => setSelectedExercises([])}
+                disabled={selectedExercises.length === 0}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-300 bg-gray-700/40 border border-gray-600 disabled:opacity-40 active:scale-95 transition-transform">
+                Clear all
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Exercise Grid */}
         {isLoading ? (

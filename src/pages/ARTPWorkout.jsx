@@ -1226,7 +1226,7 @@ function ARTPWorkoutInner() {
 
   // ── PHASE: setup ───────────────────────────────────────────────────
   if (phase === "setup") return (
-    <div className="min-h-screen bg-[#020817] flex flex-col text-white">
+    <div className="fixed inset-0 bg-[#020817] flex flex-col text-white">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 bg-[#111] border-b border-gray-800 sticky top-0 z-10"
         style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 52px)", paddingBottom: "12px" }}>
@@ -1241,7 +1241,7 @@ function ARTPWorkoutInner() {
         <span className="bg-blue-500/20 text-blue-400 text-[10px] font-bold border border-blue-500/30 rounded-full px-2.5 py-0.5 shrink-0">PRO</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-[140px]">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-6">
 
         {/* ── Saved Program card ───────────────────────────────────── */}
         {savedName ? (
@@ -1380,9 +1380,23 @@ function ARTPWorkoutInner() {
 
         {/* Exercise list */}
         <div className="bg-[#111] border border-gray-800 rounded-2xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
-            <p className="text-white font-semibold text-sm">Exercises</p>
-            <span className="text-blue-400 text-xs font-semibold">{selected.size} selected</span>
+          <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="text-white font-semibold text-sm">Exercises</p>
+              <span className="text-blue-400 text-xs font-semibold whitespace-nowrap">{selected.size} selected</span>
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <button
+                onClick={() => setSelected(new Set(ALL_EXERCISES.map(e => e.name)))}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-blue-300 bg-blue-500/10 border border-blue-500/40 active:scale-95 transition-transform">
+                Select all
+              </button>
+              <button
+                onClick={() => setSelected(new Set())}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-gray-300 bg-gray-700/40 border border-gray-600 active:scale-95 transition-transform">
+                Clear all
+              </button>
+            </div>
           </div>
           <div className="divide-y divide-gray-800/50">
             {ALL_EXERCISES.map((ex) => {
@@ -1488,12 +1502,12 @@ function ARTPWorkoutInner() {
 
       </div>
 
-      {/* Fixed START bar */}
+      {/* START bar — in-flow footer so it's always pinned to the visible bottom */}
       <motion.div
         initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 400, damping: 35 }}
-        className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-3"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 16px) + 8px)", background: "linear-gradient(to top, #020817 70%, transparent)" }}
+        className="flex-shrink-0 px-4 pt-3 border-t border-white/5"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 16px) + 8px)", background: "linear-gradient(to top, #020817 70%, rgba(2,8,23,0.85))" }}
       >
         <button
           onClick={handleStart}

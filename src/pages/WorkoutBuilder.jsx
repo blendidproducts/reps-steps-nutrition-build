@@ -1002,8 +1002,19 @@ Make it realistic, but always respect specific rep/time requests.`,
             {/* Exercise List with Drag & Drop */}
             <Card className="bg-gray-900 border-gray-800 rounded-xl">
               <CardHeader>
-                <CardTitle className="text-white text-xl">Exercise List</CardTitle>
-                <p className="text-sm text-gray-400">Drag to reorder, customize settings, and configure supersets</p>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <CardTitle className="text-white text-xl">Exercise List</CardTitle>
+                    <p className="text-sm text-gray-400">Drag to reorder, customize settings, and configure supersets</p>
+                  </div>
+                  {selectedExercises.length > 0 && (
+                    <button
+                      onClick={() => setSelectedExercises([])}
+                      className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold text-gray-300 bg-gray-700/50 border border-gray-600 active:scale-95 transition-transform">
+                      Clear all
+                    </button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 <DragDropContext onDragEnd={onDragEnd}>
