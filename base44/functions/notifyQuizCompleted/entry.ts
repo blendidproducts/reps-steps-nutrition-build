@@ -1,5 +1,17 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
+// HTML-escape user-supplied values before interpolating into the email body
+const escapeHtml = (val) => {
+  if (val == null) return '';
+  return String(val)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+const safeField = (val) => escapeHtml(val) || 'Not provided';
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -25,11 +37,11 @@ Deno.serve(async (req) => {
     const body = `Great news! A new user just completed the fitness quiz on your app.
 
 Here are their details:
-• Name: ${user.full_name || 'Not provided'}
-• Email: ${user.email || 'Not provided'}
-• Age: ${answers?.age || user.age || 'Not provided'}
-• Fitness Level: ${answers?.fitness_level || user.fitness_level || 'Not provided'}
-• Goal: ${answers?.fitness_goals || user.fitness_goals || 'Not provided'}
+• Name: ${safeField(user.full_name)}
+• Email: ${safeField(user.email)}
+• Age: ${safeField(answers?.age || user.age)}
+• Fitness Level: ${safeField(answers?.fitness_level || user.fitness_level)}
+• Goal: ${safeField(answers?.fitness_goals || user.fitness_goals)}
 
 You can log in to your dashboard to see more.
 `;

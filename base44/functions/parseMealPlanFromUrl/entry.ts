@@ -1,5 +1,79 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
+// Block private/loopback/link-local IPs to prevent SSRF
+const isPrivateIp = (ip) => {
+  const v4 = ip.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (v4) {
+    const [a, b] = [Number(v4[1]), Number(v4[2])];
+    return a === 0 || a === 10 || a === 127 ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 100 && b >= 64 && b <= 127);
+  }
+  const v6 = ip.toLowerCase();
+  if (v6 === '::1' || v6 === '::') return true;
+  if (v6.startsWith('fc') || v6.startsWith('fd')) return true;
+  if (v6.startsWith('fe80')) return true;
+  const mapped = v6.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (mapped) return isPrivateIp(mapped[1]);
+  return false;
+};
+
+// Validate scheme + resolve hostname + reject internal destinations
+const validateUrl = async (rawUrl) => {
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new Error('Invalid URL');
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('Only http and https URLs are allowed');
+  }
+  const host = parsed.hostname;
+  let addresses = [];
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(host) || (host.startsWith('[') && host.endsWith(']'))) {
+    addresses = [host.startsWith('[') ? host.slice(1, -1) : host];
+  } else {
+    try {
+      addresses = await Deno.resolveDns(host, 'A');
+    } catch {
+      try {
+        addresses = await Deno.resolveDns(host, 'AAAA');
+      } catch {
+        throw new Error('Could not resolve hostname');
+      }
+    }
+  }
+  if (addresses.length === 0) throw new Error('Could not resolve hostname');
+  for (const ip of addresses) {
+    if (isPrivateIp(ip)) {
+      throw new Error('URLs pointing to private or internal addresses are not allowed');
+    }
+  }
+  return parsed;
+};
+
+// Fetch with manual redirect following, re-validating every hop
+const fetchSafe = async (rawUrl, maxRedirects = 5) => {
+  let current = await validateUrl(rawUrl);
+  for (let i = 0; i <= maxRedirects; i++) {
+    const res = await fetch(current.href, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MealPlanBot/1.0)' },
+      redirect: 'manual'
+    });
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get('location');
+      if (!location) return res;
+      current = await validateUrl(new URL(location, current.href).href);
+      continue;
+    }
+    return res;
+  }
+  throw new Error('Too many redirects');
+};
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -12,9 +86,7 @@ Deno.serve(async (req) => {
     // Fetch the page content
     let pageText = '';
     try {
-      const pageRes = await fetch(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MealPlanBot/1.0)' }
-      });
+      const pageRes = await fetchSafe(url);
       const html = await pageRes.text();
       // Strip HTML tags to get readable text
       pageText = html
