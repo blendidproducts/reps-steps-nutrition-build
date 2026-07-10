@@ -16,6 +16,13 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Owner and repo are required' }, { status: 400 });
         }
 
+        // Strict validation: GitHub owner/repo names only allow alphanumerics,
+        // hyphens, underscores, and dots. Reject path traversal and any other chars.
+        const namePattern = /^[a-zA-Z0-9_.-]+$/;
+        if (!namePattern.test(owner) || !namePattern.test(repo)) {
+            return Response.json({ error: 'Invalid owner or repo name' }, { status: 400 });
+        }
+
         const { accessToken } = await base44.asServiceRole.connectors.getConnection("github");
 
         const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases`, {
