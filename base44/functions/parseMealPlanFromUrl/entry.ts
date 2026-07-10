@@ -20,7 +20,9 @@ const isPrivateIp = (ip) => {
   return false;
 };
 
-// Validate scheme + resolve hostname + reject internal destinations
+// Validate scheme + resolve hostname + reject internal destinations.
+// Returns the parsed URL, the validated IP, and the original hostname so the
+// fetch can connect directly to the pinned IP (DNS-rebinding / TOCTOU safe).
 const validateUrl = async (rawUrl) => {
   let parsed;
   try {
@@ -47,26 +49,41 @@ const validateUrl = async (rawUrl) => {
     }
   }
   if (addresses.length === 0) throw new Error('Could not resolve hostname');
+  let validatedIp = null;
   for (const ip of addresses) {
     if (isPrivateIp(ip)) {
       throw new Error('URLs pointing to private or internal addresses are not allowed');
     }
+    if (!validatedIp) validatedIp = ip;
   }
-  return parsed;
+  return { url: parsed, ip: validatedIp, host };
 };
 
-// Fetch with manual redirect following, re-validating every hop
+// Build a fetch URL that connects directly to the validated IP, preserving
+// scheme, port, path, and query. IPv6 addresses are bracketed per RFC 3986.
+const pinnedUrl = (url, ip) => {
+  const ipHost = ip.includes(':') ? `[${ip}]` : ip;
+  const port = url.port ? `:${url.port}` : '';
+  return `${url.protocol}//${ipHost}${port}${url.pathname}${url.search}`;
+};
+
+// Fetch with manual redirect following, re-validating every hop. Connects to
+// the validated IP and sends the original hostname in the Host header so the
+// target server routes correctly — no second DNS lookup occurs.
 const fetchSafe = async (rawUrl, maxRedirects = 5) => {
   let current = await validateUrl(rawUrl);
   for (let i = 0; i <= maxRedirects; i++) {
-    const res = await fetch(current.href, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MealPlanBot/1.0)' },
+    const res = await fetch(pinnedUrl(current.url, current.ip), {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; MealPlanBot/1.0)',
+        'Host': current.host
+      },
       redirect: 'manual'
     });
     if (res.status >= 300 && res.status < 400) {
       const location = res.headers.get('location');
       if (!location) return res;
-      current = await validateUrl(new URL(location, current.href).href);
+      current = await validateUrl(new URL(location, current.url.href).href);
       continue;
     }
     return res;
