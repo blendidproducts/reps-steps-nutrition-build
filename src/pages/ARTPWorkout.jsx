@@ -72,11 +72,11 @@ const CONDITIONING_EXERCISES = new Set(["Jumping Jack", "High Knee", "Jump Squat
 // Light, no-equipment moves to raise heart rate and loosen joints. Each runs on a
 // timer and auto-advances; the user can skip any move or the whole warm-up.
 const WARMUP_ROUTINE = [
-  { name: "Arm Circles",        seconds: 30, emoji: "🔄", cue: "Big forward then backward circles — loosen the shoulders" },
-  { name: "Hip Circles",        seconds: 30, emoji: "🌀", cue: "Hands on hips — slow circles each direction" },
-  { name: "Bodyweight Squats",  seconds: 30, emoji: "🦵", cue: "Slow and controlled — warm up the knees and hips" },
-  { name: "Toe Touches",        seconds: 30, emoji: "🙆", cue: "Reach for your toes — gentle hamstring stretch" },
-  { name: "Marching High Knees",seconds: 30, emoji: "🏃", cue: "March in place — drive knees up, pump the arms" },
+  { name: "Arm Circles",        seconds: 30, emoji: "🔄", cue: "Big forward then backward circles — loosen the shoulders", imgKeys: ["arm circles", "arm circle"] },
+  { name: "Hip Circles",        seconds: 30, emoji: "🌀", cue: "Hands on hips — slow circles each direction", imgKeys: ["hip circles", "hip circle", "hip rotation"] },
+  { name: "Bodyweight Squats",  seconds: 30, emoji: "🦵", cue: "Slow and controlled — warm up the knees and hips", imgKeys: ["squat", "air squat", "bodyweight squat"] },
+  { name: "Toe Touches",        seconds: 30, emoji: "🙆", cue: "Reach for your toes — gentle hamstring stretch", imgKeys: ["toe touch", "toe touches", "standing toe touch"] },
+  { name: "Marching High Knees",seconds: 30, emoji: "🏃", cue: "March in place — drive knees up, pump the arms", imgKeys: ["high knee", "high knees", "marching high knees"] },
 ];
 const WARMUP_TOTAL_SECS = WARMUP_ROUTINE.reduce((t, m) => t + m.seconds, 0);
 
@@ -809,10 +809,11 @@ function ManualRepCounter({ onCount }) {
 }
 
 // ── Warm-up Screen — guided timed mobility sequence ──────────────────────────
-function WarmupScreen({ onFinish, onSkipAll }) {
+function WarmupScreen({ onFinish, onSkipAll, imageMap = {} }) {
   const [idx, setIdx]   = useState(0);
   const [secs, setSecs] = useState(WARMUP_ROUTINE[0].seconds);
   const move = WARMUP_ROUTINE[idx];
+  const moveImg = (move.imgKeys || []).map((k) => imageMap[k]).find(Boolean);
   const isLast = idx >= WARMUP_ROUTINE.length - 1;
 
   // Announce each move
@@ -864,7 +865,13 @@ function WarmupScreen({ onFinish, onSkipAll }) {
 
       {/* Current move */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-        <div className="text-[120px] leading-none mb-4">{move.emoji}</div>
+        {moveImg ? (
+          <div className="w-44 h-44 sm:w-52 sm:h-52 rounded-2xl overflow-hidden border-2 border-orange-400/40 mb-4 bg-black/30 shadow-lg">
+            <img src={moveImg} alt={move.name} className="w-full h-full object-cover" />
+          </div>
+        ) : (
+          <div className="text-[120px] leading-none mb-4">{move.emoji}</div>
+        )}
         <h2 className="text-3xl font-black mb-2">{move.name}</h2>
         <p className="text-gray-400 text-sm max-w-xs leading-relaxed mb-8">{move.cue}</p>
         <div className="text-7xl font-black tabular-nums text-orange-400">{secs}</div>
@@ -1541,6 +1548,7 @@ function ARTPWorkoutInner() {
       {/* ── Warm-up ───────────────────────────────────────────────── */}
       {phase === "warmup" && (
         <WarmupScreen
+          imageMap={exImageMapRef.current}
           onFinish={() => { setCountdownSecs(3); setPhase("countdown"); }}
           onSkipAll={() => { setCountdownSecs(3); setPhase("countdown"); }}
         />
