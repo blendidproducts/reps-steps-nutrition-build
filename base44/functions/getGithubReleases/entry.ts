@@ -9,6 +9,13 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        // The GitHub connector token (asServiceRole) has broad 'repo' scope and
+        // can read private repos. Restrict this endpoint to admins so standard
+        // users cannot query arbitrary (including private) repositories.
+        if (user.role !== 'admin') {
+            return Response.json({ error: 'Forbidden: admin access required' }, { status: 403 });
+        }
+
         const body = await req.json();
         const { owner, repo } = body;
 
