@@ -1226,7 +1226,7 @@ function ARTPWorkoutInner() {
 
   // ── PHASE: setup ───────────────────────────────────────────────────
   if (phase === "setup") return (
-    <div className="fixed inset-0 bg-[#020817] flex flex-col text-white">
+    <div className="min-h-screen bg-[#020817] flex flex-col text-white">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 bg-[#111] border-b border-gray-800 sticky top-0 z-10"
         style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 52px)", paddingBottom: "12px" }}>

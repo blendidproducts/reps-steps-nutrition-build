@@ -470,7 +470,7 @@ export default function AIWorkoutGenerator() {
         </div>
       </div>
 
-      <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8 pb-32 sm:pb-40 max-w-4xl overflow-hidden">
+      <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8 pb-48 sm:pb-44 max-w-4xl overflow-x-hidden">
         {/* Step 1: Choose Level */}
         {currentStep === 1 && (
           <motion.div

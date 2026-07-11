@@ -31,8 +31,16 @@ Three changes, built in the sync folder and esbuild-verified:
 2. **AI tracking in program/regular mode** (`src/pages/ActiveWorkout.jsx`): the reps counter now shows an "Enable AI Rep Tracking" button whenever the current exercise is body-trackable (via `matchExercise`). It launches `RepTracker` inline; on completion the counted reps flow into the set. Experimental exercises show a BETA tag.
 3. **ARTP warm-up** (`src/pages/ARTPWorkout.jsx`): optional guided mobility warm-up (`WARMUP_ROUTINE`, ~2.5 min) with a toggle on the setup screen (remembered in `localStorage` key `artp_warmup`). Runs as a new `warmup` phase before the countdown, with skip-move and skip-all controls.
 
+### Round 13b — UI fixes (2026-07-09)
+- **Green AI-tracking button** (`ActiveWorkout.jsx`): the program/regular-mode AI button was recolored green and moved onto its own row directly below the VIDEO / 3D buttons (was a blue button buried under the rep counter, hard to spot). Shows a BETA tag for experimental exercises.
+- **ARTP START button off-screen fix** (`ARTPWorkout.jsx`): the setup screen is now a full-viewport flex column (`fixed inset-0`) with the START bar as an in-flow footer instead of `fixed bottom-0`. A framer-motion transformed ancestor was trapping the fixed element and pushing START below the viewport.
+- **Select all / Clear all**:
+  - `ARTPWorkout.jsx` — explicit "Select all" + "Clear all" buttons in the Exercises list header.
+  - `Exercises.jsx` — "Select all" (all currently-filtered exercises) + "Clear all" toolbar above the exercise grid, with a live selected count.
+  - `WorkoutBuilder.jsx` — "Clear all" on the Exercise List header (no "Select all" here — this screen has no browse list; exercises are chosen on the Exercises page). NOTE: `WorkoutBuilder.jsx` is now part of the sync overlay.
+
 ## Next steps (in order)
-1. **QA round 13 on the live app** — ARTP: new variations appear + count reps; warm-up toggle runs the sequence then flows into the workout. Program mode: "Enable AI Rep Tracking" button appears on trackable exercises and records reps. Sanity-check the Beta variations (decline/pike/pistol) count reasonably.
+1. **QA round 13 on the live app** — ARTP: new variations appear + count reps; warm-up toggle runs the sequence then flows into the workout; START button sits at the visible bottom; Select all / Clear all work. Program mode: green "AI REP TRACKING" button (below VIDEO/3D) appears on trackable exercises and records reps. Exercises page + WorkoutBuilder: Select all / Clear all work. Sanity-check the Beta variations (decline/pike/pistol) count reasonably.
 2. **Test Active Session clock/timer stopping** — verify the timer stops correctly during a live session.
 3. **Test AI add-on purchases** — Fitness Brain and AI Nutrition are separate Stripe add-ons; run a purchase test for each and confirm the webhook grants the right entitlement (they are NOT covered by `pro_monthly`/`pro_annual`).
 4. **Finish `/ExerciseImages`** — upload remaining missing exercise photos; paste remaining YouTube links.
