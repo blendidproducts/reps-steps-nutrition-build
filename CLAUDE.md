@@ -1,5 +1,5 @@
 # Reps & Steps — Project Context (CLAUDE.md)
-_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-13 (Round 14)_
+_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-13 (Round 15)_
 
 > This file lives at the repo root so any machine that clones the repo (and any Claude session opened on it) has full project context.
 
@@ -55,8 +55,16 @@ Jace field-tested ARTP on an iPhone + tripod (2026-07-13 morning). Six issues re
 6. **Bulgarian Split Squat (untested by Jace)**: found a real bug anyway — it (plus Lunge, Reverse Lunge, Step Up, Pistol) hard-coded the LEFT knee, so right-leg-forward reps were invisible. All single-leg moves now use `workingKneeAngle()` (better-visible leg). Needs live QA.
 - **⚠️ GOTCHA HIT AGAIN (three times this round):** connected-folder edits truncated `ARTPWorkout.jsx` mid-write, left trailing NUL bytes on `exerciseTracking.js`, and truncated this `CLAUDE.md`. Recovery: patch a copy in the sandbox, esbuild-verify, byte-copy back, `cmp` to confirm. Always `cmp` + esbuild after ANY edit in the sync folder.
 
+## Round 15 — ARTP QA fixes, second live test (2026-07-13)
+Jace's second field test (talk-to-text notes). Five issues; all fixed in the sync folder, esbuild-verified, staged (not yet pushed):
+1. **Timed-mode countdown invisible** — the timer existed only as a 24px number in the thin top bar (unreadable from a tripod). `RepTracker` now takes `timedMode`/`secondsLeft` and renders a BIG 64px countdown pill top-center of the camera view (red + pulsing at ≤5 s), and ARTP speaks "10 seconds" then "3, 2, 1" via TTS.
+2. **Camera permission asked every exercise** — `RepTracker` stopped its stream on unmount and re-ran getUserMedia per exercise, so iOS re-prompted each time. Now a module-scope shared stream (`acquireCamera`/`releaseSharedCamera`, exported) survives across exercises; ARTP passes `keepCameraAlive` and releases on setup/done/unmount. Facing choice persists (`localStorage rns_cam_facing`). NOTE: iOS Safari may still prompt once per browsing session for the web app — the Capacitor native build remembers permanently.
+3. **Summary showed 0 reps for all but the last exercise (+ timer expiry recorded nothing)** — ROOT CAUSE: `finishExercise(pendingReps.current)` ran on timer expiry/skip, but `pendingReps` was only set by the DONE button. `RepTracker` now has `onCountChange` reporting the live count continuously; ARTP keeps `aiRepsRef`/`manualRepsRef` and commits `Math.max` of both. DONE, timer expiry, Skip, and End-Workout all record correct reps now.
+4. **Active recovery card needed scrolling** — `GuidedRestScreen` changed from bottom sheet (72vh, justify-end) to a centered card (max-w 560px, 88vh, fully rounded).
+5. **Active recovery reachable anywhere** — `ExercisePreviewCard` now has an "ACTIVE RECOVERY — walk · jog · sprint" button (preview phase renders `MidExerciseRecovery`, raised to z 100001 to sit above the preview at 99998). Already existed during exercises (top-bar steps chip) and rests.
+
 ## Next steps (in order)
-1. **Push + Publish rounds 13c + 14** — staged in the sync folder, not yet pushed. Run `push-reps-updates.ps1` → Publish.
+1. **Push + Publish rounds 13c + 14 + 15** — staged in the sync folder, not yet pushed. Run `push-reps-updates.ps1` → Publish.
 2. **Re-QA on iPhone + tripod** — warm-up waits for START; rest screen shows next-exercise photo + speaks it; push-up/squat/diamond counts feel right (watch for over-counting now thresholds are looser — tighten toward 95 if shallow reps count); Bulgarian Split Squat with EACH leg forward; confirm Tricep Extension gone from ARTP builder.
 3. **QA round 13/13b leftovers** — program mode green "AI REP TRACKING" button records reps; Select all / Clear all; Beta variations (decline/pike/pistol) count reasonably.
 4. **Test Active Session clock/timer stopping** — verify the timer stops correctly during a live session.
@@ -98,6 +106,7 @@ Jace field-tested ARTP on an iPhone + tripod (2026-07-13 morning). Six issues re
 - Homepage = `/public/index.html`. Other pages: `app-download.html`, `download.html` (Stripe success), `dashboard.html`, `login/signup`, plus PDF-program pages. `website-index.html` / `website-index_1.html` are backups (not served).
 - **All app links funnel to `https://repsandstepsartp.base44.app`** (one of several working hostnames for the same Base44 app; others: `reps-steps-nutrition-build.base44.app`, `...-copy-992a9659...`). Standardized 2026-07-13.
 - **`AiRTP`** = the site's brand name for AI Rep Tracking. Homepage has a dedicated `#artp` section (skeleton-tracking stills in `/public/images/artp-*.jpg`, extracted from the exercise videos in `RnS_ARTP/`) + updated app-home image (`images/app-home.jpg`).
+- **QR code (2026-07-13):** all 29 served pages have a footer "SCAN TO GET THE APP" block (`id=rns-qr-block`, inline-styled, before `</body>`) linking + QR-ing to `https://repsandstepsartp.base44.app`. QR asset: `/public/images/qr-app.png` (brand-blue rounded modules, logo-icon center, error-correction H, decode-verified). Shareable 2048px versions in `Documents\Pers\RepsAndSteps\QR-codes\`. index.html ALSO has a hero QR (`rns-hero-qr`, in the ARTP hero panel beside the Get-the-App CTA; hidden ≤640px since you can't scan your own phone). Skipped: pricing.html (redirect stub) + website-index backups. Regenerate: script pattern in QR-codes (python qrcode+PIL). Remember: site deploys via aplus File Manager/FTP, NOT the push script.
 - **3D demo POC** = `/public/3d-demo.html` — Google `<model-viewer>` showing animated GLBs (`/public/models/burpee.glb`, `pistol-squat.glb`). Source GLBs in `3D/glb/` were 80–156 MB / 3M-vertex; compressed with **Draco** (gltf-transform) to ~4.7 MB. model-viewer needs **Draco, NOT meshopt** (no bundled meshopt decoder). Models have ~950 units of empty bbox below the feet, so the page reframes on load (target = box center + 0.4×height, radius = 1.8×height).
 
 ## Gotchas

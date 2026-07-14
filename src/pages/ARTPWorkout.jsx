@@ -21,7 +21,7 @@ import { base44 } from "@/api/base44Client";
 import { User } from "@/entities/User";
 import { checkIsPro } from "@/lib/proCheck";
 import { motion, AnimatePresence } from "framer-motion";
-import RepTracker from "@/components/workout/RepTracker";
+import RepTracker, { releaseSharedCamera } from "@/components/workout/RepTracker";
 import StepTracker from "@/components/StepTracker";
 import {
   Brain, Timer, Zap, ChevronRight, ChevronLeft,
@@ -107,7 +107,7 @@ function formatTime(s) {
 }
 
 // ── Exercise Preview Card — shown before each exercise starts ─────────────────
-function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl }) {
+function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl, onActiveRecovery }) {
   // Countdown only runs AFTER user presses START NOW — never auto-launches
   const [started, setStarted] = useState(false);
   const [count,   setCount]   = useState(3);
@@ -208,6 +208,14 @@ function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl })
             </div>
           )}
         </div>
+
+        {/* Active recovery — available between every exercise (Round 15) */}
+        {onActiveRecovery && !started && (
+          <button onClick={onActiveRecovery}
+            className="z-10 w-full max-w-xs py-3 rounded-2xl border-2 border-[#00a9ff]/50 bg-[#00a9ff]/10 text-[#00a9ff] font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform">
+            <Footprints className="w-4 h-4" /> ACTIVE RECOVERY — walk · jog · sprint
+          </button>
+        )}
       </div>
     </div>
   );
@@ -288,17 +296,16 @@ function GuidedRestScreen({ nextExercise, nextImageUrl, prevExercise, nextSetNum
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex flex-col justify-end"
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex flex-col justify-center items-center px-3"
       style={{ zIndex: 99990 }}>
 
       <motion.div
-        initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+        initial={{ y: "60%", opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "60%", opacity: 0 }}
         transition={{ type: "spring", damping: 30, stiffness: 320 }}
-        className="bg-gray-900 border-t border-[#00a9ff]/30 text-white w-full flex flex-col overflow-hidden"
+        className="bg-gray-900 border border-[#00a9ff]/30 text-white w-full max-w-[560px] flex flex-col overflow-hidden"
         style={{
-          maxHeight: "72vh",
-          borderRadius: "24px 24px 0 0",
-          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          maxHeight: "88vh",
+          borderRadius: "24px",
         }}>
 
       {/* drag handle */}
@@ -481,7 +488,8 @@ function MidExerciseRecovery({ totalSteps, onClose }) {
 
   return createPortal(
     <motion.div initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }}
-      className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[10002] flex flex-col items-center justify-center"
+      className="fixed inset-0 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center"
+      style={{ zIndex: 100001 }}
       style={{ padding: 'calc(env(safe-area-inset-top, 16px) + 16px) 16px calc(env(safe-area-inset-bottom, 16px) + 16px)' }}>
 
       <div className="bg-gray-900 border border-[#00a9ff]/40 rounded-2xl w-full max-w-sm overflow-hidden">
@@ -987,6 +995,8 @@ function ARTPWorkoutInner() {
   const timerRef      = useRef(null);
   const elapsedRef    = useRef(null);
   const pendingReps   = useRef(0);
+  const aiRepsRef     = useRef(0);   // live count from RepTracker (Round 15)
+  const manualRepsRef = useRef(0);   // live count from ManualRepCounter
   const stepBaseRef   = useRef(0);
   const stepLastRef   = useRef(0);
   const exImageMapRef = useRef({}); // exercise name → image_url from backend
@@ -1143,6 +1153,8 @@ function ARTPWorkoutInner() {
 
   const advanceToNext = useCallback(() => {
     pendingReps.current = 0;
+    aiRepsRef.current = 0;
+    manualRepsRef.current = 0;
     if (isLastEx && currentSet < totalSets) {
       // Start next set
       setCurrentSet(s => s + 1);
@@ -1178,12 +1190,27 @@ function ARTPWorkoutInner() {
     return () => clearInterval(timerRef.current);
   }, [phase, mode, exerciseIndex, currentSet, isPaused, finishExercise]);
 
+  // Audible time cues (Round 15) — the tiny top-bar timer can't be read from a
+  // tripod across the room; the camera view now shows a big countdown too.
+  useEffect(() => {
+    if (phase !== "working" || mode !== "time" || isPaused) return;
+    if (timerSecs === 10) speak("10 seconds", 1.1, 1.1);
+    else if (timerSecs > 0 && timerSecs <= 3) speak(String(timerSecs), 1.2, 1.2);
+  }, [timerSecs, phase, mode, isPaused]);
+
+  // Release the shared camera when the session ends (and on unmount) — during
+  // the workout the stream stays alive so iOS asks for permission only once.
+  useEffect(() => {
+    if (phase === "setup" || phase === "done") releaseSharedCamera();
+  }, [phase]);
+  useEffect(() => () => releaseSharedCamera(), []);
+
   const handleStart = () => {
     if (!mode || activeList.length === 0) return;
     setExerciseIndex(0); setCurrentSet(1); setScores([]);
     setCountdownSecs(3); setTimerSecs(timePerEx);
     setElapsedSecs(0); setTotalSteps(0); setIsPaused(false);
-    pendingReps.current = 0;
+    pendingReps.current = 0; aiRepsRef.current = 0; manualRepsRef.current = 0;
     stepBaseRef.current = 0; stepLastRef.current = 0;
     setPhase(warmupEnabled ? "warmup" : "countdown");
   };
@@ -1192,7 +1219,7 @@ function ARTPWorkoutInner() {
     setExerciseIndex(0); setCurrentSet(1); setScores([]);
     setCountdownSecs(3); setTimerSecs(timePerEx);
     setElapsedSecs(0); setTotalSteps(0); setIsPaused(false);
-    pendingReps.current = 0;
+    pendingReps.current = 0; aiRepsRef.current = 0; manualRepsRef.current = 0;
     stepBaseRef.current = 0; stepLastRef.current = 0;
     setPhase("setup");
   };
@@ -1611,13 +1638,25 @@ function ARTPWorkoutInner() {
 
       {/* ── Preview ───────────────────────────────────────────────── */}
       {phase === "preview" && createPortal(
-        <ExercisePreviewCard
-          exercise={currentEx}
-          setNum={currentSet}
-          totalSets={totalSets}
-          imageUrl={exImageMapRef.current[currentEx?.name?.toLowerCase()]}
-          onStart={() => { setPhase("working"); }}
-        />,
+        <>
+          <ExercisePreviewCard
+            exercise={currentEx}
+            setNum={currentSet}
+            totalSets={totalSets}
+            imageUrl={exImageMapRef.current[currentEx?.name?.toLowerCase()]}
+            onStart={() => { setPhase("working"); }}
+            onActiveRecovery={() => { setShowMidRest(true); speak("Active recovery mode", 1.05, 1.05); }}
+          />
+          <AnimatePresence>
+            {showMidRest && (
+              <MidExerciseRecovery
+                key="mid-rest-preview"
+                totalSteps={totalSteps}
+                onClose={() => setShowMidRest(false)}
+              />
+            )}
+          </AnimatePresence>
+        </>,
         document.body
       )}
 
@@ -1718,6 +1757,13 @@ function ARTPWorkoutInner() {
             targetReps={mode === "goal" ? repGoalPerEx : mode === "time" ? targetRepsPerEx : 0}
             autoAdvance={mode === "goal"}
             defaultFacingMode="user"
+            keepCameraAlive={true}
+            timedMode={mode === "time"}
+            secondsLeft={mode === "time" ? timerSecs : null}
+            onCountChange={(c) => {
+              aiRepsRef.current = c;
+              pendingReps.current = Math.max(aiRepsRef.current, manualRepsRef.current);
+            }}
             paused={isPaused || showMidRest}
             onPause={isPaused ? handleResume : handlePause}
             onComplete={handleRepTrackerComplete}
@@ -1726,7 +1772,10 @@ function ARTPWorkoutInner() {
           {CONDITIONING_EXERCISES.has(currentEx?.name) && (
             <ManualRepCounter
               key={`mc-${exerciseIndex}-set${currentSet}`}
-              onCount={(n) => { pendingReps.current = n; }}
+              onCount={(n) => {
+                manualRepsRef.current = n;
+                pendingReps.current = Math.max(aiRepsRef.current, manualRepsRef.current);
+              }}
             />
           )}
         </>

@@ -43,8 +43,31 @@ const CONNECTIONS = [
   [27,29],[28,30],[29,31],[30,32],[27,31],[28,32],
 ];
 
+// ── Shared camera stream (Round 15) ───────────────────────────────────────────
+// Re-requesting getUserMedia for every exercise made iOS prompt for camera
+// permission each time. Keep ONE stream alive across the whole workout; the
+// workout page passes keepCameraAlive and calls releaseSharedCamera() at the end.
+let sharedStream = null;
+let sharedFacing = null;
+export function releaseSharedCamera() {
+  try { sharedStream?.getTracks().forEach((t) => t.stop()); } catch (_) {}
+  sharedStream = null;
+  sharedFacing = null;
+}
+async function acquireCamera(mode) {
+  const live = sharedStream?.getVideoTracks?.().some((t) => t.readyState === "live");
+  if (sharedStream && live && sharedFacing === mode) return sharedStream;
+  try { sharedStream?.getTracks().forEach((t) => t.stop()); } catch (_) {}
+  sharedStream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } },
+    audio: false,
+  });
+  sharedFacing = mode;
+  return sharedStream;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function RepTracker({ exerciseName, targetReps, onComplete, onClose, defaultFacingMode = "user", exerciseEmoji = "", setLabel = "", paused = false, onPause, autoAdvance = false }) {
+export default function RepTracker({ exerciseName, targetReps, onComplete, onClose, defaultFacingMode = "user", exerciseEmoji = "", setLabel = "", paused = false, onPause, autoAdvance = false, onCountChange, keepCameraAlive = false, secondsLeft = null, timedMode = false }) {
   const initialConfig = matchExercise(exerciseName);
 
   const videoRef       = useRef(null);
@@ -62,7 +85,9 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
   const [stage,          setStage]          = useState(null);
   const [currentAngle,   setCurrentAngle]   = useState(0);
   const [showSkeleton,   setShowSkeleton]   = useState(true);
-  const [facingMode,     setFacingMode]     = useState(defaultFacingMode);
+  const [facingMode,     setFacingMode]     = useState(() => {
+    try { return sharedFacing || localStorage.getItem("rns_cam_facing") || defaultFacingMode; } catch (_) { return defaultFacingMode; }
+  });
   const [repFlash,       setRepFlash]       = useState(false);
   const [poseDetected,         setPoseDetected]         = useState(false);
   const [multiPersonDetected,  setMultiPersonDetected]  = useState(false);
@@ -143,15 +168,8 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
 
   // ── Camera ─────────────────────────────────────────────────────
   const startCamera = useCallback(async (mode) => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
     cancelAnimationFrame(animFrameRef.current);
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false,
-    });
+    const stream = await acquireCamera(mode); // reuses live stream — no new permission prompt
     streamRef.current = stream;
     const track = stream.getVideoTracks()[0];
     if (track) {
@@ -172,14 +190,16 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
   const flipCamera = useCallback(async () => {
     const next = facingMode === "user" ? "environment" : "user";
     setFacingMode(next);
+    try { localStorage.setItem("rns_cam_facing", next); } catch (_) {}
     await startCamera(next);
   }, [facingMode, startCamera]);
 
   const cleanup = useCallback(() => {
     cancelAnimationFrame(animFrameRef.current);
-    if (streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null; }
+    if (!keepCameraAlive) releaseSharedCamera(); // keep stream alive between exercises during a workout
+    streamRef.current = null;
     if (landmarkerRef.current) { try { landmarkerRef.current.close(); } catch (_) {} landmarkerRef.current = null; }
-  }, []);
+  }, [keepCameraAlive]);
 
   // ── Detection loop ─────────────────────────────────────────────
   const scheduleDetection = useCallback(() => {
@@ -294,6 +314,11 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
       appListener?.remove?.();
     };
   }, []); // eslint-disable-line
+
+  // ── Live count reporting (Round 15) ────────────────────────────
+  // The parent commits these reps even if DONE is never pressed (timer expiry,
+  // skip, end-workout). Fixes "0 reps in summary" for timed exercises.
+  useEffect(() => { onCountChange?.(repCount); }, [repCount]); // eslint-disable-line
 
   // ── Auto-advance when rep target is reached (goal mode) ────────
   useEffect(() => {
@@ -631,6 +656,18 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
                   {exerciseEmoji && <span className="text-lg">{exerciseEmoji}</span>}
                   <span className="text-white font-bold text-sm">{exerciseConfig?.name || exerciseName}</span>
                   {setLabel && <span className="text-gray-400 text-xs">{setLabel}</span>}
+                </div>
+              </div>
+            )}
+
+            {/* BIG countdown — readable from across the room (timed mode) */}
+            {timedMode && secondsLeft != null && !paused && (
+              <div className="absolute left-0 right-0 flex justify-center z-10 pointer-events-none"
+                style={{ top: 'calc(env(safe-area-inset-top, 0px) + 106px)' }}>
+                <div className={`px-6 py-1.5 rounded-3xl border backdrop-blur-sm bg-black/60 ${secondsLeft <= 5 ? "border-red-500/70" : "border-white/25"}`}>
+                  <span className={`font-black tabular-nums leading-none ${secondsLeft <= 5 ? "text-red-400 animate-pulse" : "text-white"}`}
+                    style={{ fontSize: "64px" }}>{secondsLeft}</span>
+                  <span className="text-white/50 font-bold text-xl ml-1">s</span>
                 </div>
               </div>
             )}
