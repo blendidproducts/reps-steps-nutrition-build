@@ -1,5 +1,5 @@
 # Reps & Steps — Project Context (CLAUDE.md)
-_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-13_
+_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-13 (Round 14)_
 
 > This file lives at the repo root so any machine that clones the repo (and any Claude session opened on it) has full project context.
 
@@ -45,13 +45,24 @@ Three changes, built in the sync folder and esbuild-verified:
 - **Warm-up moves now show real photos** (`ARTPWorkout.jsx`): each `WARMUP_ROUTINE` move has `imgKeys` (DB name candidates); `WarmupScreen` takes an `imageMap` prop (passed `exImageMapRef.current`) and renders the exercise photo if found, else the emoji. Photos only appear for moves that have an `image_url` in the Base44 DB (upload missing ones in `/ExerciseImages`).
 - **⚠️ GOTCHA HIT:** writing `ARTPWorkout.jsx` directly to the connected sync folder **truncated the file mid-write** (the documented "connected-folder truncates large files" issue). Always esbuild-verify after editing large files in the sync folder before pushing. This round's files were all re-verified with esbuild (`npx esbuild <file> --bundle --external:react --external:'@/*' ...`).
 
+## Round 14 — ARTP QA fixes from Jace's live tripod test (2026-07-13)
+Jace field-tested ARTP on an iPhone + tripod (2026-07-13 morning). Six issues reported; all addressed in the sync folder, esbuild-verified, staged (not yet pushed):
+1. **Warm-up had no start button** (`ARTPWorkout.jsx` `WarmupScreen`): the timer started ticking on mount and blew through arm circles while the phone was being set up. Now shows a get-ready screen with a **START WARM-UP** button; nothing ticks or speaks until pressed.
+2. **Active recovery didn't show what's next** (`GuidedRestScreen`): the UP NEXT card now renders the exercise's real photo (via `exImageMapRef`, falls back to emoji), and TTS announces "Next exercise: [name]" ~3.2 s into the rest (delayed so it doesn't cancel the "set complete" phrase — `speak()` cancels in-progress utterances).
+3. **Push-ups/squats missing reps** (`exerciseTracking.js`): thresholds were tuned for a perfect side view; a tripod at an angle reads shallower joint angles, so honest reps never crossed them. Loosened across the push-up family (up 150 / down 100; incline 105) and squat family (up 155 / down 100), with `minRepIntervalMs` (600–700 ms) guarding against double counts. Jace's guess was right: the shoulder→elbow calculation had too little deviation allowance.
+4. **Diamond Push-Up tracked zero reps**: it (and Wide/Incline/Tricep Dip) averaged BOTH arms with no visibility fallback — one occluded arm corrupted the average. All elbow-family entries now use a shared `elbowAngle()` helper (better-visible-side fallback, same as the main push-up). Down-threshold 80°→100° also mattered.
+5. **Tricep Extension removed from ARTP builder**: it duplicated Tricep Dip (same elbow tracking, not one of the 83 canonical DB exercises, no image). Library entry kept in `exerciseTracking.js` for program-mode name matching; only the `ALL_EXERCISES` card was removed.
+6. **Bulgarian Split Squat (untested by Jace)**: found a real bug anyway — it (plus Lunge, Reverse Lunge, Step Up, Pistol) hard-coded the LEFT knee, so right-leg-forward reps were invisible. All single-leg moves now use `workingKneeAngle()` (better-visible leg). Needs live QA.
+- **⚠️ GOTCHA HIT AGAIN (three times this round):** connected-folder edits truncated `ARTPWorkout.jsx` mid-write, left trailing NUL bytes on `exerciseTracking.js`, and truncated this `CLAUDE.md`. Recovery: patch a copy in the sandbox, esbuild-verify, byte-copy back, `cmp` to confirm. Always `cmp` + esbuild after ANY edit in the sync folder.
+
 ## Next steps (in order)
-1. **Push + Publish round 13c** — the warm-up-image + scroll fixes are staged in the sync folder but not yet pushed as of this note. Run `push-reps-updates.ps1` → Publish. Then QA: ARTP setup scrolls and START is reachable; warm-up shows photos where available; AI generator scrolls to its buttons.
-2. **QA round 13/13b on the live app** — ARTP: new variations appear + count reps; warm-up toggle runs the sequence. Program mode: green "AI REP TRACKING" button (below VIDEO/3D) records reps. Exercises page + WorkoutBuilder: Select all / Clear all. Sanity-check Beta variations (decline/pike/pistol) count reasonably.
-2. **Test Active Session clock/timer stopping** — verify the timer stops correctly during a live session.
-3. **Test AI add-on purchases** — Fitness Brain and AI Nutrition are separate Stripe add-ons; run a purchase test for each and confirm the webhook grants the right entitlement (they are NOT covered by `pro_monthly`/`pro_annual`).
-4. **Finish `/ExerciseImages`** — upload remaining missing exercise photos; paste remaining YouTube links.
-5. Optional polish: custom domain `app.repsandsteps.com` (see Domain below).
+1. **Push + Publish rounds 13c + 14** — staged in the sync folder, not yet pushed. Run `push-reps-updates.ps1` → Publish.
+2. **Re-QA on iPhone + tripod** — warm-up waits for START; rest screen shows next-exercise photo + speaks it; push-up/squat/diamond counts feel right (watch for over-counting now thresholds are looser — tighten toward 95 if shallow reps count); Bulgarian Split Squat with EACH leg forward; confirm Tricep Extension gone from ARTP builder.
+3. **QA round 13/13b leftovers** — program mode green "AI REP TRACKING" button records reps; Select all / Clear all; Beta variations (decline/pike/pistol) count reasonably.
+4. **Test Active Session clock/timer stopping** — verify the timer stops correctly during a live session.
+5. **Test AI add-on purchases** — Fitness Brain and AI Nutrition are separate Stripe add-ons; run a purchase test for each and confirm the webhook grants the right entitlement (they are NOT covered by `pro_monthly`/`pro_annual`).
+6. **Finish `/ExerciseImages`** — upload remaining missing exercise photos; paste remaining YouTube links.
+7. Optional polish: custom domain `app.repsandsteps.com` (see Domain below).
 
 ## Built so far (through ~round 12)
 6 workout programs + nutrition (ProgramSeed); Stretches page rebuilt (always-populated library, Mobility tab, instructions, images, inline YouTube, 3D, timer audio, error boundary); Active Session redesigned to mockup (image+timer side-by-side, TIPS, navy full-screen); $9.99 + $99/yr annual toggle on Pricing/Home/AddOns; WorkoutGenie prompt box; front camera default; per-exercise YouTube field + "Add Missing Photos" auto-fill (57 of 83) in admin tools; Program Guides (PDF) page; unified navy (#020817)/blue (#00a9ff) theme.

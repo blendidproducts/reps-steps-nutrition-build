@@ -50,6 +50,43 @@ export function getDist(a, b) {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
+// ── Shared joint-angle helpers (visibility-aware) ─────────────────────────────
+// Round 14: several variations (Diamond/Wide/Incline push-ups, Tricep Dip)
+// averaged BOTH arms with no visibility fallback — if one arm was occluded
+// (common on phone/tripod at an angle) the average was corrupted and reps
+// never crossed the thresholds. These helpers pick the better-visible side.
+
+/** Elbow angle — averages both arms when visible, falls back to the clearer one */
+function elbowAngle(lm) {
+  const lVis = (lm[11]?.visibility ?? 0) + (lm[13]?.visibility ?? 0) + (lm[15]?.visibility ?? 0);
+  const rVis = (lm[12]?.visibility ?? 0) + (lm[14]?.visibility ?? 0) + (lm[16]?.visibility ?? 0);
+  const L = getAngle(lm[11], lm[13], lm[15]);
+  const R = getAngle(lm[12], lm[14], lm[16]);
+  if (lVis < 1.0) return R;
+  if (rVis < 1.0) return L;
+  return (L + R) / 2;
+}
+
+/** Knee angle — averages both legs when visible, falls back to the clearer one */
+function kneeAngle(lm) {
+  const lVis = (lm[23]?.visibility ?? 0) + (lm[25]?.visibility ?? 0) + (lm[27]?.visibility ?? 0);
+  const rVis = (lm[24]?.visibility ?? 0) + (lm[26]?.visibility ?? 0) + (lm[28]?.visibility ?? 0);
+  const L = getAngle(lm[23], lm[25], lm[27]);
+  const R = getAngle(lm[24], lm[26], lm[28]);
+  if (lVis < 1.0) return R;
+  if (rVis < 1.0) return L;
+  return (L + R) / 2;
+}
+
+/** Single working knee — uses whichever leg the camera sees best (lunges, split
+ *  squats, step-ups, pistols). The old configs hard-coded the LEFT leg only, so
+ *  right-leg-forward reps were invisible to the tracker. */
+function workingKneeAngle(lm) {
+  const lVis = (lm[23]?.visibility ?? 0) + (lm[25]?.visibility ?? 0) + (lm[27]?.visibility ?? 0);
+  const rVis = (lm[24]?.visibility ?? 0) + (lm[26]?.visibility ?? 0) + (lm[28]?.visibility ?? 0);
+  return lVis >= rVis ? getAngle(lm[23], lm[25], lm[27]) : getAngle(lm[24], lm[26], lm[28]);
+}
+
 // ── Exercise Library ──────────────────────────────────────────────────────────
 // Each entry:
 //   id           – unique string
@@ -79,20 +116,14 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Push',
     color: '#ef4444',
-    getAngle: (lm) => {
-      // Use BOTH elbows — average for robustness; fallback to best visible one
-      const lVis = (lm[11]?.visibility ?? 0) + (lm[13]?.visibility ?? 0) + (lm[15]?.visibility ?? 0);
-      const rVis = (lm[12]?.visibility ?? 0) + (lm[14]?.visibility ?? 0) + (lm[16]?.visibility ?? 0);
-      const L = getAngle(lm[11], lm[13], lm[15]);
-      const R = getAngle(lm[12], lm[14], lm[16]);
-      if (lVis < 1.0) return R;   // only right side visible
-      if (rVis < 1.0) return L;   // only left side visible
-      return (L + R) / 2;         // both visible
-    },
-    // Tuned for side-view (phone on floor beside you) AND front-angle cameras:
-    // DOWN = elbows bent ~80°  UP = arms fully extended ~165°
-    upThreshold: 155,    // arms locked out at top — slightly below 180 for real-world variance
-    downThreshold: 85,   // chest near floor — tighter range catches full reps only
+    getAngle: (lm) => elbowAngle(lm),
+    // Round 14: loosened for tripod/angled cameras — 85° down required chest
+    // nearly on the floor as READ BY THE CAMERA; off-axis views read shallower
+    // angles than reality, so real reps were missed. Hysteresis (must pass BOTH
+    // thresholds) + minRepIntervalMs still prevent double counts.
+    upThreshold: 150,    // arms extended at top — forgiving of off-axis reads
+    downThreshold: 100,  // elbows clearly bent — counts honest reps at an angle
+    minRepIntervalMs: 600,
     direction: 'down_then_up',
     primaryJoint: 'Elbow',
     formCues: [
@@ -110,14 +141,11 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Push',
     color: '#f97316',
-    getAngle: (lm) => {
-      const L = getAngle(lm[11], lm[13], lm[15]);
-      const R = getAngle(lm[12], lm[14], lm[16]);
-      return (L + R) / 2;
-    },
-    upThreshold: 160,
-    downThreshold: 80,
+    getAngle: (lm) => elbowAngle(lm),
+    upThreshold: 150,
+    downThreshold: 100,
     direction: 'down_then_up',
+    minRepIntervalMs: 600,
     primaryJoint: 'Elbow',
     formCues: ['Hands form a diamond', 'Elbows tight to body', 'Full tricep extension'],
   },
@@ -129,14 +157,11 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Push',
     color: '#ef4444',
-    getAngle: (lm) => {
-      const L = getAngle(lm[11], lm[13], lm[15]);
-      const R = getAngle(lm[12], lm[14], lm[16]);
-      return (L + R) / 2;
-    },
-    upThreshold: 160,
-    downThreshold: 90,
+    getAngle: (lm) => elbowAngle(lm),
+    upThreshold: 150,
+    downThreshold: 100,
     direction: 'down_then_up',
+    minRepIntervalMs: 600,
     primaryJoint: 'Elbow',
     formCues: ['Hands wider than shoulders', 'Chest to floor', 'Squeeze chest at top'],
   },
@@ -148,11 +173,7 @@ export const EXERCISE_LIBRARY = [
     trackable: 'experimental',
     category: 'Push',
     color: '#f97316',
-    getAngle: (lm) => {
-      const L = getAngle(lm[11], lm[13], lm[15]);
-      const R = getAngle(lm[12], lm[14], lm[16]);
-      return (L + R) / 2;
-    },
+    getAngle: (lm) => elbowAngle(lm),
     upThreshold: 160,
     downThreshold: 80,
     direction: 'down_then_up',
@@ -167,11 +188,7 @@ export const EXERCISE_LIBRARY = [
     trackable: 'experimental',
     category: 'Push',
     color: '#ef4444',
-    getAngle: (lm) => {
-      const L = getAngle(lm[11], lm[13], lm[15]);
-      const R = getAngle(lm[12], lm[14], lm[16]);
-      return (L + R) / 2;
-    },
+    getAngle: (lm) => elbowAngle(lm),
     upThreshold: 160,
     downThreshold: 90,
     direction: 'down_then_up',
@@ -186,14 +203,11 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Push',
     color: '#ef4444',
-    getAngle: (lm) => {
-      const L = getAngle(lm[11], lm[13], lm[15]);
-      const R = getAngle(lm[12], lm[14], lm[16]);
-      return (L + R) / 2;
-    },
-    upThreshold: 160,
-    downThreshold: 90,
+    getAngle: (lm) => elbowAngle(lm),
+    upThreshold: 150,
+    downThreshold: 105,
     direction: 'down_then_up',
+    minRepIntervalMs: 600,
     primaryJoint: 'Elbow',
     formCues: ['Hands on elevated surface', 'Great for beginners', 'Lower chest focus'],
   },
@@ -205,11 +219,7 @@ export const EXERCISE_LIBRARY = [
     trackable: false,
     category: 'Push',
     color: '#f97316',
-    getAngle: (lm) => {
-      const L = getAngle(lm[11], lm[13], lm[15]);
-      const R = getAngle(lm[12], lm[14], lm[16]);
-      return (L + R) / 2;
-    },
+    getAngle: (lm) => elbowAngle(lm),
     upThreshold: 160,
     downThreshold: 90,
     direction: 'down_then_up',
@@ -224,14 +234,11 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Push',
     color: '#f97316',
-    getAngle: (lm) => {
-      const L = getAngle(lm[11], lm[13], lm[15]);
-      const R = getAngle(lm[12], lm[14], lm[16]);
-      return (L + R) / 2;
-    },
-    upThreshold: 160,
-    downThreshold: 90,
+    getAngle: (lm) => elbowAngle(lm),
+    upThreshold: 150,
+    downThreshold: 100,
     direction: 'down_then_up',
+    minRepIntervalMs: 600,
     primaryJoint: 'Elbow',
     formCues: ['Hips close to chair/bench', 'Lower until 90° elbow angle', 'Full extension at top'],
   },
@@ -268,11 +275,7 @@ export const EXERCISE_LIBRARY = [
     trackable: 'experimental',
     category: 'Push',
     color: '#ef4444',
-    getAngle: (lm) => {
-      const L = getAngle(lm[11], lm[13], lm[15]);
-      const R = getAngle(lm[12], lm[14], lm[16]);
-      return (L + R) / 2;
-    },
+    getAngle: (lm) => elbowAngle(lm),
     upThreshold: 160,
     downThreshold: 90,
     direction: 'down_then_up',
@@ -291,11 +294,7 @@ export const EXERCISE_LIBRARY = [
     trackable: false,
     category: 'Pull',
     color: '#8b5cf6',
-    getAngle: (lm) => {
-      const L = getAngle(lm[11], lm[13], lm[15]);
-      const R = getAngle(lm[12], lm[14], lm[16]);
-      return (L + R) / 2;
-    },
+    getAngle: (lm) => elbowAngle(lm),
     upThreshold: 75,
     downThreshold: 160,
     direction: 'up_then_down',
@@ -310,11 +309,7 @@ export const EXERCISE_LIBRARY = [
     trackable: false,
     category: 'Pull',
     color: '#8b5cf6',
-    getAngle: (lm) => {
-      const L = getAngle(lm[11], lm[13], lm[15]);
-      const R = getAngle(lm[12], lm[14], lm[16]);
-      return (L + R) / 2;
-    },
+    getAngle: (lm) => elbowAngle(lm),
     upThreshold: 75,
     downThreshold: 160,
     direction: 'up_then_down',
@@ -329,11 +324,7 @@ export const EXERCISE_LIBRARY = [
     trackable: false,
     category: 'Pull',
     color: '#7c3aed',
-    getAngle: (lm) => {
-      const L = getAngle(lm[11], lm[13], lm[15]);
-      const R = getAngle(lm[12], lm[14], lm[16]);
-      return (L + R) / 2;
-    },
+    getAngle: (lm) => elbowAngle(lm),
     upThreshold: 80,
     downThreshold: 160,
     direction: 'up_then_down',
@@ -348,11 +339,7 @@ export const EXERCISE_LIBRARY = [
     trackable: false,
     category: 'Pull',
     color: '#8b5cf6',
-    getAngle: (lm) => {
-      const L = getAngle(lm[11], lm[13], lm[15]);
-      const R = getAngle(lm[12], lm[14], lm[16]);
-      return (L + R) / 2;
-    },
+    getAngle: (lm) => elbowAngle(lm),
     upThreshold: 160,
     downThreshold: 75,
     direction: 'up_then_down',
@@ -371,20 +358,12 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Legs',
     color: '#22c55e',
-    getAngle: (lm) => {
-      // Use the better-visible knee — from the side, one knee is always clearer
-      const lVis = (lm[23]?.visibility ?? 0) + (lm[25]?.visibility ?? 0) + (lm[27]?.visibility ?? 0);
-      const rVis = (lm[24]?.visibility ?? 0) + (lm[26]?.visibility ?? 0) + (lm[28]?.visibility ?? 0);
-      const L = getAngle(lm[23], lm[25], lm[27]);
-      const R = getAngle(lm[24], lm[26], lm[28]);
-      if (lVis < 1.0) return R;
-      if (rVis < 1.0) return L;
-      return (L + R) / 2;
-    },
-    // Tuned for side-view phone placement:
-    // DOWN = knees at ~90° parallel  UP = legs fully extended ~170°
-    upThreshold: 165,    // fully extended — requires near-straight leg to reset
-    downThreshold: 85,   // below parallel — prevents shallow-squat double counts
+    getAngle: (lm) => kneeAngle(lm),
+    // Round 14: loosened for tripod/angled cameras — 85° required a below-parallel
+    // squat as READ BY THE CAMERA; off-axis views read shallower, so honest
+    // squats weren't counted. minRepIntervalMs still blocks bounce double-counts.
+    upThreshold: 155,    // legs extended at top
+    downThreshold: 100,  // knees clearly bent ~parallel — counts honest depth at an angle
     minRepIntervalMs: 700, // 700ms min between reps prevents bounce double-counting
     direction: 'down_then_up',
     primaryJoint: 'Knee',
@@ -427,8 +406,8 @@ export const EXERCISE_LIBRARY = [
       const R = getAngle(lm[24], lm[26], lm[28]);
       return (L + R) / 2;
     },
-    upThreshold: 160,
-    downThreshold: 90,
+    upThreshold: 155,
+    downThreshold: 100,
     direction: 'down_then_up',
     minRepIntervalMs: 700,
     primaryJoint: 'Knee',
@@ -442,10 +421,11 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Legs',
     color: '#22c55e',
-    getAngle: (lm) => getAngle(lm[23], lm[25], lm[27]),
-    upThreshold: 160,
-    downThreshold: 90,
+    getAngle: (lm) => workingKneeAngle(lm),
+    upThreshold: 155,
+    downThreshold: 100,
     direction: 'down_then_up',
+    minRepIntervalMs: 700,
     primaryJoint: 'Front Knee',
     formCues: ['Front knee behind toes', 'Back knee near floor', 'Upright torso'],
   },
@@ -457,10 +437,11 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Legs',
     color: '#22c55e',
-    getAngle: (lm) => getAngle(lm[23], lm[25], lm[27]),
-    upThreshold: 160,
-    downThreshold: 90,
+    getAngle: (lm) => workingKneeAngle(lm),
+    upThreshold: 155,
+    downThreshold: 100,
     direction: 'down_then_up',
+    minRepIntervalMs: 700,
     primaryJoint: 'Front Knee',
     formCues: ['Step backward', 'Control the descent', 'Push through front heel'],
   },
@@ -472,10 +453,11 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Legs',
     color: '#15803d',
-    getAngle: (lm) => getAngle(lm[23], lm[25], lm[27]),
-    upThreshold: 160,
-    downThreshold: 90,
+    getAngle: (lm) => workingKneeAngle(lm),
+    upThreshold: 155,
+    downThreshold: 100,
     direction: 'down_then_up',
+    minRepIntervalMs: 700,
     primaryJoint: 'Front Knee',
     formCues: ['Rear foot elevated on bench', 'Torso upright', 'Deep range of motion'],
   },
@@ -487,10 +469,11 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Legs',
     color: '#22c55e',
-    getAngle: (lm) => getAngle(lm[23], lm[25], lm[27]),
-    upThreshold: 160,
+    getAngle: (lm) => workingKneeAngle(lm),
+    upThreshold: 155,
     downThreshold: 100,
     direction: 'down_then_up',
+    minRepIntervalMs: 700,
     primaryJoint: 'Knee',
     formCues: ['Step onto elevation', 'Drive through heel', 'Full hip extension at top'],
   },
@@ -577,10 +560,11 @@ export const EXERCISE_LIBRARY = [
     trackable: 'experimental',
     category: 'Legs',
     color: '#16a34a',
-    getAngle: (lm) => getAngle(lm[23], lm[25], lm[27]),
-    upThreshold: 160,
-    downThreshold: 80,
+    getAngle: (lm) => workingKneeAngle(lm),
+    upThreshold: 155,
+    downThreshold: 90,
     direction: 'down_then_up',
+    minRepIntervalMs: 900,
     primaryJoint: 'Knee',
     formCues: ['One leg extended forward', 'Full depth squat', 'Control the descent'],
   },

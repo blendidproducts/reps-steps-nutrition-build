@@ -52,7 +52,8 @@ const ALL_EXERCISES = [
   { name: "Incline Push-Up", cue: "Side view · hands on elevated surface · lower chest",       emoji: "📈", cameraTip: "Place phone on floor beside you" },
   { name: "Decline Push-Up", cue: "Side view · feet elevated · upper-chest focus",             emoji: "📉", cameraTip: "Place phone on floor beside you", beta: true },
   { name: "Tricep Dip",      cue: "Side view · lower until 90° elbow · full extension up",      emoji: "🪑", cameraTip: "Place phone at hip height to side" },
-  { name: "Tricep Extension",cue: "Side view · bend only at the elbow · full lockout",          emoji: "💪", cameraTip: "Place phone at hip height to side" },
+  // "Tricep Extension" removed (Round 14) — duplicated Tricep Dip in the builder
+  // and isn't one of the 83 canonical DB exercises (no image, same elbow tracking).
   // ── Squat variations (knee tracking) ──
   { name: "Bulgarian Split Squat", cue: "Side view · rear foot elevated · deep range",         emoji: "🦵", cameraTip: "Place phone at hip height to side" },
   { name: "Step Up",         cue: "Side view · drive through heel · full hip extension",        emoji: "🪜", cameraTip: "Place phone at hip height to side" },
@@ -213,7 +214,7 @@ function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl })
 }
 
 // ── Guided Rest Screen — styled to match RestScreen.jsx ──────────────────────
-function GuidedRestScreen({ nextExercise, prevExercise, nextSetNum, totalSets, isLastExercise, totalSteps, onSkip, onEndWorkout }) {
+function GuidedRestScreen({ nextExercise, nextImageUrl, prevExercise, nextSetNum, totalSets, isLastExercise, totalSteps, onSkip, onEndWorkout }) {
   const [restSecs,     setRestSecs]    = useState(REST_DEFAULT);
   const [cardioMode,   setCardioMode]  = useState(null); // null | 'walk' | 'jog' | 'sprint'
   const [cardioTimer,  setCardioTimer] = useState(0);
@@ -251,6 +252,15 @@ function GuidedRestScreen({ nextExercise, prevExercise, nextSetNum, totalSets, i
       return () => clearTimeout(t);
     }
   }, [restSecs, cardioMode, onSkip]);
+
+  // Round 14: announce what's coming — delayed so it doesn't cancel the
+  // "set complete / take a rest" phrase already being spoken (speak() cancels
+  // any in-progress utterance).
+  useEffect(() => {
+    if (!nextExercise?.name) return;
+    const t = setTimeout(() => speak(`Next exercise: ${nextExercise.name}`, 1.05, 1.05), 3200);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cardio timer
   useEffect(() => {
@@ -364,7 +374,13 @@ function GuidedRestScreen({ nextExercise, prevExercise, nextSetNum, totalSets, i
                   {nextExercise ? (
                     <div className="bg-[#00a9ff]/10 border border-[#00a9ff]/30 rounded-xl p-3">
                       <p className="text-[9px] text-[#00a9ff] font-bold mb-2">▶ UP NEXT</p>
-                      <div className="text-2xl mb-1">{nextExercise.emoji}</div>
+                      {nextImageUrl ? (
+                        <div className="w-full h-16 rounded-lg overflow-hidden mb-1 bg-black/30">
+                          <img src={nextImageUrl} alt={nextExercise.name} className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="text-2xl mb-1">{nextExercise.emoji}</div>
+                      )}
                       <p className="text-[10px] font-semibold text-white leading-tight">{nextExercise.name}</p>
                     </div>
                   ) : (
@@ -812,17 +828,23 @@ function ManualRepCounter({ onCount }) {
 function WarmupScreen({ onFinish, onSkipAll, imageMap = {} }) {
   const [idx, setIdx]   = useState(0);
   const [secs, setSecs] = useState(WARMUP_ROUTINE[0].seconds);
+  // Round 14: warm-up used to start ticking the moment the screen mounted —
+  // no start button, so it blew through arm circles while you set up the phone.
+  // Nothing runs until the user presses START WARM-UP.
+  const [started, setStarted] = useState(false);
   const move = WARMUP_ROUTINE[idx];
   const moveImg = (move.imgKeys || []).map((k) => imageMap[k]).find(Boolean);
   const isLast = idx >= WARMUP_ROUTINE.length - 1;
 
-  // Announce each move
+  // Announce each move (only once the user has started)
   useEffect(() => {
+    if (!started) return;
     speak(`${move.name}. ${move.cue}`, 1.05, 1.05);
-  }, [idx]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [idx, started]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Per-move countdown — auto-advances, finishes warm-up after the last move
   useEffect(() => {
+    if (!started) return;
     const t = setInterval(() => {
       setSecs((s) => {
         if (s <= 1) {
@@ -835,7 +857,7 @@ function WarmupScreen({ onFinish, onSkipAll, imageMap = {} }) {
       });
     }, 1000);
     return () => clearInterval(t);
-  }, [idx, isLast]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [idx, isLast, started]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const nextMove = () => {
     if (isLast) onFinish();
@@ -874,18 +896,36 @@ function WarmupScreen({ onFinish, onSkipAll, imageMap = {} }) {
         )}
         <h2 className="text-3xl font-black mb-2">{move.name}</h2>
         <p className="text-gray-400 text-sm max-w-xs leading-relaxed mb-8">{move.cue}</p>
-        <div className="text-7xl font-black tabular-nums text-orange-400">{secs}</div>
-        <p className="text-gray-600 text-xs mt-1 uppercase tracking-widest">seconds</p>
+        {started ? (
+          <>
+            <div className="text-7xl font-black tabular-nums text-orange-400">{secs}</div>
+            <p className="text-gray-600 text-xs mt-1 uppercase tracking-widest">seconds</p>
+          </>
+        ) : (
+          <p className="text-orange-300/90 text-sm font-semibold max-w-xs">
+            {WARMUP_ROUTINE.length} moves · {Math.round(WARMUP_TOTAL_SECS / 60 * 10) / 10} min — timer starts when you press START
+          </p>
+        )}
       </div>
 
       {/* Controls */}
       <div className="px-4 space-y-2">
-        <button onClick={nextMove}
-          className="w-full py-4 rounded-2xl font-black text-lg text-white active:scale-95 transition-transform flex items-center justify-center gap-2"
-          style={{ background: "linear-gradient(135deg, #f97316, #ea580c)", boxShadow: "0 8px 24px rgba(249,115,22,0.35)" }}>
-          <SkipForward className="w-5 h-5" /> {isLast ? "Start Workout" : "Next Move"}
-        </button>
-        <p className="text-gray-600 text-[11px] text-center">Move {idx + 1} of {WARMUP_ROUTINE.length} · auto-advances</p>
+        {started ? (
+          <button onClick={nextMove}
+            className="w-full py-4 rounded-2xl font-black text-lg text-white active:scale-95 transition-transform flex items-center justify-center gap-2"
+            style={{ background: "linear-gradient(135deg, #f97316, #ea580c)", boxShadow: "0 8px 24px rgba(249,115,22,0.35)" }}>
+            <SkipForward className="w-5 h-5" /> {isLast ? "Start Workout" : "Next Move"}
+          </button>
+        ) : (
+          <button onClick={() => setStarted(true)}
+            className="w-full py-4 rounded-2xl font-black text-lg text-white active:scale-95 transition-transform flex items-center justify-center gap-2"
+            style={{ background: "linear-gradient(135deg, #f97316, #ea580c)", boxShadow: "0 8px 24px rgba(249,115,22,0.35)" }}>
+            <Flame className="w-5 h-5" /> START WARM-UP
+          </button>
+        )}
+        <p className="text-gray-600 text-[11px] text-center">
+          {started ? `Move ${idx + 1} of ${WARMUP_ROUTINE.length} · auto-advances` : "Get in position, then start when ready"}
+        </p>
       </div>
     </div>,
     document.body
@@ -1587,6 +1627,7 @@ function ARTPWorkoutInner() {
           <GuidedRestScreen
             key="rest"
             nextExercise={isLastEx && currentSet < totalSets ? activeList[0] : activeList[exerciseIndex + 1]}
+            nextImageUrl={exImageMapRef.current[((isLastEx && currentSet < totalSets ? activeList[0] : activeList[exerciseIndex + 1])?.name || "").toLowerCase()]}
             prevExercise={activeList[exerciseIndex]}
             nextSetNum={isLastEx && currentSet < totalSets ? currentSet + 1 : currentSet}
             totalSets={totalSets}
