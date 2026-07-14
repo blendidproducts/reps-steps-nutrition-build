@@ -1,5 +1,5 @@
 # Reps & Steps — Project Context (CLAUDE.md)
-_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-09_
+_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-13_
 
 > This file lives at the repo root so any machine that clones the repo (and any Claude session opened on it) has full project context.
 
@@ -39,8 +39,15 @@ Three changes, built in the sync folder and esbuild-verified:
   - `Exercises.jsx` — "Select all" (all currently-filtered exercises) + "Clear all" toolbar above the exercise grid, with a live selected count.
   - `WorkoutBuilder.jsx` — "Clear all" on the Exercise List header (no "Select all" here — this screen has no browse list; exercises are chosen on the Exercises page). NOTE: `WorkoutBuilder.jsx` is now part of the sync overlay.
 
+### Round 13c — bug fixes + warm-up images (2026-07-13)
+- **ARTP setup "stuck / can't scroll to START" — FIXED (regression from 13b).** Round 13b set the setup screen to `fixed inset-0`, but `fixed` gets trapped by framer-motion's page-transition transform, which constrained the screen and cut off the bottom (mode selector + START) with no way to scroll. Reverted the setup wrapper to `min-h-screen ... flex flex-col` (normal flow); the content stays `flex-1 overflow-y-auto` and the START bar stays an in-flow `flex-shrink-0` footer. **Lesson: don't use `fixed` for the ARTP setup — the Layout's motion transform traps it.**
+- **AI Workout Generator scroll** (`AIWorkoutGenerator.jsx`): main content container changed `overflow-hidden` → `overflow-x-hidden` (never block vertical scroll) and bottom padding bumped to `pb-48 sm:pb-44` so the last controls clear the fixed action bar.
+- **Warm-up moves now show real photos** (`ARTPWorkout.jsx`): each `WARMUP_ROUTINE` move has `imgKeys` (DB name candidates); `WarmupScreen` takes an `imageMap` prop (passed `exImageMapRef.current`) and renders the exercise photo if found, else the emoji. Photos only appear for moves that have an `image_url` in the Base44 DB (upload missing ones in `/ExerciseImages`).
+- **⚠️ GOTCHA HIT:** writing `ARTPWorkout.jsx` directly to the connected sync folder **truncated the file mid-write** (the documented "connected-folder truncates large files" issue). Always esbuild-verify after editing large files in the sync folder before pushing. This round's files were all re-verified with esbuild (`npx esbuild <file> --bundle --external:react --external:'@/*' ...`).
+
 ## Next steps (in order)
-1. **QA round 13 on the live app** — ARTP: new variations appear + count reps; warm-up toggle runs the sequence then flows into the workout; START button sits at the visible bottom; Select all / Clear all work. Program mode: green "AI REP TRACKING" button (below VIDEO/3D) appears on trackable exercises and records reps. Exercises page + WorkoutBuilder: Select all / Clear all work. Sanity-check the Beta variations (decline/pike/pistol) count reasonably.
+1. **Push + Publish round 13c** — the warm-up-image + scroll fixes are staged in the sync folder but not yet pushed as of this note. Run `push-reps-updates.ps1` → Publish. Then QA: ARTP setup scrolls and START is reachable; warm-up shows photos where available; AI generator scrolls to its buttons.
+2. **QA round 13/13b on the live app** — ARTP: new variations appear + count reps; warm-up toggle runs the sequence. Program mode: green "AI REP TRACKING" button (below VIDEO/3D) records reps. Exercises page + WorkoutBuilder: Select all / Clear all. Sanity-check Beta variations (decline/pike/pistol) count reasonably.
 2. **Test Active Session clock/timer stopping** — verify the timer stops correctly during a live session.
 3. **Test AI add-on purchases** — Fitness Brain and AI Nutrition are separate Stripe add-ons; run a purchase test for each and confirm the webhook grants the right entitlement (they are NOT covered by `pro_monthly`/`pro_annual`).
 4. **Finish `/ExerciseImages`** — upload remaining missing exercise photos; paste remaining YouTube links.
@@ -65,25 +72,33 @@ Three changes, built in the sync folder and esbuild-verified:
 - Webhook URL is RESOLVED (points to this app, confirmed 200 — see Payment confirmed).
 - Optional: connect custom domain **`app.repsandsteps.com`** (CNAME at registrar → Base44 Domains → Connect existing domain), then repoint the Stripe webhook at the custom domain + re-copy its signing secret to `STRIPE_WEBHOOK_SECRET`. See DOMAIN-SETUP.md.
 
+
 ## Access / gating (2026-06-26)
 - ARTP (AI Rep Tracking Program) is **Pro-gated** in `src/pages/ARTPWorkout.jsx` via `checkIsPro`. Free build-your-own workout stays free.
-- **Dev bypass REMOVED:** `src/lib/proCheck.js` `DEV_EMAILS = []`. Pro access is now real (is_pro / subscription_status==='pro' / role==='admin'). Ensure jacetrimmer@gmail.com is **admin** in Base44 to retain access.
+- **Dev bypass REMOVED:** `src/lib/proCheck.js` `DEV_EMAILS = []`. Pro access is real (is_pro / subscription_status==='pro' / role==='admin'). Ensure jacetrimmer@gmail.com is **admin** in Base44 to retain access.
 
 ## Payment confirmed (2026-06-26; re-verified in live QA by 2026-07-01)
 - Stripe → Pro WORKS end-to-end: test $9.99 returned webhook 200 `{"success":true,"message":"Activated: pro_monthly"}`. Webhook sets `subscription_status='pro'` (the `is_pro` column staying blank is expected — app reads subscription_status).
-- Webhook signature verification rewritten to **Web Crypto** (Deno-native) — removed Node `crypto`/`Buffer`, cleared a High security flag. Same HMAC-SHA256 algorithm; after any change, Resend a Stripe event and expect 200.
-- Orange WorkoutGenie card routes to AIWorkoutGenerator (the old pop-up modal black-screened).
+- Webhook signature verification uses **Web Crypto** (Deno-native). After any change, Resend a Stripe event and expect 200.
 - **AI add-ons (Fitness Brain, AI Nutrition) purchase flow NOT yet tested** — see Next steps.
 
+## Marketing website (repsandsteps.com — SEPARATE from this app repo)
+- The public site lives on **aplus.net hosting** (HostPapa control panel, my.aplus.net) under `repsandsteps.com` → served from `/public/`. It is **static HTML** (not this repo, not the Base44 app). Local working copy: `Documents\Pers\RepsAndSteps\website-public-updated\public\`. Edit locally, then upload via aplus **File Manager** (Websites → repsandsteps.com → Web Apps → Files → File Manager) or FTP.
+- Homepage = `/public/index.html`. Other pages: `app-download.html`, `download.html` (Stripe success), `dashboard.html`, `login/signup`, plus PDF-program pages. `website-index.html` / `website-index_1.html` are backups (not served).
+- **All app links funnel to `https://repsandstepsartp.base44.app`** (one of several working hostnames for the same Base44 app; others: `reps-steps-nutrition-build.base44.app`, `...-copy-992a9659...`). Standardized 2026-07-13.
+- **`AiRTP`** = the site's brand name for AI Rep Tracking. Homepage has a dedicated `#artp` section (skeleton-tracking stills in `/public/images/artp-*.jpg`, extracted from the exercise videos in `RnS_ARTP/`) + updated app-home image (`images/app-home.jpg`).
+- **3D demo POC** = `/public/3d-demo.html` — Google `<model-viewer>` showing animated GLBs (`/public/models/burpee.glb`, `pistol-squat.glb`). Source GLBs in `3D/glb/` were 80–156 MB / 3M-vertex; compressed with **Draco** (gltf-transform) to ~4.7 MB. model-viewer needs **Draco, NOT meshopt** (no bundled meshopt decoder). Models have ~950 units of empty bbox below the feet, so the page reframes on load (target = box center + 0.4×height, radius = 1.8×height).
+
 ## Gotchas
-- Connected-folder editor can truncate large files — edit in a sandbox clone, esbuild-verify, then byte-copy into sync.
+- **Connected-folder editor truncates large files mid-write** — edit in a sandbox, esbuild-verify, then byte-copy into sync. Hit this on `ARTPWorkout.jsx` and this `CLAUDE.md` on 2026-07-13.
 - Drive image hotlinks work but can be flaky; `/ExerciseImages` uploads override and are most reliable.
 - Base44 build can cache — if the app looks old after a push, refresh the preview and Publish.
 
 ## Key files
-- `src/pages/Stretches.jsx` — stretch library + Active Session
-- `src/pages/ExerciseSeed.jsx` / `ProgramSeed.jsx` / `ExerciseImages.jsx` — admin seeding tools
-- `src/pages/Pricing.jsx` / `Home.jsx` / `AddOns.jsx` — pricing & promo
-- `base44/functions/stripeWebhook/entry.ts` — Stripe → entitlements
+- `src/pages/ARTPWorkout.jsx` — ARTP builder + warm-up + AI rep tracking flow (largest, edit carefully)
+- `src/pages/ActiveWorkout.jsx` — program/regular workout mode (+ green AI-tracking button)
 - `src/lib/exerciseTracking.js` — AI pose rep-tracking engine (EXERCISE_LIBRARY, matchExercise, RepCounter)
-- `src/index.css` — theme tokens
+- `src/pages/AIWorkoutGenerator.jsx` — AI workout generator (3-step)
+- `src/pages/Exercises.jsx` / `WorkoutBuilder.jsx` — exercise browse + custom builder
+- `src/pages/ExerciseImages.jsx` / `ExerciseSeed.jsx` / `ProgramSeed.jsx` — admin seeding tools
+- `base44/functions/stripeWebhook/entry.ts` — Stripe → entitlements
