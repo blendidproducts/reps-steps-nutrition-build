@@ -30,11 +30,11 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Invalid owner or repo name' }, { status: 400 });
         }
 
-        const { accessToken } = await base44.asServiceRole.connectors.getConnection("github");
-
+        // Use the unauthenticated GitHub API so the broad-scope service-role
+        // token is never exposed to this endpoint. Only public repositories are
+        // accessible; private repos return 404 without the connector token.
         const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases`, {
             headers: {
-                'Authorization': `Bearer ${accessToken}`,
                 'Accept': 'application/vnd.github.v3+json',
                 'User-Agent': 'Base44-App'
             }

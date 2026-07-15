@@ -33,6 +33,11 @@ const validateUrl = async (rawUrl) => {
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw new Error('Only http and https URLs are allowed');
   }
+  // Restrict to standard web ports to prevent probing internal services on
+  // non-standard ports (e.g., databases, Redis, admin panels).
+  if (parsed.port && parsed.port !== '80' && parsed.port !== '443') {
+    throw new Error('Non-standard ports are not allowed');
+  }
   const host = parsed.hostname;
   let addresses = [];
   if (/^\d+\.\d+\.\d+\.\d+$/.test(host) || (host.startsWith('[') && host.endsWith(']'))) {

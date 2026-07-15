@@ -11,6 +11,13 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
+// Strip HTML metacharacters from user-supplied display names before storing,
+// preventing stored XSS if the value is ever rendered in a non-text context.
+const sanitizeName = (name) => {
+  if (!name) return '';
+  return String(name).replace(/[<>&"']/g, '').slice(0, 50);
+};
+
 export default function Community() {
   const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
@@ -82,7 +89,7 @@ export default function Community() {
           duration: latestSession.duration,
           calories: latestSession.calories_burned
         } : null,
-        user_name: currentUser?.full_name || 'Anonymous',
+        user_name: sanitizeName(currentUser?.full_name) || 'Anonymous',
         is_public: true
       });
 
