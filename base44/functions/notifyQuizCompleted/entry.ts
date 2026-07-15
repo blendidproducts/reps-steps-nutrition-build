@@ -33,7 +33,9 @@ Deno.serve(async (req) => {
         return Response.json({ success: false, message: "No admins found to notify." });
     }
 
-    const subject = `New Quiz Completed by ${user.full_name || 'a new user'}!`;
+    // Strip CR/LF and control chars to prevent email header injection
+    const safeSubjectName = String(user.full_name || 'a new user').replace(/[\r\n\x00-\x1F\x7F]/g, '').slice(0, 50);
+    const subject = `New Quiz Completed by ${safeSubjectName}!`;
     const body = `Great news! A new user just completed the fitness quiz on your app.
 
 Here are their details:
