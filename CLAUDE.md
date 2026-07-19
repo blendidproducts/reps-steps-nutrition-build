@@ -1,5 +1,5 @@
 # Reps & Steps — Project Context (CLAUDE.md)
-_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-13 (Round 15)_
+_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-15 (Round 16)_
 
 > This file lives at the repo root so any machine that clones the repo (and any Claude session opened on it) has full project context.
 
@@ -63,8 +63,18 @@ Jace's second field test (talk-to-text notes). Five issues; all fixed in the syn
 4. **Active recovery card needed scrolling** — `GuidedRestScreen` changed from bottom sheet (72vh, justify-end) to a centered card (max-w 560px, 88vh, fully rounded).
 5. **Active recovery reachable anywhere** — `ExercisePreviewCard` now has an "ACTIVE RECOVERY — walk · jog · sprint" button (preview phase renders `MidExerciseRecovery`, raised to z 100001 to sit above the preview at 99998). Already existed during exercises (top-bar steps chip) and rests.
 
+## Round 16 — warm-up steps/reps + timed holds (2026-07-15)
+From Jace's third test session. Staged in sync folder, esbuild-verified:
+1. **Walk in Place warm-up** (`ARTPWorkout.jsx`): new first move in `WARMUP_ROUTINE` (60s, `showSteps`) — `WarmupScreen` takes `totalSteps` and shows a live step counter (also on Marching High Knees). Image: looks up "running in place" etc. in the DB image map; NO Drive image exists yet → emoji fallback until one is uploaded.
+2. **Toe Touches rep counter** (`ARTPWorkout.jsx`): `countReps` moves get a tap-to-count button beside the timer (`moveReps`, resets per move).
+3. **Wall Sit was rep-based in program mode — root cause: DB record has no `metric`** (ActiveWorkout defaults to 'reps'). Added `metric:"time" + target_time` in `ExerciseSeed.jsx` SEED_EXERCISES for ALL isometric holds: Wall Sit 45, Plank 60, Side Plank 30, Hollow Body Hold 30, L-Sit 20, Bar Hang 30, Handstand Hold 30. ⚠️ Takes effect on the LIVE db only after running `/ExerciseSeed` → "Fix Stretch Records" (its repair pass pushes metric/target_time to existing records). Checked: Stretches.jsx uses a hardcoded library and Exercises.jsx ignores `metric`, so no side effects.
+4. **Deliverable:** `Documents\Pers\RepsAndSteps\QA-UPDATE-CHECKLIST.md` — ordered deploy/admin/media checklist (publish → Fix Stretch Records → Add Missing Photos → /ExerciseImages; create a Walk-in-Place image; 4 ARTP images priority).
+
 ## Next steps (in order)
-1. **Push + Publish rounds 13c + 14 + 15** — staged in the sync folder, not yet pushed. Run `push-reps-updates.ps1` → Publish.
+0. **Mobile builds + media** (2026-07-14, after a successful live QA pass): see `Documents\Pers\RepsAndSteps\MOBILE-BUILD-PLAN.md` (v2: PRIMARY PATH = Base44 Publish → Mobile app tab builds the AAB and even the iOS IPA in the cloud, no Mac needed; needs Builder plan. Gate 1 = test camera/ARTP inside their web-view wrapper. BLOCKER: Stripe digital-goods subscriptions get store-rejected — hide purchase flows in the mobile app. Capacitor project = Plan B only) and `Exercise_Media_Audit.xlsx` (26 exercises missing images, 59 missing videos; 4 ARTP-tracked ones are priority: Tricep Dip, Reverse Lunge, Bulgarian Split Squat, Decline Push-Up).
+1. **Publish in Base44** — rounds 13c+14+15 are ALREADY ON GITHUB (verified 2026-07-14: fresh clone of `main` is byte-identical to the sync folder, incl. Round 15 CLAUDE.md). Just click Publish in Base44, then QA.
+   - NOTE: remote also had 3 Base44-side commits (backend functions, package bumps, and a **Community.jsx XSS sanitize fix**). That newer Community.jsx was back-ported INTO the sync folder so future script runs don't regress it.
+   - NOTE: the local repo clone had stale `.git` locks + corrupt ORIG_HEAD (from a git run on the connected folder — don't run git through the sandbox mount). `push-reps-updates.ps1` now auto-clears ALL locks and broken ORIG_HEAD before pulling.
 2. **Re-QA on iPhone + tripod** — warm-up waits for START; rest screen shows next-exercise photo + speaks it; push-up/squat/diamond counts feel right (watch for over-counting now thresholds are looser — tighten toward 95 if shallow reps count); Bulgarian Split Squat with EACH leg forward; confirm Tricep Extension gone from ARTP builder.
 3. **QA round 13/13b leftovers** — program mode green "AI REP TRACKING" button records reps; Select all / Clear all; Beta variations (decline/pike/pistol) count reasonably.
 4. **Test Active Session clock/timer stopping** — verify the timer stops correctly during a live session.

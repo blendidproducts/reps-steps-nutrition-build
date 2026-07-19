@@ -73,11 +73,12 @@ const CONDITIONING_EXERCISES = new Set(["Jumping Jack", "High Knee", "Jump Squat
 // Light, no-equipment moves to raise heart rate and loosen joints. Each runs on a
 // timer and auto-advances; the user can skip any move or the whole warm-up.
 const WARMUP_ROUTINE = [
+  { name: "Walk in Place",      seconds: 60, emoji: "🚶", cue: "Easy walking march — get the blood moving. Your steps count live", imgKeys: ["running in place", "walk in place", "walking", "march"], showSteps: true },
   { name: "Arm Circles",        seconds: 30, emoji: "🔄", cue: "Big forward then backward circles — loosen the shoulders", imgKeys: ["arm circles", "arm circle"] },
   { name: "Hip Circles",        seconds: 30, emoji: "🌀", cue: "Hands on hips — slow circles each direction", imgKeys: ["hip circles", "hip circle", "hip rotation"] },
   { name: "Bodyweight Squats",  seconds: 30, emoji: "🦵", cue: "Slow and controlled — warm up the knees and hips", imgKeys: ["squat", "air squat", "bodyweight squat"] },
-  { name: "Toe Touches",        seconds: 30, emoji: "🙆", cue: "Reach for your toes — gentle hamstring stretch", imgKeys: ["toe touch", "toe touches", "standing toe touch"] },
-  { name: "Marching High Knees",seconds: 30, emoji: "🏃", cue: "March in place — drive knees up, pump the arms", imgKeys: ["high knee", "high knees", "marching high knees"] },
+  { name: "Toe Touches",        seconds: 30, emoji: "🙆", cue: "Reach for your toes — gentle hamstring stretch. Tap to count each rep", imgKeys: ["toe touch", "toe touches", "standing toe touch"], countReps: true },
+  { name: "Marching High Knees",seconds: 30, emoji: "🏃", cue: "March in place — drive knees up, pump the arms", imgKeys: ["high knee", "high knees", "marching high knees"], showSteps: true },
 ];
 const WARMUP_TOTAL_SECS = WARMUP_ROUTINE.reduce((t, m) => t + m.seconds, 0);
 
@@ -833,7 +834,7 @@ function ManualRepCounter({ onCount }) {
 }
 
 // ── Warm-up Screen — guided timed mobility sequence ──────────────────────────
-function WarmupScreen({ onFinish, onSkipAll, imageMap = {} }) {
+function WarmupScreen({ onFinish, onSkipAll, imageMap = {}, totalSteps = 0 }) {
   const [idx, setIdx]   = useState(0);
   const [secs, setSecs] = useState(WARMUP_ROUTINE[0].seconds);
   // Round 14: warm-up used to start ticking the moment the screen mounted —
@@ -843,6 +844,9 @@ function WarmupScreen({ onFinish, onSkipAll, imageMap = {} }) {
   const move = WARMUP_ROUTINE[idx];
   const moveImg = (move.imgKeys || []).map((k) => imageMap[k]).find(Boolean);
   const isLast = idx >= WARMUP_ROUTINE.length - 1;
+  // Round 16: tap-to-count reps for stretch moves (Toe Touches), reset per move
+  const [moveReps, setMoveReps] = useState(0);
+  useEffect(() => { setMoveReps(0); }, [idx]);
 
   // Announce each move (only once the user has started)
   useEffect(() => {
@@ -908,6 +912,20 @@ function WarmupScreen({ onFinish, onSkipAll, imageMap = {} }) {
           <>
             <div className="text-7xl font-black tabular-nums text-orange-400">{secs}</div>
             <p className="text-gray-600 text-xs mt-1 uppercase tracking-widest">seconds</p>
+            {move.showSteps && (
+              <div className="flex items-center gap-2 mt-4 bg-[#00a9ff]/10 border border-[#00a9ff]/40 rounded-2xl px-5 py-2.5">
+                <Footprints className="w-5 h-5 text-[#00a9ff]" />
+                <span className="text-white font-black text-2xl tabular-nums">{totalSteps}</span>
+                <span className="text-gray-400 text-xs font-semibold uppercase">steps</span>
+              </div>
+            )}
+            {move.countReps && (
+              <button onClick={() => setMoveReps((r) => r + 1)}
+                className="mt-4 flex items-center gap-3 bg-orange-500/15 border-2 border-orange-400/50 rounded-2xl px-6 py-3 active:scale-95 transition-transform">
+                <span className="text-orange-300 font-black text-3xl tabular-nums">{moveReps}</span>
+                <span className="text-orange-200 text-xs font-bold uppercase tracking-wide text-left">reps<br/>tap to count</span>
+              </button>
+            )}
           </>
         ) : (
           <p className="text-orange-300/90 text-sm font-semibold max-w-xs">
@@ -1616,6 +1634,7 @@ function ARTPWorkoutInner() {
       {phase === "warmup" && (
         <WarmupScreen
           imageMap={exImageMapRef.current}
+          totalSteps={totalSteps}
           onFinish={() => { setCountdownSecs(3); setPhase("countdown"); }}
           onSkipAll={() => { setCountdownSecs(3); setPhase("countdown"); }}
         />
