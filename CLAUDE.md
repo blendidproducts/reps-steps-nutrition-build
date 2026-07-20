@@ -1,5 +1,5 @@
 # Reps & Steps — Project Context (CLAUDE.md)
-_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-15 (Round 16)_
+_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-20 (Round 17)_
 
 > This file lives at the repo root so any machine that clones the repo (and any Claude session opened on it) has full project context.
 
@@ -69,6 +69,12 @@ From Jace's third test session. Staged in sync folder, esbuild-verified:
 2. **Toe Touches rep counter** (`ARTPWorkout.jsx`): `countReps` moves get a tap-to-count button beside the timer (`moveReps`, resets per move).
 3. **Wall Sit was rep-based in program mode — root cause: DB record has no `metric`** (ActiveWorkout defaults to 'reps'). Added `metric:"time" + target_time` in `ExerciseSeed.jsx` SEED_EXERCISES for ALL isometric holds: Wall Sit 45, Plank 60, Side Plank 30, Hollow Body Hold 30, L-Sit 20, Bar Hang 30, Handstand Hold 30. ⚠️ Takes effect on the LIVE db only after running `/ExerciseSeed` → "Fix Stretch Records" (its repair pass pushes metric/target_time to existing records). Checked: Stretches.jsx uses a hardcoded library and Exercises.jsx ignores `metric`, so no side effects.
 4. **Deliverable:** `Documents\Pers\RepsAndSteps\QA-UPDATE-CHECKLIST.md` — ordered deploy/admin/media checklist (publish → Fix Stretch Records → Add Missing Photos → /ExerciseImages; create a Walk-in-Place image; 4 ARTP images priority).
+
+## Round 17 — Play-guideline fixes: tab navigation + no in-app Stripe (2026-07-20)
+From the Google Play guidelines scan on the Base44 mobile build. Additive only — web behavior unchanged. Staged in sync folder, esbuild-verified:
+1. **Active-tab re-tap resets to root** — `navigateToTab` in `src/lib/NavigationManager.jsx` now calls `resetTabStack(tab)` + navigates to `TAB_ROOTS[tab]` when the tab is already active; `src/components/BottomNav.jsx` active-tap keeps scroll-to-top AND triggers the reset. ⚠️ Both files were repo-only before — they are now part of the SYNC OVERLAY (edit them in the sync folder from now on).
+2. **Stripe hidden inside the app shell** — new `src/lib/nativeShell.jsx`: `isNativeShell()` (window.isNativeApp / Capacitor / Android "wv" UA / iOS WKWebView UA — conservative, normal browsers never match) + `<WebUpgradeNotice/>` card ("visit repsandsteps.com… status syncs instantly"). Applied to ALL Stripe buttons: `Pricing.jsx` (trial, monthly/annual, all-access link, lifetime), `AddOns.jsx` (add-on cards + bundle tiers), `NutritionPricing.jsx` (add-on + all-access). Web users still see checkout unchanged.
+- GOTCHA: inserting an import "after the last import line" broke on AddOns.jsx's multi-line lucide import — insert after the closing `} from "lucide-react";` instead.
 
 ## Next steps (in order)
 0. **Mobile builds + media** (2026-07-14, after a successful live QA pass): see `Documents\Pers\RepsAndSteps\MOBILE-BUILD-PLAN.md` (v2: PRIMARY PATH = Base44 Publish → Mobile app tab builds the AAB and even the iOS IPA in the cloud, no Mac needed; needs Builder plan. Gate 1 = test camera/ARTP inside their web-view wrapper. BLOCKER: Stripe digital-goods subscriptions get store-rejected — hide purchase flows in the mobile app. Capacitor project = Plan B only) and `Exercise_Media_Audit.xlsx` (26 exercises missing images, 59 missing videos; 4 ARTP-tracked ones are priority: Tricep Dip, Reverse Lunge, Bulgarian Split Squat, Decline Push-Up).

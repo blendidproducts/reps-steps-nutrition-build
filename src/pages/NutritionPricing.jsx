@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { ArrowLeft, Check, Camera, Link2, Zap, Star, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
+import { isNativeShell, WebUpgradeNotice } from "@/lib/nativeShell";
 
 const AI_ADDON_FEATURES = [
   { icon: Camera, text: "AI food photo nutrition analysis" },
@@ -22,6 +23,9 @@ const ALL_ACCESS_FEATURES = [
 
 export default function NutritionPricing() {
   const navigate = useNavigate();
+
+  // Round 17: hide Stripe checkout inside the native/WebView shell
+  const nativeShell = isNativeShell();
 
   const handleBuyAddon = () => {
     // Link to the $4.99/mo AI Add-On Stripe product
@@ -97,13 +101,17 @@ export default function NutritionPricing() {
               </ul>
             </CardContent>
             <CardFooter className="flex-col gap-2">
-              <Button
-                onClick={handleBuyAddon}
-                className="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-bold py-3"
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Get AI Add-On — $4.99/mo
-              </Button>
+              {nativeShell ? (
+                <WebUpgradeNotice compact />
+              ) : (
+                <Button
+                  onClick={handleBuyAddon}
+                  className="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-bold py-3"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Get AI Add-On — $4.99/mo
+                </Button>
+              )}
               <p className="text-xs text-gray-500 text-center">After payment, your plan will be activated automatically.</p>
             </CardFooter>
           </Card>
@@ -143,13 +151,17 @@ export default function NutritionPricing() {
               </ul>
             </CardContent>
             <CardFooter className="flex-col gap-2">
-              <Button
-                onClick={handleBuyAllAccess}
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-3"
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Get All-Access — $19.99/mo
-              </Button>
+              {nativeShell ? (
+                <WebUpgradeNotice compact />
+              ) : (
+                <Button
+                  onClick={handleBuyAllAccess}
+                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-3"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Get All-Access — $19.99/mo
+                </Button>
+              )}
               <p className="text-xs text-gray-500 text-center">After payment, your plan will be activated automatically.</p>
             </CardFooter>
           </Card>

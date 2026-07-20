@@ -37,6 +37,8 @@ const BottomNav = memo(function BottomNav({ activeTab, navigateToTab }) {
                 e.stopPropagation();
                 if (isActive) {
                   document.getElementById("main-content")?.scrollTo({ top: 0, behavior: "smooth" });
+                  // Round 17: also reset this tab's stack and return to its root
+                  navigateToTab(tab);
                 } else {
                   navigateToTab(tab);
                 }

@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Check, Star, Zap, ExternalLink, CreditCard } from "lucide-react";
 import { motion } from "framer-motion";
+import { isNativeShell, WebUpgradeNotice } from "@/lib/nativeShell";
 
 export default function Pricing() {
   const navigate = useNavigate();
@@ -24,6 +25,10 @@ export default function Pricing() {
     };
     checkUserStatus();
   }, []);
+
+  // Round 17: app stores reject direct web checkout for digital goods —
+  // inside the native/WebView shell we hide Stripe buttons entirely.
+  const nativeShell = isNativeShell();
 
   const handleStripeCheckout = (plan) => {
     // WorkoutGENIE Pro Monthly: $9.99/month  (canonical pro_monthly link)
@@ -146,6 +151,8 @@ export default function Pricing() {
                   <Check className="w-5 h-5 mr-2" />
                   You are a Pro Member!
                 </Button>
+              ) : nativeShell ? (
+                <WebUpgradeNotice compact />
               ) : (
                 <>
                   <Button
@@ -227,6 +234,8 @@ export default function Pricing() {
                     <Check className="w-5 h-5 mr-2" />
                     You are a Pro Member!
                   </Button>
+                ) : nativeShell ? (
+                  <WebUpgradeNotice compact />
                 ) : (
                   <>
                     <Button
@@ -288,6 +297,8 @@ export default function Pricing() {
                     <Check className="w-5 h-5 mr-2" />
                     You are a Pro Member!
                   </Button>
+                ) : nativeShell ? (
+                  <WebUpgradeNotice compact />
                 ) : (
                   <>
                     <Button

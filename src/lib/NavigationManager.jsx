@@ -275,7 +275,14 @@ export function NavigationManagerProvider({ children }) {
   // ── Tab navigation helpers ───────────────────────────────────────────────
   const navigateToTab = useCallback((tab) => {
     const currentTab = resolveTabForPath(location.pathname);
-    if (currentTab === tab) return;
+    if (currentTab === tab) {
+      // Round 17: re-tapping the active tab resets its stack and returns to
+      // the tab's root page (store-guideline navigation expectation).
+      resetTabStack(tab);
+      const root = TAB_ROOTS[tab];
+      if (location.pathname !== root) navigate(root);
+      return;
+    }
     navigate(getLastTabPath(tab));
   }, [navigate, location.pathname]);
 

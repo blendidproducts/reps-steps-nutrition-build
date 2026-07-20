@@ -6,6 +6,7 @@ import {
   Brain, Camera, Users,
   Check, ExternalLink, Zap, Star, Lock, ArrowLeft
 } from "lucide-react";
+import { isNativeShell, WebUpgradeNotice } from "@/lib/nativeShell";
 
 const ADD_ONS = [
   {
@@ -218,13 +219,17 @@ function AddOnCard({ item, index }) {
             <span className="text-gray-300 text-xs">{f}</span>
           </div>
         ))}
-        <Button
-          onClick={() => window.open(item.stripeUrl, "_blank")}
-          className={`w-full mt-3 bg-gradient-to-r ${item.gradient} text-white font-bold rounded-xl gap-2 hover:opacity-90`}
-        >
-          <ExternalLink className="w-4 h-4" />
-          Get {item.title}
-        </Button>
+        {isNativeShell() ? (
+          <div className="mt-3"><WebUpgradeNotice compact /></div>
+        ) : (
+          <Button
+            onClick={() => window.open(item.stripeUrl, "_blank")}
+            className={`w-full mt-3 bg-gradient-to-r ${item.gradient} text-white font-bold rounded-xl gap-2 hover:opacity-90`}
+          >
+            <ExternalLink className="w-4 h-4" />
+            Get {item.title}
+          </Button>
+        )}
       </div>
     </motion.div>
   );
@@ -328,13 +333,17 @@ export default function AddOns() {
                       <span className="text-gray-300 text-xs">{f}</span>
                     </div>
                   ))}
-                  <Button
-                    onClick={() => window.open(tier.stripeUrl, "_blank")}
-                    className={`w-full mt-3 bg-gradient-to-r ${tier.gradient} text-white font-bold rounded-xl gap-2 hover:opacity-90`}
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    {tier.ctaLabel}
-                  </Button>
+                  {isNativeShell() ? (
+                    <div className="mt-3"><WebUpgradeNotice compact /></div>
+                  ) : (
+                    <Button
+                      onClick={() => window.open(tier.stripeUrl, "_blank")}
+                      className={`w-full mt-3 bg-gradient-to-r ${tier.gradient} text-white font-bold rounded-xl gap-2 hover:opacity-90`}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      {tier.ctaLabel}
+                    </Button>
+                  )}
                 </div>
               </motion.div>
             ))}
