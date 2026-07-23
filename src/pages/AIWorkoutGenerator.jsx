@@ -306,13 +306,34 @@ export default function AIWorkoutGenerator() {
     let exercisesToUse = [...selectedExercises];
     
     if (settings.includeWarmup) {
-      const warmupExercises = [
-        { id: 'warmup-1', name: 'Walk in Place', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 60 },
-        { id: 'warmup-2', name: 'Toe Touches', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 20 },
-        { id: 'warmup-3', name: 'Arm Circles Forward', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 15 },
-        { id: 'warmup-4', name: 'Hip Circles', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 20 },
-        { id: 'warmup-5', name: 'Chest Opener Stretch', category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: 15 }
-      ];
+      // Round 18: the warm-up matches the day's focus — leg day gets lower-body
+      // dynamic moves, upper day gets upper-body, mixed gets a blend.
+      // All stretch names are canonical DB records so images resolve.
+      // Two-sided stretches use 30s (15s per side — ActiveWorkout announces the switch).
+      const W = (id, name, secs) => ({ id, name, category: 'warmup', metric: 'time', difficulty: 'beginner', target_time: secs });
+      const catCount = (c) => exercisesToUse.filter(ex => ex.category === c).length;
+      const lower = catCount('lower_body'), upper = catCount('upper_body');
+      const focus = lower >= upper * 2 ? 'lower' : upper >= lower * 2 ? 'upper' : 'mix';
+      const warmupExercises =
+        focus === 'lower' ? [
+          W('warmup-1', 'Walk in Place', 60),
+          W('warmup-2', 'Hip Circles', 20),
+          W('warmup-3', 'Toe Touches', 20),
+          W('warmup-4', 'Standing Quadriceps Stretch', 30),
+          W('warmup-5', 'Standing Hamstring Stretch', 30),
+        ] : focus === 'upper' ? [
+          W('warmup-1', 'Walk in Place', 60),
+          W('warmup-2', 'Arm Circles Forward', 20),
+          W('warmup-3', 'Shoulder Cross-Body Stretch', 30),
+          W('warmup-4', 'Overhead Tricep Stretch', 30),
+          W('warmup-5', 'Chest Opener Stretch', 30),
+        ] : [
+          W('warmup-1', 'Walk in Place', 60),
+          W('warmup-2', 'Toe Touches', 20),
+          W('warmup-3', 'Arm Circles Forward', 15),
+          W('warmup-4', 'Hip Circles', 20),
+          W('warmup-5', 'Chest Opener Stretch', 30),
+        ];
       exercisesToUse = [...warmupExercises, ...exercisesToUse];
     }
 
@@ -356,7 +377,7 @@ export default function AIWorkoutGenerator() {
 
   const getEstimatedTime = () => {
     if (!selectedExercises.length) return 0;
-    const warmupTime = settings.includeWarmup ? 190 : 0;
+    const warmupTime = settings.includeWarmup ? 170 : 0; // avg of the focus-based warm-up variants
     let workTime = 0;
     let totalSets = 0;
     

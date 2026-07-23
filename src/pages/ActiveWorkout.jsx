@@ -23,6 +23,61 @@ import {
   SupersetConfigModal, SwapExerciseModal, VoiceCoachModal
 } from "@/components/workout/WorkoutModals";
 
+
+// ── Round 18: fuzzy exercise-record matching + timed-name coercion ───────────
+// AI-generated workouts save names like "Toe Touches" / "Walk in Place" that
+// never exactly matched DB records ("Toe Touch" / "Running in Place"), so the
+// exercises lost their images, instructions, and timed metric.
+const EX_ALIASES = {
+  "walk in place": "running in place",
+  "walking in place": "running in place",
+  "walking": "running in place",
+  "march in place": "running in place",
+  "marching in place": "running in place",
+  "arm circles forward": "arm circle",
+  "arm circles backward": "arm circle",
+  "chest opener": "chest opener stretch",
+};
+const normName = (s) => (s || "").toLowerCase().trim().replace(/-/g, " ").replace(/[^a-z0-9\s\/]/g, "").replace(/\s+/g, " ");
+const singularWord = (w) => (/(ch|sh|ss|x)es$/.test(w) ? w.slice(0, -2) : (/[a-z]s$/.test(w) && !/ss$/.test(w) ? w.slice(0, -1) : w));
+const singular = (s) => s.split(" ").map(singularWord).join(" ");
+
+function findExerciseRecord(exList, we) {
+  let d = exList.find(ex => ex.id === we.exercise_id || ex.name === we.exercise_name);
+  if (d) return d;
+  const raw = normName(we.exercise_name);
+  const target = EX_ALIASES[raw] || raw;
+  d = exList.find(ex => normName(ex.name) === target);
+  if (d) return d;
+  const st = singular(target);
+  d = exList.find(ex => singular(normName(ex.name)) === st);
+  if (d) return d;
+  // last resort: longest DB name contained in the workout name (or vice versa)
+  let best = null, bestLen = 0;
+  for (const ex of exList) {
+    const n = normName(ex.name);
+    if (n.length > 3 && (target.includes(n) || n.includes(target)) && n.length > bestLen) { best = ex; bestLen = n.length; }
+  }
+  return best;
+}
+
+// Names that must ALWAYS run as timers, never rep counters
+const TIMED_EXACT = new Set([
+  "walk in place", "walking in place", "running in place", "march in place", "marching in place",
+  "jump rope", "wall sit", "plank", "side plank", "arm circle", "arm circles",
+  "arm circles forward", "arm circles backward", "hip circle", "hip circles",
+  "toe touch", "toe touches", "cat-cow", "cat cow",
+]);
+function isTimedName(name) {
+  const n = normName(name);
+  if (/stretch|opener/.test(n)) return true;
+  if (/\bhold\b|\bhang\b/.test(n)) return true;
+  return TIMED_EXACT.has(n);
+}
+
+// Two-sided stretches that get a halfway "switch sides" voice cue
+const SWITCH_SIDES_RE = /chest opener|quadriceps stretch|quad stretch|hamstring stretch|hip flexor|figure.?4|it band|neck side|cross.?body|overhead tricep|pigeon|spinal twist|calf stretch|side plank|forearm stretch|lat stretch|thread the needle/i;
+
 export default function ActiveWorkout() {
   const navigate = useNavigate();
   const [workout, setWorkout] = useState(null);
@@ -300,8 +355,12 @@ export default function ActiveWorkout() {
               if (metric === 'reps') setExerciseTimer(p => p + elapsed);
               else {
                 const target = workout.exercises[currentExerciseIndex].target_time;
+                const exName = workout.exercises[currentExerciseIndex].exercise_name || "";
                 setExerciseTimer(p => {
                   const n = p + elapsed; const left = target - n;
+                  // Round 18: two-sided stretches announce the halfway switch
+                  const half = Math.floor(target / 2);
+                  if ((target - p) > half && left <= half && half >= 5 && !isTimerPaused && SWITCH_SIDES_RE.test(exName)) speak("Switch sides");
                   if (left <= 3 && left > 0 && left !== lastBeepSecond && !isTimerPaused) { setLastBeepSecond(left); playBeep(false); }
                   else if (left === 0 && !isTimerPaused) { playBeep(true); setTimeout(nextExercise, 500); }
                   return n;
@@ -352,8 +411,15 @@ export default function ActiveWorkout() {
       if (!data.exercises || !data.exercises.length) { setLoadingError('No exercises found in workout'); setTimeout(() => navigate(createPageUrl("Exercises")), 2000); return; }
       const exList = await base44.entities.Exercise.list(); setAllExercises(exList);
       data.exercises = data.exercises.map(we => {
-        const d = exList.find(ex => ex.id === we.exercise_id || ex.name === we.exercise_name);
-        return { ...we, image_url: d?.image_url, instructions: d?.instructions, metric: d?.metric || we.metric || 'reps', category: we.category || d?.category || 'full_body', model_url: d?.model_url, video_url: d?.video_url, youtube_url: d?.youtube_url };
+        // Round 18: fuzzy match so generated names resolve to real DB records
+        // (images + instructions + metric come through); stretches, mobility
+        // circles, and walking warm-ups are coerced to timers.
+        const d = findExerciseRecord(exList, we);
+        let metric = d?.metric || we.metric || 'reps';
+        let target_time = we.target_time || d?.target_time || 0;
+        if (metric !== 'time' && isTimedName(we.exercise_name)) metric = 'time';
+        if (metric === 'time' && !target_time) target_time = 30;
+        return { ...we, image_url: we.image_url || d?.image_url, instructions: d?.instructions, metric, target_time, category: we.category || d?.category || 'full_body', model_url: d?.model_url, video_url: d?.video_url, youtube_url: d?.youtube_url };
       });
       if (data.workout_type === 'time_based' && data.total_duration > 0) {
         const tpe = Math.floor((data.total_duration * 60) / data.exercises.length);

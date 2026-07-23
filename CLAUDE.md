@@ -1,5 +1,5 @@
 # Reps & Steps — Project Context (CLAUDE.md)
-_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-20 (Round 17)_
+_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-22 (Round 18)_
 
 > This file lives at the repo root so any machine that clones the repo (and any Claude session opened on it) has full project context.
 
@@ -75,6 +75,14 @@ From the Google Play guidelines scan on the Base44 mobile build. Additive only �
 1. **Active-tab re-tap resets to root** — `navigateToTab` in `src/lib/NavigationManager.jsx` now calls `resetTabStack(tab)` + navigates to `TAB_ROOTS[tab]` when the tab is already active; `src/components/BottomNav.jsx` active-tap keeps scroll-to-top AND triggers the reset. ⚠️ Both files were repo-only before — they are now part of the SYNC OVERLAY (edit them in the sync folder from now on).
 2. **Stripe hidden inside the app shell** — new `src/lib/nativeShell.jsx`: `isNativeShell()` (window.isNativeApp / Capacitor / Android "wv" UA / iOS WKWebView UA — conservative, normal browsers never match) + `<WebUpgradeNotice/>` card ("visit repsandsteps.com… status syncs instantly"). Applied to ALL Stripe buttons: `Pricing.jsx` (trial, monthly/annual, all-access link, lifetime), `AddOns.jsx` (add-on cards + bundle tiers), `NutritionPricing.jsx` (add-on + all-access). Web users still see checkout unchanged.
 - GOTCHA: inserting an import "after the last import line" broke on AddOns.jsx's multi-line lucide import — insert after the closing `} from "lucide-react";` instead.
+
+## Round 18 — AI-generator workout fixes (2026-07-22)
+From Jace's AI Workout Generator test. Staged in sync folder, esbuild-verified + node-tested:
+1. **Missing images in active recovery (first stretches) — ROOT CAUSE: exact-name DB matching.** Generated workouts save names like "Toe Touches" / "Walk in Place" / "Hip Circles" that never matched DB records ("Toe Touch" / "Running in Place" / "Hip Circle") → no image_url/instructions/metric. `ActiveWorkout.jsx` now uses `findExerciseRecord()` — exact → alias map (walk/march→running in place, arm circles fwd/back→arm circle) → normalized (hyphens→spaces) → per-word singularization (handles -es: touches→touch) → longest-substring fallback. Fixes EXISTING saved workouts too (enrichment runs at load).
+2. **Walking/hip circles/toe touches now always timers** — `isTimedName()` coerces stretches (/stretch|opener/), holds (\bhold\b|\bhang\b), and an exact list (walk/march/run in place, jump rope, wall sit, plank, side plank, arm/hip circles, toe touches, cat-cow) to `metric:'time'` (default 30 s if no target). Deliberately NOT matched: Walking Lunge, Plank to Push-Up (rep moves — verified).
+3. **Focus-matched dynamic warm-up** (`AIWorkoutGenerator.jsx` `startWorkout`): warm-up now picks lower/upper/mix variants by counting selected exercise categories (2× majority threshold). All stretch names are canonical DB records so images resolve. Chest Opener bumped 15→30 s (two sides).
+4. **"Switch sides" halfway voice cue** (`ActiveWorkout.jsx` timed countdown): two-sided stretches (`SWITCH_SIDES_RE`: chest opener, quad/hamstring, hip flexor, figure-4, IT band, neck side, cross-body, overhead tricep, pigeon, spinal twist, calf, side plank, forearm, lat, thread the needle) speak "Switch sides" when crossing the half-time mark (crossing detection, not equality — robust to skipped ticks; only if half ≥ 5 s).
+- NOTE: "Walk in Place" images resolve to the "Running in Place" DB record — which still has NO uploaded image (see QA-UPDATE-CHECKLIST.md). Upload one and it appears everywhere.
 
 ## Next steps (in order)
 0. **Mobile builds + media** (2026-07-14, after a successful live QA pass): see `Documents\Pers\RepsAndSteps\MOBILE-BUILD-PLAN.md` (v2: PRIMARY PATH = Base44 Publish → Mobile app tab builds the AAB and even the iOS IPA in the cloud, no Mac needed; needs Builder plan. Gate 1 = test camera/ARTP inside their web-view wrapper. BLOCKER: Stripe digital-goods subscriptions get store-rejected — hide purchase flows in the mobile app. Capacitor project = Plan B only) and `Exercise_Media_Audit.xlsx` (26 exercises missing images, 59 missing videos; 4 ARTP-tracked ones are priority: Tricep Dip, Reverse Lunge, Bulgarian Split Squat, Decline Push-Up).
