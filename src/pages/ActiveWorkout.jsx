@@ -205,6 +205,11 @@ export default function ActiveWorkout() {
     }
   }, [workout, currentExerciseIndex, currentSet, timer, elapsedTimer, currentReps, sessionStartTime, totalReps, exerciseTimer, isResting, restTimer, cardioIntervals, isActive, isPaused, gpsPositions, combinedSteps, totalWorkoutDistance]);
 
+  // Round 19: keep the current exercise visible in the Workout Plan list
+  useEffect(() => {
+    try { document.getElementById(`wp-row-${currentExerciseIndex}`)?.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (_) {}
+  }, [currentExerciseIndex]);
+
   const swapExercise = (newExercise) => {
     const updatedExercises = [...workout.exercises];
     const details = allExercises.find(ex => ex.id === newExercise.id);
@@ -227,29 +232,43 @@ export default function ActiveWorkout() {
 
   const nextExercise = () => {
     const currentExercise = workout.exercises[currentExerciseIndex];
+    // Round 19: ONE updatedExercises array for reps + per-exercise set counting.
+    const updatedExercises = [...workout.exercises];
     if (currentExercise.metric === 'reps' && currentReps > 0) {
-      const updatedExercises = [...workout.exercises];
       const prev = updatedExercises[currentExerciseIndex].completed_reps || 0;
       const diff = currentReps - (updatedExercises[currentExerciseIndex].current_set_reps || 0);
-      updatedExercises[currentExerciseIndex].completed_reps = prev + diff;
-      updatedExercises[currentExerciseIndex].current_set_reps = currentReps;
-      setWorkout({...workout, exercises: updatedExercises});
+      updatedExercises[currentExerciseIndex] = { ...updatedExercises[currentExerciseIndex], completed_reps: prev + diff, current_set_reps: currentReps };
       const n = currentExercise.exercise_name.toLowerCase();
       if (n.includes('push')) checkAchievement('pushups', currentReps, currentExercise.exercise_name);
       if (n.includes('squat')) checkAchievement('squats', currentReps, currentExercise.exercise_name);
       if (n.includes('burpee')) checkAchievement('burpees', currentReps, currentExercise.exercise_name);
     }
-    if (currentExercise.superset_with_next && currentExerciseIndex < workout.exercises.length - 1) { setIsSupersetTransition(true); return; }
-    if (currentSet < (currentExercise.sets || 1)) {
-      let supersetStart = currentExerciseIndex;
-      while (supersetStart > 0 && workout.exercises[supersetStart - 1].superset_with_next) supersetStart--;
-      if (supersetStart !== currentExerciseIndex) { setCurrentExerciseIndex(supersetStart); setCurrentSet(p => p + 1); } else { setCurrentSet(p => p + 1); }
+    // Round 19: per-exercise completed-set counter — the old single global
+    // currentSet was shared by the whole superset chain, so linking a superset
+    // MID-workout made a solo set already done "steal" a round from the partner
+    // (user saw only 2 of 3 rounds). Each exercise now tracks its own sets.
+    updatedExercises[currentExerciseIndex] = { ...updatedExercises[currentExerciseIndex], completed_sets: (updatedExercises[currentExerciseIndex].completed_sets || 0) + 1 };
+    setWorkout({ ...workout, exercises: updatedExercises });
+
+    if (currentExercise.superset_with_next && currentExerciseIndex < updatedExercises.length - 1) { setIsSupersetTransition(true); return; }
+
+    // Contiguous superset group containing the current exercise
+    let gs = currentExerciseIndex;
+    while (gs > 0 && updatedExercises[gs - 1].superset_with_next) gs--;
+    // First group member that still owes a set (per-exercise, not global)
+    let pending = -1;
+    for (let i = gs; i <= currentExerciseIndex; i++) {
+      if ((updatedExercises[i].completed_sets || 0) < (updatedExercises[i].sets || 1)) { pending = i; break; }
+    }
+    if (pending !== -1) {
+      setCurrentExerciseIndex(pending);
+      setCurrentSet((updatedExercises[pending].completed_sets || 0) + 1);
       setCurrentReps(0); setRepInput(""); setExerciseTimer(0);
-      setIsResting(true); setRestTimer(currentExercise.category === 'warmup' ? WARMUP_REST_TIME : (workout.rest_time || (supersetStart !== currentExerciseIndex ? 60 : 30))); setRestCardioTotal(0);
+      setIsResting(true); setRestTimer(currentExercise.category === 'warmup' ? WARMUP_REST_TIME : (workout.rest_time || (pending !== currentExerciseIndex ? 60 : 30))); setRestCardioTotal(0);
     } else {
-      if (currentExerciseIndex < workout.exercises.length - 1) {
-        const next = workout.exercises[currentExerciseIndex + 1];
-        setCurrentExerciseIndex(p => p + 1); setCurrentSet(1); setCurrentReps(0); setRepInput(""); setExerciseTimer(0);
+      if (currentExerciseIndex < updatedExercises.length - 1) {
+        const next = updatedExercises[currentExerciseIndex + 1];
+        setCurrentExerciseIndex(p => p + 1); setCurrentSet((next.completed_sets || 0) + 1); setCurrentReps(0); setRepInput(""); setExerciseTimer(0);
         const isWarmup = currentExercise.category === 'warmup' || next?.category === 'warmup';
         setIsResting(true); setRestTimer(isWarmup ? WARMUP_REST_TIME : (workout.rest_time || 60)); setRestCardioTotal(0);
       } else { stopWorkout(); }
@@ -733,9 +752,11 @@ export default function ActiveWorkout() {
         <Card className="bg-card border-border mx-2 mb-2">
           <CardContent className="p-2">
             <h3 className="text-sm sm:text-base font-semibold mb-3 text-white">Workout Plan</h3>
-            <div className="space-y-2 max-h-40 overflow-y-auto touch-manipulation">
+            {/* Round 19: taller + touch-scrollable (was stuck on mobile) */}
+            <div className="space-y-2 max-h-72 overflow-y-auto overscroll-contain"
+              style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
               {workout.exercises.filter(ex => !ex.is_cardio_interval).map((exercise, index) => (
-                <div key={index} className={`flex items-center justify-between p-2 rounded-lg text-sm ${index === currentExerciseIndex ? 'bg-brand-blue/20 border border-brand-blue/30' : index < currentExerciseIndex ? 'bg-green-500/10 text-gray-400' : 'bg-gray-800/50 text-gray-300'}`}>
+                <div key={index} id={`wp-row-${index}`} className={`flex items-center justify-between p-2 rounded-lg text-sm ${index === currentExerciseIndex ? 'bg-brand-blue/20 border border-brand-blue/30' : index < currentExerciseIndex ? 'bg-green-500/10 text-gray-400' : 'bg-gray-800/50 text-gray-300'}`}>
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span className={`w-6 h-6 rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0 ${index === currentExerciseIndex ? 'bg-brand-blue text-white' : index < currentExerciseIndex ? 'bg-green-500 text-white' : 'bg-gray-700 text-white'}`}>{index + 1}</span>
                     <span className="font-medium truncate">{exercise.exercise_name}</span>

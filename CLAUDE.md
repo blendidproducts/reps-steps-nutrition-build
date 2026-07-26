@@ -1,5 +1,5 @@
 # Reps & Steps — Project Context (CLAUDE.md)
-_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-22 (Round 18)_
+_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-23 (Round 19)_
 
 > This file lives at the repo root so any machine that clones the repo (and any Claude session opened on it) has full project context.
 
@@ -83,6 +83,11 @@ From Jace's AI Workout Generator test. Staged in sync folder, esbuild-verified +
 3. **Focus-matched dynamic warm-up** (`AIWorkoutGenerator.jsx` `startWorkout`): warm-up now picks lower/upper/mix variants by counting selected exercise categories (2× majority threshold). All stretch names are canonical DB records so images resolve. Chest Opener bumped 15→30 s (two sides).
 4. **"Switch sides" halfway voice cue** (`ActiveWorkout.jsx` timed countdown): two-sided stretches (`SWITCH_SIDES_RE`: chest opener, quad/hamstring, hip flexor, figure-4, IT band, neck side, cross-body, overhead tricep, pigeon, spinal twist, calf, side plank, forearm, lat, thread the needle) speak "Switch sides" when crossing the half-time mark (crossing detection, not equality — robust to skipped ticks; only if half ≥ 5 s).
 - NOTE: "Walk in Place" images resolve to the "Running in Place" DB record — which still has NO uploaded image (see QA-UPDATE-CHECKLIST.md). Upload one and it appears everywhere.
+
+## Round 19 — ActiveWorkout scroll + superset set-tracking (2026-07-23)
+Two fixes in `ActiveWorkout.jsx`, esbuild-verified + simulation-tested:
+1. **Workout Plan list was stuck/unscrollable on mobile** — the list is now `max-h-72` with `overscroll-contain`, `-webkit-overflow-scrolling: touch`, and `touch-action: pan-y` (replaced `touch-manipulation`), and auto-scrolls the current exercise into view (`wp-row-{i}` ids + scrollIntoView on index change).
+2. **Superset linked MID-workout skipped a round** — ROOT CAUSE: `currentSet` was one GLOBAL counter for the whole superset chain, so a solo set done before linking counted as the pair's first round (partner got 2 of 3). `nextExercise` now tracks per-exercise `completed_sets`; after each set it jumps to the FIRST group member still owing sets and shows that exercise's own set number. Node simulation verified: superset-from-start 3/3, mid-workout link 3/3 (was 3/2), plain exercises unchanged, 3-chain 2/2/2. Also merged the two `setWorkout` spreads in `nextExercise` into one `updatedExercises` array (the split was a lost-update risk). `completed_sets` persists in `activeWorkoutState` automatically.
 
 ## Next steps (in order)
 0. **Mobile builds + media** (2026-07-14, after a successful live QA pass): see `Documents\Pers\RepsAndSteps\MOBILE-BUILD-PLAN.md` (v2: PRIMARY PATH = Base44 Publish → Mobile app tab builds the AAB and even the iOS IPA in the cloud, no Mac needed; needs Builder plan. Gate 1 = test camera/ARTP inside their web-view wrapper. BLOCKER: Stripe digital-goods subscriptions get store-rejected — hide purchase flows in the mobile app. Capacitor project = Plan B only) and `Exercise_Media_Audit.xlsx` (26 exercises missing images, 59 missing videos; 4 ARTP-tracked ones are priority: Tricep Dip, Reverse Lunge, Bulgarian Split Squat, Decline Push-Up).
