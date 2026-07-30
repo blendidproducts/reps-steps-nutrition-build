@@ -1,5 +1,5 @@
 # Reps & Steps — Project Context (CLAUDE.md)
-_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-23 (Round 19)_
+_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-24 (Round 20)_
 
 > This file lives at the repo root so any machine that clones the repo (and any Claude session opened on it) has full project context.
 
@@ -88,6 +88,15 @@ From Jace's AI Workout Generator test. Staged in sync folder, esbuild-verified +
 Two fixes in `ActiveWorkout.jsx`, esbuild-verified + simulation-tested:
 1. **Workout Plan list was stuck/unscrollable on mobile** — the list is now `max-h-72` with `overscroll-contain`, `-webkit-overflow-scrolling: touch`, and `touch-action: pan-y` (replaced `touch-manipulation`), and auto-scrolls the current exercise into view (`wp-row-{i}` ids + scrollIntoView on index change).
 2. **Superset linked MID-workout skipped a round** — ROOT CAUSE: `currentSet` was one GLOBAL counter for the whole superset chain, so a solo set done before linking counted as the pair's first round (partner got 2 of 3). `nextExercise` now tracks per-exercise `completed_sets`; after each set it jumps to the FIRST group member still owing sets and shows that exercise's own set number. Node simulation verified: superset-from-start 3/3, mid-workout link 3/3 (was 3/2), plain exercises unchanged, 3-chain 2/2/2. Also merged the two `setWorkout` spreads in `nextExercise` into one `updatedExercises` array (the split was a lost-update risk). `completed_sets` persists in `activeWorkoutState` automatically.
+
+## Round 20 — ARTP live-session fixes, seven issues (2026-07-24)
+Four files, esbuild-verified. Root causes worth remembering:
+1. **Fast reps dropped past ~15** (`exerciseTracking.js`): minRepIntervalMs was gating fast cadence (push-up 600→450 ms, jumping jack 350→250 ms) and fast reps at throttled frame rates miss the angle extremes → widened jack thresholds (120/55), push-up up 150→145. If fast sets still drop reps, next lever = extremes-tracking in RepCounter (record min/max between frames).
+2. **Crossed limbs at 3/4 view broke lunges** (`exerciseTracking.js`): Lunge + Reverse Lunge now use **min(left knee, right knee) angle** — symmetric metric, so MediaPipe landmark identity swaps don't matter, and each leg's lunge dips the metric → **left = 1 rep, right = 1 rep** (alternating). Bulgarian/Step-Up/Pistol stay on workingKneeAngle (stationary single-leg).
+3. **Active recovery "did nothing" in ARTP working phase** (`ARTPWorkout.jsx`): MidExerciseRecovery + ExitConfirmSheet were fixed-position elements INSIDE the Layout's framer-motion transform (the documented trap) → rendered invisibly behind the RepTracker portal. Both now render via createPortal(document.body). (The preview-phase copy was already portal'd — that's why it worked there.)
+4. **Un-pause lockout**: the invisible modal kept `paused={isPaused || showMidRest}` true while the RESUME button only cleared isPaused. New `handlePauseToggle` clears BOTH; wired to RepTracker + TimerOverlay + AmrapBar.
+5+6. **RepTracker overlay rework** (`RepTracker.jsx`): solid top bar (bg-black/85, was transparent gradient over camera); set label folded into the picker; redundant name/set pill REMOVED; skeleton toggle moved off the top overlay into the bottom bar (SKEL button beside RESET); floating center form-cue REMOVED (bottom-bar tip remains); big timed countdown moved to the top band (+56); no-pose/multi-person/beta ribbons dropped to +150. Bands no longer overlap at any width.
+7. **START/Next/Back could be hidden in the AI generator** (`AIWorkoutGenerator.jsx`): the fixed bottom action bar was inside the same framer-motion trap — now createPortal(document.body), zIndex 9000, safe-area padding. LESSON (3rd time): ANY fixed/absolute overlay inside Layout must be portal'd to document.body.
 
 ## Next steps (in order)
 0. **Mobile builds + media** (2026-07-14, after a successful live QA pass): see `Documents\Pers\RepsAndSteps\MOBILE-BUILD-PLAN.md` (v2: PRIMARY PATH = Base44 Publish → Mobile app tab builds the AAB and even the iOS IPA in the cloud, no Mac needed; needs Builder plan. Gate 1 = test camera/ARTP inside their web-view wrapper. BLOCKER: Stripe digital-goods subscriptions get store-rejected — hide purchase flows in the mobile app. Capacitor project = Plan B only) and `Exercise_Media_Audit.xlsx` (26 exercises missing images, 59 missing videos; 4 ARTP-tracked ones are priority: Tricep Dip, Reverse Lunge, Bulgarian Split Squat, Decline Push-Up).

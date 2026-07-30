@@ -1276,6 +1276,13 @@ function ARTPWorkoutInner() {
 
   const handlePause  = useCallback(() => setIsPaused(true),  []);
   const handleResume = useCallback(() => setIsPaused(false), []);
+  // Round 20: resume must ALSO clear showMidRest — a stuck (invisible) recovery
+  // modal kept `paused={isPaused || showMidRest}` true and the workout could
+  // never be un-paused.
+  const handlePauseToggle = useCallback(() => {
+    if (isPaused || showMidRest) { setIsPaused(false); setShowMidRest(false); }
+    else setIsPaused(true);
+  }, [isPaused, showMidRest]);
   const handleEndWorkout = () => { setIsPaused(false); setShowExitSheet(true); };
 
   const confirmEndWorkout = () => {
@@ -1719,18 +1726,24 @@ function ARTPWorkoutInner() {
       {/* ── Working ───────────────────────────────────────────────── */}
       {phase === "working" && (
         <>
-          <AnimatePresence>
-            {showExitSheet && (
-              <ExitConfirmSheet onConfirm={confirmEndWorkout} onCancel={() => setShowExitSheet(false)} />
-            )}
-            {showMidRest && (
-              <MidExerciseRecovery
-                key="mid-rest"
-                totalSteps={totalSteps}
-                onClose={() => { setShowMidRest(false); setIsPaused(false); }}
-              />
-            )}
-          </AnimatePresence>
+          {/* Round 20: PORTAL'd — these fixed modals were trapped by the Layout's
+              framer-motion transform and rendered invisibly behind the RepTracker
+              (active recovery "did nothing"; exit sheet was at risk too). */}
+          {createPortal(
+            <AnimatePresence>
+              {showExitSheet && (
+                <ExitConfirmSheet onConfirm={confirmEndWorkout} onCancel={() => setShowExitSheet(false)} />
+              )}
+              {showMidRest && (
+                <MidExerciseRecovery
+                  key="mid-rest"
+                  totalSteps={totalSteps}
+                  onClose={() => { setShowMidRest(false); setIsPaused(false); }}
+                />
+              )}
+            </AnimatePresence>,
+            document.body
+          )}
 
           {mode === "time" && (
             <TimerOverlay
@@ -1744,7 +1757,7 @@ function ARTPWorkoutInner() {
               targetReps={targetRepsPerEx}
               isPaused={isPaused}
               onSkip={() => finishExercise(pendingReps.current)}
-              onPause={isPaused ? handleResume : handlePause}
+              onPause={handlePauseToggle}
               onEndWorkout={handleEndWorkout}
               onActiveRecovery={() => { setIsPaused(true); setShowMidRest(true); speak("Active recovery mode", 1.05, 1.05); }}
               onAddSet={() => setTotalSets(s => s + 1)}
@@ -1761,7 +1774,7 @@ function ARTPWorkoutInner() {
               totalSteps={totalSteps}
               isSS={supersets.has(currentEx?.name)}
               isPaused={isPaused}
-              onPause={isPaused ? handleResume : handlePause}
+              onPause={handlePauseToggle}
               onEndWorkout={handleEndWorkout}
               onActiveRecovery={() => { setIsPaused(true); setShowMidRest(true); speak("Active recovery mode", 1.05, 1.05); }}
               onAddSet={() => setTotalSets(s => s + 1)}
@@ -1784,7 +1797,7 @@ function ARTPWorkoutInner() {
               pendingReps.current = Math.max(aiRepsRef.current, manualRepsRef.current);
             }}
             paused={isPaused || showMidRest}
-            onPause={isPaused ? handleResume : handlePause}
+            onPause={handlePauseToggle}
             onComplete={handleRepTrackerComplete}
             onClose={handleEndWorkout}
           />

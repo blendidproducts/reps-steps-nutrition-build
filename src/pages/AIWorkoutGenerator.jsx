@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1210,8 +1211,12 @@ export default function AIWorkoutGenerator() {
         )}
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-20 sm:bottom-0 left-0 right-0 bg-gradient-to-t from-gray-900 via-gray-900 to-gray-900/95 border-t-2 border-brand-blue/30 p-3 sm:p-6 shadow-2xl z-50">
+      {/* Bottom Navigation — Round 20: PORTAL'd to <body> so the Layout's
+          framer-motion transform can't trap/hide the fixed bar. START / Next /
+          Back are always visible on the top layer. */}
+      {createPortal(
+      <div className="fixed bottom-20 sm:bottom-0 left-0 right-0 bg-gray-900 border-t-2 border-brand-blue/30 p-3 sm:p-6 shadow-2xl"
+        style={{ zIndex: 9000, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
         <div className="container mx-auto max-w-3xl px-2 sm:px-0">
           <div className="flex justify-between items-center gap-3 sm:gap-4">
             {currentStep > 1 ? (
@@ -1248,7 +1253,9 @@ export default function AIWorkoutGenerator() {
             )}
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
+      )}
 
       {/* Spacer to clear bottom nav bar on mobile */}
       <div className="h-20 md:hidden" aria-hidden="true" />

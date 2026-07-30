@@ -121,9 +121,9 @@ export const EXERCISE_LIBRARY = [
     // nearly on the floor as READ BY THE CAMERA; off-axis views read shallower
     // angles than reality, so real reps were missed. Hysteresis (must pass BOTH
     // thresholds) + minRepIntervalMs still prevent double counts.
-    upThreshold: 150,    // arms extended at top — forgiving of off-axis reads
+    upThreshold: 145,    // arms extended at top — forgiving of off-axis reads
     downThreshold: 100,  // elbows clearly bent — counts honest reps at an angle
-    minRepIntervalMs: 600,
+    minRepIntervalMs: 450,  // Round 20: fast sets (15+) were dropping reps at 600ms
     direction: 'down_then_up',
     primaryJoint: 'Elbow',
     formCues: [
@@ -421,13 +421,16 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Legs',
     color: '#22c55e',
-    getAngle: (lm) => workingKneeAngle(lm),
+    // Round 20: use the SMALLER knee angle — symmetric, so crossed/swapped
+    // landmarks at 3/4 camera views don't matter, and EACH leg's lunge (left
+    // or right) dips the metric → alternating lunges count 1 rep per leg.
+    getAngle: (lm) => Math.min(getAngle(lm[23], lm[25], lm[27]), getAngle(lm[24], lm[26], lm[28])),
     upThreshold: 155,
     downThreshold: 100,
     direction: 'down_then_up',
-    minRepIntervalMs: 700,
+    minRepIntervalMs: 600,
     primaryJoint: 'Front Knee',
-    formCues: ['Front knee behind toes', 'Back knee near floor', 'Upright torso'],
+    formCues: ['Front knee behind toes', 'Back knee near floor', 'Left = 1 rep, right = 1 rep', 'Upright torso'],
   },
   {
     id: 'reverse_lunge',
@@ -437,13 +440,14 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Legs',
     color: '#22c55e',
-    getAngle: (lm) => workingKneeAngle(lm),
+    // Round 20: min-knee metric — see Lunge note (alternating-leg + crossed-landmark proof)
+    getAngle: (lm) => Math.min(getAngle(lm[23], lm[25], lm[27]), getAngle(lm[24], lm[26], lm[28])),
     upThreshold: 155,
     downThreshold: 100,
     direction: 'down_then_up',
-    minRepIntervalMs: 700,
+    minRepIntervalMs: 600,
     primaryJoint: 'Front Knee',
-    formCues: ['Step backward', 'Control the descent', 'Push through front heel'],
+    formCues: ['Step backward', 'Control the descent', 'Left = 1 rep, right = 1 rep', 'Push through front heel'],
   },
   {
     id: 'bulgarian_split_squat',
@@ -873,10 +877,10 @@ export const EXERCISE_LIBRARY = [
       if (rVis < 1.2) return L;
       return (L + R) / 2;
     },
-    upThreshold: 130,   // arms reasonably wide/overhead — slightly lower than before for more forgiveness
-    downThreshold: 50,  // arms fully back at sides
+    upThreshold: 120,   // Round 20: widened — fast jacks at reduced frame rates missed the extremes
+    downThreshold: 55,
     direction: 'down_then_up',
-    minRepIntervalMs: 350,
+    minRepIntervalMs: 250,
     primaryJoint: 'Shoulder',
     formCues: [
       'Front-facing camera is ideal for jumping jacks',

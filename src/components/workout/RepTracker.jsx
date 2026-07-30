@@ -566,14 +566,18 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
             </AnimatePresence>
 
             {/* Top bar */}
-            <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-3 bg-gradient-to-b from-black/80 to-transparent"
+            {/* Round 20: SOLID top bar (text was unreadable over camera) + set
+                label folded into the picker; skeleton toggle moved to bottom bar */}
+            <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-3 bg-black/85 backdrop-blur-sm border-b border-white/10"
               style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)', paddingBottom: '10px' }}>
               <button onClick={handleClose} className="w-9 h-9 bg-black/60 rounded-full flex items-center justify-center border border-white/20">
                 <X className="w-5 h-5 text-white" />
               </button>
               <button onClick={() => setShowExPicker((p) => !p)} className="flex items-center gap-2 bg-black/60 rounded-full px-3 py-1.5 border border-white/20">
+                {exerciseEmoji && <span className="text-base leading-none">{exerciseEmoji}</span>}
                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: exerciseConfig?.color }} />
-                <span className="text-white text-sm font-bold truncate max-w-[160px]">{exerciseConfig?.name || exerciseName}</span>
+                <span className="text-white text-sm font-bold truncate max-w-[140px]">{exerciseConfig?.name || exerciseName}</span>
+                {setLabel && <span className="text-gray-400 text-xs flex-shrink-0">{setLabel}</span>}
                 <ChevronDown className="w-4 h-4 text-white/70" />
               </button>
               {isExperimental ? (
@@ -588,7 +592,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
 
             {/* No pose warning */}
             {!poseDetected && !multiPersonDetected && (
-              <div className="absolute left-0 right-0 flex justify-center z-10" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 58px)' }}>
+              <div className="absolute left-0 right-0 flex justify-center z-10" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 150px)' }}>
                 <div className="bg-yellow-600/80 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5">
                   <AlertTriangle className="w-3 h-3" />
                   No pose detected — step back
@@ -598,7 +602,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
 
             {/* Multiple-person warning — reps auto-paused */}
             {multiPersonDetected && (
-              <div className="absolute left-0 right-0 flex justify-center z-10" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 58px)' }}>
+              <div className="absolute left-0 right-0 flex justify-center z-10" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 150px)' }}>
                 <div className="bg-red-600/90 text-white text-xs px-4 py-2 rounded-full flex items-center gap-2 font-bold shadow-lg">
                   <Users className="w-3.5 h-3.5" />
                   Multiple people detected — reps paused
@@ -641,7 +645,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
 
             {/* Experimental ribbon */}
             {isExperimental && poseDetected && (
-              <div className="absolute left-0 right-0 flex justify-center z-10" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 58px)' }}>
+              <div className="absolute left-0 right-0 flex justify-center z-10" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 150px)' }}>
                 <div className="bg-yellow-600/60 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5">
                   <FlaskConical className="w-3 h-3" />
                   Experimental — counts may be approximate
@@ -649,21 +653,13 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
               </div>
             )}
 
-            {/* Exercise name + set label overlay */}
-            {(exerciseEmoji || setLabel) && (
-              <div className="absolute left-0 right-0 flex justify-center z-10 pointer-events-none px-4" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 58px)' }}>
-                <div className="flex items-center gap-2 bg-black/65 backdrop-blur-sm rounded-full px-4 py-2 border border-white/15">
-                  {exerciseEmoji && <span className="text-lg">{exerciseEmoji}</span>}
-                  <span className="text-white font-bold text-sm">{exerciseConfig?.name || exerciseName}</span>
-                  {setLabel && <span className="text-gray-400 text-xs">{setLabel}</span>}
-                </div>
-              </div>
-            )}
+            {/* Round 20: name/set pill removed — it duplicated the top-bar picker
+                and collided with the skeleton toggle and warnings at the same offset */}
 
             {/* BIG countdown — readable from across the room (timed mode) */}
             {timedMode && secondsLeft != null && !paused && (
               <div className="absolute left-0 right-0 flex justify-center z-10 pointer-events-none"
-                style={{ top: 'calc(env(safe-area-inset-top, 0px) + 106px)' }}>
+                style={{ top: 'calc(env(safe-area-inset-top, 0px) + 56px)' }}>
                 <div className={`px-6 py-1.5 rounded-3xl border backdrop-blur-sm bg-black/60 ${secondsLeft <= 5 ? "border-red-500/70" : "border-white/25"}`}>
                   <span className={`font-black tabular-nums leading-none ${secondsLeft <= 5 ? "text-red-400 animate-pulse" : "text-white"}`}
                     style={{ fontSize: "64px" }}>{secondsLeft}</span>
@@ -672,16 +668,8 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
               </div>
             )}
 
-            {/* Form cue overlay — center of camera view, above rep counter */}
-            {exerciseConfig?.formCues?.length > 0 && poseDetected && !paused && (
-              <div className="absolute left-4 right-4 z-10 flex justify-center pointer-events-none"
-                style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 130px)' }}>
-                <div className="bg-black/80 backdrop-blur-sm rounded-xl px-4 py-2.5 border border-white/15 max-w-xs">
-                  <p className="text-[10px] text-[#00a9ff] uppercase tracking-wide font-bold mb-0.5">💡 Form Tip</p>
-                  <p className="text-white text-xs leading-snug text-center">{exerciseConfig.formCues[repCount % exerciseConfig.formCues.length]}</p>
-                </div>
-              </div>
-            )}
+            {/* Round 20: floating center form-cue removed — it blocked the view;
+                the bottom bar still shows the rotating form tip */}
 
             {/* Rep counter */}
             <div className="absolute bottom-4 left-4 z-10">
@@ -711,16 +699,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
               </div>
             </div>
 
-            {/* Skeleton toggle */}
-            <div className="absolute right-3 z-10" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 58px)' }}>
-              <button onClick={() => setShowSkeleton((p) => !p)}
-                className={`text-sm px-3.5 py-2 rounded-full border font-bold transition-all flex items-center gap-1.5 ${
-                  showSkeleton ? "bg-[#00a9ff]/40 border-[#00a9ff] text-white shadow-lg shadow-[#00a9ff]/20" : "bg-black/60 border-white/30 text-white/60"
-                }`}>
-                <Activity className="w-4 h-4" />
-                {showSkeleton ? "Skeleton ON" : "Skeleton OFF"}
-              </button>
-            </div>
+            {/* Round 20: skeleton toggle moved into the bottom bar */}
           </div>
 
           {/* Bottom bar */}
@@ -751,6 +730,13 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
                   }
                 </button>
               )}
+              <button onClick={() => setShowSkeleton((p) => !p)}
+                className={`flex-shrink-0 flex flex-col items-center justify-center gap-1 w-12 h-14 rounded-2xl border active:scale-95 transition-transform ${
+                  showSkeleton ? "bg-[#00a9ff]/30 border-[#00a9ff]/60" : "bg-gray-800 border-white/15"
+                }`}>
+                <Activity className={`w-5 h-5 ${showSkeleton ? "text-[#00a9ff]" : "text-gray-500"}`} />
+                <span className={`text-[9px] font-bold leading-none ${showSkeleton ? "text-[#00a9ff]" : "text-gray-500"}`}>SKEL</span>
+              </button>
               <button onClick={resetCount}
                 className="flex-shrink-0 flex flex-col items-center justify-center gap-1 w-12 h-14 bg-gray-800 rounded-2xl border border-white/15 active:scale-95 transition-transform">
                 <RotateCcw className="w-5 h-5 text-gray-400" />
