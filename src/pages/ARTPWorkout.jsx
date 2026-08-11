@@ -23,6 +23,7 @@ import { checkIsPro } from "@/lib/proCheck";
 import { motion, AnimatePresence } from "framer-motion";
 import RepTracker, { releaseSharedCamera } from "@/components/workout/RepTracker";
 import StepTracker from "@/components/StepTracker";
+import { thumbImg, mediumImg } from "@/lib/imgOpt";
 import {
   Brain, Timer, Zap, ChevronRight, ChevronLeft,
   Trophy, RotateCcw, X, Play, Clock, Shuffle,
@@ -190,7 +191,7 @@ function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl, o
         {imageUrl && (
           <div className="w-full max-w-xs rounded-2xl overflow-hidden border border-gray-700 z-10"
             style={{ maxHeight: 180 }}>
-            <img src={imageUrl} alt={exercise.name} className="w-full h-full object-cover" />
+            <img src={mediumImg(imageUrl)} alt={exercise.name} decoding="async" className="w-full h-full object-cover" />
           </div>
         )}
 
@@ -384,7 +385,7 @@ function GuidedRestScreen({ nextExercise, nextImageUrl, prevExercise, nextSetNum
                       <p className="text-[9px] text-[#00a9ff] font-bold mb-2">▶ UP NEXT</p>
                       {nextImageUrl ? (
                         <div className="w-full h-16 rounded-lg overflow-hidden mb-1 bg-black/30">
-                          <img src={nextImageUrl} alt={nextExercise.name} className="w-full h-full object-cover" />
+                          <img src={thumbImg(nextImageUrl)} alt={nextExercise.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                         </div>
                       ) : (
                         <div className="text-2xl mb-1">{nextExercise.emoji}</div>
@@ -901,7 +902,7 @@ function WarmupScreen({ onFinish, onSkipAll, imageMap = {}, totalSteps = 0 }) {
       <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
         {moveImg ? (
           <div className="w-44 h-44 sm:w-52 sm:h-52 rounded-2xl overflow-hidden border-2 border-orange-400/40 mb-4 bg-black/30 shadow-lg">
-            <img src={moveImg} alt={move.name} className="w-full h-full object-cover" />
+            <img src={mediumImg(moveImg)} alt={move.name} decoding="async" className="w-full h-full object-cover" />
           </div>
         ) : (
           <div className="text-[120px] leading-none mb-4">{move.emoji}</div>

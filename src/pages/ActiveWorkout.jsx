@@ -17,6 +17,7 @@ import StepTracker from "@/components/StepTracker";
 import RepTracker from "@/components/workout/RepTracker";
 import { matchExercise } from "@/lib/exerciseTracking";
 import RestScreen from "@/components/workout/RestScreen";
+import { fullImg } from "@/lib/imgOpt";
 import ActiveRecoveryScreen from "@/components/workout/ActiveRecoveryScreen";
 import {
   SupersetTransitionModal, AchievementPopup, VideoModal, ThreeDViewModal,
@@ -677,7 +678,7 @@ export default function ActiveWorkout() {
               {!isTimeBased && isFourCountExercise(currentExercise.exercise_name) && <div className="mb-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg"><p className="text-yellow-400 text-xs font-semibold">⚠️ 4-COUNT: 1...2...3...4 = 1 REP</p></div>}
               <div className="flex flex-col sm:flex-row gap-3 mb-2">
                 <div className="flex-1 bg-background rounded-lg flex items-center justify-center overflow-hidden min-h-[200px] sm:min-h-[280px] max-h-[300px] sm:max-h-[400px]">
-                  {currentExercise.image_url ? <img src={currentExercise.image_url} alt={currentExercise.exercise_name} className="w-full h-full object-cover rounded-lg" /> : <Target className="w-16 h-16 text-brand-blue/50" />}
+                  {currentExercise.image_url ? <img src={fullImg(currentExercise.image_url)} alt={currentExercise.exercise_name} decoding="async" className="w-full h-full object-cover rounded-lg" /> : <Target className="w-16 h-16 text-brand-blue/50" />}
                 </div>
                 {!isTimeBased ? (
                   <div className="flex flex-col items-center justify-center bg-gray-900/50 rounded-lg p-3 w-full sm:w-auto sm:min-w-[180px]">

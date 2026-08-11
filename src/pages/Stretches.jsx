@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Play, Timer, ChevronDown, ChevronUp, X, SkipForward, RotateCcw, Youtube, Box, Lightbulb, CheckCircle2, Video, ChevronLeft } from "lucide-react";
 import Exercise3DViewer from "@/components/Exercise3DViewer";
+import { optImg } from "@/lib/imgOpt";
 
 const CATEGORIES = [
   { id: "all", label: "All" },
@@ -534,7 +535,7 @@ export default function Stretches() {
                       <div className="flex items-center gap-3 p-3 cursor-pointer"
                         onClick={() => setSelectedExercise(open ? null : exercise)}>
                         {isUsableImg(exercise.image_url) ? (
-                          <img src={exercise.image_url} alt={exercise.name} loading="lazy"
+                          <img src={optImg(exercise.image_url, 200)} alt={exercise.name} loading="lazy" decoding="async"
                             onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
                             className="w-20 h-20 rounded-xl object-cover border border-white/10 shrink-0" />
                         ) : (

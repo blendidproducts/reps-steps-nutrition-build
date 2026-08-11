@@ -1,5 +1,5 @@
 # Reps & Steps — Project Context (CLAUDE.md)
-_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-24 (Round 20)_
+_Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-07-24 (Round 21)_
 
 > This file lives at the repo root so any machine that clones the repo (and any Claude session opened on it) has full project context.
 
@@ -97,6 +97,9 @@ Four files, esbuild-verified. Root causes worth remembering:
 4. **Un-pause lockout**: the invisible modal kept `paused={isPaused || showMidRest}` true while the RESUME button only cleared isPaused. New `handlePauseToggle` clears BOTH; wired to RepTracker + TimerOverlay + AmrapBar.
 5+6. **RepTracker overlay rework** (`RepTracker.jsx`): solid top bar (bg-black/85, was transparent gradient over camera); set label folded into the picker; redundant name/set pill REMOVED; skeleton toggle moved off the top overlay into the bottom bar (SKEL button beside RESET); floating center form-cue REMOVED (bottom-bar tip remains); big timed countdown moved to the top band (+56); no-pose/multi-person/beta ribbons dropped to +150. Bands no longer overlap at any width.
 7. **START/Next/Back could be hidden in the AI generator** (`AIWorkoutGenerator.jsx`): the fixed bottom action bar was inside the same framer-motion trap — now createPortal(document.body), zIndex 9000, safe-area padding. LESSON (3rd time): ANY fixed/absolute overlay inside Layout must be portal'd to document.body.
+
+## Round 21 — image loading optimization (2026-07-24)
+Jace noticed slow image loads. ROOT CAUSE: most exercise images are Google Drive thumbnail links hardcoded at `sz=w1000` — lists were downloading 1000px images into 40–60px slots. New `src/lib/imgOpt.js`: `optImg(url, w)` rewrites Drive thumbnail `sz=`, converts `file/d/` links to the thumbnail endpoint, passes Base44/Supabase uploads through untouched. Tiers: `thumbImg` 200px (list rows, rest-screen cards), `mediumImg` 640px (preview cards, warm-up), `fullImg` 1200px (in-exercise display). Applied + `loading="lazy" decoding="async"` in: ARTPWorkout (preview card, rest UP-NEXT, warm-up), ActiveWorkout (main display), Stretches (library thumbs), RestScreen (prev/next cards). ⚠️ `RestScreen.jsx` is NOW part of the sync overlay (was repo-only). LONG-TERM: Drive hotlinks are also flaky/slow per the docs — best fix remains re-uploading compressed WebP via /ExerciseImages so images ship from Base44 storage. DONE 2026-07-24: all 132 movement images batch-converted to WebP (806MB→15MB, each ≤150KB, max 1000px) in `Documents\Pers\RepsAndSteps\WebP-optimized\` — upload from there.
 
 ## Next steps (in order)
 0. **Mobile builds + media** (2026-07-14, after a successful live QA pass): see `Documents\Pers\RepsAndSteps\MOBILE-BUILD-PLAN.md` (v2: PRIMARY PATH = Base44 Publish → Mobile app tab builds the AAB and even the iOS IPA in the cloud, no Mac needed; needs Builder plan. Gate 1 = test camera/ARTP inside their web-view wrapper. BLOCKER: Stripe digital-goods subscriptions get store-rejected — hide purchase flows in the mobile app. Capacitor project = Plan B only) and `Exercise_Media_Audit.xlsx` (26 exercises missing images, 59 missing videos; 4 ARTP-tracked ones are priority: Tricep Dip, Reverse Lunge, Bulgarian Split Squat, Decline Push-Up).

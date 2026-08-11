@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Plus, Minus, Square, Footprints, Route, Zap, Target, Link as LinkIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { thumbImg } from "@/lib/imgOpt";
 
 export default function RestScreen({
   isResting, activeCardio, workout, currentExerciseIndex, currentExercise,
@@ -59,7 +60,7 @@ export default function RestScreen({
                       <div className="bg-green-600/10 border border-green-500/30 rounded-lg p-2">
                         <p className="text-[9px] text-green-400 font-bold mb-1">✓ COMPLETED</p>
                         <div className="w-full h-14 bg-gray-800 rounded mb-1 flex items-center justify-center overflow-hidden">
-                          {workout.exercises[currentExerciseIndex - 1]?.image_url ? <img src={workout.exercises[currentExerciseIndex - 1].image_url} alt="" className="w-full h-full object-cover" /> : <Target className="w-5 h-5 text-gray-600" />}
+                          {workout.exercises[currentExerciseIndex - 1]?.image_url ? <img src={thumbImg(workout.exercises[currentExerciseIndex - 1].image_url)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" /> : <Target className="w-5 h-5 text-gray-600" />}
                         </div>
                         <p className="text-[9px] font-semibold text-white line-clamp-2">{workout.exercises[currentExerciseIndex - 1]?.exercise_name}</p>
                       </div>
@@ -67,7 +68,7 @@ export default function RestScreen({
                     <div className="bg-brand-blue/10 border border-brand-blue/30 rounded-lg p-2">
                       <p className="text-[9px] text-brand-blue font-bold mb-1">▶ UP NEXT</p>
                       <div className="w-full h-14 bg-gray-800 rounded mb-1 flex items-center justify-center overflow-hidden">
-                        {currentExercise?.image_url ? <img src={currentExercise.image_url} alt="" className="w-full h-full object-cover" /> : <Target className="w-5 h-5 text-gray-600" />}
+                        {currentExercise?.image_url ? <img src={thumbImg(currentExercise.image_url)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" /> : <Target className="w-5 h-5 text-gray-600" />}
                       </div>
                       <p className="text-[9px] font-semibold text-white line-clamp-2">{currentExercise?.exercise_name}</p>
                       <p className="text-[9px] text-gray-400">{currentExercise?.metric === 'time' ? `${currentExercise?.target_time}s` : `${currentExercise?.target_reps} reps`}</p>
