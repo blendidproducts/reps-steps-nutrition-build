@@ -41,6 +41,15 @@ const ISOMETRIC_HOLDS = {
 
 const norm = (s) => (s || "").toLowerCase().trim();
 
+/* Base44 stores some fields as arrays (step lists), some as strings.
+   Coerce either shape to plain text so .trim() is always safe. */
+const textOf = (v) => {
+  if (Array.isArray(v)) return v.filter(Boolean).join(" ").trim();
+  if (typeof v === "string") return v.trim();
+  if (v === null || v === undefined) return "";
+  return String(v).trim();
+};
+
 /* exerciseTracking's matchExercise shape varies by entry — read it defensively
    so a library change can never crash the audit. */
 function getTrackInfo(name) {
@@ -81,14 +90,14 @@ function auditExercise(ex) {
       detail: "Falls back to a grey box in every list.",
     });
   }
-  if (!(ex.instructions || "").trim()) {
+  if (!textOf(ex.instructions)) {
     issues.push({
       p: 2, code: "NO_INSTRUCTIONS", icon: FileText,
       label: "No instructions",
       detail: "Exercise screen has no how-to text. New users are guessing.",
     });
   }
-  if (!(ex.youtube_url || "").trim()) {
+  if (!textOf(ex.youtube_url)) {
     issues.push({
       p: 3, code: "NO_VIDEO", icon: Youtube,
       label: "No video link",
@@ -166,8 +175,8 @@ export default function ContentAudit() {
         ex.issues.length ? `P${ex.worst}` : "OK",
         ex.issues.map(i => i.label).join(" | "),
         ex.image_url ? "yes" : "NO",
-        ex.youtube_url ? "yes" : "NO",
-        (ex.instructions || "").trim() ? "yes" : "NO",
+        textOf(ex.youtube_url) ? "yes" : "NO",
+        textOf(ex.instructions) ? "yes" : "NO",
         ex.metric || "(unset)",
         ex.track ? (ex.track.experimental ? "beta" : "yes") : "no",
       ]));
