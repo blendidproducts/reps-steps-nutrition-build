@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import StepTracker from "@/components/StepTracker";
 import RepTracker from "@/components/workout/RepTracker";
 import { matchExercise } from "@/lib/exerciseTracking";
+import { normName, findExerciseRecord } from "@/lib/exerciseNameMatch";
 import RestScreen from "@/components/workout/RestScreen";
 import { fullImg } from "@/lib/imgOpt";
 import ActiveRecoveryScreen from "@/components/workout/ActiveRecoveryScreen";
@@ -29,38 +30,8 @@ import {
 // AI-generated workouts save names like "Toe Touches" / "Walk in Place" that
 // never exactly matched DB records ("Toe Touch" / "Running in Place"), so the
 // exercises lost their images, instructions, and timed metric.
-const EX_ALIASES = {
-  "walk in place": "running in place",
-  "walking in place": "running in place",
-  "walking": "running in place",
-  "march in place": "running in place",
-  "marching in place": "running in place",
-  "arm circles forward": "arm circle",
-  "arm circles backward": "arm circle",
-  "chest opener": "chest opener stretch",
-};
-const normName = (s) => (s || "").toLowerCase().trim().replace(/-/g, " ").replace(/[^a-z0-9\s\/]/g, "").replace(/\s+/g, " ");
-const singularWord = (w) => (/(ch|sh|ss|x)es$/.test(w) ? w.slice(0, -2) : (/[a-z]s$/.test(w) && !/ss$/.test(w) ? w.slice(0, -1) : w));
-const singular = (s) => s.split(" ").map(singularWord).join(" ");
-
-function findExerciseRecord(exList, we) {
-  let d = exList.find(ex => ex.id === we.exercise_id || ex.name === we.exercise_name);
-  if (d) return d;
-  const raw = normName(we.exercise_name);
-  const target = EX_ALIASES[raw] || raw;
-  d = exList.find(ex => normName(ex.name) === target);
-  if (d) return d;
-  const st = singular(target);
-  d = exList.find(ex => singular(normName(ex.name)) === st);
-  if (d) return d;
-  // last resort: longest DB name contained in the workout name (or vice versa)
-  let best = null, bestLen = 0;
-  for (const ex of exList) {
-    const n = normName(ex.name);
-    if (n.length > 3 && (target.includes(n) || n.includes(target)) && n.length > bestLen) { best = ex; bestLen = n.length; }
-  }
-  return best;
-}
+// normName / findExerciseRecord now live in @/lib/exerciseNameMatch (Round 22)
+// so AIWorkoutGenerator's WorkoutGenie prompt can resolve names the same way.
 
 // Names that must ALWAYS run as timers, never rep counters
 const TIMED_EXACT = new Set([

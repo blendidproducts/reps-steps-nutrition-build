@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//dev/**)",
+      "Bash(npx esbuild *)",
+      "Bash(xargs grep -l \"MobileRouteTransition\")"
+    ]
+  }
+}

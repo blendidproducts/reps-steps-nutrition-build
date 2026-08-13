@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
+import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,12 +27,15 @@ import {
   Sparkles
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { findNamedExercisesInText } from "@/lib/exerciseNameMatch";
 
 export default function AIWorkoutGenerator() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [promptText, setPromptText] = useState("");
   const [isListening, setIsListening] = useState(false);
+  const [justTranscribed, setJustTranscribed] = useState(false);
+  const promptInputRef = useRef(null);
   const [workoutLevel, setWorkoutLevel] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
@@ -270,15 +272,43 @@ export default function AIWorkoutGenerator() {
     if (level === "beginner") filtered = filtered.filter(ex => ex.difficulty === "beginner" || ex.difficulty === "intermediate");
     else if (level === "intermediate") filtered = filtered.filter(ex => ex.difficulty !== "advanced");
 
-    const numExercises = Math.min(Math.max(5, Math.floor(time / 5)), filtered.length);
-    const shuffled = [...filtered].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, numExercises).map(ex => ({ ...ex, superset_with_next: false }));
+    // Round 22: exercises explicitly named in the prompt ("burpees, mountain
+    // climbers, push-ups") are a HARD CONSTRAINT, not a suggestion — they must
+    // appear in the result regardless of the guessed category/difficulty
+    // filters above. Matched against the Exercise table the same way
+    // ActiveWorkout resolves saved workout names (@/lib/exerciseNameMatch).
+    const namedExercises = findNamedExercisesInText(req, allExercises);
+    const namedIds = new Set(namedExercises.map(ex => ex.id));
+    const rest = filtered.filter(ex => !namedIds.has(ex.id));
+
+    const numExercises = Math.min(Math.max(5, Math.floor(time / 5)), rest.length + namedExercises.length);
+    const fillCount = Math.max(0, numExercises - namedExercises.length);
+    const shuffled = [...rest].sort(() => 0.5 - Math.random());
+    const selected = [...namedExercises, ...shuffled.slice(0, fillCount)].map(ex => ({ ...ex, superset_with_next: false }));
     if (!selected.length) { toast.error("No matching exercises found — try different words."); return; }
+
+    // Validate every named exercise actually made it into the result. It
+    // always should (they're prepended unconditionally above) — this guards
+    // against silently dropping a name instead of telling the user.
+    const includedIds = new Set(selected.map(ex => ex.id));
+    const missingNamed = namedExercises.filter(ex => !includedIds.has(ex.id));
+    if (missingNamed.length > 0) {
+      toast.error(`Couldn't include: ${missingNamed.map(ex => ex.name).join(", ")} — check spelling and try again.`);
+    }
+
     setSelectedExercises(selected);
-    toast.success(`Built a ${level} ${cat === "mix" ? "full-body" : cat} workout (${selected.length} moves)`);
+    const namedNote = namedExercises.length ? ` — incl. ${namedExercises.map(ex => ex.name).join(", ")}` : "";
+    toast.success(`Built a ${level} ${cat === "mix" ? "full-body" : cat} workout (${selected.length} moves)${namedNote}`);
     setCurrentStep(3);
   };
 
+  // Round 22: voice input used to call generateFromPrompt() straight from the
+  // speech-recognition result — the user never saw what was actually heard
+  // before a workout got built from it, so a mis-transcribed word silently
+  // built the wrong thing. Now it only fills the (already editable) prompt
+  // field and waits for the user to review/correct it and explicitly confirm
+  // via the Generate button (or Enter) — same path as typed prompts, so it
+  // goes through the same named-exercise hard-constraint matching (Fix 4).
   const startVoicePrompt = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { toast.error("Voice input is not supported in this browser — please type instead."); return; }
@@ -287,11 +317,17 @@ export default function AIWorkoutGenerator() {
     rec.interimResults = false;
     rec.maxAlternatives = 1;
     setIsListening(true);
+    setJustTranscribed(false);
     rec.onresult = (e) => {
       const said = e.results[0][0].transcript;
       setPromptText(said);
       setIsListening(false);
-      generateFromPrompt(said);
+      setJustTranscribed(true);
+      toast.info("Review what we heard, then tap Generate my workout");
+      // Put the transcript in front of the user for editing rather than
+      // generating immediately — a native select() also highlights it so a
+      // wrong word is obvious and easy to overwrite.
+      requestAnimationFrame(() => { promptInputRef.current?.focus(); promptInputRef.current?.select(); });
     };
     rec.onerror = () => { setIsListening(false); toast.error("Didn't catch that — try again or type it."); };
     rec.onend = () => setIsListening(false);
@@ -492,7 +528,56 @@ export default function AIWorkoutGenerator() {
         </div>
       </div>
 
-      <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8 pb-48 sm:pb-44 max-w-4xl overflow-x-hidden">
+      {/* Sticky action bar — Round 22: this used to be a fixed bottom bar
+          portal'd to <body> (Round 20, to escape the Layout's framer-motion
+          transform trap). On an iPhone SE (375pt) that bar covered enough of
+          the viewport that Next/Start Workout became unreachable. Sticky
+          positioning doesn't need the portal escape — the transform trap only
+          affects fixed/absolute overlays (it works by giving them a new
+          containing block); position:sticky is governed by the nearest
+          scrolling ancestor (#main-content, which has overflow-y-auto) and
+          isn't affected by an ancestor's transform. Staying in normal flow
+          also means it can never cover page content below it. */}
+      <div className="sticky top-0 z-40 bg-gray-900/95 backdrop-blur-lg border-b-2 border-brand-blue/30 shadow-lg">
+        <div className="container mx-auto max-w-3xl px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3">
+          <div className="flex justify-between items-center gap-3 sm:gap-4">
+            {currentStep > 1 ? (
+              <Button
+                variant="outline"
+                onClick={() => setCurrentStep(currentStep - 1)}
+                className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700 rounded-lg px-3 sm:px-5 py-2.5 sm:py-3 text-sm sm:text-base"
+              >
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5" />
+                Back
+              </Button>
+            ) : (
+              <div />
+            )}
+
+            {currentStep < 3 ? (
+              <Button
+                onClick={proceedToNextStep}
+                disabled={!canProceed()}
+                className="bg-brand-blue hover:bg-brand-blue/90 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed px-6 sm:px-10 py-2.5 sm:py-3 text-sm sm:text-base font-bold shadow-lg flex-1 max-w-xs"
+              >
+                Next
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
+              </Button>
+            ) : (
+              <Button
+                onClick={startWorkout}
+                disabled={!canProceed()}
+                className="bg-gradient-to-r from-brand-blue to-blue-600 hover:opacity-90 text-white font-bold text-sm sm:text-base px-5 sm:px-8 py-2.5 sm:py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl flex-1 max-w-md mx-auto"
+              >
+                <Play className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                START WORKOUT
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8 pb-8 sm:pb-10 max-w-4xl overflow-x-hidden">
         {/* Step 1: Choose Level */}
         {currentStep === 1 && (
           <motion.div
@@ -512,11 +597,14 @@ export default function AIWorkoutGenerator() {
                 </p>
                 <div className="flex items-center gap-2">
                   <Input
+                    ref={promptInputRef}
                     value={promptText}
-                    onChange={(e) => setPromptText(e.target.value)}
+                    onChange={(e) => { setPromptText(e.target.value); setJustTranscribed(false); }}
                     onKeyDown={(e) => { if (e.key === "Enter") generateFromPrompt(); }}
                     placeholder="Describe your workout..."
-                    className="flex-1 bg-gray-900 border-gray-700 text-white"
+                    className={`flex-1 bg-gray-900 text-white transition-colors ${
+                      justTranscribed ? "border-[#00a9ff] ring-2 ring-[#00a9ff]/40" : "border-gray-700"
+                    }`}
                   />
                   <button
                     type="button"
@@ -529,8 +617,13 @@ export default function AIWorkoutGenerator() {
                     <Mic className="w-5 h-5 text-white" />
                   </button>
                 </div>
+                {justTranscribed && (
+                  <p className="text-[#00a9ff] text-xs mt-2 flex items-center gap-1.5">
+                    <Mic className="w-3 h-3 flex-shrink-0" /> Heard you — review the text above (edit if needed), then tap Generate
+                  </p>
+                )}
                 <Button
-                  onClick={() => generateFromPrompt()}
+                  onClick={() => { setJustTranscribed(false); generateFromPrompt(); }}
                   className="w-full mt-3 bg-[#00a9ff] hover:bg-[#0090e0] text-white font-bold"
                 >
                   <Sparkles className="w-4 h-4 mr-2" /> Generate my workout
@@ -1062,7 +1155,7 @@ export default function AIWorkoutGenerator() {
                 <CardTitle className="text-white text-lg sm:text-xl">Fine-tune Settings</CardTitle>
                 <p className="text-xs sm:text-sm text-gray-400">Adjust workout parameters</p>
               </CardHeader>
-              <CardContent className="space-y-4 sm:space-y-6 pb-40">
+              <CardContent className="space-y-4 sm:space-y-6 pb-6">
                 <div className="space-y-3">
                   <Label className="text-white text-sm sm:text-base">Sets per Exercise</Label>
                   <div className="flex items-center gap-3">
@@ -1210,55 +1303,6 @@ export default function AIWorkoutGenerator() {
           </motion.div>
         )}
       </div>
-
-      {/* Bottom Navigation — Round 20: PORTAL'd to <body> so the Layout's
-          framer-motion transform can't trap/hide the fixed bar. START / Next /
-          Back are always visible on the top layer. */}
-      {createPortal(
-      <div className="fixed bottom-20 sm:bottom-0 left-0 right-0 bg-gray-900 border-t-2 border-brand-blue/30 p-3 sm:p-6 shadow-2xl"
-        style={{ zIndex: 9000, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
-        <div className="container mx-auto max-w-3xl px-2 sm:px-0">
-          <div className="flex justify-between items-center gap-3 sm:gap-4">
-            {currentStep > 1 ? (
-              <Button
-                variant="outline"
-                onClick={() => setCurrentStep(currentStep - 1)}
-                className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700 rounded-lg px-4 sm:px-6 py-4 sm:py-6 text-sm sm:text-base"
-              >
-                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                Back
-              </Button>
-            ) : (
-              <div />
-            )}
-
-            {currentStep < 3 ? (
-              <Button
-                onClick={proceedToNextStep}
-                disabled={!canProceed()}
-                className="bg-brand-blue hover:bg-brand-blue/90 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed px-8 sm:px-12 py-4 sm:py-6 text-base sm:text-lg font-bold shadow-lg flex-1 max-w-xs"
-              >
-                Next
-                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
-              </Button>
-            ) : (
-              <Button
-                onClick={startWorkout}
-                disabled={!canProceed()}
-                className="bg-gradient-to-r from-brand-blue to-blue-600 hover:opacity-90 text-white font-bold text-base sm:text-lg md:text-xl px-6 sm:px-10 md:px-16 py-4 sm:py-6 md:py-7 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl flex-1 max-w-md mx-auto"
-              >
-                <Play className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-                START WORKOUT
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>,
-      document.body
-      )}
-
-      {/* Spacer to clear bottom nav bar on mobile */}
-      <div className="h-20 md:hidden" aria-hidden="true" />
 
       <style>
         {`

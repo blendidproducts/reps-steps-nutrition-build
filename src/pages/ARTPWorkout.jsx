@@ -491,8 +491,10 @@ function MidExerciseRecovery({ totalSteps, onClose }) {
   return createPortal(
     <motion.div initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }}
       className="fixed inset-0 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center"
-      style={{ zIndex: 100001 }}
-      style={{ padding: 'calc(env(safe-area-inset-top, 16px) + 16px) 16px calc(env(safe-area-inset-bottom, 16px) + 16px)' }}>
+      style={{
+        zIndex: 100001,
+        padding: 'calc(env(safe-area-inset-top, 16px) + 16px) 16px calc(env(safe-area-inset-bottom, 16px) + 16px)',
+      }}>
 
       <div className="bg-gray-900 border border-[#00a9ff]/40 rounded-2xl w-full max-w-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-[#00a9ff]/20 flex items-center justify-between">
@@ -855,22 +857,25 @@ function WarmupScreen({ onFinish, onSkipAll, imageMap = {}, totalSteps = 0 }) {
     speak(`${move.name}. ${move.cue}`, 1.05, 1.05);
   }, [idx, started]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Per-move countdown — auto-advances, finishes warm-up after the last move
+  // Per-move countdown — PURE decrement only, no side effects. (Round 22: the
+  // old version called setIdx/setSecs/onFinish from inside this updater's own
+  // callback; an impure functional updater can be invoked more than once by
+  // React's setState scheduling, which was firing the advance logic twice per
+  // tick and cascading through the rest of the routine. This mirrors the
+  // countdown pattern already used correctly above for the 3-2-1 phase.)
   useEffect(() => {
     if (!started) return;
-    const t = setInterval(() => {
-      setSecs((s) => {
-        if (s <= 1) {
-          clearInterval(t);
-          if (isLast) { speak("Warm-up complete! Let's go.", 1.1, 1.1); onFinish(); }
-          else { setIdx((i) => i + 1); setSecs(WARMUP_ROUTINE[idx + 1].seconds); }
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
+    const t = setInterval(() => setSecs((s) => Math.max(0, s - 1)), 1000);
     return () => clearInterval(t);
-  }, [idx, isLast, started]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [started, idx]);
+
+  // Advance once secs actually reaches 0, read from committed state on the
+  // next render — never from inside the tick's own updater.
+  useEffect(() => {
+    if (!started || secs > 0) return;
+    if (isLast) { speak("Warm-up complete! Let's go.", 1.1, 1.1); onFinish(); }
+    else { setIdx((i) => i + 1); setSecs(WARMUP_ROUTINE[idx + 1].seconds); }
+  }, [secs, started]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const nextMove = () => {
     if (isLast) onFinish();
@@ -1005,10 +1010,24 @@ function ARTPWorkoutInner() {
   const [totalSteps,     setTotalSteps]     = useState(0);
   const [elapsedSecs,    setElapsedSecs]    = useState(0);
   const [showExitSheet,  setShowExitSheet]  = useState(false);
-  const [isPaused,       setIsPaused]       = useState(false);
+  // Round 22: pause is tracked as a SET OF REASONS ('manual', 'recovery', …)
+  // instead of one boolean. Each source can only ever add/remove its OWN
+  // reason — the manual pause button never touches 'recovery' and vice versa —
+  // so one source finishing can't clobber a pause the other source started.
+  // The workout is paused iff the set is non-empty; showMidRest (whether the
+  // active-recovery modal is mounted) is derived from the 'recovery' reason so
+  // there's a single source of truth instead of two booleans that can drift.
+  const [pauseReasons,   setPauseReasons]   = useState(() => new Set());
+  const isPaused    = pauseReasons.size > 0;
+  const showMidRest = pauseReasons.has("recovery");
+  const addPauseReason = useCallback((reason) => {
+    setPauseReasons(prev => (prev.has(reason) ? prev : new Set(prev).add(reason)));
+  }, []);
+  const removePauseReason = useCallback((reason) => {
+    setPauseReasons(prev => (prev.has(reason) ? new Set([...prev].filter(r => r !== reason)) : prev));
+  }, []);
   const [targetRepsPerEx, setTargetRepsPerEx] = useState(12);
   const [repGoalPerEx,   setRepGoalPerEx]   = useState(20); // used in "goal" mode
-  const [showMidRest,    setShowMidRest]    = useState(false);
   const [warmupEnabled,  setWarmupEnabled]  = useState(() => localStorage.getItem("artp_warmup") === "1");
 
   const timerRef      = useRef(null);
@@ -1228,7 +1247,7 @@ function ARTPWorkoutInner() {
     if (!mode || activeList.length === 0) return;
     setExerciseIndex(0); setCurrentSet(1); setScores([]);
     setCountdownSecs(3); setTimerSecs(timePerEx);
-    setElapsedSecs(0); setTotalSteps(0); setIsPaused(false);
+    setElapsedSecs(0); setTotalSteps(0); setPauseReasons(new Set());
     pendingReps.current = 0; aiRepsRef.current = 0; manualRepsRef.current = 0;
     stepBaseRef.current = 0; stepLastRef.current = 0;
     setPhase(warmupEnabled ? "warmup" : "countdown");
@@ -1237,7 +1256,7 @@ function ARTPWorkoutInner() {
   const handleRestart = () => {
     setExerciseIndex(0); setCurrentSet(1); setScores([]);
     setCountdownSecs(3); setTimerSecs(timePerEx);
-    setElapsedSecs(0); setTotalSteps(0); setIsPaused(false);
+    setElapsedSecs(0); setTotalSteps(0); setPauseReasons(new Set());
     pendingReps.current = 0; aiRepsRef.current = 0; manualRepsRef.current = 0;
     stepBaseRef.current = 0; stepLastRef.current = 0;
     setPhase("setup");
@@ -1268,23 +1287,24 @@ function ARTPWorkoutInner() {
     const pkg = "@capacitor/app";
     import(/* @vite-ignore */ pkg).then(({ App }) => {
       App.addListener("backButton", () => {
-        setIsPaused(true);
+        addPauseReason("manual");
         setShowExitSheet(true);
       }).then(h => { handle = h; }).catch(() => {});
     }).catch(() => {});
     return () => { handle?.remove?.(); };
   }, [phase]);
 
-  const handlePause  = useCallback(() => setIsPaused(true),  []);
-  const handleResume = useCallback(() => setIsPaused(false), []);
-  // Round 20: resume must ALSO clear showMidRest — a stuck (invisible) recovery
-  // modal kept `paused={isPaused || showMidRest}` true and the workout could
-  // never be un-paused.
+  // Manual pause/resume — toggles ONLY the 'manual' reason. Never touches
+  // 'recovery', so opening/closing active recovery can't silently cancel an
+  // unrelated manual pause (or vice versa) the way the old single boolean did.
   const handlePauseToggle = useCallback(() => {
-    if (isPaused || showMidRest) { setIsPaused(false); setShowMidRest(false); }
-    else setIsPaused(true);
-  }, [isPaused, showMidRest]);
-  const handleEndWorkout = () => { setIsPaused(false); setShowExitSheet(true); };
+    setPauseReasons(prev => {
+      const next = new Set(prev);
+      if (next.has("manual")) next.delete("manual"); else next.add("manual");
+      return next;
+    });
+  }, []);
+  const handleEndWorkout = () => { removePauseReason("manual"); setShowExitSheet(true); };
 
   const confirmEndWorkout = () => {
     clearInterval(timerRef.current);
@@ -1672,14 +1692,14 @@ function ARTPWorkoutInner() {
             totalSets={totalSets}
             imageUrl={exImageMapRef.current[currentEx?.name?.toLowerCase()]}
             onStart={() => { setPhase("working"); }}
-            onActiveRecovery={() => { setShowMidRest(true); speak("Active recovery mode", 1.05, 1.05); }}
+            onActiveRecovery={() => { addPauseReason("recovery"); speak("Active recovery mode", 1.05, 1.05); }}
           />
           <AnimatePresence>
             {showMidRest && (
               <MidExerciseRecovery
                 key="mid-rest-preview"
                 totalSteps={totalSteps}
-                onClose={() => setShowMidRest(false)}
+                onClose={() => removePauseReason("recovery")}
               />
             )}
           </AnimatePresence>
@@ -1739,7 +1759,7 @@ function ARTPWorkoutInner() {
                 <MidExerciseRecovery
                   key="mid-rest"
                   totalSteps={totalSteps}
-                  onClose={() => { setShowMidRest(false); setIsPaused(false); }}
+                  onClose={() => removePauseReason("recovery")}
                 />
               )}
             </AnimatePresence>,
@@ -1760,7 +1780,7 @@ function ARTPWorkoutInner() {
               onSkip={() => finishExercise(pendingReps.current)}
               onPause={handlePauseToggle}
               onEndWorkout={handleEndWorkout}
-              onActiveRecovery={() => { setIsPaused(true); setShowMidRest(true); speak("Active recovery mode", 1.05, 1.05); }}
+              onActiveRecovery={() => { addPauseReason("recovery"); speak("Active recovery mode", 1.05, 1.05); }}
               onAddSet={() => setTotalSets(s => s + 1)}
             />
           )}
@@ -1777,7 +1797,7 @@ function ARTPWorkoutInner() {
               isPaused={isPaused}
               onPause={handlePauseToggle}
               onEndWorkout={handleEndWorkout}
-              onActiveRecovery={() => { setIsPaused(true); setShowMidRest(true); speak("Active recovery mode", 1.05, 1.05); }}
+              onActiveRecovery={() => { addPauseReason("recovery"); speak("Active recovery mode", 1.05, 1.05); }}
               onAddSet={() => setTotalSets(s => s + 1)}
             />
           )}
@@ -1797,7 +1817,7 @@ function ARTPWorkoutInner() {
               aiRepsRef.current = c;
               pendingReps.current = Math.max(aiRepsRef.current, manualRepsRef.current);
             }}
-            paused={isPaused || showMidRest}
+            paused={isPaused}
             onPause={handlePauseToggle}
             onComplete={handleRepTrackerComplete}
             onClose={handleEndWorkout}
