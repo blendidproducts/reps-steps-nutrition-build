@@ -24,6 +24,9 @@ export const AuthProvider = ({ children }) => {
       
       // First, check app public settings (with token if available)
       // This will tell us if auth is required, user not registered, etc.
+      // serverUrl is a trusted build-time constant (see app-params.js) and is
+      // NOT derived from a runtime URL query param, so authenticated requests
+      // cannot be redirected to an attacker-controlled host.
       const appClient = createAxiosClient({
         baseURL: `${appParams.serverUrl}/api/apps/public`,
         headers: {
