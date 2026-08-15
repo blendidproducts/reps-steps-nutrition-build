@@ -1345,8 +1345,26 @@ function ARTPWorkoutInner() {
   ) : null;
 
   // ── PHASE: setup ───────────────────────────────────────────────────
+  // Round 23: root used to be `min-h-screen flex flex-col` with the scrollable
+  // body as a `flex-1 overflow-y-auto` child and the START bar as a plain
+  // `flex-shrink-0` footer below it (Round 13c). That's a SECOND, nested scroll
+  // container sitting inside Layout's own #main-content (also overflow-y-auto)
+  // — and the inner box was sized via `min-h-screen` (100vh). On iOS Safari,
+  // 100vh is computed against the LARGEST possible viewport (chrome hidden),
+  // taller than the actual visible area while the address bar is showing; the
+  // page's html/body are `position: fixed` (Layout.jsx) so there's no natural
+  // document scroll to reveal the shortfall, and touch scroll gestures land on
+  // the INNER scroll box first — so the footer ends up sized off the bottom of
+  // the real viewport with no reliable way to scroll it into view. Same root
+  // cause class as the Round 22 Build Workout fix (AIWorkoutGenerator.jsx):
+  // don't nest a second scroll container / don't rely on fixed+vh sizing —
+  // let Layout's #main-content be the ONLY scroll owner, and pin the bar with
+  // `sticky bottom-0` inside it. Sticky tracks the real scrolling ancestor's
+  // actual rendered viewport (immune to the 100vh oversizing) and, per the
+  // Round 22 lesson, isn't trapped by the Layout's page-transition transform
+  // the way `fixed` is — so no portal escape needed either.
   if (phase === "setup") return (
-    <div className="min-h-screen bg-[#020817] flex flex-col text-white">
+    <div className="min-h-screen bg-[#020817] text-white">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 bg-[#111] border-b border-gray-800 sticky top-0 z-10"
         style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 52px)", paddingBottom: "12px" }}>
@@ -1361,7 +1379,7 @@ function ARTPWorkoutInner() {
         <span className="bg-blue-500/20 text-blue-400 text-[10px] font-bold border border-blue-500/30 rounded-full px-2.5 py-0.5 shrink-0">PRO</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-6">
+      <div className="px-4 py-4 space-y-4 pb-6">
 
         {/* ── Saved Program card ───────────────────────────────────── */}
         {savedName ? (
@@ -1622,11 +1640,12 @@ function ARTPWorkoutInner() {
 
       </div>
 
-      {/* START bar — in-flow footer so it's always pinned to the visible bottom */}
+      {/* START bar — sticky to the bottom of Layout's #main-content scroller
+          (see root-container comment above for why sticky, not fixed/in-flow). */}
       <motion.div
         initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 400, damping: 35 }}
-        className="flex-shrink-0 px-4 pt-3 border-t border-white/5"
+        className="sticky bottom-0 z-20 px-4 pt-3 border-t border-white/5"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 16px) + 8px)", background: "linear-gradient(to top, #020817 70%, rgba(2,8,23,0.85))" }}
       >
         <button

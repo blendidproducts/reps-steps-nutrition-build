@@ -142,10 +142,22 @@ export const EXERCISE_LIBRARY = [
     category: 'Push',
     color: '#f97316',
     getAngle: (lm) => elbowAngle(lm),
-    upThreshold: 150,
-    downThreshold: 100,
+    // Round 23: was up 150 / down 100 (the round-14 push-up-family baseline,
+    // never revisited). Diamond's tucked, narrow hand placement means the
+    // chest reaches the hands — full honest depth — at a shallower (larger)
+    // 2D elbow angle than a shoulder-width push-up produces; 100 required
+    // more flexion than the movement actually generates, so deep-but-honest
+    // reps never crossed it and were silently dropped. Loosened to 105 (still
+    // a 40° hysteresis gap vs standard push-up's proven 45°, so double-count
+    // risk from landmark jitter stays in the same range) and matched the
+    // up threshold + fast-cadence interval already validated for the base
+    // push-up in Round 20. Tradeoff: a rep bottoming out at 105-108° (not
+    // quite full diamond depth) now counts where it wouldn't before — traded
+    // in exchange for no longer missing genuinely full-depth reps.
+    upThreshold: 145,
+    downThreshold: 105,
     direction: 'down_then_up',
-    minRepIntervalMs: 600,
+    minRepIntervalMs: 450,
     primaryJoint: 'Elbow',
     formCues: ['Hands form a diamond', 'Elbows tight to body', 'Full tricep extension'],
   },

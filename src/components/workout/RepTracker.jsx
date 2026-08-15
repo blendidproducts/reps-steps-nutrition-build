@@ -656,14 +656,26 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
             {/* Round 20: name/set pill removed — it duplicated the top-bar picker
                 and collided with the skeleton toggle and warnings at the same offset */}
 
-            {/* BIG countdown — readable from across the room (timed mode) */}
+            {/* BIG countdown — readable from across the room (timed mode).
+                Round 23: RepTracker is portal'd to document.body at z-9999, but
+                ARTPWorkout ALSO portals its own TimerOverlay/AmrapBar bar to
+                document.body at the SAME top-of-screen coordinates with a
+                HIGHER z-index (z-[10001]) — the two overlay systems don't share
+                a coordinate space, each assumes it's the only thing anchored to
+                the top. This +56px offset was tuned (Round 20) against
+                RepTracker's OWN top bar only (~54px tall) with almost no
+                margin; it never accounted for ARTPWorkout's separate bar, whose
+                own height varies 1-3 stacked lines (Set/Target rows are
+                conditional) and can exceed that budget, painting over the top
+                of this pill. Pushed further down with real clearance + shrunk
+                the digits so any residual overlap is less likely to matter. */}
             {timedMode && secondsLeft != null && !paused && (
               <div className="absolute left-0 right-0 flex justify-center z-10 pointer-events-none"
-                style={{ top: 'calc(env(safe-area-inset-top, 0px) + 56px)' }}>
-                <div className={`px-6 py-1.5 rounded-3xl border backdrop-blur-sm bg-black/60 ${secondsLeft <= 5 ? "border-red-500/70" : "border-white/25"}`}>
+                style={{ top: 'calc(env(safe-area-inset-top, 0px) + 84px)' }}>
+                <div className={`px-5 py-1 rounded-3xl border backdrop-blur-sm bg-black/60 ${secondsLeft <= 5 ? "border-red-500/70" : "border-white/25"}`}>
                   <span className={`font-black tabular-nums leading-none ${secondsLeft <= 5 ? "text-red-400 animate-pulse" : "text-white"}`}
-                    style={{ fontSize: "64px" }}>{secondsLeft}</span>
-                  <span className="text-white/50 font-bold text-xl ml-1">s</span>
+                    style={{ fontSize: "44px" }}>{secondsLeft}</span>
+                  <span className="text-white/50 font-bold text-base ml-1">s</span>
                 </div>
               </div>
             )}
