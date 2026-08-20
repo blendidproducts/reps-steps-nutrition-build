@@ -77,6 +77,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
   const animFrameRef   = useRef(null);
   const repCounterRef  = useRef(null);
   const lastVideoTime  = useRef(-1);
+  const frameSkipRef   = useRef(0); // Finding 4a: throttles angle/stage UI updates, not rep counting
 
   const [isLoading,      setIsLoading]      = useState(initialConfig.trackable !== false);
   const [loadError,      setLoadError]      = useState(null);
@@ -233,7 +234,19 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
       lastVideoTime.current = ts;
       try {
         const result = landmarker.detectForVideo(video, ts);
-        const numPeople = result?.landmarks?.length || 0;
+        const rawPeople = result?.landmarks || [];
+
+        // Finding 4b (2026-08-20): a low-confidence secondary detection (e.g.
+        // a shadow on the ground from a low tripod) used to count as a real
+        // "second person" and pause reps — isMulti was a raw length check
+        // with no confidence filtering, even though the PRIMARY person was
+        // already gated by the same 0.35 visibility bar below. Apply that
+        // same existing bar to every detected pose, not just the first one,
+        // before it counts toward the multi-person total.
+        const KEY_PTS = [11, 12, 23, 24];
+        const poseConfidence = (p) => KEY_PTS.reduce((s, i) => s + (p?.[i]?.visibility ?? 0), 0) / KEY_PTS.length;
+        const confidentPeople = rawPeople.filter((p) => poseConfidence(p) >= 0.35);
+        const numPeople = confidentPeople.length;
 
         // Multiple people in frame → pause counting, warn user
         const isMulti = numPeople > 1;
@@ -241,20 +254,28 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
         setMultiPersonDetected(isMulti);
 
         if (numPeople > 0) {
-          const lm = result.landmarks[0]; // always use most-prominent person
+          const lm = confidentPeople[0]; // most-prominent confident person
           setPoseDetected(true);
           if (skl) drawSkeleton(ctx, lm, sW, sH, fm, 0, 1, dX, dY, dW, dH);
 
-          // Visibility gate: ignore low-confidence detections (background/far-away people)
-          const KEY_PTS = [11, 12, 23, 24];
-          const avgVis = KEY_PTS.reduce((s, i) => s + (lm[i]?.visibility ?? 0), 0) / KEY_PTS.length;
-          const goodVis = avgVis >= 0.35;
-
-          // Only count when: not paused, single person, landmarks clearly visible
-          if (counter && !pausedRef.current && !isMulti && goodVis) {
+          // Only count when: not paused, single confident person
+          if (counter && !pausedRef.current && !isMulti) {
             const u = counter.update(lm);
-            setCurrentAngle(Math.round(u.angle));
-            setStage(u.stage);
+            // Finding 4a (2026-08-20): the no-pose banner (React state) could
+            // show stale info while the skeleton (drawn straight to canvas,
+            // outside React) already reflected the current frame — this
+            // component was firing setState for a continuously-changing angle
+            // on every single detected frame (~60Hz), and that sustained
+            // render churn — on a phone already busy running MediaPipe
+            // inference — let React's commit fall behind the canvas's
+            // immediate paint. Throttle only the high-churn UI fields
+            // (angle/stage) to ~20Hz; rep-counting itself (counter.update
+            // above) still runs every frame, so no rep can be missed by this.
+            frameSkipRef.current = (frameSkipRef.current + 1) % 3;
+            if (frameSkipRef.current === 0) {
+              setCurrentAngle(Math.round(u.angle));
+              setStage(u.stage);
+            }
             setRepCount(u.count);
             if (u.repCounted) { triggerRepFlash(); announceRep(u.count); }
           }

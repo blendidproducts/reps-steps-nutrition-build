@@ -51,7 +51,7 @@ const ALL_EXERCISES = [
   { name: "Wide Push-Up",    cue: "Side view · hands wider than shoulders · chest to floor",  emoji: "💪", cameraTip: "Place phone on floor beside you" },
   { name: "Diamond Push-Up", cue: "Side view · hands form a diamond · elbows tight",          emoji: "🔺", cameraTip: "Place phone on floor beside you" },
   { name: "Incline Push-Up", cue: "Side view · hands on elevated surface · lower chest",       emoji: "📈", cameraTip: "Place phone on floor beside you" },
-  { name: "Decline Push-Up", cue: "Side view · feet elevated · upper-chest focus",             emoji: "📉", cameraTip: "Place phone on floor beside you", beta: true },
+  { name: "Decline Push-Up", cue: "Feet elevated · upper-chest focus · manual rep count",       emoji: "📉", cameraTip: "No camera needed — tap the screen to count reps" },
   { name: "Tricep Dip",      cue: "Side view · lower until 90° elbow · full extension up",      emoji: "🪑", cameraTip: "Place phone at hip height to side" },
   // "Tricep Extension" removed (Round 14) — duplicated Tricep Dip in the builder
   // and isn't one of the 83 canonical DB exercises (no image, same elbow tracking).

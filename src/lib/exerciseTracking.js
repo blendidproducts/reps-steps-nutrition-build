@@ -87,6 +87,41 @@ function workingKneeAngle(lm) {
   return lVis >= rVis ? getAngle(lm[23], lm[25], lm[27]) : getAngle(lm[24], lm[26], lm[28]);
 }
 
+/** Push-up depth — vertical shoulder displacement relative to hip, normalized
+ *  by torso length (shoulder-to-hip distance). PRIMARY signal for the push-up
+ *  family as of 2026-08-20 (Finding 1). From a head-on/tripod camera the upper
+ *  arm points toward/away from the lens, so the 2D elbow angle measures
+ *  foreshortening, not flexion, and can rise again at full depth (confirmed
+ *  from field data: Elbow 138 -> 102 -> 131 -> 140, INCREASING at the bottom
+ *  of the rep). Shoulders moving down toward hip height is monotonic
+ *  regardless of camera angle. Normalizing by torso length keeps the metric
+ *  comparable whether the tripod is 2 ft or 5 ft away.
+ *
+ *  Needs BOTH shoulders and BOTH hips visible with reasonable confidence to
+ *  normalize honestly. If not, we do NOT guess — we hold the metric at a
+ *  fixed "neutral/up" value so a rep may go uncounted, but the counter is
+ *  never fed a fabricated number.
+ *
+ *  ⚠️ UNCALIBRATED: up/downThreshold on the entries using this metric are a
+ *  reasoned first pass, not measured from real capture data (we only have
+ *  elbow-angle field data, a different signal). Needs one live test — read
+ *  the on-screen "Torso Depth" number at the top and bottom of a rep — before
+ *  trusting the exact numbers. Also worth watching: in a near-pure head-on
+ *  view the 2D shoulder-hip distance itself can compress (most of the torso's
+ *  real length runs along the depth axis, not the image plane), which could
+ *  make the normalization denominator small and noisy. The floor below
+ *  guards divide-by-zero, not jitter. */
+function pushupDepthMetric(lm) {
+  const lSh = lm[11], rSh = lm[12], lHip = lm[23], rHip = lm[24];
+  const shVis  = ((lSh?.visibility ?? 0) + (rSh?.visibility ?? 0)) / 2;
+  const hipVis = ((lHip?.visibility ?? 0) + (rHip?.visibility ?? 0)) / 2;
+  if (shVis < 0.4 || hipVis < 0.4) return 100; // can't normalize honestly — hold at "up", never fabricate a rep
+  const shoulderMid = getMid(lSh, rSh);
+  const hipMid = getMid(lHip, rHip);
+  const torsoLen = Math.max(getDist(shoulderMid, hipMid), 0.08);
+  return ((hipMid.y - shoulderMid.y) / torsoLen) * 100;
+}
+
 // ── Exercise Library ──────────────────────────────────────────────────────────
 // Each entry:
 //   id           – unique string
@@ -116,18 +151,18 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Push',
     color: '#ef4444',
-    getAngle: (lm) => elbowAngle(lm),
-    // Round 14: loosened for tripod/angled cameras — 85° down required chest
-    // nearly on the floor as READ BY THE CAMERA; off-axis views read shallower
-    // angles than reality, so real reps were missed. Hysteresis (must pass BOTH
-    // thresholds) + minRepIntervalMs still prevent double counts.
-    upThreshold: 145,    // arms extended at top — forgiving of off-axis reads
-    downThreshold: 100,  // elbows clearly bent — counts honest reps at an angle
+    // Finding 1 (2026-08-20): elbow angle is non-monotonic from a head-on
+    // camera (foreshortening, not flexion) — replaced with vertical shoulder
+    // displacement normalized by torso length. See pushupDepthMetric() above.
+    // Elbow angle is no longer read for counting; kept only as a form cue below.
+    getAngle: (lm) => pushupDepthMetric(lm),
+    upThreshold: 28,    // ⚠️ uncalibrated first pass — shoulders clearly above hip line (top)
+    downThreshold: 6,   // ⚠️ uncalibrated first pass — shoulders near hip level (bottom)
     minRepIntervalMs: 450,  // Round 20: fast sets (15+) were dropping reps at 600ms
     direction: 'down_then_up',
-    primaryJoint: 'Elbow',
+    primaryJoint: 'Torso Depth',
     formCues: [
-      'Place phone on floor to your SIDE for best tracking',
+      'Camera can stay in front — keep hips to head in frame the whole rep',
       'Keep back straight — no sagging hips',
       'Lower until chest nearly touches floor',
       'Full lockout at the top counts the rep',
@@ -141,24 +176,18 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Push',
     color: '#f97316',
-    getAngle: (lm) => elbowAngle(lm),
-    // Round 23: was up 150 / down 100 (the round-14 push-up-family baseline,
-    // never revisited). Diamond's tucked, narrow hand placement means the
-    // chest reaches the hands — full honest depth — at a shallower (larger)
-    // 2D elbow angle than a shoulder-width push-up produces; 100 required
-    // more flexion than the movement actually generates, so deep-but-honest
-    // reps never crossed it and were silently dropped. Loosened to 105 (still
-    // a 40° hysteresis gap vs standard push-up's proven 45°, so double-count
-    // risk from landmark jitter stays in the same range) and matched the
-    // up threshold + fast-cadence interval already validated for the base
-    // push-up in Round 20. Tradeoff: a rep bottoming out at 105-108° (not
-    // quite full diamond depth) now counts where it wouldn't before — traded
-    // in exchange for no longer missing genuinely full-depth reps.
-    upThreshold: 145,
-    downThreshold: 105,
+    // Finding 1 (2026-08-20): Round 23's threshold tuning didn't fix the real
+    // problem. Field data on this exact set showed elbow angle RISING again at
+    // full depth (138 -> 102 -> 131 -> 140) from the head-on tripod — no
+    // downThreshold value can work when the signal itself isn't monotonic.
+    // Replaced with vertical shoulder displacement normalized by torso length
+    // (see pushupDepthMetric() above); elbow angle kept only as a form cue.
+    getAngle: (lm) => pushupDepthMetric(lm),
+    upThreshold: 28,    // ⚠️ uncalibrated first pass — see pushupDepthMetric() note
+    downThreshold: 6,   // ⚠️ uncalibrated first pass — see pushupDepthMetric() note
     direction: 'down_then_up',
     minRepIntervalMs: 450,
-    primaryJoint: 'Elbow',
+    primaryJoint: 'Torso Depth',
     formCues: ['Hands form a diamond', 'Elbows tight to body', 'Full tricep extension'],
   },
   {
@@ -169,12 +198,14 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Push',
     color: '#ef4444',
-    getAngle: (lm) => elbowAngle(lm),
-    upThreshold: 150,
-    downThreshold: 100,
+    // Finding 1 (2026-08-20): same head-on foreshortening problem as the base
+    // Push-Up — see pushupDepthMetric() above.
+    getAngle: (lm) => pushupDepthMetric(lm),
+    upThreshold: 28,    // ⚠️ uncalibrated first pass — see pushupDepthMetric() note
+    downThreshold: 6,   // ⚠️ uncalibrated first pass — see pushupDepthMetric() note
     direction: 'down_then_up',
     minRepIntervalMs: 600,
-    primaryJoint: 'Elbow',
+    primaryJoint: 'Torso Depth',
     formCues: ['Hands wider than shoulders', 'Chest to floor', 'Squeeze chest at top'],
   },
   {
@@ -197,7 +228,13 @@ export const EXERCISE_LIBRARY = [
     name: 'Decline Push-Up',
     keywords: ['decline push', 'feet elevated push'],
     mode: 'reps',
-    trackable: 'experimental',
+    // Finding 3 (2026-08-20): removed from AI tracking — screenshots show a
+    // collapsed/stacked skeleton (elbow readings of 38-48° are anatomically
+    // impossible). MediaPipe is trained on upright bodies; an inverted decline
+    // position is out of distribution. This is a bad skeleton, not a mistuned
+    // threshold — no code fix recovers it. Still selectable/performable via
+    // RepTracker's manual tap-to-count mode (trackable: false routes there).
+    trackable: false,
     category: 'Push',
     color: '#ef4444',
     getAngle: (lm) => elbowAngle(lm),
@@ -215,12 +252,14 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Push',
     color: '#ef4444',
-    getAngle: (lm) => elbowAngle(lm),
-    upThreshold: 150,
-    downThreshold: 105,
+    // Finding 1 (2026-08-20): same head-on foreshortening problem as the base
+    // Push-Up — see pushupDepthMetric() above.
+    getAngle: (lm) => pushupDepthMetric(lm),
+    upThreshold: 28,    // ⚠️ uncalibrated first pass — see pushupDepthMetric() note
+    downThreshold: 6,   // ⚠️ uncalibrated first pass — see pushupDepthMetric() note
     direction: 'down_then_up',
     minRepIntervalMs: 600,
-    primaryJoint: 'Elbow',
+    primaryJoint: 'Torso Depth',
     formCues: ['Hands on elevated surface', 'Great for beginners', 'Lower chest focus'],
   },
   {
@@ -576,12 +615,21 @@ export const EXERCISE_LIBRARY = [
     trackable: 'experimental',
     category: 'Legs',
     color: '#16a34a',
-    getAngle: (lm) => workingKneeAngle(lm),
+    // Finding 2 (2026-08-20): workingKneeAngle() picks the more-VISIBLE leg,
+    // which is right for Bulgarian Split Squat (rear leg occluded behind on a
+    // bench) but wrong here — in a pistol squat BOTH legs are fully visible
+    // (one straight forward, one bent under), so visibility scores are nearly
+    // tied and the tie-break defaulted to the left/extended leg (confirmed by
+    // field data: near-constant 180/173/174° = the straight leg, not the
+    // working one). Use min(left, right) instead — the extended leg stays
+    // ~155-180° throughout, so the smaller angle always isolates the bent,
+    // weight-bearing leg regardless of which physical leg is forward.
+    getAngle: (lm) => Math.min(getAngle(lm[23], lm[25], lm[27]), getAngle(lm[24], lm[26], lm[28])),
     upThreshold: 155,
     downThreshold: 90,
     direction: 'down_then_up',
     minRepIntervalMs: 900,
-    primaryJoint: 'Knee',
+    primaryJoint: 'Working Knee',
     formCues: ['One leg extended forward', 'Full depth squat', 'Control the descent'],
   },
 
