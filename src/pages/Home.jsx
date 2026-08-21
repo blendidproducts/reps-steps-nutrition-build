@@ -176,20 +176,20 @@ export default function Home() {
             onClick={() => navigate(createPageUrl("ARTPWorkout"))}
             className="relative rounded-2xl overflow-hidden cursor-pointer group active:scale-[0.99] transition-transform"
             style={{
-              background: "linear-gradient(135deg, #0a1a2e 0%, #0d1a0a 40%, #0a0a2e 100%)",
-              border: "2px solid rgba(0,169,255,0.55)",
-              boxShadow: "0 0 40px rgba(0,169,255,0.18), 0 8px 32px rgba(0,0,0,0.45)",
+              background: "linear-gradient(135deg, #0f3d24 0%, #0a2818 45%, #041209 100%)",
+              border: "2px solid rgba(34,197,94,0.55)",
+              boxShadow: "0 0 40px rgba(34,197,94,0.18), 0 8px 32px rgba(0,0,0,0.45)",
             }}
           >
             {/* Animated glow ring */}
             <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-              style={{ boxShadow: "inset 0 0 30px rgba(0,169,255,0.12)" }} />
+              style={{ boxShadow: "inset 0 0 30px rgba(34,197,94,0.12)" }} />
 
             {/* AI PROGRAM badge */}
             <div className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full px-2.5 py-1"
-              style={{ background: "rgba(0,169,255,0.18)", border: "1px solid rgba(0,169,255,0.45)" }}>
-              <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#00a9ff" }} />
-              <span className="text-[10px] font-bold tracking-widest" style={{ color: "#00a9ff" }}>AI PROGRAM</span>
+              style={{ background: "rgba(34,197,94,0.18)", border: "1px solid rgba(34,197,94,0.45)" }}>
+              <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#4ade80" }} />
+              <span className="text-[10px] font-bold tracking-widest" style={{ color: "#4ade80" }}>AI PROGRAM</span>
             </div>
 
             <div className="p-5">
@@ -197,14 +197,14 @@ export default function Home() {
               <div className="flex items-start gap-4 mb-4">
                 <div className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
                   style={{
-                    background: "linear-gradient(135deg, #00a9ff, #7c3aed)",
-                    boxShadow: "0 0 22px rgba(0,169,255,0.4)",
+                    background: "linear-gradient(135deg, #22c55e, #15803d)",
+                    boxShadow: "0 0 22px rgba(34,197,94,0.4)",
                   }}
                 >
                   <Zap className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                  <p className="text-[11px] font-bold tracking-widest uppercase mb-1" style={{ color: "#00a9ff" }}>
+                  <p className="text-[11px] font-bold tracking-widest uppercase mb-1" style={{ color: "#4ade80" }}>
                     Main Feature
                   </p>
                   <h2 className="text-2xl font-black text-white leading-tight">
@@ -223,9 +223,9 @@ export default function Home() {
                     key={tag}
                     className="text-[10px] font-semibold px-2.5 py-1 rounded-full"
                     style={{
-                      background: "rgba(0,169,255,0.12)",
-                      border: "1px solid rgba(0,169,255,0.3)",
-                      color: "#7dd3fc",
+                      background: "rgba(34,197,94,0.12)",
+                      border: "1px solid rgba(34,197,94,0.3)",
+                      color: "#86efac",
                     }}
                   >
                     {tag}
@@ -237,8 +237,8 @@ export default function Home() {
               <button
                 className="w-full py-3.5 rounded-xl font-bold text-sm tracking-wide text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                 style={{
-                  background: "linear-gradient(135deg, #00a9ff, #7c3aed)",
-                  boxShadow: "0 4px 15px rgba(0,169,255,0.35)",
+                  background: "linear-gradient(135deg, #22c55e, #15803d)",
+                  boxShadow: "0 4px 15px rgba(34,197,94,0.35)",
                 }}
               >
                 <Play className="w-4 h-4 fill-white" />
