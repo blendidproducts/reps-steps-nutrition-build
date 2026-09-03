@@ -148,16 +148,16 @@ export default function Home() {
                 <span className="text-[10px] text-gray-300 font-medium">AI Match Score</span>
                 <Info className="w-3 h-3 text-blue-400" />
               </div>
-              <div className="text-3xl font-bold text-green-400 mb-0.5">92%</div>
-              <div className="flex items-center gap-1 text-green-400 text-[10px] mb-2 font-medium">
+              <div className="text-3xl font-bold text-[#00E5FF] mb-0.5">92%</div>
+              <div className="flex items-center gap-1 text-[#00E5FF] text-[10px] mb-2 font-medium">
                 <TrendingUp className="w-3 h-3" />
                 Excellent Fit
               </div>
               <div className="flex gap-1">
-                 <div className="h-1 w-full bg-green-400 rounded-full"></div>
-                 <div className="h-1 w-full bg-green-400 rounded-full"></div>
-                 <div className="h-1 w-full bg-green-400 rounded-full"></div>
-                 <div className="h-1 w-full bg-green-400 rounded-full"></div>
+                 <div className="h-1 w-full bg-[#00E5FF] rounded-full"></div>
+                 <div className="h-1 w-full bg-[#00E5FF] rounded-full"></div>
+                 <div className="h-1 w-full bg-[#00E5FF] rounded-full"></div>
+                 <div className="h-1 w-full bg-[#00E5FF] rounded-full"></div>
                  <div className="h-1 w-full bg-gray-700 rounded-full"></div>
               </div>
             </div>

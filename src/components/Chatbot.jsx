@@ -6,6 +6,121 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
 
+/* ── Draggable AI-support button ──────────────────────────────────────────
+   Moved off the bottom-right corner (it collided with the AiRTP pill and
+   covered the MAIN FEATURE card). Now starts top-right, is draggable,
+   snaps to whichever edge is nearest on release, fades when idle so it
+   never fully blocks content, and remembers where the user left it.      */
+const FAB_SIZE = 80;
+const EDGE_PAD = 12;
+const TOP_SAFE = 88;     // clear of the app header
+const BOTTOM_SAFE = 96;  // clear of the bottom tab bar
+const DRAG_THRESHOLD = 8;
+const POS_KEY = "rns_chatbot_pos";
+
+function DraggableChatButton({ onOpen, hidden }) {
+  const [pos, setPos] = useState(null);
+  const [dragging, setDragging] = useState(false);
+  const [idle, setIdle] = useState(false);
+  const drag = useRef({ active: false, moved: false, sx: 0, sy: 0, ox: 0, oy: 0 });
+  const idleTimer = useRef(null);
+
+  const clamp = (p) => ({
+    x: Math.max(EDGE_PAD, Math.min(window.innerWidth - FAB_SIZE - EDGE_PAD, p.x)),
+    y: Math.max(TOP_SAFE, Math.min(window.innerHeight - FAB_SIZE - BOTTOM_SAFE, p.y)),
+  });
+
+  const bumpIdle = () => {
+    setIdle(false);
+    clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(() => setIdle(true), 2600);
+  };
+
+  useEffect(() => {
+    let start = null;
+    try {
+      const saved = JSON.parse(localStorage.getItem(POS_KEY) || "null");
+      if (saved && typeof saved.x === "number" && typeof saved.y === "number") start = saved;
+    } catch (err) { /* ignore unreadable storage */ }
+    if (!start) start = { x: window.innerWidth - FAB_SIZE - EDGE_PAD, y: TOP_SAFE };
+    setPos(clamp(start));
+    bumpIdle();
+    const onResize = () => setPos((p) => (p ? clamp(p) : p));
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      clearTimeout(idleTimer.current);
+    };
+  }, []);
+
+  const onPointerDown = (e) => {
+    if (!pos) return;
+    drag.current = { active: true, moved: false, sx: e.clientX, sy: e.clientY, ox: pos.x, oy: pos.y };
+    if (e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
+    setDragging(true);
+    bumpIdle();
+  };
+
+  const onPointerMove = (e) => {
+    const d = drag.current;
+    if (!d.active) return;
+    const dx = e.clientX - d.sx;
+    const dy = e.clientY - d.sy;
+    if (!d.moved && Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+    d.moved = true;
+    setPos(clamp({ x: d.ox + dx, y: d.oy + dy }));
+  };
+
+  const endDrag = () => {
+    const d = drag.current;
+    if (!d.active) return;
+    d.active = false;
+    setDragging(false);
+    if (d.moved) {
+      setPos((p) => {
+        const snapLeft = p.x + FAB_SIZE / 2 < window.innerWidth / 2;
+        const next = clamp({ x: snapLeft ? EDGE_PAD : window.innerWidth - FAB_SIZE - EDGE_PAD, y: p.y });
+        try { localStorage.setItem(POS_KEY, JSON.stringify(next)); } catch (err) { /* ignore */ }
+        return next;
+      });
+    } else {
+      onOpen();   // it was a tap, not a drag
+    }
+    bumpIdle();
+  };
+
+  if (hidden || !pos) return null;
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label="Open AI support chat"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); }
+      }}
+      className="fixed z-[100] rounded-full bg-[#0066cc] shadow-xl shadow-brand-blue/30 ring-4 ring-white/10 flex items-center justify-center"
+      style={{
+        left: pos.x,
+        top: pos.y,
+        width: FAB_SIZE,
+        height: FAB_SIZE,
+        touchAction: "none",
+        cursor: dragging ? "grabbing" : "grab",
+        opacity: dragging ? 1 : idle ? 0.45 : 1,
+        transition: dragging ? "none" : "left .18s cubic-bezier(.2,.9,.3,1), opacity .4s ease",
+        WebkitTapHighlightColor: "transparent",
+      }}
+    >
+      <Bot className="w-10 h-10 text-white pointer-events-none" />
+    </div>
+  );
+}
+
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
@@ -124,25 +239,8 @@ Here is the conversation history:
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {!isOpen && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="fixed bottom-[80px] right-4 sm:bottom-6 sm:right-6 z-[100]"
-          >
-            <Button 
-              onClick={() => setIsOpen(true)}
-              className="w-20 h-20 rounded-full shadow-xl shadow-brand-blue/30 bg-[#0066cc] hover:opacity-90 flex items-center justify-center p-0 ring-4 ring-white/10"
-            >
-              <Bot className="w-10 h-10 text-white" />
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <DraggableChatButton onOpen={() => setIsOpen(true)} hidden={isOpen} />
+
     </>
   );
 }
