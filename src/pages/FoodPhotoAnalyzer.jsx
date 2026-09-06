@@ -52,45 +52,9 @@ export default function FoodPhotoAnalyzer() {
       // Upload the image first
       const { file_url } = await base44.integrations.Core.UploadFile({ file: imageFile });
 
-      // Ask the LLM to analyze the food photo
-      const analysis = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are a professional nutritionist and food recognition AI. 
-Analyze this food photo and identify all food items visible.
-For each food item, estimate realistic serving sizes and nutritional values.
-Then provide total combined macros for the entire meal in the photo.
-Be specific and realistic — base estimates on standard nutritional databases.
-If you can't identify something clearly, make a reasonable estimate.`,
-        file_urls: [file_url],
-        response_json_schema: {
-          type: "object",
-          properties: {
-            meal_name: { type: "string", description: "Short descriptive name for the whole meal" },
-            description: { type: "string", description: "What you see in the photo" },
-            confidence: { type: "string", enum: ["low", "medium", "high"] },
-            foods_detected: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  name: { type: "string" },
-                  estimated_serving: { type: "string" },
-                  calories: { type: "number" },
-                  protein: { type: "number" },
-                  carbs: { type: "number" },
-                  fat: { type: "number" }
-                }
-              }
-            },
-            total_calories: { type: "number" },
-            total_protein: { type: "number" },
-            total_carbs: { type: "number" },
-            total_fat: { type: "number" },
-            total_fiber: { type: "number" },
-            health_notes: { type: "string", description: "Brief nutrition quality note" },
-            suggested_meal_type: { type: "string", enum: ["breakfast", "lunch", "dinner", "snack"] }
-          }
-        }
-      });
+      // Ask the LLM to analyze the food photo (server-side to protect credits)
+      const response = await base44.functions.invoke('analyzeFoodPhoto', { file_url });
+      const analysis = response.data.analysis;
 
       setResult(analysis);
       if (analysis.suggested_meal_type) setMealType(analysis.suggested_meal_type);

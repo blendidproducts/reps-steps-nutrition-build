@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
 
 Deno.serve(async (req) => {
   try {
@@ -70,7 +70,7 @@ Return ONLY valid JSON in this exact structure:
   "achievements": ["string"]
 }`;
 
-      const result = await base44.integrations.Core.InvokeLLM({
+      const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
         prompt,
         response_json_schema: {
           type: "object",

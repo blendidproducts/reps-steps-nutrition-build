@@ -483,54 +483,8 @@ export default function WorkoutBuilder() {
 
     setIsGenerating(true);
     try {
-      const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are a professional fitness trainer. Generate a workout based on this request: "${aiPrompt}"
-        
-If the user asks for specific reps (like 200 pushups), make sure target_reps * sets = requested reps (e.g. 20 sets of 10 reps, or 1 set of 200). If they ask for cardio (run, sprint), include it with a target_time in seconds.
-
-Return a JSON object with this exact structure:
-{
-  "exercises": [
-    {
-      "name": "Exercise Name",
-      "category": "upper_body|lower_body|core|full_body|cardio",
-      "target_reps": 15,
-      "target_time": 0,
-      "sets": 3,
-      "superset_with_next": false
-    }
-  ],
-  "workout_type": "rep_based",
-  "estimated_duration": 30,
-  "difficulty": "beginner|intermediate|advanced"
-}
-
-Choose real exercises from this list: Push-ups, Squats, Lunges, Plank, Sit-ups, Burpees, Mountain Climbers, Jumping Jacks, Dips, Pull-ups, Tricep Dips, Leg Raises, Russian Twists, High Knees, Butt Kickers, Jump Squats, Wall Sits, Bicycle Crunches, Flutter Kicks, Crunches, Run, Sprint.
-
-Make it realistic, but always respect specific rep/time requests.`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            exercises: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  name: { type: "string" },
-                  category: { type: "string" },
-                  target_reps: { type: "number" },
-                  target_time: { type: "number" },
-                  sets: { type: "number" },
-                  superset_with_next: { type: "boolean" }
-                }
-              }
-            },
-            workout_type: { type: "string" },
-            estimated_duration: { type: "number" },
-            difficulty: { type: "string" }
-          }
-        }
-      });
+      const invokeResponse = await base44.functions.invoke('generateWorkoutPlan', { prompt: aiPrompt });
+      const response = invokeResponse.data.workout;
 
       // Find exercise IDs from database
       const exerciseNames = response.exercises.map(ex => ex.name);

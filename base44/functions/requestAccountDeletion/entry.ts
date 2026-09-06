@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
 
 /**
  * Secure account-deletion workflow — two-step:
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
         deletion_window_start: windowActive ? user.deletion_window_start : now.toISOString(),
       });
 
-      await base44.integrations.Core.SendEmail({
+      await base44.asServiceRole.integrations.Core.SendEmail({
         to: user.email,
         subject: '⚠️ RepsAndSteps — Account Deletion Verification',
         body: `

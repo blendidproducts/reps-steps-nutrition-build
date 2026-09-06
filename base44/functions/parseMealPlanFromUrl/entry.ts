@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
 
 // Block private/loopback/link-local IPs to prevent SSRF
 const isPrivateIp = (ip) => {
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     }
 
     // Use LLM to extract structured meal plan
-    const result = await base44.integrations.Core.InvokeLLM({
+    const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
       prompt: `You are a nutrition expert. Extract a structured meal plan from the following webpage content.
       
 Webpage content:
