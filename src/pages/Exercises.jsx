@@ -154,8 +154,81 @@ export default function Exercises() {
 
     setIsGenerating(true);
     try {
-      const response = await base44.functions.invoke('generateWorkoutPlan', { prompt: aiPrompt, duration: aiDuration });
-      const parsedResponse = response.data.workout;
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are a professional fitness trainer. Generate a calisthenics workout based on this EXACT request:
+
+"${aiPrompt}"
+
+CRITICAL REQUIREMENTS:
+1. Parse the user's request to determine body focus, duration, and intensity
+2. If duration is mentioned, respect it EXACTLY
+3. If intensity is mentioned (low/moderate/high/easy/hard), respect it
+4. If body focus is mentioned (upper/lower/full body/mixed), respect it
+5. If not mentioned, use reasonable defaults (30 min, moderate, mixed)
+
+Return a JSON object with this exact structure:
+{
+  "exercises": [
+    {
+      "name": "Exercise Name",
+      "category": "upper_body|lower_body|core|full_body",
+      "target_reps": 15,
+      "sets": 3,
+      "superset_with_next": false
+    }
+  ],
+  "workout_type": "rep_based",
+  "estimated_duration": ${aiDuration},
+  "difficulty": "beginner|intermediate|advanced"
+}
+
+AVAILABLE EXERCISES BY CATEGORY:
+UPPER BODY: Push-ups, Wide Push-ups, Diamond Push-ups, Decline Push-ups, Dips, Tricep Dips, Pull-ups, Arm Circles
+LOWER BODY: Squats, Jump Squats, Lunges, Calf Raises, Wall Sits, Glute Bridges
+CORE: Sit-ups, Crunches, Bicycle Crunches, Russian Twists, Leg Raises, Flutter Kicks, Plank, Mountain Climbers
+FULL BODY: Burpees, Jumping Jacks, High Knees, Butt Kickers
+
+EXERCISE SELECTION RULES:
+- Balance exercises across requested body parts
+- Calculate exercises based on mentioned duration
+- Adjust sets/reps/rest based on mentioned intensity
+- Ensure workout fits within time constraints
+
+Choose realistic exercises that match the body focus and intensity level.`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            exercises: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  category: { type: "string" },
+                  target_reps: { type: "number" },
+                  sets: { type: "number" },
+                  superset_with_next: { type: "boolean" }
+                }
+              }
+            },
+            workout_type: { type: "string" },
+            estimated_duration: { type: "number" },
+            difficulty: { type: "string" }
+          }
+        }
+      });
+
+      // Normalize response — InvokeLLM may return a string or parsed object
+      let parsedResponse = response;
+      if (typeof response === 'string') {
+        try {
+          parsedResponse = JSON.parse(response);
+        } catch {
+          toast.error('AI returned an unexpected format. Please try again.');
+          setIsGenerating(false);
+          return;
+        }
+      }
 
       if (!parsedResponse?.exercises?.length) {
         toast.error('No exercises generated. Try rephrasing your prompt.');

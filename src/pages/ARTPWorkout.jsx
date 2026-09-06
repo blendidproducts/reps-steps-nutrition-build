@@ -970,6 +970,22 @@ function ARTPWorkoutInner() {
   // ── Setup state ─────────────────────────────────────────────────
   const [phase,          setPhase]         = useState("setup");
   const [mode,           setMode]          = useState(null);
+
+  // Chrome control. The setup screen is an ordinary page and keeps the bottom
+  // tab bar; everything from warm-up onward is immersive and hides it.
+  // Layout.jsx listens for this event.
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("rns:immersive", { detail: phase !== "setup" })
+    );
+  }, [phase]);
+
+  // Always hand the chrome back when this page unmounts.
+  useEffect(
+    () => () =>
+      window.dispatchEvent(new CustomEvent("rns:immersive", { detail: false })),
+    []
+  );
   const [timePerEx,      setTimePerEx]     = useState(45);
   const [totalSets,      setTotalSets]     = useState(3);
 

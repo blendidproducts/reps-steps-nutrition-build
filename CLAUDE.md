@@ -123,6 +123,36 @@ Nav restructure agreed with Jace from interactive mockups. Three files, all esbu
 - **F: dismounted mid-session.** The drive holding this repo + the sync folder disappeared while an `npm install` was running in the repo; the install hung at 503 packages and never linked vite. After remount, all three edited files were hash-verified against clean copies — no corruption. If a long-running local command stalls for no reason, check `Get-PSDrive` first.
 - **`node_modules` is NOT installed in this repo and does not need to be** — Base44 builds on sync. `npm run build` will fail locally with "'vite' is not recognized". Use the documented `npx esbuild <file> --bundle --external:react --external:'@/*' …` per-file check instead; it needs no install and runs in milliseconds.
 
+## Round 25 - bottom nav restored on the ARTP setup screen (2026-09-06)
+
+Jace published Round 24 and tested it: the AiRTP pill works, but the bottom bar
+vanished as soon as he opened ARTP. Cause was pre-existing, not a Round 24
+regression - `Layout.jsx` hid all chrome for the whole `ARTPWorkout` route:
+
+```js
+const isFullScreenWorkout = location.pathname.includes('ARTPWorkout') || ...
+```
+
+So the ARTP *setup* page (exercise picker, sets, warm-up toggle) had no tab bar
+and no way out except the small back chevron.
+
+- `Layout.jsx` - split the one flag in two. `isFullScreenWorkout` is unchanged
+  and still governs the mobile header (both workout pages draw their own top
+  bar; restoring Layout's would stack two headers). New `hideBottomNav` hides
+  the tab bar only while a workout is actually running.
+- `Layout.jsx` - new `artpImmersive` state fed by a `window` event
+  `"rns:immersive"`, plus a failsafe effect that clears it whenever the route
+  is no longer ARTPWorkout (covers crash / hard nav / back gesture).
+- `ARTPWorkout.jsx` - dispatches `rns:immersive` with `phase !== "setup"` on
+  every phase change, and `false` on unmount.
+
+Net: tab bar visible on ARTP setup, hidden from warm-up through done.
+ActiveWorkout behaviour unchanged. Both files esbuild-verified.
+
+**Not yet device-tested.** Check that the nav does not appear over the camera
+during `working`/`rest`, and that returning from a finished workout to setup
+brings the bar back.
+
 ## Next steps (in order)
 0. **Mobile builds + media** (2026-07-14, after a successful live QA pass): see `Documents\Pers\RepsAndSteps\MOBILE-BUILD-PLAN.md` (v2: PRIMARY PATH = Base44 Publish → Mobile app tab builds the AAB and even the iOS IPA in the cloud, no Mac needed; needs Builder plan. Gate 1 = test camera/ARTP inside their web-view wrapper. BLOCKER: Stripe digital-goods subscriptions get store-rejected — hide purchase flows in the mobile app. Capacitor project = Plan B only) and `Exercise_Media_Audit.xlsx` (26 exercises missing images, 59 missing videos; 4 ARTP-tracked ones are priority: Tricep Dip, Reverse Lunge, Bulgarian Split Squat, Decline Push-Up).
 1. **Publish in Base44** — rounds 13c+14+15 are ALREADY ON GITHUB (verified 2026-07-14: fresh clone of `main` is byte-identical to the sync folder, incl. Round 15 CLAUDE.md). Just click Publish in Base44, then QA.

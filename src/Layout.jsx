@@ -312,8 +312,38 @@ export default function Layout({ children, currentPageName }) {
     }
   };
 
-  // Hide chrome (header + bottom nav) on full-screen workout pages
-  const isFullScreenWorkout = location.pathname.includes('ARTPWorkout') || location.pathname.includes('ActiveWorkout');
+  // Hide chrome (header + bottom nav) on full-screen workout pages.
+  //
+  // ActiveWorkout is immersive for its whole life. ARTPWorkout is NOT: its
+  // setup screen is an ordinary page and must keep the tab bar, otherwise the
+  // only way out is the small back chevron. ARTPWorkout dispatches
+  // "rns:immersive" when it leaves setup (warm-up / countdown / working /
+  // rest / done) and again with false on unmount. Default false = nav shown.
+  const [artpImmersive, setArtpImmersive] = React.useState(false);
+
+  React.useEffect(() => {
+    const onImmersive = (e) => setArtpImmersive(!!e.detail);
+    window.addEventListener("rns:immersive", onImmersive);
+    return () => window.removeEventListener("rns:immersive", onImmersive);
+  }, []);
+
+  // Failsafe: leaving the ARTP route always restores the chrome, even if the
+  // page unmounted without dispatching (crash, hard navigation, back gesture).
+  React.useEffect(() => {
+    if (!location.pathname.includes('ARTPWorkout')) setArtpImmersive(false);
+  }, [location.pathname]);
+
+  // Header: unchanged. Both workout pages draw their own top bar, so Layout's
+  // mobile header stays hidden for the whole route -- putting it back on the
+  // ARTP setup screen would stack two headers.
+  const isFullScreenWorkout =
+    location.pathname.includes('ARTPWorkout') ||
+    location.pathname.includes('ActiveWorkout');
+
+  // Bottom nav: hidden only while a workout is actually running.
+  const hideBottomNav =
+    location.pathname.includes('ActiveWorkout') ||
+    (location.pathname.includes('ARTPWorkout') && artpImmersive);
 
   return (
     <SidebarProvider>
@@ -553,7 +583,7 @@ export default function Layout({ children, currentPageName }) {
           </div>
 
           {/* Bottom Navigation Bar - Mobile Only (hidden on full-screen workout pages) */}
-          {!isFullScreenWorkout && <BottomNav activeTab={activeTab} navigateToTab={navigateToTab} />}
+          {!hideBottomNav && <BottomNav activeTab={activeTab} navigateToTab={navigateToTab} />}
           <Chatbot />
         </main>
       </div>
