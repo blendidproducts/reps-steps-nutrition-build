@@ -148,21 +148,9 @@ export default function Chatbot() {
     setIsLoading(true);
 
     try {
-      // Build the conversation history to give the LLM context
-      let prompt = `You are an AI support assistant for a fitness portal called RepsAndSteps. You are helpful, friendly, and knowledgeable about fitness, workouts, nutrition, and using this app. Please provide a helpful and concise answer.
+      const response = await base44.functions.invoke('chatWithAssistant', { messages: updatedMessages });
 
-Here is the conversation history:
-`;
-      updatedMessages.forEach(msg => {
-        prompt += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`;
-      });
-      prompt += `Assistant:`;
-
-      const response = await base44.integrations.Core.InvokeLLM({
-        prompt: prompt,
-      });
-
-      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: response.data.reply }]);
     } catch (error) {
       console.error("Failed to get AI response", error);
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I am having trouble connecting to my brain right now. Please try again later.' }]);

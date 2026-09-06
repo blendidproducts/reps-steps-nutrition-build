@@ -100,16 +100,10 @@ export default function Help() {
         message: feedbackForm.message
       });
 
-      await base44.integrations.Core.SendEmail({
-        to: 'info@repsandsteps.com',
-        subject: `RepsAndSteps Feedback from ${feedbackForm.name}`,
-        body: `
-Name: ${feedbackForm.name}
-Email: ${feedbackForm.email}
-
-Message:
-${feedbackForm.message}
-        `
+      await base44.functions.invoke('sendFeedback', {
+        name: feedbackForm.name,
+        email: feedbackForm.email,
+        message: feedbackForm.message
       });
       
       toast.success('Thank you for your feedback! We\'ll get back to you soon.');

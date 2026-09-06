@@ -153,6 +153,31 @@ ActiveWorkout behaviour unchanged. Both files esbuild-verified.
 during `working`/`rest`, and that returning from a finished workout to setup
 brings the bar back.
 
+### ⚠️ TRAP: the sync folder silently reverts Base44-side edits
+
+Commit `0ad3f84` (Round 25, first attempt) **reverted four files** that Base44
+had refactored on its own side between rounds. The pull in
+`push-reps-updates.ps1` fast-forwarded them in, then the very next step copied
+the STALE sync copies straight back over them:
+
+| File | What Base44 had done | What the sync copy restored |
+|---|---|---|
+| `Chatbot.jsx` | call backend fn `chatWithAssistant` | inline `InvokeLLM` prompt |
+| `Exercises.jsx` | -77 lines, moved to backend | old inline version |
+| `WorkoutBuilder.jsx` | -50 lines, `generateWorkoutPlan` fn | old inline version |
+| `Help.jsx` | -14 lines, `sendFeedback` fn | old inline version |
+
+Fixed in the next commit: `git checkout <pulled-sha> -- <files>` then byte-copy
+repo -> sync, and for `Chatbot.jsx` re-apply Base44's backend call by hand
+because Round 24's draggable FAB lives in the same file and had to be kept.
+
+**Do this every round before running the push script:** run the script's pull
+first (or `git fetch && git diff main origin/main --stat`), and for every file
+the remote touched, reconcile the sync copy against the incoming version.
+The script copies sync -> repo unconditionally; it has no merge step and will
+happily undo Base44's work. Base44 tends to move inline `InvokeLLM` calls into
+`base44/functions/*` — that refactor is the usual casualty.
+
 ## Next steps (in order)
 0. **Mobile builds + media** (2026-07-14, after a successful live QA pass): see `Documents\Pers\RepsAndSteps\MOBILE-BUILD-PLAN.md` (v2: PRIMARY PATH = Base44 Publish → Mobile app tab builds the AAB and even the iOS IPA in the cloud, no Mac needed; needs Builder plan. Gate 1 = test camera/ARTP inside their web-view wrapper. BLOCKER: Stripe digital-goods subscriptions get store-rejected — hide purchase flows in the mobile app. Capacitor project = Plan B only) and `Exercise_Media_Audit.xlsx` (26 exercises missing images, 59 missing videos; 4 ARTP-tracked ones are priority: Tricep Dip, Reverse Lunge, Bulgarian Split Squat, Decline Push-Up).
 1. **Publish in Base44** — rounds 13c+14+15 are ALREADY ON GITHUB (verified 2026-07-14: fresh clone of `main` is byte-identical to the sync folder, incl. Round 15 CLAUDE.md). Just click Publish in Base44, then QA.
