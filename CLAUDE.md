@@ -8,9 +8,28 @@ _Repo: blendidproducts/reps-steps-nutrition-build · Last updated: 2026-08-15 (R
 - **Platform:** Base44 app `Reps & Steps-Nutrition BUILD` (app id `6a2c8c120d402896992a9659`), exported as **Vite + React**.
 - **Critical:** App DATA (exercises, programs, stretches) lives in the **Base44 database**, not this repo. This repo is the frontend + admin "seed" tools that populate that database.
 
+## ⚠️ PATHS CHANGED 2026-09-08 — the folder was reorganized
+
+The root `F:\Personal\Per\RepsAndSteps` was cleaned up. The deploy trio moved together
+into `1-APP\` and is otherwise unchanged:
+
+| Was | Now |
+|---|---|
+| `F:\Personal\Per\RepsAndSteps\push-reps-updates.ps1` | `F:\Personal\Per\RepsAndSteps\1-APP\push-reps-updates.ps1` |
+| `F:\Personal\Per\RepsAndSteps\sync-2026-06-16\` | `F:\Personal\Per\RepsAndSteps\1-APP\sync-2026-06-16\` |
+| `F:\Personal\Per\RepsAndSteps\reps-steps-nutrition-build\` | `F:\Personal\Per\RepsAndSteps\1-APP\reps-steps-nutrition-build\` |
+
+The script resolves both folders from `$PSScriptRoot`, so it works unchanged — but the
+three MUST stay siblings. `reps-app` (the Capacitor shell) moved to `9-ARCHIVE\`.
+Read `F:\Personal\Per\RepsAndSteps\README.md` first in any new session.
+`_UNDO-reorganize.ps1` at the root reverses the whole move if needed.
+
 ## Deploy workflow (the only one that works)
-1. Edit files in the sync folder: `Documents\Pers\RepsAndSteps\sync-2026-06-16\`
-2. Run `Documents\Pers\RepsAndSteps\push-reps-updates.ps1` (PowerShell) — clones/pulls, copies sync files in, commits, pushes. Auto-clears stale `.git/index.lock`. Watch for "PUSHED to GitHub".
+1. Edit files in the sync folder: `F:\Personal\Per\RepsAndSteps\1-APP\sync-2026-06-16\`
+2. Run `F:\Personal\Per\RepsAndSteps\1-APP\push-reps-updates.ps1` (PowerShell) — clones/pulls, copies sync files in, commits, pushes. Auto-clears stale `.git/index.lock`. Watch for "PUSHED to GitHub".
+   ⚠️ The copy step has NO merge — it overwrites the repo with the sync copy. Run
+   `git fetch; git diff main origin/main --stat` first and reconcile any file Base44
+   changed on its side, or you will silently revert it (this has happened — Round 25).
 3. Base44 auto-syncs the commit → click **Publish** in Base44.
 4. **Never** ask the Base44 chatbot to "apply" changes — it only sees what's already on GitHub.
 

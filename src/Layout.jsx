@@ -349,6 +349,15 @@ export default function Layout({ children, currentPageName }) {
     <SidebarProvider>
       <style>
         {`
+          /* Height of the mobile tab bar (BottomNav): 56px min-height + 12px of
+             py-1.5. SINGLE SOURCE OF TRUTH - #main-content reserves this much
+             space, and any page pinning something to the bottom (e.g. the
+             ARTPWorkout START bar, which is position:sticky inside #main-content) must
+             offset by it or the nav lands on top of the control. 0 on desktop,
+             where BottomNav is md:hidden. */
+          :root { --nav-h: 68px; }
+          @media (min-width: 768px) { :root { --nav-h: 0px; } }
+
           * {
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
@@ -572,8 +581,9 @@ export default function Layout({ children, currentPageName }) {
               overscrollBehaviorY: 'contain',
               WebkitOverflowScrolling: 'touch',
               position: 'relative',
-              // Reserve space for the fixed bottom nav (56px) + safe area on mobile
-              paddingBottom: 'calc(56px + env(safe-area-inset-bottom, 0px))',
+              // Reserve space for the fixed bottom nav + safe area on mobile.
+              // --nav-h is defined in the style block above (68px mobile, 0 desktop).
+              paddingBottom: 'calc(var(--nav-h, 68px) + env(safe-area-inset-bottom, 0px))',
             }} 
             id="main-content"
           >

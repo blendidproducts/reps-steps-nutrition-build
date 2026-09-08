@@ -1661,8 +1661,19 @@ function ARTPWorkoutInner() {
       <motion.div
         initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 400, damping: 35 }}
-        className="sticky bottom-0 z-20 px-4 pt-3 border-t border-white/5"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 16px) + 8px)", background: "linear-gradient(to top, #020817 70%, rgba(2,8,23,0.85))" }}
+        className="sticky z-20 px-4 pt-3 border-t border-white/5"
+        style={{
+          // Round 26: was `bottom-0`, which pinned this to the very bottom of
+          // #main-content -- the exact spot the bottom tab bar occupies now that
+          // Round 25 restored it on the setup screen. The START button ended up
+          // UNDER the nav and untappable. Offset by --nav-h (Layout.jsx: 68px on
+          // mobile, 0 on desktop) so the bar always sits directly above the nav.
+          // The safe-area inset is handled here, not in paddingBottom, or it
+          // would be counted twice.
+          bottom: "calc(var(--nav-h, 68px) + env(safe-area-inset-bottom, 0px))",
+          paddingBottom: "12px",
+          background: "linear-gradient(to top, #020817 70%, rgba(2,8,23,0.85))",
+        }}
       >
         <button
           onClick={handleStart}
