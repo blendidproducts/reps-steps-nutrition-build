@@ -237,6 +237,13 @@ browsers expose `share` but reject files. Fallback order: native sheet -> save
 the PNG -> copy the text. Nothing is uploaded; the PNG is drawn on-device, which
 is what keeps the website's privacy claim true.
 
+**Round 27b - shape toggle.** `CompletionScreen` has a Feed 4:5 / Square 1:1
+segmented control directly above the Share button. The choice persists in
+`localStorage` key `rns_share_variant` via `getShareVariant()`/`setShareVariant()`
+(both wrapped in try/catch - private mode must not break sharing), and
+`History.jsx` reads the same preference. **Deliberately no toggle on history
+rows:** one per row is clutter for a choice made once.
+
 **Not device-tested.** Check the native sheet on a real iPhone and Android, and
 confirm a long workout (18 exercises) renders the "+ n more" line correctly.
 

@@ -34,7 +34,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 // Round 27: workout share card (Canvas-rendered PNG + full detail text).
-import { buildShareData, shareWorkoutCard, copyDetails } from "@/lib/shareCard";
+import {
+  buildShareData, shareWorkoutCard, copyDetails,
+  SHARE_VARIANTS, getShareVariant, setShareVariant,
+} from "@/lib/shareCard";
 
 // ── Body-trackable exercises (AI pose detection verified) ────────────────────
 // Removed: Mountain Climber, Burpee, Sit-Up, Crunch, Bicycle Crunch, Arm Circle
@@ -688,6 +691,11 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
   // Round 27: share the session as an image. Built from the numbers already on
   // this screen - no new tracking, nothing uploaded, the PNG is drawn on-device.
   const [sharing, setSharing] = useState(false);
+  // Round 27b: remembered across sessions AND shared with History's share button,
+  // so the choice is made once rather than on every row.
+  const [variant, setVariant] = useState(() => getShareVariant());
+
+  const pickVariant = (v) => { setVariant(v); setShareVariant(v); };
 
   const shareData = () => buildShareData({
     date: new Date(),
@@ -716,7 +724,7 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
   const handleShareImage = async () => {
     if (sharing) return;
     setSharing(true);
-    try { announce(await shareWorkoutCard(shareData(), "feed")); }
+    try { announce(await shareWorkoutCard(shareData(), variant)); }
     finally { setSharing(false); }
   };
 
@@ -803,8 +811,29 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
           </div>
         </div>
 
+        {/* Card shape picker - sits directly above the button it affects, so the
+            choice reads as part of sharing rather than a stray setting. */}
+        <div className="flex items-center justify-between gap-3 pt-2">
+          <span className="text-gray-500 text-xs font-medium">Card shape</span>
+          <div role="radiogroup" aria-label="Share card shape"
+            className="flex gap-1 p-1 rounded-xl bg-[#111] border border-gray-800">
+            {SHARE_VARIANTS.map((v) => {
+              const on = variant === v.id;
+              return (
+                <button key={v.id} role="radio" aria-checked={on}
+                  onClick={() => pickVariant(v.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                    on ? "bg-[#00a9ff] text-[#04121F]" : "text-gray-400"
+                  }`}>
+                  {v.label} <span className={on ? "opacity-70" : "opacity-60"}>{v.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Share row - image first, text as the equal-weight alternative */}
-        <div className="grid grid-cols-2 gap-3 pt-2">
+        <div className="grid grid-cols-2 gap-3">
           <button onClick={handleShareImage} disabled={sharing}
             className="flex items-center justify-center gap-2 py-3.5 rounded-xl text-white font-bold active:scale-95 transition-transform shadow-lg disabled:opacity-60"
             style={{ background: "linear-gradient(135deg, #00A9FF, #0066cc)", boxShadow: "0 8px 24px rgba(0,169,255,0.30)" }}>

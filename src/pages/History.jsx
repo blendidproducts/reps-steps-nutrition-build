@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, Target, TrendingUp, Share2, Footprints, Download, Upload, Copy } from "lucide-react";
 // Round 27: shared workout share-card renderer (see src/lib/shareCard.js).
-import { buildShareData, shareWorkoutCard, copyDetails } from "@/lib/shareCard";
+import { buildShareData, shareWorkoutCard, copyDetails, getShareVariant } from "@/lib/shareCard";
 import { base44 } from "@/api/base44Client";
 import { format } from "date-fns";
 import { createPageUrl } from "@/utils";
@@ -307,8 +307,11 @@ export default function History() {
     // 'cancelled' = the user dismissed the sheet. Stay quiet.
   };
 
+  // Uses the shape the user last picked on the workout-complete screen. No
+  // toggle here on purpose - one per history row would be clutter for a choice
+  // that is made once.
   const shareWorkout = async (session) => {
-    announceShare(await shareWorkoutCard(sessionShareData(session), 'feed'));
+    announceShare(await shareWorkoutCard(sessionShareData(session), getShareVariant()));
   };
 
   const copyWorkoutDetails = async (session) => {

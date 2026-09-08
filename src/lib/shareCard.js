@@ -412,6 +412,32 @@ export function renderShareCard(data, variant = "feed") {
   });
 }
 
+/* ---------- remembered variant preference ---------- */
+
+const VARIANT_KEY = "rns_share_variant";
+export const SHARE_VARIANTS = [
+  { id: "feed", label: "Feed", hint: "4:5" },
+  { id: "square", label: "Square", hint: "1:1" },
+];
+
+/** Last variant the user picked. Falls back to 'feed' on any storage failure. */
+export function getShareVariant() {
+  try {
+    const v = localStorage.getItem(VARIANT_KEY);
+    return v === "square" ? "square" : "feed";
+  } catch {
+    return "feed"; // private mode / storage blocked - not an error worth surfacing
+  }
+}
+
+export function setShareVariant(v) {
+  try {
+    localStorage.setItem(VARIANT_KEY, v === "square" ? "square" : "feed");
+  } catch {
+    /* preference just won't persist; sharing still works */
+  }
+}
+
 function fileStamp(d) {
   const x = d.date;
   return `repsandsteps-${x.getFullYear()}${pad2(x.getMonth() + 1)}${pad2(x.getDate())}.png`;
