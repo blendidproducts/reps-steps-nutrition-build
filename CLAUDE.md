@@ -197,6 +197,49 @@ The script copies sync -> repo unconditionally; it has no merge step and will
 happily undo Base44's work. Base44 tends to move inline `InvokeLLM` calls into
 `base44/functions/*` — that refactor is the usual casualty.
 
+## Round 27 - shareable workout card (2026-09-08)
+
+The only share button in the app was in `History.jsx` and sent one line of text.
+It also attached `url: window.location.href` - an internal app route nobody else
+can open. Now it shares a rendered image, and ARTP's completion screen has share
+buttons for the first time.
+
+**NEW `src/lib/shareCard.js`** - draws the card with the **Canvas 2D API**, no
+dependencies. Deliberate choice:
+- `html-to-image`/`dom-to-image` serialise the DOM into `<svg><foreignObject>`,
+  which on iOS Safari drops webfonts and cross-origin images and sometimes
+  returns a blank frame.
+- `package.json` is owned by Base44 and is **not in the sync folder**, so adding
+  a dependency can't be done through this workflow anyway.
+- Display type is a heavy *system* stack, so there is never a race between
+  `document.fonts` loading and the draw call.
+
+Two variants: `'feed'` 1080x1350 (full per-exercise breakdown, default) and
+`'square'` 1080x1080 (one hero number + three stats). Both verified by rendering
+in headless Chromium before shipping.
+
+Exports: `buildShareData()` (normalises ARTP state OR a WorkoutSession into one
+shape), `renderShareCard()` -> PNG Blob, `shareWorkoutCard()`, `copyDetails()`,
+`buildDetailText()`, `buildShortText()`, `formatDuration()`.
+
+**Share result is a string, not a boolean:** `'shared' | 'saved' | 'copied' |
+'cancelled'`. Callers must report what actually happened. `AbortError` from
+`navigator.share` means the user dismissed the sheet - that is NOT a failure and
+must not trigger a download they didn't ask for.
+
+- `ARTPWorkout.jsx` - "Share image" + "Copy details" on `CompletionScreen`.
+  Added imports: `toast` from sonner (was not imported at all), `Share2`/`Copy`.
+- `History.jsx` - `shareWorkout()` now renders the card; new `copyWorkoutDetails()`
+  and a Copy button beside the existing Share icon.
+
+Gate is `navigator.canShare({files})`, never `navigator.share` alone - plenty of
+browsers expose `share` but reject files. Fallback order: native sheet -> save
+the PNG -> copy the text. Nothing is uploaded; the PNG is drawn on-device, which
+is what keeps the website's privacy claim true.
+
+**Not device-tested.** Check the native sheet on a real iPhone and Android, and
+confirm a long workout (18 exercises) renders the "+ n more" line correctly.
+
 ## Next steps (in order)
 0. **Mobile builds + media** (2026-07-14, after a successful live QA pass): see `Documents\Pers\RepsAndSteps\MOBILE-BUILD-PLAN.md` (v2: PRIMARY PATH = Base44 Publish → Mobile app tab builds the AAB and even the iOS IPA in the cloud, no Mac needed; needs Builder plan. Gate 1 = test camera/ARTP inside their web-view wrapper. BLOCKER: Stripe digital-goods subscriptions get store-rejected — hide purchase flows in the mobile app. Capacitor project = Plan B only) and `Exercise_Media_Audit.xlsx` (26 exercises missing images, 59 missing videos; 4 ARTP-tracked ones are priority: Tricep Dip, Reverse Lunge, Bulgarian Split Squat, Decline Push-Up).
 1. **Publish in Base44** — rounds 13c+14+15 are ALREADY ON GITHUB (verified 2026-07-14: fresh clone of `main` is byte-identical to the sync folder, incl. Round 15 CLAUDE.md). Just click Publish in Base44, then QA.

@@ -3,7 +3,9 @@ import { WorkoutSession } from "@/entities/WorkoutSession";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Target, TrendingUp, Share2, Footprints, Download, Upload } from "lucide-react";
+import { Calendar, Clock, Target, TrendingUp, Share2, Footprints, Download, Upload, Copy } from "lucide-react";
+// Round 27: shared workout share-card renderer (see src/lib/shareCard.js).
+import { buildShareData, shareWorkoutCard, copyDetails } from "@/lib/shareCard";
 import { base44 } from "@/api/base44Client";
 import { format } from "date-fns";
 import { createPageUrl } from "@/utils";
@@ -273,24 +275,44 @@ export default function History() {
     reader.readAsText(file);
   };
 
+  /**
+   * Round 27: share the session as a rendered card instead of one line of text.
+   *
+   * The old version sent `url: window.location.href` — whatever internal app
+   * route the user happened to be on, which nobody else can open. Dropped.
+   * Everything below comes from fields the session already stores.
+   */
+  const sessionShareData = (session) => buildShareData({
+    date: session.start_time,
+    durationSecs: session.duration,
+    totalReps: session.total_reps,
+    steps: session.total_steps || session.steps || 0,
+    kcal: session.calories_burned,
+    exercises: (session.exercises_completed || []).map((ex) => ({
+      name: ex.exercise_name || ex.name || "Exercise",
+      total: ex.total_reps != null
+        ? ex.total_reps
+        : (Array.isArray(ex.sets) ? ex.sets.reduce((a, s) => a + (s.reps || 0), 0) : (ex.reps || 0)),
+      sets: Array.isArray(ex.sets) ? ex.sets.map((s) => s.reps || 0) : [],
+    })),
+    setCount: (session.exercises_completed || [])
+      .reduce((n, ex) => n + (Array.isArray(ex.sets) ? ex.sets.length : 0), 0),
+  });
+
+  // Say what actually happened. Never report success we did not get.
+  const announceShare = (result) => {
+    if (result === 'shared') toast.success('Shared!');
+    else if (result === 'saved') toast.success('Image saved — share it from your photos');
+    else if (result === 'copied') toast.success('Workout details copied');
+    // 'cancelled' = the user dismissed the sheet. Stay quiet.
+  };
+
   const shareWorkout = async (session) => {
-    const text = `Just completed a ${formatTime(session.duration)} workout with Reps & Steps! Crushed ${session.total_reps} reps. 🔥 #RepsAndSteps #Calisthenics`;
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: 'Workout Complete!',
-          text: text,
-          url: window.location.href
-        });
-      } else {
-        await navigator.clipboard.writeText(text);
-        toast.success('Workout stats copied to clipboard!');
-      }
-    } catch (error) {
-      console.error("Share failed:", error);
-      await navigator.clipboard.writeText(text);
-      toast.info('Share failed, copied to clipboard instead!');
-    }
+    announceShare(await shareWorkoutCard(sessionShareData(session), 'feed'));
+  };
+
+  const copyWorkoutDetails = async (session) => {
+    announceShare(await copyDetails(sessionShareData(session)));
   };
 
   return (
@@ -455,7 +477,10 @@ export default function History() {
                       </div>
                       
                       <div className="flex flex-col gap-1 ml-2">
-                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); shareWorkout(session); }} aria-label="Share this workout" className="text-gray-400 hover:text-brand-blue h-8 w-8">
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); copyWorkoutDetails(session); }} aria-label="Copy workout details as text" className="text-gray-400 hover:text-brand-blue h-8 w-8">
+                          <Copy className="w-4 h-4" aria-hidden="true" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); shareWorkout(session); }} aria-label="Share this workout as an image" className="text-gray-400 hover:text-brand-blue h-8 w-8">
                           <Share2 className="w-4 h-4" aria-hidden="true" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); exportWorkoutToTCX(session); }} aria-label="Export to TCX" className="text-gray-400 hover:text-emerald-400 h-8 w-8">

@@ -30,8 +30,11 @@ import {
   Save, Edit2, CheckCircle, Link as LinkIcon,
   Footprints, Route, Square, Plus, Minus, SkipForward,
   AlertTriangle, Activity, Repeat, BarChart2, Camera,
-  Pause, Target, Flame,
+  Pause, Target, Flame, Share2, Copy,
 } from "lucide-react";
+import { toast } from "sonner";
+// Round 27: workout share card (Canvas-rendered PNG + full detail text).
+import { buildShareData, shareWorkoutCard, copyDetails } from "@/lib/shareCard";
 
 // ── Body-trackable exercises (AI pose detection verified) ────────────────────
 // Removed: Mountain Climber, Burpee, Sit-Up, Crunch, Bicycle Crunch, Arm Circle
@@ -682,6 +685,45 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
     byExercise[s.name].push(s.reps);
   }
 
+  // Round 27: share the session as an image. Built from the numbers already on
+  // this screen - no new tracking, nothing uploaded, the PNG is drawn on-device.
+  const [sharing, setSharing] = useState(false);
+
+  const shareData = () => buildShareData({
+    date: new Date(),
+    durationSecs: elapsedSecs,
+    totalReps,
+    steps: totalSteps,
+    kcal: calEstimate,
+    exerciseCount,
+    setCount: completedSets,
+    exercises: Object.entries(byExercise).map(([name, repsPerSet]) => ({
+      name,
+      total: repsPerSet.reduce((a, b) => a + b, 0),
+      sets: repsPerSet,
+    })),
+  });
+
+  // Report what ACTUALLY happened - never claim "shared" when the sheet was
+  // dismissed or when we silently fell back to a download.
+  const announce = (result) => {
+    if (result === "shared") toast.success("Shared!");
+    else if (result === "saved") toast.success("Image saved - share it from your photos");
+    else if (result === "copied") toast.success("Workout details copied");
+    else if (result === "cancelled") { /* user backed out; say nothing */ }
+  };
+
+  const handleShareImage = async () => {
+    if (sharing) return;
+    setSharing(true);
+    try { announce(await shareWorkoutCard(shareData(), "feed")); }
+    finally { setSharing(false); }
+  };
+
+  const handleCopyText = async () => {
+    announce(await copyDetails(shareData()));
+  };
+
   return (
     <div className="fixed inset-0 bg-[#020817] flex flex-col overflow-y-auto"
       style={{ zIndex: 99990, paddingTop: "env(safe-area-inset-top, 20px)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" }}>
@@ -761,7 +803,20 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
           </div>
         </div>
 
-        <div className="space-y-3 pt-2">
+        {/* Share row - image first, text as the equal-weight alternative */}
+        <div className="grid grid-cols-2 gap-3 pt-2">
+          <button onClick={handleShareImage} disabled={sharing}
+            className="flex items-center justify-center gap-2 py-3.5 rounded-xl text-white font-bold active:scale-95 transition-transform shadow-lg disabled:opacity-60"
+            style={{ background: "linear-gradient(135deg, #00A9FF, #0066cc)", boxShadow: "0 8px 24px rgba(0,169,255,0.30)" }}>
+            <Share2 className="w-5 h-5" /> {sharing ? "Building…" : "Share image"}
+          </button>
+          <button onClick={handleCopyText}
+            className="flex items-center justify-center gap-2 py-3.5 rounded-xl border border-gray-700 text-gray-200 font-bold active:scale-95 transition-transform">
+            <Copy className="w-5 h-5" /> Copy details
+          </button>
+        </div>
+
+        <div className="space-y-3">
           <button onClick={onViewAchievements}
             className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-white font-bold active:scale-95 transition-transform shadow-lg"
             style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", boxShadow: "0 8px 24px rgba(245,158,11,0.35)" }}>
