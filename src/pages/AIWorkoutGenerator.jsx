@@ -24,7 +24,10 @@ import {
   Link as LinkIcon,
   GripVertical,
   Mic,
-  Sparkles
+  Sparkles,
+  Plus,
+  Search,
+  X
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { findNamedExercisesInText } from "@/lib/exerciseNameMatch";
@@ -196,6 +199,46 @@ export default function AIWorkoutGenerator() {
   const removeExercise = (index) => {
     const updated = selectedExercises.filter((_, i) => i !== index);
     setSelectedExercises(updated);
+  };
+
+  /**
+   * Round 28: add a named exercise to a generated workout.
+   *
+   * The generator picks exercises by category, so there was no way to say
+   * "and add Burpees" after it built the list — you could only remove or swap.
+   * Type (or dictate) a name, pick the match, it lands at the end of the list.
+   *
+   * New entries carry the same sets/target_reps as the rest of the workout so
+   * the time and rep estimates stay correct; the step-3 effect recalculates
+   * anyway, this just means the row is never briefly blank.
+   */
+  const [showAddExercise, setShowAddExercise] = useState(false);
+  const [addQuery, setAddQuery] = useState("");
+  const addInputRef = useRef(null);
+
+  const addExerciseMatches = () => {
+    const q = addQuery.trim().toLowerCase();
+    // No query yet: show a few so the panel isn't an empty box on open.
+    if (!q) return allExercises.slice(0, 8);
+    return allExercises
+      .filter(ex => (ex.name || "").toLowerCase().includes(q))
+      .slice(0, 12);
+  };
+
+  const addExercise = (exercise) => {
+    const template = selectedExercises[0] || {};
+    setSelectedExercises(prev => ([
+      ...prev,
+      {
+        ...exercise,
+        superset_with_next: false,
+        sets: template.sets || settings.defaultSets[0],
+        target_reps: template.target_reps || settings.defaultReps[0],
+      },
+    ]));
+    setAddQuery("");
+    setShowAddExercise(false);
+    toast.success(`${exercise.name} added`);
   };
 
   const swapExercise = (index, newExercise) => {
@@ -1008,8 +1051,78 @@ export default function AIWorkoutGenerator() {
             {/* Exercise List with Drag & Drop */}
             <Card className="bg-gray-900 border-gray-800 rounded-xl">
               <CardHeader>
-                <CardTitle className="text-white text-lg sm:text-xl">Exercise List</CardTitle>
-                <p className="text-xs sm:text-sm text-gray-400">Drag to reorder, swap, or configure supersets</p>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <CardTitle className="text-white text-lg sm:text-xl">Exercise List</CardTitle>
+                    <p className="text-xs sm:text-sm text-gray-400">Drag to reorder, swap, or configure supersets</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowAddExercise(v => !v);
+                      setAddQuery("");
+                      setTimeout(() => addInputRef.current?.focus(), 50);
+                    }}
+                    aria-expanded={showAddExercise}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-brand-blue/15 border border-brand-blue/40 text-brand-blue text-xs sm:text-sm font-bold active:scale-95 transition-transform flex-shrink-0"
+                  >
+                    {showAddExercise ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                    {showAddExercise ? "Close" : "Add exercise"}
+                  </button>
+                </div>
+
+                {/* Round 28: type or dictate a name (e.g. "Burpees") and add it to
+                    the generated workout. Uses the same Exercise library the
+                    generator draws from, so anything addable is trackable. */}
+                {showAddExercise && (
+                  <div className="mt-3 p-3 rounded-xl bg-gray-800/60 border border-gray-700">
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-900 border border-gray-700">
+                      <Search className="w-4 h-4 text-gray-500 flex-shrink-0" aria-hidden="true" />
+                      <input
+                        ref={addInputRef}
+                        value={addQuery}
+                        onChange={(e) => setAddQuery(e.target.value)}
+                        placeholder="Type an exercise — e.g. Burpees"
+                        aria-label="Search for an exercise to add"
+                        className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-gray-600"
+                      />
+                      {addQuery && (
+                        <button onClick={() => setAddQuery("")} aria-label="Clear search"
+                          className="text-gray-500 flex-shrink-0">
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="mt-2 max-h-56 overflow-y-auto space-y-1">
+                      {addExerciseMatches().length === 0 ? (
+                        <p className="text-gray-500 text-xs px-2 py-3">
+                          No exercise called “{addQuery}” in your library. Try another name, or add it
+                          under Exercises first so it can be tracked.
+                        </p>
+                      ) : (
+                        addExerciseMatches().map((ex) => {
+                          const already = selectedExercises.some(s => s.id === ex.id);
+                          return (
+                            <button
+                              key={ex.id}
+                              onClick={() => addExercise(ex)}
+                              className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-gray-900 border border-gray-700 text-left active:scale-[0.99] transition-transform"
+                            >
+                              <span className="min-w-0">
+                                <span className="block text-white text-sm font-medium truncate">{ex.name}</span>
+                                <span className="block text-gray-500 text-[11px] capitalize">
+                                  {(ex.category || "").replace(/_/g, " ")}
+                                  {already ? " · already in this workout" : ""}
+                                </span>
+                              </span>
+                              <Plus className="w-4 h-4 text-brand-blue flex-shrink-0" aria-hidden="true" />
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 <DragDropContext onDragEnd={onDragEnd}>

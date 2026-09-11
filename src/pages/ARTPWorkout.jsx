@@ -675,18 +675,19 @@ function AmrapBar({ exerciseIndex, total, setNum, totalSets, elapsedSecs, totalS
 }
 
 // ── Completion / Report screen ────────────────────────────────────────────────
-function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exerciseCount, onRestart, onExit, onViewAchievements }) {
+function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exerciseCount, onRestart, onExit, onViewAchievements, onAdjustReps }) {
   const totalReps = scores.reduce((s, e) => s + (e.reps || 0), 0);
   const completedSets = totalSets;
   // Estimate calories: ~8 cal/min HIIT
   const calEstimate = Math.round((elapsedSecs / 60) * 8);
 
-  // Group scores by exercise name
+  // Group scores by exercise name. Round 28 keeps each set's INDEX in `scores`
+  // alongside its rep count, so the +/- controls can address the exact set.
   const byExercise = {};
-  for (const s of scores) {
+  scores.forEach((s, i) => {
     if (!byExercise[s.name]) byExercise[s.name] = [];
-    byExercise[s.name].push(s.reps);
-  }
+    byExercise[s.name].push({ reps: s.reps, idx: i });
+  });
 
   // Round 27: share the session as an image. Built from the numbers already on
   // this screen - no new tracking, nothing uploaded, the PNG is drawn on-device.
@@ -769,11 +770,12 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
           <div className="px-4 py-3 border-b border-gray-800 flex items-center gap-2">
             <BarChart2 className="w-4 h-4 text-gray-400" />
             <p className="text-white font-semibold text-sm">Exercise Report</p>
+            <p className="text-[10px] text-gray-500 ml-auto">Miscounted? Tap ± to fix</p>
           </div>
           <div className="divide-y divide-gray-800">
-            {Object.entries(byExercise).map(([name, repsPerSet], i) => {
+            {Object.entries(byExercise).map(([name, sets], i) => {
               const ex = ALL_EXERCISES.find(e => e.name === name);
-              const total = repsPerSet.reduce((a, b) => a + b, 0);
+              const total = sets.reduce((a, s) => a + s.reps, 0);
               return (
                 <div key={i} className="px-4 py-3">
                   <div className="flex items-center justify-between mb-1">
@@ -783,15 +785,32 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
                     </div>
                     <span className="text-blue-400 font-bold text-sm">{total} reps</span>
                   </div>
-                  {repsPerSet.length > 1 && (
-                    <div className="flex gap-2 flex-wrap mt-1">
-                      {repsPerSet.map((r, si) => (
-                        <span key={si} className="text-[10px] text-gray-500 bg-gray-800 rounded px-2 py-0.5">
-                          Set {si + 1}: {r}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  {/* Round 28: every set is correctable. The camera misses shallow
+                      reps and double-counts on a wobbly tripod - this is the fix
+                      without redoing the set. Shown for single-set exercises too. */}
+                  <div className="flex gap-2 flex-wrap mt-1.5">
+                    {sets.map((s, si) => (
+                      <div key={si}
+                        className="flex items-center gap-1 bg-gray-800 rounded-lg pl-2 pr-1 py-0.5">
+                        <span className="text-[10px] text-gray-400">Set {si + 1}</span>
+                        <span className="text-[11px] text-white font-bold tabular-nums min-w-[1.6em] text-center">{s.reps}</span>
+                        <button
+                          onClick={() => onAdjustReps(s.idx, -1)}
+                          aria-label={`Remove one rep from ${name} set ${si + 1}`}
+                          className="w-6 h-6 flex items-center justify-center rounded text-gray-400 active:bg-gray-700 active:scale-90 transition-transform"
+                          style={{ minHeight: 24 }}>
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => onAdjustReps(s.idx, +1)}
+                          aria-label={`Add one rep to ${name} set ${si + 1}`}
+                          className="w-6 h-6 flex items-center justify-center rounded text-blue-400 active:bg-gray-700 active:scale-90 transition-transform"
+                          style={{ minHeight: 24 }}>
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })}
@@ -1217,6 +1236,11 @@ function ARTPWorkoutInner() {
     });
   };
 
+  // Round 28: id of the WorkoutSession row this workout created, so rep
+  // corrections can be written back. Null until the session actually saves.
+  const savedSessionIdRef = useRef(null);
+  const resaveTimerRef = useRef(null);
+
   // ── Save ARTP session to backend so History & Achievements track it ──────────
   // NOTE: declared BEFORE finishExercise so it is initialised when finishExercise's
   // dependency array is evaluated (avoids temporal-dead-zone ReferenceError crash).
@@ -1232,7 +1256,9 @@ function ARTPWorkoutInner() {
         }, {})
       ).map(([name, reps]) => ({ exercise_name: name, reps_completed: reps, time_spent: 0 }));
 
-      await base44.entities.WorkoutSession.create({
+      // Round 28: keep the created record's id so rep corrections made on the
+      // completion screen can be written back instead of being display-only.
+      const created = await base44.entities.WorkoutSession.create({
         start_time: new Date(Date.now() - finalElapsed * 1000).toISOString(),
         end_time: new Date().toISOString(),
         duration: finalElapsed,
@@ -1247,6 +1273,7 @@ function ARTPWorkoutInner() {
           sprint: { count: 0, total_time: 0, total_steps: 0, longest_sprint: 0, shortest_sprint: 0 },
         },
       });
+      if (created && created.id) savedSessionIdRef.current = created.id;
 
       // Update streak
       const { updateStreak } = await import('@/components/services/streakManager');
@@ -1404,6 +1431,57 @@ function ARTPWorkoutInner() {
       return next;
     });
   }, []);
+  /**
+   * Round 28: manual rep correction.
+   *
+   * The pose model miscounts sometimes — shallow reps get skipped, a shifting
+   * camera double-counts. Every set is now editable from the completion report.
+   * `scores` is the source of truth for the report, so adjusting it updates the
+   * on-screen totals immediately; the backend row is patched a beat later so a
+   * run of taps on +/- is one write, not ten.
+   *
+   * Corrections made on the rest screen land BEFORE the session is saved (the
+   * save only fires on the final set of the final exercise), so those need no
+   * write-back at all — only the completion-screen path does.
+   */
+  const adjustReps = useCallback((scoreIndex, delta) => {
+    setScores(prev => {
+      if (scoreIndex < 0 || scoreIndex >= prev.length) return prev;
+      const next = [...prev];
+      const cur = next[scoreIndex];
+      const reps = Math.max(0, (cur.reps || 0) + delta);
+      if (reps === cur.reps) return prev;       // already at 0, nothing changed
+      next[scoreIndex] = { ...cur, reps };
+
+      // Debounced write-back. Only meaningful once the row exists.
+      if (savedSessionIdRef.current) {
+        clearTimeout(resaveTimerRef.current);
+        const snapshot = next;
+        resaveTimerRef.current = setTimeout(async () => {
+          try {
+            const totalReps = snapshot.reduce((s, e) => s + (e.reps || 0), 0);
+            const exercisesCompleted = Object.entries(
+              snapshot.reduce((acc, s) => {
+                if (!acc[s.name]) acc[s.name] = 0;
+                acc[s.name] += s.reps || 0;
+                return acc;
+              }, {})
+            ).map(([name, r]) => ({ exercise_name: name, reps_completed: r, time_spent: 0 }));
+            await base44.entities.WorkoutSession.update(savedSessionIdRef.current, {
+              total_reps: totalReps,
+              exercises_completed: exercisesCompleted,
+            });
+          } catch (_) {
+            // Non-fatal: the on-screen report is still correct for this session.
+          }
+        }, 900);
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => () => clearTimeout(resaveTimerRef.current), []);
+
   const handleEndWorkout = () => { removePauseReason("manual"); setShowExitSheet(true); };
 
   const confirmEndWorkout = () => {
@@ -1458,12 +1536,17 @@ function ARTPWorkoutInner() {
   // the real viewport with no reliable way to scroll it into view. Same root
   // cause class as the Round 22 Build Workout fix (AIWorkoutGenerator.jsx):
   // don't nest a second scroll container / don't rely on fixed+vh sizing —
-  // let Layout's #main-content be the ONLY scroll owner, and pin the bar with
-  // `sticky bottom-0` inside it. Sticky tracks the real scrolling ancestor's
-  // actual rendered viewport (immune to the 100vh oversizing) and, per the
-  // Round 22 lesson, isn't trapped by the Layout's page-transition transform
-  // the way `fixed` is — so no portal escape needed either.
+  // let Layout's #main-content be the ONLY scroll owner.
+  //
+  // SUPERSEDED IN PART (Round 28): the "pin the bar with `sticky`" half of this
+  // was wrong and cost three rounds. Sticky is still bounded by its containing
+  // block, and this root is `min-h-screen` (100vh) — the very oversizing the
+  // paragraph above describes — so the bar rode below the visible area again as
+  // soon as Round 25 put the tab bar back on this screen. The START bar is now
+  // a `position: fixed` PORTAL to document.body (see its comment below).
+  // The "one scroll owner" rule above still stands; do NOT nest a scroll box.
   if (phase === "setup") return (
+    <>
     <div className="min-h-screen bg-[#020817] text-white">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 bg-[#111] border-b border-gray-800 sticky top-0 z-10"
@@ -1740,30 +1823,55 @@ function ARTPWorkoutInner() {
 
       </div>
 
-      {/* START bar — sticky to the bottom of Layout's #main-content scroller
-          (see root-container comment above for why sticky, not fixed/in-flow). */}
+      {/* Reserve the space the fixed START bar occupies, so the last exercise
+          row can always be scrolled clear of it. */}
+      <div aria-hidden="true" style={{ height: "calc(148px + var(--nav-h, 68px) + env(safe-area-inset-bottom, 0px))" }} />
+    </div>
+
+    {/* ── START bar ────────────────────────────────────────────────────────
+        Round 28: this is now `position: fixed`, PORTALED to document.body.
+
+        History of this one control, because it has burned three rounds:
+          R13c  in-flow footer inside a nested scroll box   -> off-screen on iOS
+          R23   `sticky bottom-0` in Layout's #main-content -> fine until R25
+          R25   restored the bottom tab bar on this screen  -> nav covered it
+          R26   `sticky` + bottom: var(--nav-h)             -> STILL unreachable
+
+        Sticky can only ever pin inside its containing block, and this one is
+        `min-h-screen` (100vh) — which iOS Safari computes against the LARGEST
+        viewport, so the block's bottom edge sits below the visible area and the
+        bar rides down with it. Layout's #main-content also carries its own
+        bottom padding, which shifts the sticky rectangle again.
+
+        A portal to document.body removes every one of those variables: fixed
+        positioning resolves against the viewport, and portaling escapes
+        Layout's page-transition transform (the R22 trap that makes `fixed`
+        unreliable INSIDE the tree). This is the same escape hatch RepTracker
+        and every other ARTP overlay already use. Do not revert this to sticky.
+
+        z-index 60: above BottomNav (z-50), far below the workout overlays
+        (9990+). Only mounts during phase === "setup". */}
+    {createPortal(
       <motion.div
         initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 400, damping: 35 }}
-        className="sticky z-20 px-4 pt-3 border-t border-white/5"
+        className="px-4 pt-3 border-t border-white/10"
         style={{
-          // Round 26: was `bottom-0`, which pinned this to the very bottom of
-          // #main-content -- the exact spot the bottom tab bar occupies now that
-          // Round 25 restored it on the setup screen. The START button ended up
-          // UNDER the nav and untappable. Offset by --nav-h (Layout.jsx: 68px on
-          // mobile, 0 on desktop) so the bar always sits directly above the nav.
-          // The safe-area inset is handled here, not in paddingBottom, or it
-          // would be counted twice.
+          position: "fixed",
+          left: 0,
+          right: 0,
           bottom: "calc(var(--nav-h, 68px) + env(safe-area-inset-bottom, 0px))",
-          paddingBottom: "12px",
-          background: "linear-gradient(to top, #020817 70%, rgba(2,8,23,0.85))",
+          zIndex: 60,
+          paddingBottom: "14px",
+          background: "linear-gradient(to top, #020817 78%, rgba(2,8,23,0.92))",
         }}
       >
         <button
           onClick={handleStart}
           disabled={!mode || activeList.length === 0}
-          className="w-full py-4 rounded-2xl text-white font-black text-lg disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all shadow-xl flex items-center justify-center gap-3"
+          className="w-full max-w-md mx-auto py-5 rounded-2xl text-white font-black text-lg disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all shadow-xl flex items-center justify-center gap-3"
           style={{
+            minHeight: 60, // bigger tap target - it was "too hard to click"
             background: (!mode || activeList.length === 0) ? "#374151" : "linear-gradient(135deg, #3b82f6, #8b5cf6)",
             boxShadow: (!mode || activeList.length === 0) ? "none" : "0 8px 24px rgba(59,130,246,0.4)",
           }}
@@ -1773,8 +1881,10 @@ function ARTPWorkoutInner() {
             : mode ? `START · ${activeList.length} Exercises × ${totalSets} Set${totalSets !== 1 ? "s" : ""}`
             : "Choose a mode above"}
         </button>
-      </motion.div>
-    </div>
+      </motion.div>,
+      document.body
+    )}
+    </>
   );
 
   // ── All active workout phases — single return keeps StepTracker alive ──────
@@ -1870,6 +1980,7 @@ function ARTPWorkoutInner() {
           onRestart={handleRestart}
           onExit={() => navigate(createPageUrl("PresetPrograms"))}
           onViewAchievements={() => navigate(createPageUrl("Achievements"))}
+          onAdjustReps={adjustReps}
         />,
         document.body
       )}

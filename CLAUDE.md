@@ -247,6 +247,49 @@ rows:** one per row is clutter for a choice made once.
 **Not device-tested.** Check the native sheet on a real iPhone and Android, and
 confirm a long workout (18 exercises) renders the "+ n more" line correctly.
 
+## Round 28 - START bar (finally), rep correction, add-exercise (2026-09-11)
+
+### 1. ⚠️ START bar: STOP USING `sticky`. It is a fixed PORTAL now.
+
+Four rounds on one button. R13c in-flow footer -> off-screen. R23 `sticky
+bottom-0` -> worked until R25. R25 restored the tab bar -> nav covered it. R26
+`sticky` + `bottom: var(--nav-h)` -> **still unreachable on device**.
+
+Root cause R26 missed: **sticky is bounded by its containing block**, and the
+setup root is `min-h-screen` (100vh). iOS Safari computes 100vh against the
+LARGEST viewport, so the containing block's bottom sits below the visible area
+and the bar rides down with it - the exact oversizing the R23 comment already
+described for the old footer. Layout's `#main-content` bottom padding shifts
+the sticky rectangle again.
+
+Now: `position: fixed`, `createPortal(..., document.body)`, `zIndex: 60`
+(above BottomNav's z-50, far below the 9990+ workout overlays), bottom offset
+`calc(var(--nav-h) + env(safe-area-inset-bottom))`. A spacer div of the same
+height sits at the end of the scroll content so the last row clears it. Button
+`minHeight: 60`. Portaling also escapes Layout's page-transition transform -
+the R22 trap that makes plain `fixed` unreliable inside the tree.
+**Do not revert this to sticky.** The "one scroll owner" rule still stands.
+
+### 2. Manual rep correction (`AiRTP` completion report)
+Pose tracking miscounts - shallow reps skipped, wobbly tripod double-counts.
+Every set on the completion report now has −/+ controls.
+- `scores` entries keep their index so a control addresses one exact set.
+- `savedSessionIdRef` holds the created `WorkoutSession` id; corrections patch
+  `total_reps` + `exercises_completed` back, **debounced 900ms** so a run of
+  taps is one write.
+- Rest-screen-era corrections need no write-back: the save only fires on the
+  final set of the final exercise, so earlier edits are already in `scores`
+  when it runs.
+
+### 3. Add a named exercise to a generated workout (`AIWorkoutGenerator`)
+Step 3 (Exercise List) has an **Add exercise** button opening a type-to-search
+panel over the Exercise library. Type/dictate "Burpees" -> tap -> appended with
+the workout's existing sets/target_reps. Previously you could only remove or
+swap what the generator chose.
+
+**None of this is device-tested.** Priority check: the START bar on a real
+phone, in both orientations, with the tab bar present.
+
 ## Next steps (in order)
 0. **Mobile builds + media** (2026-07-14, after a successful live QA pass): see `Documents\Pers\RepsAndSteps\MOBILE-BUILD-PLAN.md` (v2: PRIMARY PATH = Base44 Publish → Mobile app tab builds the AAB and even the iOS IPA in the cloud, no Mac needed; needs Builder plan. Gate 1 = test camera/ARTP inside their web-view wrapper. BLOCKER: Stripe digital-goods subscriptions get store-rejected — hide purchase flows in the mobile app. Capacitor project = Plan B only) and `Exercise_Media_Audit.xlsx` (26 exercises missing images, 59 missing videos; 4 ARTP-tracked ones are priority: Tricep Dip, Reverse Lunge, Bulgarian Split Squat, Decline Push-Up).
 1. **Publish in Base44** — rounds 13c+14+15 are ALREADY ON GITHUB (verified 2026-07-14: fresh clone of `main` is byte-identical to the sync folder, incl. Round 15 CLAUDE.md). Just click Publish in Base44, then QA.
