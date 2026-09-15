@@ -115,7 +115,27 @@ function pushupDepthMetric(lm) {
   const lSh = lm[11], rSh = lm[12], lHip = lm[23], rHip = lm[24];
   const shVis  = ((lSh?.visibility ?? 0) + (rSh?.visibility ?? 0)) / 2;
   const hipVis = ((lHip?.visibility ?? 0) + (rHip?.visibility ?? 0)) / 2;
-  if (shVis < 0.4 || hipVis < 0.4) return 100; // can't normalize honestly — hold at "up", never fabricate a rep
+  // Round 29 BUGFIX. This used to `return 100`, described as "hold at up,
+  // never fabricate a rep". 100 IS a fabricated reading, and it was the worst
+  // possible value: upThreshold is 28, so every visibility dropout injected a
+  // hard "UP" sample straight into the state machine.
+  //
+  // What that did on a real push-up (the reported symptom - skeleton drops out
+  // near the floor on Diamond/Wide/Incline/Decline/regular push-ups):
+  //   top      metric ~30  -> angle >= 28      -> stage = 'up'
+  //   bottom   visibility dips -> metric 100   -> stage RE-ARMED to 'up'
+  //   flicker  back to ~5 -> angle <= 6 & 'up' -> REP COUNTED
+  //   flicker  out and back again              -> REP COUNTED AGAIN
+  // Each flicker at the bottom re-armed 'up' and could count another rep,
+  // gated only by minRepIntervalMs (450ms). Hold near the floor with unstable
+  // tracking and you get phantom reps. If the dropout instead spanned the whole
+  // bottom, no sample ever landed <= 6 and the rep was MISSED entirely.
+  //
+  // null means "no reading". RepCounter.update() now holds its state on null
+  // instead of advancing it, so a dropout can only ever cost a rep - it can
+  // never invent one. A missed rep is correctable by hand on the completion
+  // report (Round 28); an invented one was silently wrong.
+  if (shVis < 0.4 || hipVis < 0.4) return null;
   const shoulderMid = getMid(lSh, rSh);
   const hipMid = getMid(lHip, rHip);
   const torsoLen = Math.max(getDist(shoulderMid, hipMid), 0.08);
@@ -1275,6 +1295,8 @@ export class RepCounter {
     this.stage = null;   // 'up' | 'down' | null
     this.count = 0;
     this.lastRepTime = 0; // timestamp of last counted rep (ms) — prevents double-counting
+    this.lastValidAngle = null; // Round 29: last real measurement (HUD + dropout logic)
+    this.lastValidTime = 0;     // Round 29: when we last had a real measurement
   }
 
   /**
@@ -1287,6 +1309,30 @@ export class RepCounter {
 
     const angle = this.config.getAngle(landmarks);
     const { upThreshold, downThreshold, direction } = this.config;
+
+    // ── Round 29: "no reading" handling ──────────────────────────────────────
+    // A getAngle() may return null/NaN when it cannot measure honestly (see
+    // pushupDepthMetric). Never advance the state machine on a non-reading:
+    // doing so is what produced phantom push-up reps. Hold count AND stage.
+    if (angle === null || angle === undefined || Number.isNaN(angle)) {
+      // A long dropout also invalidates the armed stage. Otherwise tracking
+      // that returns mid-descent finds a stale 'up' from before the dropout
+      // and fires a rep the user never completed from the top. After
+      // STALE_STAGE_MS the next rep must re-establish 'up' from a real top.
+      const STALE_STAGE_MS = 700;
+      if (this.lastValidTime && performance.now() - this.lastValidTime > STALE_STAGE_MS) {
+        this.stage = null;
+      }
+      return {
+        count: this.count,
+        angle: this.lastValidAngle ?? null, // don't flash a fake number on the HUD
+        stage: this.stage,
+        repCounted: false,
+        tracking: false,                    // callers can show "can't see you"
+      };
+    }
+    this.lastValidAngle = angle;
+    this.lastValidTime = performance.now();
     // Minimum ms between reps: use per-exercise value or global default (350ms)
     const minInterval = this.config.minRepIntervalMs ?? 350;
     let repCounted = false;
@@ -1330,5 +1376,7 @@ export class RepCounter {
     this.stage = null;
     this.count = 0;
     this.lastRepTime = 0;
+    this.lastValidAngle = null;
+    this.lastValidTime = 0;
   }
 }

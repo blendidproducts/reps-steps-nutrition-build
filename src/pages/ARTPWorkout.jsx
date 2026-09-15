@@ -1866,14 +1866,29 @@ function ARTPWorkoutInner() {
           background: "linear-gradient(to top, #020817 78%, rgba(2,8,23,0.92))",
         }}
       >
+        {/* Round 29: made louder. The blue->purple gradient sat too close to the
+            dark navy page and the blue tab bar right underneath it, so the most
+            important control on the screen read as just another panel. A white
+            ring lifts it off the background without abandoning brand colour,
+            and the label is heavier and tracked out. */}
         <button
           onClick={handleStart}
           disabled={!mode || activeList.length === 0}
-          className="w-full max-w-md mx-auto py-5 rounded-2xl text-white font-black text-lg disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all shadow-xl flex items-center justify-center gap-3"
+          className="w-full max-w-md mx-auto py-5 rounded-2xl font-black text-xl disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 transition-all flex items-center justify-center gap-3"
           style={{
-            minHeight: 60, // bigger tap target - it was "too hard to click"
-            background: (!mode || activeList.length === 0) ? "#374151" : "linear-gradient(135deg, #3b82f6, #8b5cf6)",
-            boxShadow: (!mode || activeList.length === 0) ? "none" : "0 8px 24px rgba(59,130,246,0.4)",
+            minHeight: 64, // bigger tap target - it was "too hard to click"
+            color: (!mode || activeList.length === 0) ? "#9CA3AF" : "#FFFFFF",
+            letterSpacing: "0.01em",
+            background: (!mode || activeList.length === 0)
+              ? "#374151"
+              : "linear-gradient(135deg, #2563EB, #7C3AED)",
+            border: (!mode || activeList.length === 0)
+              ? "2px solid #4B5563"
+              : "2px solid rgba(255,255,255,0.92)",
+            boxShadow: (!mode || activeList.length === 0)
+              ? "none"
+              : "0 0 0 4px rgba(37,99,235,0.22), 0 10px 30px -6px rgba(124,58,237,0.65)",
+            textShadow: (!mode || activeList.length === 0) ? "none" : "0 1px 2px rgba(0,0,0,0.35)",
           }}
         >
           <Play className="w-6 h-6" />

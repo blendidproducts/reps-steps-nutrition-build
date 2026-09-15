@@ -290,6 +290,83 @@ swap what the generator chose.
 **None of this is device-tested.** Priority check: the START bar on a real
 phone, in both orientations, with the tab bar present.
 
+## Round 29 - push-up phantom reps + generator fixes (2026-09-15)
+
+### ⚠️ 1. Push-up rep miscount - THE BUG WAS A SENTINEL VALUE
+
+`pushupDepthMetric()` returned **`100`** when shoulder/hip visibility < 0.4,
+commented as "hold at up, never fabricate a rep". `100` IS a fabricated
+reading, and it was the worst possible one: `upThreshold` is 28, so every
+tracking dropout fed a hard "UP" sample into the state machine.
+
+On a real push-up (reported on Diamond, Wide, Incline, Decline and regular -
+"skeleton disappears at the bottom of the rep"):
+```
+top      metric ~30   -> angle >= 28        -> stage = 'up'
+bottom   visibility dips -> metric 100      -> stage RE-ARMED to 'up'
+flicker  back to ~5 -> angle <= 6 && 'up'   -> REP COUNTED
+flicker  out and back again                 -> REP COUNTED AGAIN
+```
+Every flicker near the floor re-armed `up` and could count another rep, gated
+only by `minRepIntervalMs` (450ms). A slow bottom position with unstable
+tracking = phantom reps. A dropout spanning the whole bottom = MISSED rep.
+Note the counter fires at the BOTTOM (`angle <= downThreshold`), not the top.
+
+**Fix:** the metric returns `null` (no reading). `RepCounter.update()` now:
+- returns early on `null`/`undefined`/`NaN` without touching count or stage;
+- reports `angle: lastValidAngle` so the HUD never flashes a fake 100;
+- adds `tracking: false` to the result so callers can say "can't see you";
+- **invalidates a stale `stage` after 700ms** of no reading, so tracking that
+  returns mid-descent can't fire a rep off an `up` armed before the dropout.
+
+Net: a dropout can only ever COST a rep, never invent one - and a missed rep is
+fixable by hand on the completion report (Round 28). The old behaviour was
+silently wrong.
+
+**STILL UNCALIBRATED.** `upThreshold: 28` / `downThreshold: 6` are a reasoned
+first pass, never measured. This fix stops the phantom counting; it does not
+make the thresholds right. To calibrate: run one set and read the on-screen
+**"Torso Depth"** number at the top and at the bottom of a rep, then set
+upThreshold just under the top value and downThreshold just over the bottom.
+
+### 2. Generator: last two settings were unreachable
+"Use Weight Vest" and "Include Warm-up" are the final controls on step 3 and
+`pb-8 sm:pb-10` (32-40px) didn't clear the 68px tab bar. Same class as the
+START bar - the wrapper is `min-h-screen`. Padding now tracks
+`calc(var(--nav-h) + env(safe-area-inset-bottom) + 40px)`.
+(This is why warm-up "couldn't be turned off" - the switch was below the fold.)
+
+### 3. Generator: back button destroyed the workout
+Header back went to `Exercises` from ANY step. Now steps 3 -> 2 -> 1 and only
+leaves from step 1. **Also:** `proceedToNextStep()` used to call
+`selectExercisesByCategory()` unconditionally, so stepping back to 2 and
+forward again regenerated the list and wiped every edit. It now only generates
+when the list is EMPTY; regenerating is an explicit **Regenerate** button.
+
+### 4. Generator: "Superset everything" toggle
+One switch at the top of the Exercise List chains every exercise to the next.
+`superset_with_next` points at the FOLLOWING exercise, so the last entry is
+never flagged; `allSupersetted` is therefore "every entry except the last".
+
+### 5. ARTP START button louder
+White 2px ring + outer glow, heavier/larger label, minHeight 64. The old
+blue->purple gradient blended into the navy page and the blue tab bar directly
+beneath it.
+
+### NOT DONE - program "complete" state
+`ProgramEnrollment` already has `completed_days`, `days_completed_count` and
+`total_days`, and `ProgramProgress.jsx` computes a percentage - but nothing
+marks an enrollment COMPLETE when the last day lands, and nothing surfaces it
+on `PresetPrograms`. Needs a status/completed_at decision on the entity plus UI
+in two places. **`ProgramProgress.jsx` is NOT in the sync folder** - it would
+have to be added to the overlay first.
+⚠️ While in there: `ProgramProgress.jsx:112` uses `window.confirm`, which this
+project forbids (Capacitor blocks native dialogs) - it silently does nothing in
+the native shell.
+
+**None of Round 29 is device-tested.** The push-up fix in particular needs a
+real set in front of a camera.
+
 ## Next steps (in order)
 0. **Mobile builds + media** (2026-07-14, after a successful live QA pass): see `Documents\Pers\RepsAndSteps\MOBILE-BUILD-PLAN.md` (v2: PRIMARY PATH = Base44 Publish → Mobile app tab builds the AAB and even the iOS IPA in the cloud, no Mac needed; needs Builder plan. Gate 1 = test camera/ARTP inside their web-view wrapper. BLOCKER: Stripe digital-goods subscriptions get store-rejected — hide purchase flows in the mobile app. Capacitor project = Plan B only) and `Exercise_Media_Audit.xlsx` (26 exercises missing images, 59 missing videos; 4 ARTP-tracked ones are priority: Tricep Dip, Reverse Lunge, Bulgarian Split Squat, Decline Push-Up).
 1. **Publish in Base44** — rounds 13c+14+15 are ALREADY ON GITHUB (verified 2026-07-14: fresh clone of `main` is byte-identical to the sync folder, incl. Round 15 CLAUDE.md). Just click Publish in Base44, then QA.

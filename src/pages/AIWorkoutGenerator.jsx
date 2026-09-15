@@ -247,6 +247,25 @@ export default function AIWorkoutGenerator() {
     setSelectedExercises(updated);
   };
 
+  /**
+   * Round 29: superset-all.
+   *
+   * `superset_with_next` chains an exercise to the FOLLOWING one, so the last
+   * exercise can never carry the flag - there is nothing after it to pair with.
+   * "All supersetted" therefore means: every entry except the last is flagged.
+   * A 0- or 1-exercise workout can't be supersetted at all, so it reads false.
+   */
+  const allSupersetted =
+    selectedExercises.length > 1 &&
+    selectedExercises.slice(0, -1).every(ex => ex.superset_with_next);
+
+  const setAllSupersets = (on) => {
+    setSelectedExercises(prev => prev.map((ex, i) => ({
+      ...ex,
+      superset_with_next: on ? i < prev.length - 1 : false,
+    })));
+  };
+
   const toggleSuperset = (index) => {
     const updated = [...selectedExercises];
     updated[index] = {
@@ -275,10 +294,20 @@ export default function AIWorkoutGenerator() {
 
   const proceedToNextStep = () => {
     if (currentStep === 2) {
-      // Generate exercises before moving to step 3
-      selectExercisesByCategory();
+      // Round 29: only GENERATE if there's nothing built yet. Previously this
+      // regenerated unconditionally, so stepping back to 2 (to change the
+      // level, or reach the warm-up / vest switches) and forward again threw
+      // away every edit - removed exercises, reorders, supersets, added ones.
+      // Regenerating is now an explicit act: the "Regenerate" button on step 3.
+      if (selectedExercises.length === 0) selectExercisesByCategory();
     }
     setCurrentStep(currentStep + 1);
+  };
+
+  /** Round 29: explicit opt-in replacement of the list (was the silent behaviour). */
+  const regenerateExercises = () => {
+    selectExercisesByCategory();
+    toast.success("Workout regenerated");
   };
 
   // ── WorkoutGenie prompt: type or speak a request, get a workout ──────────────
@@ -492,11 +521,18 @@ export default function AIWorkoutGenerator() {
       <div className="bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 text-white py-6 sm:py-10">
         <div className="container mx-auto px-3 sm:px-6 lg:px-8 max-w-full overflow-hidden">
           <div className="flex items-center gap-3 sm:gap-4 mb-4">
+            {/* Round 29: this used to jump straight to Exercises from ANY step,
+                throwing away a fully built workout with no warning. Back now
+                steps 3 -> 2 -> 1 and only leaves the page from step 1, so you
+                can go back to change warm-up/vest/level and keep your list. */}
             <Button
               variant="outline"
               size="icon"
-              onClick={() => navigate(createPageUrl("Exercises"))}
-              aria-label="Back to Exercises"
+              onClick={() => {
+                if (currentStep > 1) setCurrentStep(currentStep - 1);
+                else navigate(createPageUrl("Exercises"));
+              }}
+              aria-label={currentStep > 1 ? `Back to step ${currentStep - 1}` : "Back to Exercises"}
               className="bg-white/10 text-white border-white/20 hover:bg-white/20 rounded-lg flex-shrink-0 w-11 h-11"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -620,7 +656,18 @@ export default function AIWorkoutGenerator() {
         </div>
       </div>
 
-      <div className="container mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8 pb-8 sm:pb-10 max-w-4xl overflow-x-hidden">
+      {/* Round 29: "Use Weight Vest" and "Include Warm-up" are the LAST two
+          controls on step 3, and pb-8/pb-10 (32-40px) wasn't enough to clear
+          the 68px bottom tab bar - both were unreachable on a phone. This is
+          the same class of bug as the ARTP START bar: the wrapper is
+          min-h-screen (100vh), which iOS Safari sizes against the largest
+          viewport, so the tail of the page sits below the real fold. Padding
+          now tracks the actual nav height (--nav-h, defined in Layout.jsx)
+          plus the safe-area inset, with room to spare. */}
+      <div
+        className="container mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8 max-w-4xl overflow-x-hidden"
+        style={{ paddingBottom: "calc(var(--nav-h, 68px) + env(safe-area-inset-bottom, 0px) + 40px)" }}
+      >
         {/* Step 1: Choose Level */}
         {currentStep === 1 && (
           <motion.div
@@ -1056,18 +1103,51 @@ export default function AIWorkoutGenerator() {
                     <CardTitle className="text-white text-lg sm:text-xl">Exercise List</CardTitle>
                     <p className="text-xs sm:text-sm text-gray-400">Drag to reorder, swap, or configure supersets</p>
                   </div>
-                  <button
-                    onClick={() => {
-                      setShowAddExercise(v => !v);
-                      setAddQuery("");
-                      setTimeout(() => addInputRef.current?.focus(), 50);
-                    }}
-                    aria-expanded={showAddExercise}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-brand-blue/15 border border-brand-blue/40 text-brand-blue text-xs sm:text-sm font-bold active:scale-95 transition-transform flex-shrink-0"
-                  >
-                    {showAddExercise ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                    {showAddExercise ? "Close" : "Add exercise"}
-                  </button>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={regenerateExercises}
+                      aria-label="Regenerate the exercise list"
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-gray-300 text-xs sm:text-sm font-bold active:scale-95 transition-transform"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      <span className="hidden sm:inline">Regenerate</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowAddExercise(v => !v);
+                        setAddQuery("");
+                        setTimeout(() => addInputRef.current?.focus(), 50);
+                      }}
+                      aria-expanded={showAddExercise}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-brand-blue/15 border border-brand-blue/40 text-brand-blue text-xs sm:text-sm font-bold active:scale-95 transition-transform"
+                    >
+                      {showAddExercise ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                      {showAddExercise ? "Close" : "Add"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Round 29: superset the WHOLE workout in one tap, rather than
+                    chaining each exercise by hand. Chains every exercise to the
+                    next, so the last one is never flagged - a superset needs
+                    something to pair with. */}
+                <div className="mt-3 flex items-center justify-between gap-3 p-3 rounded-xl bg-purple-500/10 border border-purple-500/25">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <LinkIcon className="w-4 h-4 text-purple-400 flex-shrink-0" aria-hidden="true" />
+                      <Label className="text-white text-sm font-medium">Superset everything</Label>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {allSupersetted
+                        ? "No rest between any exercise"
+                        : "Chain every exercise to the next — no rest between them"}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={allSupersetted}
+                    onCheckedChange={setAllSupersets}
+                    aria-label="Superset every exercise"
+                  />
                 </div>
 
                 {/* Round 28: type or dictate a name (e.g. "Burpees") and add it to
