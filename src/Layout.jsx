@@ -116,12 +116,25 @@ export default function Layout({ children, currentPageName }) {
   const checkActiveProgram = async () => {
     try {
       const user = await base44.auth.me();
-      const popupShown = sessionStorage.getItem('programPopupShown');
-      
+
+      // Round 30: this used sessionStorage, which resets with the tab/app - so
+      // dismissing the program popup only silenced it until the next launch and
+      // it kept re-appearing. Dismiss is now remembered PER DAY: once you've
+      // seen today's prompt it stays gone until tomorrow. The permanent status
+      // lives in <ProgramStatusStrip /> on Home, so nothing is lost by
+      // dismissing this.
+      const todayKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD, local date
+      let popupShown = false;
+      try {
+        popupShown = localStorage.getItem('rns_programPopupDay') === todayKey;
+      } catch {
+        popupShown = false; // storage blocked - show it, better than never
+      }
+
       if (user.active_program && !popupShown) {
         setActiveProgram(user.active_program);
         setShowProgramPopup(true);
-        sessionStorage.setItem('programPopupShown', 'true');
+        try { localStorage.setItem('rns_programPopupDay', todayKey); } catch { /* not fatal */ }
       }
     } catch (error) {
       console.log('No user logged in or no active program');

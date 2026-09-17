@@ -367,6 +367,60 @@ the native shell.
 **None of Round 29 is device-tested.** The push-up fix in particular needs a
 real set in front of a camera.
 
+## Round 30 - program status on Home (2026-09-17)
+
+Jace: "I entered the trimmer fit advanced 300 workout and I'm not sure what day
+I am on." The day number already existed - it was just never shown anywhere
+except a popup that vanished on dismiss.
+
+**NEW `src/components/ProgramStatusStrip.jsx`** - rendered in `Home.jsx`
+directly under the hero, above the ARTP card.
+- **ONE LINE TALL, COLLAPSED BY DEFAULT.** A first design used a full card and
+  was rejected - "I don't like this card... I want it on the current homescreen
+  and a small card but if it's collapsable it might work." Collapsing IS the
+  dismiss; it never disappears.
+- Expanded adds: progress bar, "N of M days done", today's plan name (or
+  "Rest day - steps still count"), and Start Day N. Open/closed persists in
+  `localStorage` key `rns_program_strip_open` (try/catch - private mode must not
+  break Home).
+- Accent colour carries state: blue = training day, amber = rest, green =
+  complete. Not just a number.
+- **Returns null when `user.active_program` is absent**, so Home is byte-identical
+  for anyone not enrolled.
+
+Data sources (all pre-existing, no new tracking):
+| Field | From |
+|---|---|
+| `active_program.program_id` / `.current_day` | User record |
+| `name`, `duration_days`, `daily_plans[]` | `PresetProgram` |
+| `days_completed_count` / `completed_days[]` | `ProgramEnrollment` (optional - falls back to `current_day - 1`) |
+
+Rest day = a `daily_plans[]` entry with no exercises (same test `Layout.jsx` uses).
+
+**`Layout.jsx` popup fix.** `checkActiveProgram()` gated the program popup on
+`sessionStorage.getItem('programPopupShown')`, which resets with the tab/app -
+so dismissing it only silenced it until the next launch and it kept coming
+back. Now keyed **per day** in `localStorage` (`rns_programPopupDay` = today's
+`YYYY-MM-DD`). Dismiss means gone until tomorrow; permanent status lives in the
+strip.
+
+### Still open
+- **`window.confirm` in TWO places** - `Layout.jsx:~140` and
+  `ProgramProgress.jsx:112`, both for "mark this rest day complete?". This
+  project forbids it (Capacitor blocks native dialogs), so in the native shell
+  the prompt silently does nothing and **the rest day never advances**. Needs an
+  in-UI confirm sheet. This is a real functional bug, not just a lint issue.
+- **Program COMPLETE is inferred, not stored.** The strip computes
+  `done >= total_days`. There's still no `completed_at` on `ProgramEnrollment`,
+  so there's no finish date and "programs completed" isn't countable for
+  achievements. Recommended: set `completed_at` when the last day lands.
+- **Which TrimmerFit?** Stripe has "TRIMMERFIT Advanced - Weight Training Split"
+  ($49, active) and "Trimmer Fit 300 Workout" ($27, DEACTIVATED). The strip
+  shows whatever `PresetProgram.name` the enrollment points at - confirm the
+  enrollment isn't pointing at the retired product.
+
+**Not device-tested.**
+
 ## Next steps (in order)
 0. **Mobile builds + media** (2026-07-14, after a successful live QA pass): see `Documents\Pers\RepsAndSteps\MOBILE-BUILD-PLAN.md` (v2: PRIMARY PATH = Base44 Publish → Mobile app tab builds the AAB and even the iOS IPA in the cloud, no Mac needed; needs Builder plan. Gate 1 = test camera/ARTP inside their web-view wrapper. BLOCKER: Stripe digital-goods subscriptions get store-rejected — hide purchase flows in the mobile app. Capacitor project = Plan B only) and `Exercise_Media_Audit.xlsx` (26 exercises missing images, 59 missing videos; 4 ARTP-tracked ones are priority: Tricep Dip, Reverse Lunge, Bulgarian Split Squat, Decline Push-Up).
 1. **Publish in Base44** — rounds 13c+14+15 are ALREADY ON GITHUB (verified 2026-07-14: fresh clone of `main` is byte-identical to the sync folder, incl. Round 15 CLAUDE.md). Just click Publish in Base44, then QA.

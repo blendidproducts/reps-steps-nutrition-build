@@ -8,6 +8,7 @@ import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Brain, 
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import GithubReleasesWidget from "@/components/dashboard/GithubReleasesWidget";
+import ProgramStatusStrip from "@/components/ProgramStatusStrip";
 const FitnessQuiz = React.lazy(() => import("@/components/FitnessQuiz"));
 const MuscleRecovery = React.lazy(() => import("@/components/recovery/MuscleRecovery"));
 
@@ -164,6 +165,12 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Round 30: program status. Sits directly under the hero so "what day am
+          I on" is answered without opening anything. One line tall by default,
+          taps open for today's plan + Start. Renders nothing when the user has
+          no active program, so Home is untouched for everyone else. */}
+      <ProgramStatusStrip />
 
       {/* ── ARTP — AI Rep Tracking Program ──────────────────────────────── */}
       <div className="px-6 mb-6">
