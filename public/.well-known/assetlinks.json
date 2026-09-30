@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.repsandsteps.app",
+      "sha256_cert_fingerprints": [
+        "11:92:6C:90:67:AE:57:35:EF:23:9D:D8:95:C3:83:37:DC:E8:CC:B6:AE:EA:9A:36:71:36:E0:EE:D4:C0:08:9F"
+      ]
+    }
+  }
+]
