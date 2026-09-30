@@ -1067,12 +1067,41 @@ function WarmupScreen({ onFinish, onSkipAll, imageMap = {}, totalSteps = 0 }) {
   );
 }
 
+// ── Crash-safe session snapshot ─────────────────────────────────────────────
+// A phone call, a notification, or Android reclaiming memory from a
+// camera-heavy page destroys this component and every useState in it. The
+// exercise SELECTION was already persisted below; the work in progress was
+// not, so a backgrounded workout came back empty and the set was lost.
+// We snapshot the live state on every meaningful change and whenever the page
+// is hidden, then offer to resume it from the setup screen.
+const SESSION_KEY = "artp_active_session";
+const SESSION_MAX_AGE_MS = 6 * 60 * 60 * 1000; // a snapshot older than this is stale
+
+function readSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (!s || s.v !== 1) return null;
+    if (Date.now() - (s.savedAt || 0) > SESSION_MAX_AGE_MS) return null;
+    // Only worth offering if actual work happened.
+    const didWork = (Array.isArray(s.scores) && s.scores.length > 0) || s.elapsedSecs > 0;
+    return didWork ? s : null;
+  } catch { return null; }
+}
+
+function clearSession() {
+  try { localStorage.removeItem(SESSION_KEY); } catch {}
+}
+
 function ARTPWorkoutInner() {
   const navigate = useNavigate();
 
   // ── Setup state ─────────────────────────────────────────────────
   const [phase,          setPhase]         = useState("setup");
   const [mode,           setMode]          = useState(null);
+  // An interrupted workout found at mount — drives the Resume card on setup.
+  const [resumable,      setResumable]     = useState(() => readSession());
 
   // Chrome control. The setup screen is an ordinary page and keeps the bottom
   // tab bar; everything from warm-up onward is immersive and hides it.
@@ -1174,6 +1203,72 @@ function ARTPWorkoutInner() {
   const isLastEx   = exerciseIndex === activeList.length - 1;
 
   // (saved selection is loaded directly in lazy state initialisers above)
+
+  // ── Crash-safe snapshot of the live workout ─────────────────────────────
+  // Mirrored into a ref every render so the hidden/pagehide handlers below
+  // always flush the CURRENT values, not the ones captured when they bound.
+  const sessionRef = useRef(null);
+  sessionRef.current = {
+    v: 1, savedAt: Date.now(), phase, mode,
+    exerciseIndex, currentSet, totalSets, timePerEx, timerSecs,
+    elapsedSecs, totalSteps, scores,
+    selectedNames: [...selected], supersetNames: [...supersets],
+    targetRepsPerEx, repGoalPerEx,
+  };
+
+  const writeSession = useCallback(() => {
+    const s = sessionRef.current;
+    if (!s || s.phase === "setup" || s.phase === "done") return;
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify({ ...s, savedAt: Date.now() })); } catch {}
+  }, []);
+
+  // Meaningful changes only. Deliberately NOT keyed on elapsedSecs: that ticks
+  // every second and would hammer localStorage for no benefit — the interval
+  // below keeps the clock and step count fresh instead.
+  useEffect(() => { writeSession(); },
+    [phase, mode, exerciseIndex, currentSet, scores, totalSteps, writeSession]);
+
+  // The moments that actually matter: a call, a notification, or the screen
+  // locking. pagehide also fires on the process teardown visibilitychange can
+  // miss, which is exactly how a workout got lost.
+  useEffect(() => {
+    const flush = () => writeSession();
+    document.addEventListener("visibilitychange", flush);
+    window.addEventListener("pagehide", flush);
+    const id = setInterval(flush, 10000);
+    return () => {
+      document.removeEventListener("visibilitychange", flush);
+      window.removeEventListener("pagehide", flush);
+      clearInterval(id);
+    };
+  }, [writeSession]);
+
+  // Restore an interrupted workout. Comes back PAUSED on purpose: the camera
+  // needs re-acquiring and nobody wants reps counting while the phone is still
+  // being picked up.
+  const resumeSession = () => {
+    const s = resumable;
+    if (!s) return;
+    if (Array.isArray(s.selectedNames) && s.selectedNames.length) setSelected(new Set(s.selectedNames));
+    if (Array.isArray(s.supersetNames)) setSupersets(new Set(s.supersetNames));
+    setMode(s.mode ?? null);
+    setExerciseIndex(s.exerciseIndex ?? 0);
+    setCurrentSet(s.currentSet ?? 1);
+    setTotalSets(s.totalSets ?? 3);
+    setTimePerEx(s.timePerEx ?? 45);
+    setTimerSecs(s.timerSecs ?? s.timePerEx ?? 45);
+    setElapsedSecs(s.elapsedSecs ?? 0);
+    setTotalSteps(s.totalSteps ?? 0);
+    setScores(Array.isArray(s.scores) ? s.scores : []);
+    setTargetRepsPerEx(s.targetRepsPerEx ?? 12);
+    setRepGoalPerEx(s.repGoalPerEx ?? 20);
+    setResumable(null);
+    addPauseReason("manual");
+    setPhase(s.phase === "rest" ? "rest" : "working");
+    speak("Workout resumed. Press play when you are ready.", 1.05, 1.05);
+  };
+
+  const discardSession = () => { clearSession(); setResumable(null); };
 
   // Elapsed timer — stops when paused
   useEffect(() => {
@@ -1498,6 +1593,7 @@ function ARTPWorkoutInner() {
       return finalScores;
     });
     speak("Workout complete!", 1.05, 1.05);
+    clearSession(); // finished cleanly — nothing left to recover
     setPhase("done");
   };
 
@@ -1563,6 +1659,37 @@ function ARTPWorkoutInner() {
       </div>
 
       <div className="px-4 py-4 space-y-4 pb-6">
+
+        {/* ── Interrupted workout ──────────────────────────────────── */}
+        {resumable && (
+          <div className="rounded-2xl border-2 border-amber-500/50 bg-amber-500/10 p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <Timer className="w-5 h-5 text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-amber-400 font-bold uppercase tracking-widest mb-0.5">Unfinished workout</p>
+                <p className="text-white font-black text-base">
+                  {(resumable.scores || []).reduce((n, s) => n + (s.reps || 0), 0)} reps · {formatTime(resumable.elapsedSecs || 0)}
+                </p>
+                <p className="text-gray-400 text-xs mt-0.5">
+                  Exercise {(resumable.exerciseIndex ?? 0) + 1}, set {resumable.currentSet ?? 1}
+                  {resumable.totalSteps ? ` · ${resumable.totalSteps} steps` : ""}
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              <button onClick={resumeSession}
+                className="min-h-[48px] rounded-xl bg-amber-500 text-black font-black text-sm active:scale-95">
+                RESUME
+              </button>
+              <button onClick={discardSession}
+                className="min-h-[48px] rounded-xl border border-gray-700 text-gray-300 font-bold text-sm active:scale-95">
+                Discard
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ── Saved Program card ───────────────────────────────────── */}
         {savedName ? (
