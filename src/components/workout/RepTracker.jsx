@@ -90,6 +90,8 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     try { return sharedFacing || localStorage.getItem("rns_cam_facing") || defaultFacingMode; } catch (_) { return defaultFacingMode; }
   });
   const [repFlash,       setRepFlash]       = useState(false);
+  const [partials,       setPartials]       = useState(0);  // shallow attempts this set
+  const [shallowFlash,   setShallowFlash]   = useState(false);
   const [poseDetected,         setPoseDetected]         = useState(false);
   const [multiPersonDetected,  setMultiPersonDetected]  = useState(false);
   const [exerciseConfig, setExerciseConfig] = useState(initialConfig);
@@ -273,11 +275,19 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
             // above) still runs every frame, so no rep can be missed by this.
             frameSkipRef.current = (frameSkipRef.current + 1) % 3;
             if (frameSkipRef.current === 0) {
-              setCurrentAngle(Math.round(u.angle));
+              // Only publish a real measurement. u.angle is null on a tracking
+              // dropout, and Math.round(null) is 0 — which on the depth meter
+              // would read as "you're at parallel" and turn the bar green.
+              if (typeof u.angle === "number" && !Number.isNaN(u.angle)) {
+                setCurrentAngle(Math.round(u.angle));
+              }
               setStage(u.stage);
             }
             setRepCount(u.count);
             if (u.repCounted) { triggerRepFlash(); announceRep(u.count); }
+            // A shallow attempt. Saying so is the whole point — a rep that
+            // silently doesn't count reads as the tracker being broken.
+            if (u.partialCounted) { setPartials(u.partials); flagShallow(); }
           }
         } else { setPoseDetected(false); }
       } catch (_) {}
@@ -380,6 +390,25 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     setRepFlash(true);
     setTimeout(() => setRepFlash(false), 400);
   }
+  // ── Shallow-rep feedback ───────────────────────────────────────
+  // Flashes the on-screen badge and says "go deeper" — but not every time, or
+  // it becomes a nag that talks over the rep count. Once every 4 seconds at
+  // most, and never while the rep count is being announced.
+  const lastShallowSpeakRef = useRef(0);
+  function flagShallow() {
+    setShallowFlash(true);
+    setTimeout(() => setShallowFlash(false), 1200);
+    try {
+      const now = performance.now();
+      if ("speechSynthesis" in window && now - lastShallowSpeakRef.current > 4000) {
+        lastShallowSpeakRef.current = now;
+        const u = new SpeechSynthesisUtterance("Go deeper");
+        u.rate = 1.1; u.pitch = 1.0; u.volume = 0.9;
+        window.speechSynthesis.speak(u);
+      }
+    } catch (_) {}
+  }
+
   function announceRep(count) {
     try {
       if ("speechSynthesis" in window && count % 5 === 0) {
@@ -407,11 +436,13 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     setIsExperimental(cfg.trackable === 'experimental');
     repCounterRef.current = new RepCounter(cfg);
     repCounterRef.current.setCount(repCount);
+    setPartials(0); // shallow count belongs to the old exercise's thresholds
     setShowExPicker(false);
   }
 
   function resetCount() {
     setRepCount(0);
+    setPartials(0);
     if (repCounterRef.current) repCounterRef.current.reset();
   }
   function handleDone()  { cleanup(); onComplete?.(repCount); }
@@ -419,6 +450,26 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
 
   const categories = getExercisesByCategory();
   const unitLabel  = exerciseConfig?.mode === "time" ? "sec" : "reps";
+
+  // ── Depth meter ────────────────────────────────────────────────
+  // Exercises whose tracking metric IS depth (squats — see squatDepthMetric in
+  // exerciseTracking.js) get a bar, not just a number: a number tells you where
+  // you are, a bar with a line on it tells you how much further to go. Scale
+  // runs from the standing reading to a little past the target, so the target
+  // line sits high enough that a deep rep still has visible travel below it.
+  const readoutUnit = exerciseConfig?.unit ?? "°";
+  const meterCfg = exerciseConfig?.depthMeter || null;
+  const meter = (() => {
+    if (!meterCfg) return null;
+    const { top, target } = meterCfg;
+    const floor = target - (top - target) * 0.35;
+    const frac = (v) => Math.max(0, Math.min(1, (top - v) / (top - floor)));
+    return {
+      fillPct: frac(currentAngle) * 100,
+      targetPct: frac(target) * 100,
+      atDepth: currentAngle <= target,
+    };
+  })();
 
   // ════════════════════════════════════════════════════════════════
   // MANUAL TAP MODE
@@ -718,10 +769,37 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
                   {unitLabel}{targetReps ? ` / ${targetReps}` : ""}
                 </div>
               </motion.div>
+
+              {/* Shallow attempts. Shown rather than hidden: a rep that didn't
+                  count looks like a broken tracker unless you say why. */}
+              {partials > 0 && (
+                <motion.div animate={shallowFlash ? { scale: 1.1 } : { scale: 1 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                  className={`mt-1.5 rounded-xl px-3 py-1.5 border backdrop-blur-sm ${
+                    shallowFlash ? "bg-amber-500/30 border-amber-400" : "bg-black/75 border-amber-500/40"
+                  }`}>
+                  <span className="text-amber-400 text-xs font-bold tabular-nums">{partials} too shallow</span>
+                </motion.div>
+              )}
             </div>
 
-            {/* Stage + angle */}
+            {/* Depth meter + stage + readout */}
             <div className="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-1.5">
+              {meter && (
+                <div className="flex flex-col items-center gap-1 mb-1">
+                  <span className={`text-[9px] font-bold uppercase tracking-wider ${meter.atDepth ? "text-green-400" : "text-white/50"}`}>
+                    {meter.atDepth ? "DEPTH ✓" : "DEEPER"}
+                  </span>
+                  <div className="relative w-3.5 h-28 rounded-full bg-black/70 border border-white/20 overflow-hidden">
+                    {/* Fill grows downward as the hips drop */}
+                    <div className="absolute left-0 right-0 top-0"
+                      style={{ height: `${meter.fillPct}%`, background: meter.atDepth ? "#22c55e" : "#00a9ff" }} />
+                    {/* The line that has to be crossed: hip level with the knee */}
+                    <div className="absolute left-0 right-0 h-[2px] bg-white shadow"
+                      style={{ top: `${meter.targetPct}%` }} />
+                  </div>
+                </div>
+              )}
               {stage && (
                 <div className="flex items-center gap-1.5 bg-black/75 rounded-full px-3 py-1 border border-white/20"
                   style={{ borderColor: exerciseConfig?.color ? `${exerciseConfig.color}60` : undefined }}>
@@ -731,7 +809,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
               )}
               <div className="bg-black/75 rounded-full px-3 py-1 border border-white/20">
                 <span className="text-white/60 text-xs">{exerciseConfig?.primaryJoint} </span>
-                <span className="text-white text-xs font-bold">{currentAngle}°</span>
+                <span className="text-white text-xs font-bold">{currentAngle}{readoutUnit}</span>
               </div>
             </div>
 

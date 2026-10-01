@@ -142,6 +142,63 @@ function pushupDepthMetric(lm) {
   return ((hipMid.y - shoulderMid.y) / torsoLen) * 100;
 }
 
+/** Squat depth — the hip's height relative to the knees, normalized by torso
+ *  length. PRIMARY signal for the bilateral squat family as of 2026-09-30,
+ *  replacing the 2D knee angle.
+ *
+ *  Why the knee angle had to go. It counted a rep at 100°, loosened from 85° in
+ *  Round 14 because honest squats weren't counting — and both numbers were
+ *  treating a symptom. What a phone measures is the hip-knee-ankle angle
+ *  PROJECTED onto the image plane, and the thigh is the segment that rotates
+ *  most toward the lens on the way down. From anything but a true side-on view
+ *  the projected angle UNDER-reads the bend: at a 3/4 view a real
+ *  below-parallel squat can read 110-120°, so 85° rejected good reps and 100°
+ *  accepted quarter squats. No threshold fixes a signal whose error depends on
+ *  where the phone happens to be standing.
+ *
+ *  What replaces it is what actually defines depth, and what a judge looks for:
+ *  where the hip sits relative to the knee. That's a comparison of two heights
+ *  in the frame, so a thigh rotating toward the camera can't corrupt it the way
+ *  it corrupts an angle. It is also monotonic — it falls the whole way down and
+ *  rises the whole way up, which is what the state machine needs.
+ *
+ *  Returns (kneeMidY - hipMidY) / torsoLen * 100, so like every other metric in
+ *  this file it reads HIGH when extended and LOW when contracted:
+ *      standing        ~ +70 to +85   hips a full thigh above the knees
+ *      parallel              0        hip crease level with the top of the knee
+ *      below parallel    negative     hip below the knee
+ *
+ *  ⚠️ CALIBRATION: a camera below or above hip height shifts the whole scale by
+ *  a roughly constant offset — looking up at someone lifts the hip in the frame
+ *  and flatters their depth. The thresholds on the entries using this metric are
+ *  reasoned, not measured. The on-screen depth meter prints this number live:
+ *  read it once standing and once at a real bottom position, and the thresholds
+ *  can be set from data instead of from argument.
+ *
+ *  Returns null — never a fabricated number — when the landmarks it needs
+ *  aren't confidently visible. RepCounter.update() holds its state on null, so
+ *  a dropout can cost a rep but can never invent one (the Round 29 lesson). */
+export function squatDepthMetric(lm) {
+  const lHip = lm[23], rHip = lm[24], lKnee = lm[25], rKnee = lm[26];
+  const hipVis  = ((lHip?.visibility ?? 0) + (rHip?.visibility ?? 0)) / 2;
+  const kneeVis = ((lKnee?.visibility ?? 0) + (rKnee?.visibility ?? 0)) / 2;
+  if (hipVis < 0.4 || kneeVis < 0.4) return null;
+
+  const hipMid  = getMid(lHip, rHip);
+  const kneeMid = getMid(lKnee, rKnee);
+
+  // Torso length is the scale reference: long, mostly in the image plane, and
+  // roughly rigid through a squat, so it keeps the number comparable whether
+  // the phone is 2ft or 6ft away. If the shoulders aren't visible, fall back to
+  // the hip-knee distance — shorter and noisier, but still measured.
+  const shVis = ((lm[11]?.visibility ?? 0) + (lm[12]?.visibility ?? 0)) / 2;
+  const ref = shVis >= 0.4
+    ? getDist(getMid(lm[11], lm[12]), hipMid)
+    : getDist(hipMid, kneeMid);
+
+  return ((kneeMid.y - hipMid.y) / Math.max(ref, 0.08)) * 100;
+}
+
 // ── Exercise Library ──────────────────────────────────────────────────────────
 // Each entry:
 //   id           – unique string
@@ -153,6 +210,15 @@ function pushupDepthMetric(lm) {
 //   getAngle     – fn(landmarks[]) → tracking angle (degrees)
 //   upThreshold  – angle that marks the "up / extended" position
 //   downThreshold– angle that marks the "down / contracted" position
+//   partialThreshold – optional. A value the metric must pass to count as a real
+//                  attempt. Dip past it but never reach downThreshold and the
+//                  attempt is tallied as a PARTIAL instead of silently vanishing.
+//   minRepDurationMs – optional. Minimum time from leaving the top to reaching
+//                  depth. Anything faster is a landmark jump or a bounce, not a
+//                  rep, and is recorded as a partial.
+//   unit         – optional. Suffix for the on-screen readout; '°' when omitted.
+//   depthMeter   – optional { top, target }. Draws the live depth bar, with
+//                  `top` the standing reading and `target` the depth line.
 //   direction    – 'down_then_up'  rep counted when below down THEN above up
 //               OR 'up_then_down'  rep counted when above up  THEN below down
 //   primaryJoint – label shown on screen
@@ -429,20 +495,29 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Legs',
     color: '#22c55e',
-    getAngle: (lm) => kneeAngle(lm),
-    // Round 14: loosened for tripod/angled cameras — 85° required a below-parallel
-    // squat as READ BY THE CAMERA; off-axis views read shallower, so honest
-    // squats weren't counted. minRepIntervalMs still blocks bounce double-counts.
-    upThreshold: 155,    // legs extended at top
-    downThreshold: 100,  // knees clearly bent ~parallel — counts honest depth at an angle
-    minRepIntervalMs: 700, // 700ms min between reps prevents bounce double-counting
+    // 2026-09-30: knee angle replaced with hip-vs-knee height. The old
+    // downThreshold of 100° counted quarter squats — see squatDepthMetric()
+    // above for why no knee-angle number could have fixed that.
+    getAngle: (lm) => squatDepthMetric(lm),
+    upThreshold: 45,      // hips well above the knees — standing back up
+    downThreshold: 3,     // hip crease level with the top of the knee — parallel
+    partialThreshold: 30, // dipped into a real squat but never reached parallel
+    minRepIntervalMs: 700,
+    // Time from crossing upThreshold to reaching depth. 450ms was the first
+    // guess and the simulation rejected an honest 400ms-descent squat with it —
+    // exactly the "too strict" failure the old 85° knee threshold had. 250ms
+    // still rejects a landmark jump (1-3 frames, 50-150ms) and a bounce off the
+    // bottom, which is all this guard is for.
+    minRepDurationMs: 250,
     direction: 'down_then_up',
-    primaryJoint: 'Knee',
+    primaryJoint: 'Depth',
+    unit: '',
+    depthMeter: { top: 70, target: 3 },
     formCues: [
-      'Place phone to your SIDE at hip height for best tracking',
-      'Break parallel — thighs below 90° for a full rep',
-      'Knees track over toes — no caving inward',
-      'Drive through heels to stand up',
+      'Place phone to your SIDE at HIP HEIGHT — depth is measured from there',
+      'Hip crease below the top of the knee — that is the rep',
+      'Shallow reps are counted separately, not thrown away',
+      'Knees track over toes, drive through the heels',
     ],
   },
   {
@@ -453,15 +528,18 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Legs',
     color: '#16a34a',
-    getAngle: (lm) => {
-      const L = getAngle(lm[23], lm[25], lm[27]);
-      const R = getAngle(lm[24], lm[26], lm[28]);
-      return (L + R) / 2;
-    },
-    upThreshold: 160,
-    downThreshold: 100,
+    // Depth metric, same as Squat. A jump squat's landing is quick, so the
+    // depth line is shallower than a strict squat and there's no duration
+    // guard — the whole point is that it's fast.
+    getAngle: (lm) => squatDepthMetric(lm),
+    upThreshold: 50,       // airborne/standing — hips highest of any leg move
+    downThreshold: 12,     // loaded landing position, not a full parallel squat
+    partialThreshold: 35,
+    minRepIntervalMs: 500,
     direction: 'down_then_up',
-    primaryJoint: 'Knee',
+    primaryJoint: 'Depth',
+    unit: '',
+    depthMeter: { top: 70, target: 12 },
     formCues: ['Explode upward', 'Land softly with bent knees', 'Absorb impact through hips'],
   },
   {
@@ -472,16 +550,19 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Legs',
     color: '#22c55e',
-    getAngle: (lm) => {
-      const L = getAngle(lm[23], lm[25], lm[27]);
-      const R = getAngle(lm[24], lm[26], lm[28]);
-      return (L + R) / 2;
-    },
-    upThreshold: 155,
-    downThreshold: 100,
+    // Depth metric, same as Squat. A wide stance shortens the standing
+    // hip-to-knee gap, so the top reading sits lower than a narrow squat's —
+    // hence the gentler upThreshold. The depth line is the same: parallel.
+    getAngle: (lm) => squatDepthMetric(lm),
+    upThreshold: 38,
+    downThreshold: 3,
+    partialThreshold: 25,
     direction: 'down_then_up',
     minRepIntervalMs: 700,
-    primaryJoint: 'Knee',
+    minRepDurationMs: 250, // see the note on Squat
+    primaryJoint: 'Depth',
+    unit: '',
+    depthMeter: { top: 60, target: 3 },
     formCues: ['Wide stance', 'Toes pointed out 45°', 'Inner thigh emphasis'],
   },
   {
@@ -1297,6 +1378,12 @@ export class RepCounter {
     this.lastRepTime = 0; // timestamp of last counted rep (ms) — prevents double-counting
     this.lastValidAngle = null; // Round 29: last real measurement (HUD + dropout logic)
     this.lastValidTime = 0;     // Round 29: when we last had a real measurement
+    // Partial-rep tracking (2026-09-30). A shallow squat used to be invisible:
+    // it didn't count and nothing said why, which reads as the tracker being
+    // broken. Now the attempt is measured and reported separately.
+    this.partials = 0;
+    this.deepest = null;        // best (lowest) reading of the attempt in progress
+    this.leftTopAt = 0;         // when the current descent began
   }
 
   /**
@@ -1304,7 +1391,7 @@ export class RepCounter {
    */
   update(landmarks) {
     if (!landmarks || landmarks.length < 33) {
-      return { count: this.count, angle: 0, stage: this.stage, repCounted: false };
+      return { count: this.count, angle: 0, stage: this.stage, repCounted: false, partials: this.partials, partialCounted: false, tracking: false };
     }
 
     const angle = this.config.getAngle(landmarks);
@@ -1328,6 +1415,8 @@ export class RepCounter {
         angle: this.lastValidAngle ?? null, // don't flash a fake number on the HUD
         stage: this.stage,
         repCounted: false,
+        partials: this.partials,
+        partialCounted: false,
         tracking: false,                    // callers can show "can't see you"
       };
     }
@@ -1336,19 +1425,49 @@ export class RepCounter {
     // Minimum ms between reps: use per-exercise value or global default (350ms)
     const minInterval = this.config.minRepIntervalMs ?? 350;
     let repCounted = false;
+    let partialCounted = false;
 
     const now = performance.now();
 
     if (direction === 'down_then_up') {
+      const { partialThreshold, minRepDurationMs } = this.config;
+
       if (angle >= upThreshold) {
+        // Back at the top, which closes out whatever just happened. If the
+        // attempt dipped far enough to be a real try but never reached depth,
+        // that's a partial — the shallow-squat case. `stage` is still 'up'
+        // here precisely BECAUSE no rep was counted; a counted rep would have
+        // moved it to 'down'.
+        if (this.stage === 'up' && partialThreshold != null &&
+            this.deepest !== null && this.deepest <= partialThreshold) {
+          this.partials++;
+          partialCounted = true;
+        }
         this.stage = 'up';
+        this.deepest = null;
+        this.leftTopAt = 0;
+      } else if (this.stage === 'up') {
+        // Descending while still armed — remember the lowest point reached and
+        // when the descent started, so depth and speed can both be judged.
+        if (!this.leftTopAt) this.leftTopAt = now;
+        this.deepest = this.deepest === null ? angle : Math.min(this.deepest, angle);
       }
+
       if (angle <= downThreshold && this.stage === 'up') {
-        this.stage = 'down';
-        if (now - this.lastRepTime >= minInterval) {
-          this.count++;
-          repCounted = true;
-          this.lastRepTime = now;
+        // A descent faster than minRepDurationMs is a landmark jump or a bounce
+        // off the bottom, not a rep. Leaving `stage` armed means the attempt
+        // falls through to the partial check when they stand back up.
+        const fastEnough = !minRepDurationMs || !this.leftTopAt ||
+          (now - this.leftTopAt) >= minRepDurationMs;
+        if (fastEnough) {
+          this.stage = 'down';
+          this.deepest = null;
+          this.leftTopAt = 0;
+          if (now - this.lastRepTime >= minInterval) {
+            this.count++;
+            repCounted = true;
+            this.lastRepTime = now;
+          }
         }
       }
     } else if (direction === 'up_then_down') {
@@ -1365,7 +1484,15 @@ export class RepCounter {
       }
     }
 
-    return { count: this.count, angle, stage: this.stage, repCounted };
+    return {
+      count: this.count,
+      angle,
+      stage: this.stage,
+      repCounted,
+      partials: this.partials,
+      partialCounted,
+      tracking: true,
+    };
   }
 
   setCount(n) {
@@ -1378,5 +1505,8 @@ export class RepCounter {
     this.lastRepTime = 0;
     this.lastValidAngle = null;
     this.lastValidTime = 0;
+    this.partials = 0;
+    this.deepest = null;
+    this.leftTopAt = 0;
   }
 }
