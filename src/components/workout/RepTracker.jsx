@@ -478,8 +478,10 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
         </button>
 
         {/* Bottom bar */}
+        {/* --artp-cb-h is set by the ARTP bottom control bar while it's mounted
+            (0 everywhere else), so DONE/RESET never sit underneath it. */}
         <div className="bg-[#020817]/95 backdrop-blur-sm border-t border-white/10 px-4 pt-3 flex flex-col gap-2"
-          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 12px) + 12px)' }}>
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 12px) + 12px + var(--artp-cb-h, 0px))' }}>
           {exerciseConfig?.formCues?.length > 0 && (
             <div className="w-full">
               <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">Form Tip</p>
@@ -511,7 +513,8 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
                 <p className="text-white font-bold text-base">Select Exercise</p>
                 <button onClick={() => setShowExPicker(false)}><X className="w-5 h-5 text-gray-400" /></button>
               </div>
-              <div className="overflow-y-auto flex-1 p-3 space-y-3">
+              <div className="overflow-y-auto flex-1 p-3 space-y-3"
+                style={{ paddingBottom: 'calc(12px + var(--artp-cb-h, 0px))' }}>
                 {Object.entries(categories).map(([cat, exList]) => (
                   <div key={cat}>
                     <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 px-1">{cat}</p>
@@ -737,7 +740,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
 
           {/* Bottom bar */}
           <div className="bg-[#020817]/95 backdrop-blur-sm border-t border-white/10 px-4 pt-2 flex flex-col gap-2"
-            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 12px) + 12px)' }}>
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 12px) + 12px + var(--artp-cb-h, 0px))' }}>
             {exerciseConfig?.formCues?.length > 0 && (
               <div className="w-full">
                 <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-0.5">💡 Form Tip</p>
@@ -795,7 +798,8 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
               <p className="text-white font-bold text-base">Select Exercise</p>
               <button onClick={() => setShowExPicker(false)}><X className="w-5 h-5 text-gray-400" /></button>
             </div>
-            <div className="overflow-y-auto flex-1 p-3 space-y-3">
+            <div className="overflow-y-auto flex-1 p-3 space-y-3"
+              style={{ paddingBottom: 'calc(12px + var(--artp-cb-h, 0px))' }}>
               {Object.entries(categories).map(([cat, exList]) => (
                 <div key={cat}>
                   <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 px-1">{cat}</p>

@@ -144,7 +144,7 @@ function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl, o
   // Safe-area: use 56px minimum so notch/punch-hole phones don't clip the header
   return (
     <div className="fixed inset-0 bg-[#020817] overflow-y-auto"
-      style={{ zIndex: 99998, paddingTop: "max(env(safe-area-inset-top, 0px), 56px)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}>
+      style={{ zIndex: 99998, paddingTop: "max(env(safe-area-inset-top, 0px), 56px)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px + var(--artp-cb-h, 0px))" }}>
 
       {/* Ghost emoji background */}
       {!imageUrl && (
@@ -305,7 +305,7 @@ function GuidedRestScreen({ nextExercise, nextImageUrl, prevExercise, nextSetNum
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/70 backdrop-blur-sm flex flex-col justify-center items-center px-3"
-      style={{ zIndex: 99990 }}>
+      style={{ zIndex: 99990, paddingBottom: "var(--artp-cb-h, 0px)" }}>
 
       <motion.div
         initial={{ y: "60%", opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "60%", opacity: 0 }}
@@ -623,13 +623,10 @@ function TimerOverlay({ secondsLeft, exerciseIndex, total, setNum, totalSets, el
             <span>{totalSteps}</span>
           </button>
           <span className="text-gray-400 text-[9px] font-mono">{formatTime(elapsedSecs)}</span>
-          {!isPaused && <button onClick={onSkip} className="text-white/60 text-[10px] underline">Skip</button>}
-          <button onClick={onPause}
-            className={`text-[10px] font-bold border rounded-full px-2 py-0.5 ${isPaused ? "text-green-400 border-green-500/40" : "text-yellow-400 border-yellow-500/40"}`}>
-            {isPaused ? "▶" : "⏸"}
-          </button>
-          <button onClick={onEndWorkout} className="text-red-400 text-[10px] font-bold border border-red-500/30 rounded-full px-2 py-0.5">End</button>
-          <button onClick={onAddSet} className="text-green-400 text-[10px] font-bold border border-green-500/30 rounded-full px-2 py-0.5">+Set</button>
+          {/* Pause and End moved to the bottom ControlBar: as 10px pills wedged
+              against the step counter they were ~20px tall and unhittable. */}
+          {!isPaused && <button onClick={onSkip} className="text-white/70 text-[11px] underline px-1 py-1">Skip</button>}
+          <button onClick={onAddSet} className="text-green-400 text-[10px] font-bold border border-green-500/30 rounded-full px-2 py-1">+Set</button>
         </div>
       </div>
     </div>,
@@ -661,13 +658,81 @@ function AmrapBar({ exerciseIndex, total, setNum, totalSets, elapsedSecs, totalS
             <span>{totalSteps}</span>
           </button>
           <span className="text-gray-400 text-[9px] font-mono">{formatTime(elapsedSecs)}</span>
-          <button onClick={onPause}
-            className={`text-[10px] font-bold border rounded-full px-2 py-0.5 ${isPaused ? "text-green-400 border-green-500/40" : "text-yellow-400 border-yellow-500/40"}`}>
-            {isPaused ? "▶" : "⏸"}
-          </button>
-          <button onClick={onEndWorkout} className="text-red-400 text-[10px] font-bold border border-red-500/30 rounded-full px-2 py-0.5">End</button>
-          <button onClick={onAddSet} className="text-green-400 text-[10px] font-bold border border-green-500/30 rounded-full px-2 py-0.5">+Set</button>
+          {/* Pause and End live in the bottom ControlBar now — see TimerOverlay. */}
+          <button onClick={onAddSet} className="text-green-400 text-[10px] font-bold border border-green-500/30 rounded-full px-2 py-1">+Set</button>
         </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ── Bottom control bar ───────────────────────────────────────────────────────
+// The four controls that must never be hard to hit: pause, add time, reset the
+// timer, end the workout. These used to be 10px pills in the top bar, crammed
+// beside the step counter — about a 20px touch target, and on a Z Flip the End
+// button sat under the step pill. Fixed to the bottom, 56px tall, clear of the
+// gesture bar. Rendered for every active phase, including rest and recovery.
+function ControlBar({ isPaused, showTimeControls, onPause, onAddTime, onResetTimer, onEndWorkout }) {
+  const btn = "flex flex-col items-center justify-center gap-0.5 min-h-[56px] rounded-xl font-bold active:scale-95 transition";
+
+  // Publish our own height as a CSS variable so the screens underneath can keep
+  // their bottom controls clear of us. RepTracker's DONE button lives exactly
+  // where this bar sits, so without this the bar would cover it.
+  const elRef = useRef(null);
+  useEffect(() => {
+    const root = document.documentElement;
+    const apply = () => {
+      const h = elRef.current?.offsetHeight || 76;
+      root.style.setProperty("--artp-cb-h", `${h}px`);
+    };
+    apply();
+    window.addEventListener("resize", apply);
+    window.addEventListener("orientationchange", apply);
+    return () => {
+      window.removeEventListener("resize", apply);
+      window.removeEventListener("orientationchange", apply);
+      root.style.removeProperty("--artp-cb-h");
+    };
+  }, []);
+
+  return createPortal(
+    <div ref={elRef} className="fixed left-0 right-0 bottom-0 bg-black/90 backdrop-blur-sm border-t border-white/10 px-3 pt-2"
+      style={{
+        // 100000 puts it above every full-screen workout phase (preview 99998,
+        // warm-up 99999, rest 99990) and below the exit sheet and active
+        // recovery (both 100001), which must be able to cover it.
+        zIndex: 100000,
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 10px)",
+      }}>
+      <div className={`grid gap-2 ${showTimeControls ? "grid-cols-4" : "grid-cols-2"}`}>
+        <button onClick={onPause} aria-label={isPaused ? "Resume workout" : "Pause workout"}
+          className={`${btn} ${isPaused ? "bg-green-500 text-black" : "bg-yellow-500 text-black"}`}>
+          <span className="text-lg leading-none">{isPaused ? "▶" : "⏸"}</span>
+          <span className="text-[10px] uppercase tracking-wide">{isPaused ? "Resume" : "Pause"}</span>
+        </button>
+
+        {showTimeControls && (
+          <button onClick={onAddTime} aria-label="Add thirty seconds to this exercise"
+            className={`${btn} bg-blue-600 text-white`}>
+            <span className="text-base leading-none font-black">+30s</span>
+            <span className="text-[10px] uppercase tracking-wide">Add time</span>
+          </button>
+        )}
+
+        {showTimeControls && (
+          <button onClick={onResetTimer} aria-label="Reset this exercise timer"
+            className={`${btn} border border-white/25 text-white`}>
+            <span className="text-lg leading-none">⟲</span>
+            <span className="text-[10px] uppercase tracking-wide">Reset</span>
+          </button>
+        )}
+
+        <button onClick={onEndWorkout} aria-label="End workout"
+          className={`${btn} bg-red-600 text-white`}>
+          <span className="text-lg leading-none">■</span>
+          <span className="text-[10px] uppercase tracking-wide">End</span>
+        </button>
       </div>
     </div>,
     document.body
@@ -924,7 +989,7 @@ function ManualRepCounter({ onCount }) {
   const bump = (d) => setCount((c) => { const n = Math.max(0, c + d); onCount(n); return n; });
   return (
     <div className="fixed left-1/2 -translate-x-1/2 z-[99985]"
-      style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 104px)" }}>
+      style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 104px + var(--artp-cb-h, 0px))" }}>
       <div className="bg-black/80 backdrop-blur-md border border-[#00a9ff]/40 rounded-2xl px-3 py-2 flex items-center gap-3 shadow-2xl">
         <button onClick={() => bump(-1)} aria-label="minus one rep"
           className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl font-bold flex items-center justify-center active:scale-95">−</button>
@@ -987,7 +1052,7 @@ function WarmupScreen({ onFinish, onSkipAll, imageMap = {}, totalSteps = 0 }) {
 
   return createPortal(
     <div className="fixed inset-0 bg-[#020817] flex flex-col text-white"
-      style={{ zIndex: 99999, paddingTop: "max(env(safe-area-inset-top, 0px), 52px)", paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)" }}>
+      style={{ zIndex: 99999, paddingTop: "max(env(safe-area-inset-top, 0px), 52px)", paddingBottom: "calc(max(env(safe-area-inset-bottom, 0px), 16px) + var(--artp-cb-h, 0px))" }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 pb-3">
         <div className="flex items-center gap-2">
@@ -1526,6 +1591,22 @@ function ARTPWorkoutInner() {
       return next;
     });
   }, []);
+
+  // ── Timer controls (timed mode) ───────────────────────────────────────────
+  // Two things were impossible before: giving yourself more time on an exercise
+  // that needed it, and restarting a set whose first few seconds were wasted
+  // getting into frame. Both only touch `timerSecs` — the per-exercise
+  // countdown — so the total elapsed clock and the step count stay honest.
+  const addTime = useCallback((secs) => {
+    setTimerSecs(s => Math.max(0, s) + secs);
+    speak(`${secs} seconds added`, 1.05, 1.05);
+  }, []);
+
+  const resetTimer = useCallback(() => {
+    setTimerSecs(timePerEx);
+    speak("Timer reset", 1.05, 1.05);
+  }, [timePerEx]);
+
   /**
    * Round 28: manual rep correction.
    *
@@ -2040,6 +2121,20 @@ function ARTPWorkoutInner() {
       {/* Persistent step badge */}
       {stepBadgePortal}
 
+      {/* Persistent bottom controls — pause, add time, reset, end. Present in
+          every phase except the 3-2-1 countdown, so the workout can always be
+          stopped without hunting for a 10px pill behind the step counter. */}
+      {phase !== "countdown" && (
+        <ControlBar
+          isPaused={isPaused}
+          showTimeControls={phase === "working" && mode === "time"}
+          onPause={handlePauseToggle}
+          onAddTime={() => addTime(30)}
+          onResetTimer={resetTimer}
+          onEndWorkout={handleEndWorkout}
+        />
+      )}
+
       {/* ── Warm-up ───────────────────────────────────────────────── */}
       {phase === "warmup" && (
         <WarmupScreen
@@ -2201,7 +2296,9 @@ function ARTPWorkoutInner() {
               pendingReps.current = Math.max(aiRepsRef.current, manualRepsRef.current);
             }}
             paused={isPaused}
-            onPause={handlePauseToggle}
+            /* No onPause: pausing now lives in the persistent ControlBar below,
+               which is 56px tall instead of 14. Passing it would stack two
+               pause buttons and squeeze the DONE button. */
             onComplete={handleRepTrackerComplete}
             onClose={handleEndWorkout}
           />
