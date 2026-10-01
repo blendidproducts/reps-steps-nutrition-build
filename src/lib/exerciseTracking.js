@@ -199,6 +199,121 @@ export function squatDepthMetric(lm) {
   return ((kneeMid.y - hipMid.y) / Math.max(ref, 0.08)) * 100;
 }
 
+/** Apparent body width in normalized image units — the raw signal the distance
+ *  tracker measures. Averages shoulder width and hip width when both are
+ *  visible, falls back to whichever one is. Returns null when neither is.
+ *
+ *  Width rather than height because a bear crawl is horizontal: the torso is
+ *  foreshortened along the travel axis, but shoulder-to-shoulder and hip-to-hip
+ *  stay perpendicular to it, so they shrink with distance and nothing else. */
+export function bodyWidthMetric(lm) {
+  const shVis  = Math.min(lm[11]?.visibility ?? 0, lm[12]?.visibility ?? 0);
+  const hipVis = Math.min(lm[23]?.visibility ?? 0, lm[24]?.visibility ?? 0);
+  const parts = [];
+  if (shVis  >= 0.4) parts.push(getDist(lm[11], lm[12]));
+  if (hipVis >= 0.4) parts.push(getDist(lm[23], lm[24]));
+  if (!parts.length) return null;
+  const w = parts.reduce((a, b) => a + b, 0) / parts.length;
+  // Below this the person is too small in frame for the landmarks to be worth
+  // anything — roughly 25px of a 720px-wide feed.
+  return w >= 0.035 ? w : null;
+}
+
+/**
+ * Distance travelled away from (or toward) a stationary camera.
+ *
+ * THE METHOD. A person's shoulders are a fixed real-world width, so their
+ * apparent width in the frame is inversely proportional to how far away they
+ * are: w ∝ 1/d. Measure the width once at a known distance and every later
+ * width converts straight to feet — d = refFeet × refWidth / width. No camera
+ * calibration, no intrinsics, no depth sensor. One known distance is the whole
+ * setup, which is why calibration asks the person to stand on a mark.
+ *
+ * THE CEILING, stated plainly because it decides how this can be used.
+ * Landmark jitter of a pixel or two is a small fraction of a wide, close
+ * subject and a large fraction of a narrow, far one, so error grows with the
+ * square of distance. In practice:
+ *     out to ~15 ft   good — within a foot or so
+ *     15-30 ft        usable — the reading drifts, the trend is right
+ *     past ~30 ft     MediaPipe stops finding a pose at all and this returns
+ *                     tracking: false rather than a number
+ * A 20-foot crawl is inside that. **25 yards is not, and no amount of work on
+ * this function will make it so** — at 75 feet a person is a dozen pixels tall.
+ * Long crawls have to be counted in lengths (crawl out, crawl back, tap) or
+ * timed; they cannot be measured by a phone sitting at the start line.
+ *
+ * SETUP this assumes: phone stationary, facing down the lane, person crawling
+ * directly away from it or directly toward it. Crawling across the frame
+ * doesn't change apparent width, so it reads as no distance at all.
+ */
+export class DistanceTracker {
+  /** @param refFeet how far the person stands from the camera while calibrating */
+  constructor({ refFeet = 6 } = {}) {
+    this.refFeet = refFeet;
+    this.refWidth = null;     // apparent width at refFeet
+    this.samples = [];        // calibration samples
+    this.distanceFt = 0;      // best distance travelled so far this effort
+    this.lastFeet = null;     // last good absolute distance from camera
+    this.lostSince = 0;
+  }
+
+  /** Feed frames while the person holds still on the mark. Returns
+   *  { ready, progress } — ready once there are enough stable samples. */
+  calibrate(landmarks) {
+    const w = landmarks && landmarks.length >= 33 ? bodyWidthMetric(landmarks) : null;
+    if (w === null) return { ready: false, progress: this.samples.length / 20, tracking: false };
+    this.samples.push(w);
+    if (this.samples.length > 20) this.samples.shift();
+    if (this.samples.length < 20) {
+      return { ready: false, progress: this.samples.length / 20, tracking: true };
+    }
+    // Median, not mean: one bad frame shouldn't set the reference for the whole
+    // effort, and everything downstream is divided by this number.
+    const sorted = [...this.samples].sort((a, b) => a - b);
+    this.refWidth = sorted[Math.floor(sorted.length / 2)];
+    return { ready: true, progress: 1, tracking: true };
+  }
+
+  isCalibrated() { return this.refWidth !== null; }
+
+  /**
+   * @returns {{ feet:number|null, distanceFt:number, tracking:boolean, confidence:'good'|'fair'|'poor' }}
+   *   feet        absolute distance from the camera right now
+   *   distanceFt  furthest travelled from the mark this effort — monotonic, so a
+   *               momentary bad frame can't walk the total backwards
+   */
+  update(landmarks) {
+    if (!this.refWidth) {
+      return { feet: null, distanceFt: this.distanceFt, tracking: false, confidence: 'poor' };
+    }
+    const w = landmarks && landmarks.length >= 33 ? bodyWidthMetric(landmarks) : null;
+    if (w === null) {
+      if (!this.lostSince) this.lostSince = performance.now();
+      return { feet: this.lastFeet, distanceFt: this.distanceFt, tracking: false, confidence: 'poor' };
+    }
+    this.lostSince = 0;
+
+    const feet = this.refFeet * (this.refWidth / w);
+    // Light smoothing. The raw reading is noisy enough at range to jump a foot
+    // between frames, which looks broken even when the trend is fine.
+    this.lastFeet = this.lastFeet === null ? feet : this.lastFeet * 0.7 + feet * 0.3;
+
+    const travelled = Math.abs(this.lastFeet - this.refFeet);
+    if (travelled > this.distanceFt) this.distanceFt = travelled;
+
+    const confidence = this.lastFeet <= 15 ? 'good' : this.lastFeet <= 30 ? 'fair' : 'poor';
+    return { feet: this.lastFeet, distanceFt: this.distanceFt, tracking: true, confidence };
+  }
+
+  reset() {
+    this.refWidth = null;
+    this.samples = [];
+    this.distanceFt = 0;
+    this.lastFeet = null;
+    this.lostSince = 0;
+  }
+}
+
 // ── Exercise Library ──────────────────────────────────────────────────────────
 // Each entry:
 //   id           – unique string
@@ -1117,20 +1232,30 @@ export const EXERCISE_LIBRARY = [
     id: 'bear_crawl',
     name: 'Bear Crawl',
     keywords: ['bear crawl'],
-    mode: 'reps',
-    trackable: false,
+    // A bear crawl is a distance, not a count. Counting "reps" of it was always
+    // a fudge — there is no rep, there is a lane and you cross it. Measured by
+    // apparent body size shrinking as you crawl away from the phone; see
+    // DistanceTracker above, including the honest range limit.
+    mode: 'distance',
+    trackable: 'experimental',
     category: 'Full Body',
     color: '#06b6d4',
-    getAngle: (lm) => {
-      const L = getAngle(lm[23], lm[25], lm[27]);
-      const R = getAngle(lm[24], lm[26], lm[28]);
-      return (L + R) / 2;
-    },
-    upThreshold: 100,
-    downThreshold: 60,
+    targetFeet: 20,        // the prescribed lane; overridable per workout later
+    calibrateFeet: 6,      // where the person stands for the reference capture
+    unit: 'ft',
+    // Not used in distance mode — kept so anything that reads these fields
+    // generically doesn't trip over undefined.
+    getAngle: (lm) => bodyWidthMetric(lm),
+    upThreshold: 0,
+    downThreshold: 0,
     direction: 'down_then_up',
-    primaryJoint: 'Knee',
-    formCues: ['Knees hover 1 inch off floor', 'Opposite hand + foot move together', 'Keep back flat'],
+    primaryJoint: 'Distance',
+    formCues: [
+      'Phone on the ground at the START line, facing down the lane',
+      'Crawl straight away from the phone — across the frame does not measure',
+      'Knees hover an inch off the floor, back flat',
+      'Opposite hand and foot move together',
+    ],
   },
   {
     id: 'box_jump',

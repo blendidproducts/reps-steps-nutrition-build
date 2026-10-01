@@ -25,11 +25,11 @@ import React, {
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { matchExercise, RepCounter, getExercisesByCategory } from "@/lib/exerciseTracking";
+import { matchExercise, RepCounter, DistanceTracker, getExercisesByCategory } from "@/lib/exerciseTracking";
 import {
   X, Camera, Activity, CheckCircle,
   ChevronUp, ChevronDown, AlertTriangle, RotateCcw, Hand, FlaskConical,
-  Pause, Play as PlayIcon, Users,
+  Pause, Play as PlayIcon, Users, Route, Crosshair,
 } from "lucide-react";
 
 // ─── MediaPipe CDN ────────────────────────────────────────────────────────────
@@ -92,6 +92,16 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
   const [repFlash,       setRepFlash]       = useState(false);
   const [partials,       setPartials]       = useState(0);  // shallow attempts this set
   const [shallowFlash,   setShallowFlash]   = useState(false);
+  // ── Distance mode (bear crawl) ────────────────────────────────
+  const distTrackerRef = useRef(null);
+  const distModeRef    = useRef(initialConfig.mode === "distance"); // read inside the RAF loop
+  const distPhaseRef   = useRef("calibrating");
+  const distDoneRef    = useRef(false);  // guards against firing onComplete twice
+  const [distPhase,      setDistPhase]      = useState("calibrating"); // 'calibrating' | 'tracking'
+  const [calProgress,    setCalProgress]    = useState(0);
+  const [distFeet,       setDistFeet]       = useState(0);   // travelled from the mark
+  const [distTracking,   setDistTracking]   = useState(false);
+  const [distConfidence, setDistConfidence] = useState("poor");
   const [poseDetected,         setPoseDetected]         = useState(false);
   const [multiPersonDetected,  setMultiPersonDetected]  = useState(false);
   const [exerciseConfig, setExerciseConfig] = useState(initialConfig);
@@ -118,6 +128,19 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     setIsManualMode(cfg.trackable === false);
     setIsExperimental(cfg.trackable === 'experimental');
     repCounterRef.current = new RepCounter(cfg);
+    // Distance exercises (bear crawl) measure travel, not reps. The tracker
+    // needs a reference capture before it can report feet, so it starts in the
+    // calibrating phase and the UI asks the person to stand on the mark.
+    if (cfg.mode === "distance") {
+      distTrackerRef.current = new DistanceTracker({ refFeet: cfg.calibrateFeet ?? 6 });
+      distModeRef.current = true;
+      setDistPhase("calibrating");
+      setCalProgress(0);
+      setDistFeet(0);
+    } else {
+      distTrackerRef.current = null;
+      distModeRef.current = false;
+    }
   }, [exerciseName]);
 
   // ── Load MediaPipe (skipped when starting in manual mode) ──────
@@ -260,8 +283,38 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
           setPoseDetected(true);
           if (skl) drawSkeleton(ctx, lm, sW, sH, fm, 0, 1, dX, dY, dW, dH);
 
+          // ── Distance mode (bear crawl) ───────────────────────────────
+          // Measures travel instead of counting reps. Two phases: hold still on
+          // the mark to capture the reference size, then crawl.
+          if (distModeRef.current && distTrackerRef.current) {
+            const dt = distTrackerRef.current;
+            if (!pausedRef.current && !isMulti) {
+              if (distPhaseRef.current === "calibrating") {
+                const c = dt.calibrate(lm);
+                setCalProgress(c.progress);
+                setDistTracking(c.tracking);
+                if (c.ready) {
+                  distPhaseRef.current = "tracking";
+                  setDistPhase("tracking");
+                  speakOnce("Reference set. Crawl when you are ready.");
+                }
+              } else {
+                const d = dt.update(lm);
+                setDistTracking(d.tracking);
+                setDistConfidence(d.confidence);
+                const ft = Math.round(d.distanceFt);
+                setDistFeet(ft);
+                const target = exConfigRef.current?.targetFeet || 0;
+                if (target && ft >= target && !distDoneRef.current) {
+                  distDoneRef.current = true;
+                  speakOnce("Distance complete!");
+                  onCompleteRef.current?.(ft);
+                }
+              }
+            }
+          }
           // Only count when: not paused, single confident person
-          if (counter && !pausedRef.current && !isMulti) {
+          else if (counter && !pausedRef.current && !isMulti) {
             const u = counter.update(lm);
             // Finding 4a (2026-08-20): the no-pose banner (React state) could
             // show stale info while the skeleton (drawn straight to canvas,
@@ -297,6 +350,11 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
 
   const showSkeletonRef = useRef(showSkeleton);
   useEffect(() => { showSkeletonRef.current = showSkeleton; }, [showSkeleton]);
+  // Mirrored for the RAF closure, which captures first-render values.
+  const exConfigRef = useRef(exerciseConfig);
+  useEffect(() => { exConfigRef.current = exerciseConfig; }, [exerciseConfig]);
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
   const facingModeRef = useRef(facingMode);
   useEffect(() => { facingModeRef.current = facingMode; }, [facingMode]);
   // Pause + multi-person refs (read inside RAF closure)
@@ -409,6 +467,18 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     } catch (_) {}
   }
 
+  // One-shot spoken cue, for distance-mode transitions. Not throttled by a
+  // timer — the caller only fires each of these once per effort.
+  function speakOnce(text) {
+    try {
+      if (!("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 1.05; u.pitch = 1.05; u.volume = 0.9;
+      window.speechSynthesis.speak(u);
+    } catch (_) {}
+  }
+
   function announceRep(count) {
     try {
       if ("speechSynthesis" in window && count % 5 === 0) {
@@ -444,12 +514,29 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     setRepCount(0);
     setPartials(0);
     if (repCounterRef.current) repCounterRef.current.reset();
+    // In distance mode RESET means "re-measure from the mark", which has to
+    // re-capture the reference — the phone or the person may have moved.
+    if (distTrackerRef.current) {
+      distTrackerRef.current.reset();
+      distDoneRef.current = false;
+      distPhaseRef.current = "calibrating";
+      setDistPhase("calibrating");
+      setCalProgress(0);
+      setDistFeet(0);
+    }
   }
-  function handleDone()  { cleanup(); onComplete?.(repCount); }
+  // Distance mode reports the feet travelled, not a rep count.
+  function handleDone()  { cleanup(); onComplete?.(isDistanceMode ? distFeet : repCount); }
   function handleClose() { cleanup(); onClose?.(); }
 
   const categories = getExercisesByCategory();
-  const unitLabel  = exerciseConfig?.mode === "time" ? "sec" : "reps";
+  const isDistanceMode = exerciseConfig?.mode === "distance";
+  const unitLabel  = exerciseConfig?.mode === "time" ? "sec"
+                   : isDistanceMode ? "ft" : "reps";
+  const targetFeet = exerciseConfig?.targetFeet || 0;
+  // The number the big counter shows and the DONE button reports.
+  const shownCount = isDistanceMode ? distFeet : repCount;
+  const shownTarget = isDistanceMode ? targetFeet : targetReps;
 
   // ── Depth meter ────────────────────────────────────────────────
   // Exercises whose tracking metric IS depth (squats — see squatDepthMetric in
@@ -763,12 +850,33 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
               <motion.div animate={repFlash ? { scale: 1.15 } : { scale: 1 }} transition={{ type: "spring", stiffness: 400, damping: 15 }}
                 className="bg-black/75 rounded-2xl px-4 py-3 border border-[#00a9ff]/50 backdrop-blur-sm">
                 <div className="text-6xl font-black leading-none tabular-nums" style={{ color: exerciseConfig?.color || "#00a9ff" }}>
-                  {repCount}
+                  {shownCount}
                 </div>
                 <div className="text-white/60 text-xs font-semibold mt-0.5 uppercase tracking-wide">
-                  {unitLabel}{targetReps ? ` / ${targetReps}` : ""}
+                  {unitLabel}{shownTarget ? ` / ${shownTarget}` : ""}
                 </div>
               </motion.div>
+
+              {/* Distance confidence. The reading degrades with range and the
+                  person deserves to know rather than trust a number that is
+                  quietly getting worse — see DistanceTracker's range note. */}
+              {isDistanceMode && distPhase === "tracking" && (
+                <div className={`mt-1.5 rounded-xl px-3 py-1.5 border backdrop-blur-sm bg-black/75 ${
+                  !distTracking ? "border-red-500/60"
+                    : distConfidence === "good" ? "border-green-500/50"
+                    : distConfidence === "fair" ? "border-amber-500/50" : "border-red-500/50"
+                }`}>
+                  <span className={`text-[11px] font-bold uppercase tracking-wide ${
+                    !distTracking ? "text-red-400"
+                      : distConfidence === "good" ? "text-green-400"
+                      : distConfidence === "fair" ? "text-amber-400" : "text-red-400"
+                  }`}>
+                    {!distTracking ? "Lost you — crawl back in frame"
+                      : distConfidence === "good" ? "Tracking"
+                      : distConfidence === "fair" ? "Tracking · rough" : "Too far to measure"}
+                  </span>
+                </div>
+              )}
 
               {/* Shallow attempts. Shown rather than hidden: a rep that didn't
                   count looks like a broken tracker unless you say why. */}
@@ -783,7 +891,26 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
               )}
             </div>
 
+            {/* Distance progress — same slot the depth meter uses, since no
+                exercise has both. Fills from the bottom as the lane is covered. */}
+            {isDistanceMode && distPhase === "tracking" && targetFeet > 0 && (
+              <div className="absolute bottom-4 right-4 z-10 flex flex-col items-center gap-1">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-white/50">
+                  {targetFeet} FT
+                </span>
+                <div className="relative w-3.5 h-28 rounded-full bg-black/70 border border-white/20 overflow-hidden">
+                  <div className="absolute left-0 right-0 bottom-0 transition-all duration-200"
+                    style={{
+                      height: `${Math.min(100, (distFeet / targetFeet) * 100)}%`,
+                      background: distFeet >= targetFeet ? "#22c55e" : "#06b6d4",
+                    }} />
+                </div>
+                <span className="text-[9px] font-bold uppercase tracking-wider text-white/50">START</span>
+              </div>
+            )}
+
             {/* Depth meter + stage + readout */}
+            {!isDistanceMode && (
             <div className="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-1.5">
               {meter && (
                 <div className="flex flex-col items-center gap-1 mb-1">
@@ -812,6 +939,42 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
                 <span className="text-white text-xs font-bold">{currentAngle}{readoutUnit}</span>
               </div>
             </div>
+            )}
+
+            {/* ── Distance calibration ──────────────────────────────────────
+                The whole method rests on one known distance: stand on the mark,
+                hold still, and the apparent body size recorded there becomes the
+                yardstick for the rest of the crawl. Nothing can be measured
+                before this, so it owns the screen until it's done. */}
+            {isDistanceMode && distPhase === "calibrating" && (
+              <div className="absolute inset-0 z-20 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center px-6 text-center">
+                <Crosshair className="w-10 h-10 text-[#06b6d4] mb-3" />
+                <p className="text-white font-bold text-lg leading-tight">
+                  Stand {exerciseConfig?.calibrateFeet ?? 6} ft from the phone
+                </p>
+                <p className="text-gray-400 text-sm mt-2 max-w-xs leading-snug">
+                  Face the camera and hold still for a second. That one known distance
+                  is what turns your size on screen into feet.
+                </p>
+
+                <div className="w-48 h-2 bg-white/10 rounded-full mt-5 overflow-hidden">
+                  <div className="h-full bg-[#06b6d4] transition-all duration-150"
+                    style={{ width: `${Math.round(calProgress * 100)}%` }} />
+                </div>
+                <p className={`text-xs mt-2 font-semibold ${distTracking ? "text-green-400" : "text-amber-400"}`}>
+                  {distTracking ? "Hold still…" : "Step into frame — I can't see you"}
+                </p>
+
+                <div className="mt-6 bg-white/5 border border-white/10 rounded-xl px-4 py-3 max-w-xs">
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
+                    Put the phone at the <span className="text-white font-semibold">start line</span>,
+                    facing down the lane, and crawl straight away from it.
+                    Good to about 15 ft, rough to 30 ft, and past that a phone
+                    can't see you well enough to measure — use DONE to log it.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Round 20: skeleton toggle moved into the bottom bar */}
           </div>
@@ -859,7 +1022,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
               <button onClick={handleDone}
                 className="flex-1 h-14 bg-[#00a9ff] hover:bg-[#0090e0] active:scale-95 transition-transform text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#00a9ff]/30">
                 <CheckCircle className="w-5 h-5" />
-                <span className="text-sm">DONE — {repCount} {unitLabel}</span>
+                <span className="text-sm">DONE — {shownCount} {unitLabel}</span>
               </button>
             </div>
           </div>

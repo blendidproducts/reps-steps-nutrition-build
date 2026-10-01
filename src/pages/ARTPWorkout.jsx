@@ -22,6 +22,7 @@ import { User } from "@/entities/User";
 import { checkIsPro } from "@/lib/proCheck";
 import { motion, AnimatePresence } from "framer-motion";
 import RepTracker, { releaseSharedCamera } from "@/components/workout/RepTracker";
+import { matchExercise } from "@/lib/exerciseTracking";
 import StepTracker from "@/components/StepTracker";
 import { thumbImg, mediumImg } from "@/lib/imgOpt";
 import {
@@ -65,6 +66,9 @@ const ALL_EXERCISES = [
   { name: "Bulgarian Split Squat", cue: "Side view · rear foot elevated · deep range",         emoji: "🦵", cameraTip: "Place phone at hip height to side" },
   { name: "Step Up",         cue: "Side view · drive through heel · full hip extension",        emoji: "🪜", cameraTip: "Place phone at hip height to side" },
   { name: "Pistol Squat",    cue: "Side view · one leg forward · control the descent",          emoji: "🦩", cameraTip: "Place phone at hip height to side", beta: true },
+  // Scored in FEET, not reps — the tracker measures how far you crawl away from
+  // the phone. See DistanceTracker in exerciseTracking.js for the range limit.
+  { name: "Bear Crawl",      cue: "20 ft · crawl straight away from the phone · knees hover",    emoji: "🐻", cameraTip: "Phone on the ground at the START line, facing down the lane", beta: true },
 ];
 
 const TIME_OPTIONS  = [{ label: "30s", seconds: 30 }, { label: "45s", seconds: 45 }, { label: "60s", seconds: 60 }, { label: "90s", seconds: 90 }];
@@ -739,9 +743,35 @@ function ControlBar({ isPaused, showTimeControls, onPause, onAddTime, onResetTim
   );
 }
 
+// ── Score units ───────────────────────────────────────────────────────────────
+// Most exercises score in reps. Bear crawl scores in FEET, and before this the
+// number went into the same `reps` field and got summed into "Total Reps" — so a
+// 20-foot crawl silently inflated the rep total by 20. Every score now carries
+// the unit it was measured in, and the rep totals only add up the ones that are
+// actually reps.
+function unitFor(exerciseName) {
+  try { return matchExercise(exerciseName)?.unit === 'ft' ? 'ft' : 'reps'; }
+  catch (_) { return 'reps'; }
+}
+/** Sum of rep-scored entries only. Feet and other units are excluded. */
+function sumReps(scores) {
+  return (scores || []).reduce((s, e) => s + ((e.unit ?? 'reps') === 'reps' ? (e.reps || 0) : 0), 0);
+}
+/** Totals per non-rep unit, e.g. { ft: 40 }, for display alongside the rep count. */
+function sumByUnit(scores) {
+  const out = {};
+  (scores || []).forEach(e => {
+    const u = e.unit ?? 'reps';
+    if (u === 'reps') return;
+    out[u] = (out[u] || 0) + (e.reps || 0);
+  });
+  return out;
+}
+
 // ── Completion / Report screen ────────────────────────────────────────────────
 function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exerciseCount, onRestart, onExit, onViewAchievements, onAdjustReps }) {
-  const totalReps = scores.reduce((s, e) => s + (e.reps || 0), 0);
+  const totalReps = sumReps(scores);
+  const unitTotals = sumByUnit(scores);   // e.g. { ft: 40 } from bear crawls
   const completedSets = totalSets;
   // Estimate calories: ~8 cal/min HIIT
   const calEstimate = Math.round((elapsedSecs / 60) * 8);
@@ -751,7 +781,7 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
   const byExercise = {};
   scores.forEach((s, i) => {
     if (!byExercise[s.name]) byExercise[s.name] = [];
-    byExercise[s.name].push({ reps: s.reps, idx: i });
+    byExercise[s.name].push({ reps: s.reps, idx: i, unit: s.unit ?? 'reps' });
   });
 
   // Round 27: share the session as an image. Built from the numbers already on
@@ -828,6 +858,14 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
             <p className="text-3xl font-black text-orange-400">~{calEstimate}</p>
             <p className="text-gray-500 text-xs mt-0.5">Est. Calories</p>
           </div>
+          {/* Distance-scored work (bear crawl) gets its own tile rather than
+              being folded into Total Reps, where 20 feet read as 20 reps. */}
+          {unitTotals.ft > 0 && (
+            <div className="bg-[#111] border border-gray-800 rounded-xl p-4 text-center col-span-2">
+              <p className="text-3xl font-black text-cyan-400">{unitTotals.ft} ft</p>
+              <p className="text-gray-500 text-xs mt-0.5">Crawled</p>
+            </div>
+          )}
         </div>
 
         {/* Per-exercise breakdown */}
@@ -841,6 +879,7 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
             {Object.entries(byExercise).map(([name, sets], i) => {
               const ex = ALL_EXERCISES.find(e => e.name === name);
               const total = sets.reduce((a, s) => a + s.reps, 0);
+              const u = sets[0]?.unit === 'ft' ? 'ft' : 'reps';
               return (
                 <div key={i} className="px-4 py-3">
                   <div className="flex items-center justify-between mb-1">
@@ -848,7 +887,7 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
                       <span className="text-base">{ex?.emoji || "💪"}</span>
                       <span className="text-white text-sm font-medium">{name}</span>
                     </div>
-                    <span className="text-blue-400 font-bold text-sm">{total} reps</span>
+                    <span className="text-blue-400 font-bold text-sm">{total} {u}</span>
                   </div>
                   {/* Round 28: every set is correctable. The camera misses shallow
                       reps and double-counts on a wobbly tripod - this is the fix
@@ -1406,7 +1445,9 @@ function ARTPWorkoutInner() {
   // dependency array is evaluated (avoids temporal-dead-zone ReferenceError crash).
   const saveArtpSession = useCallback(async (finalScores, finalSteps, finalElapsed) => {
     try {
-      const totalReps = finalScores.reduce((s, e) => s + (e.reps || 0), 0);
+      // Reps only — a bear crawl's feet must not land in total_reps, which feeds
+      // History, streaks and achievements.
+      const totalReps = sumReps(finalScores);
       const calEstimate = Math.round((finalElapsed / 60) * 8);
       const exercisesCompleted = Object.entries(
         finalScores.reduce((acc, s) => {
@@ -1447,7 +1488,7 @@ function ARTPWorkoutInner() {
   // ── Advance / finish helpers ─────────────────────────────────────
   const finishExercise = useCallback((reps) => {
     clearInterval(timerRef.current);
-    const newScore = { name: currentEx.name, reps: reps || 0, set: currentSet, isSuperset: supersets.has(currentEx.name) };
+    const newScore = { name: currentEx.name, reps: reps || 0, set: currentSet, isSuperset: supersets.has(currentEx.name), unit: unitFor(currentEx.name) };
     setScores(prev => {
       const updated = [...prev, newScore];
       if (isLastEx && currentSet >= totalSets) {
@@ -1635,7 +1676,7 @@ function ARTPWorkoutInner() {
         const snapshot = next;
         resaveTimerRef.current = setTimeout(async () => {
           try {
-            const totalReps = snapshot.reduce((s, e) => s + (e.reps || 0), 0);
+            const totalReps = sumReps(snapshot);
             const exercisesCompleted = Object.entries(
               snapshot.reduce((acc, s) => {
                 if (!acc[s.name]) acc[s.name] = 0;
@@ -1666,7 +1707,7 @@ function ARTPWorkoutInner() {
     setShowExitSheet(false);
     setScores(prev => {
       const extra = (currentEx && pendingReps.current > 0)
-        ? [{ name: currentEx.name, reps: pendingReps.current, set: currentSet, isSuperset: supersets.has(currentEx.name) }]
+        ? [{ name: currentEx.name, reps: pendingReps.current, set: currentSet, isSuperset: supersets.has(currentEx.name), unit: unitFor(currentEx.name) }]
         : [];
       const finalScores = [...prev, ...extra];
       // Save to backend (non-blocking)
