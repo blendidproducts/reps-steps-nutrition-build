@@ -234,7 +234,8 @@ function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl, o
 }
 
 // ── Guided Rest Screen — styled to match RestScreen.jsx ──────────────────────
-function GuidedRestScreen({ nextExercise, nextImageUrl, prevExercise, nextSetNum, totalSets, isLastExercise, totalSteps, onSkip, onEndWorkout }) {
+function GuidedRestScreen({ nextExercise, nextImageUrl, prevExercise, nextSetNum, totalSets, isLastExercise, totalSteps, onSkip, onEndWorkout,
+  exercises = [], exerciseIndex = 0, currentSet = 1, supersets, onAddSet }) {
   const [restSecs,     setRestSecs]    = useState(REST_DEFAULT);
   const [cardioMode,   setCardioMode]  = useState(null); // null | 'walk' | 'jog' | 'sprint'
   const [cardioTimer,  setCardioTimer] = useState(0);
@@ -428,6 +429,64 @@ function GuidedRestScreen({ nextExercise, nextImageUrl, prevExercise, nextSetNum
                     <span className="text-[10px] font-black">SPRINT</span>
                   </button>
                 </div>
+
+                {/* ── The whole circuit ───────────────────────────────────────
+                    Rest is the only moment in a workout with time to read, so
+                    this is where the full list belongs: what's done, what's
+                    running now, and what's still coming. Adding a set lives here
+                    too — it's a decision about the workout, and the only other
+                    place it existed was a 10px pill mid-exercise and, wrongly,
+                    the completion report after the workout had already ended. */}
+                {exercises.length > 0 && (
+                  <div className="bg-black/30 border border-white/10 rounded-xl overflow-hidden">
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                        This circuit
+                      </p>
+                      <p className="text-[10px] text-gray-500">
+                        Set {currentSet} of {totalSets}
+                      </p>
+                    </div>
+
+                    <div className="divide-y divide-white/5">
+                      {exercises.map((ex, i) => {
+                        // `exerciseIndex` is the exercise that just finished, so
+                        // everything up to and including it is done this set.
+                        const done = i <= exerciseIndex;
+                        const isNext = i === exerciseIndex + 1 ||
+                          (isLastExercise && currentSet < totalSets && i === 0);
+                        return (
+                          <div key={ex.name}
+                            className={`flex items-center gap-2 px-3 py-1.5 ${isNext ? "bg-[#00a9ff]/10" : ""}`}>
+                            <span className={`w-4 text-center text-[10px] font-bold shrink-0 ${
+                              done ? "text-green-400" : isNext ? "text-[#00a9ff]" : "text-gray-600"
+                            }`}>
+                              {done ? "✓" : isNext ? "▶" : i + 1}
+                            </span>
+                            <span className="text-sm shrink-0">{ex.emoji}</span>
+                            <span className={`text-[11px] truncate flex-1 ${
+                              done ? "text-gray-500 line-through" : isNext ? "text-white font-semibold" : "text-gray-300"
+                            }`}>
+                              {ex.name}
+                            </span>
+                            {supersets?.has?.(ex.name) && (
+                              <span className="text-[8px] font-bold text-purple-300 bg-purple-500/20 rounded px-1 py-0.5 shrink-0">
+                                SS
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {onAddSet && (
+                      <button onClick={onAddSet}
+                        className="w-full min-h-[44px] flex items-center justify-center gap-1.5 text-green-400 text-[11px] font-bold border-t border-white/10 active:bg-white/5 transition-colors">
+                        <Plus className="w-3.5 h-3.5" /> ADD ANOTHER SET
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Bottom actions */}
@@ -873,7 +932,10 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
           <div className="px-4 py-3 border-b border-gray-800 flex items-center gap-2">
             <BarChart2 className="w-4 h-4 text-gray-400" />
             <p className="text-white font-semibold text-sm">Exercise Report</p>
-            <p className="text-[10px] text-gray-500 ml-auto">Miscounted? Tap ± to fix</p>
+            {/* Explicitly "reps", because ± beside a chip labelled "Set 1" read
+                as adding SETS to a finished workout. It corrects the count the
+                camera recorded, nothing else. */}
+            <p className="text-[10px] text-gray-500 ml-auto">Miscounted? ± fixes reps</p>
           </div>
           <div className="divide-y divide-gray-800">
             {Object.entries(byExercise).map(([name, sets], i) => {
@@ -898,6 +960,7 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
                         className="flex items-center gap-1 bg-gray-800 rounded-lg pl-2 pr-1 py-0.5">
                         <span className="text-[10px] text-gray-400">Set {si + 1}</span>
                         <span className="text-[11px] text-white font-bold tabular-nums min-w-[1.6em] text-center">{s.reps}</span>
+                        <span className="text-[9px] text-gray-500">{u}</span>
                         <button
                           onClick={() => onAdjustReps(s.idx, -1)}
                           aria-label={`Remove one rep from ${name} set ${si + 1}`}
@@ -1051,6 +1114,14 @@ function WarmupScreen({ onFinish, onSkipAll, imageMap = {}, totalSteps = 0 }) {
   // no start button, so it blew through arm circles while you set up the phone.
   // Nothing runs until the user presses START WARM-UP.
   const [started, setStarted] = useState(false);
+  // Get-ready countdown before each move (2026-10-01). Jumping straight from
+  // one move's timer into the next gave you no time to read what was coming or
+  // get into position; the first few seconds of every move were wasted. `prep`
+  // counts 5 -> 0 before the move timer starts: the name is announced at 5, the
+  // digits at 3/2/1, "begin" at 0. Spaced like that because speak() cancels
+  // whatever is already talking, so back-to-back utterances cut each other off.
+  const PREP_SECS = 5;
+  const [prep, setPrep] = useState(null);   // null = not prepping
   const move = WARMUP_ROUTINE[idx];
   const moveImg = (move.imgKeys || []).map((k) => imageMap[k]).find(Boolean);
   const isLast = idx >= WARMUP_ROUTINE.length - 1;
@@ -1058,11 +1129,19 @@ function WarmupScreen({ onFinish, onSkipAll, imageMap = {}, totalSteps = 0 }) {
   const [moveReps, setMoveReps] = useState(0);
   useEffect(() => { setMoveReps(0); }, [idx]);
 
-  // Announce each move (only once the user has started)
+  // Prep countdown. Announces the move at the top, then the digits.
   useEffect(() => {
-    if (!started) return;
-    speak(`${move.name}. ${move.cue}`, 1.05, 1.05);
-  }, [idx, started]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!started || prep === null) return;
+    if (prep === PREP_SECS) speak(`Get ready for ${move.name}. ${move.cue}`, 1.05, 1.05);
+    else if (prep > 0 && prep <= 3) speak(String(prep), 1.2, 1.2);
+    if (prep <= 0) {
+      speak("Begin!", 1.1, 1.15);
+      setPrep(null);           // hands over to the move timer below
+      return;
+    }
+    const t = setTimeout(() => setPrep((p) => (p === null ? null : p - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [prep, started, idx]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Per-move countdown — PURE decrement only, no side effects. (Round 22: the
   // old version called setIdx/setSecs/onFinish from inside this updater's own
@@ -1071,23 +1150,33 @@ function WarmupScreen({ onFinish, onSkipAll, imageMap = {}, totalSteps = 0 }) {
   // tick and cascading through the rest of the routine. This mirrors the
   // countdown pattern already used correctly above for the 3-2-1 phase.)
   useEffect(() => {
-    if (!started) return;
+    if (!started || prep !== null) return;   // held while getting ready
     const t = setInterval(() => setSecs((s) => Math.max(0, s - 1)), 1000);
     return () => clearInterval(t);
-  }, [started, idx]);
+  }, [started, idx, prep]);
 
   // Advance once secs actually reaches 0, read from committed state on the
   // next render — never from inside the tick's own updater.
   useEffect(() => {
-    if (!started || secs > 0) return;
+    if (!started || prep !== null || secs > 0) return;
     if (isLast) { speak("Warm-up complete! Let's go.", 1.1, 1.1); onFinish(); }
-    else { setIdx((i) => i + 1); setSecs(WARMUP_ROUTINE[idx + 1].seconds); }
-  }, [secs, started]); // eslint-disable-line react-hooks/exhaustive-deps
+    else { goToMove(idx + 1); }
+  }, [secs, started, prep]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Move to a step and run its get-ready countdown first. */
+  const goToMove = (i) => {
+    setIdx(i);
+    setSecs(WARMUP_ROUTINE[i].seconds);
+    setPrep(PREP_SECS);
+  };
 
   const nextMove = () => {
     if (isLast) onFinish();
-    else { setIdx((i) => i + 1); setSecs(WARMUP_ROUTINE[idx + 1].seconds); }
+    else goToMove(idx + 1);
   };
+
+  /** Skip just the get-ready countdown and start the move now. */
+  const skipPrep = () => { setPrep(null); speak("Begin!", 1.1, 1.15); };
 
   return createPortal(
     <div className="fixed inset-0 bg-[#020817] flex flex-col text-white"
@@ -1121,7 +1210,20 @@ function WarmupScreen({ onFinish, onSkipAll, imageMap = {}, totalSteps = 0 }) {
         )}
         <h2 className="text-3xl font-black mb-2">{move.name}</h2>
         <p className="text-gray-400 text-sm max-w-xs leading-relaxed mb-8">{move.cue}</p>
-        {started ? (
+        {started && prep !== null ? (
+          /* Get ready — the move's name and image are already above, so this
+             just has to say how long until it starts. */
+          <>
+            <p className="text-orange-300 text-sm font-bold uppercase tracking-widest">Get ready</p>
+            <div className="text-8xl font-black tabular-nums text-white leading-none mt-1">
+              {prep > 0 ? prep : "GO"}
+            </div>
+            <button onClick={skipPrep}
+              className="mt-5 text-gray-400 text-xs font-semibold border border-gray-700 rounded-full px-4 py-2 active:scale-95">
+              Start now
+            </button>
+          </>
+        ) : started ? (
           <>
             <div className="text-7xl font-black tabular-nums text-orange-400">{secs}</div>
             <p className="text-gray-600 text-xs mt-1 uppercase tracking-widest">seconds</p>
@@ -1156,14 +1258,16 @@ function WarmupScreen({ onFinish, onSkipAll, imageMap = {}, totalSteps = 0 }) {
             <SkipForward className="w-5 h-5" /> {isLast ? "Start Workout" : "Next Move"}
           </button>
         ) : (
-          <button onClick={() => setStarted(true)}
+          <button onClick={() => { setStarted(true); setPrep(PREP_SECS); }}
             className="w-full py-4 rounded-2xl font-black text-lg text-white active:scale-95 transition-transform flex items-center justify-center gap-2"
             style={{ background: "linear-gradient(135deg, #f97316, #ea580c)", boxShadow: "0 8px 24px rgba(249,115,22,0.35)" }}>
             <Flame className="w-5 h-5" /> START WARM-UP
           </button>
         )}
         <p className="text-gray-600 text-[11px] text-center">
-          {started ? `Move ${idx + 1} of ${WARMUP_ROUTINE.length} · auto-advances` : "Get in position, then start when ready"}
+          {!started ? "Get in position, then start when ready"
+            : prep !== null ? `Next: ${move.name} · ${move.seconds}s`
+            : `Move ${idx + 1} of ${WARMUP_ROUTINE.length} · auto-advances`}
         </p>
       </div>
     </div>,
@@ -2165,7 +2269,12 @@ function ARTPWorkoutInner() {
       {/* Persistent bottom controls — pause, add time, reset, end. Present in
           every phase except the 3-2-1 countdown, so the workout can always be
           stopped without hunting for a 10px pill behind the step counter. */}
-      {phase !== "countdown" && (
+      {/* 2026-10-01: this was gated only against the countdown, so after End the
+          Pause and End buttons stayed pinned over the completion report — live
+          workout controls on a workout that had already finished, covering the
+          bottom of the report as well. The workout is over at `done`; there is
+          nothing left to pause or end. */}
+      {isWorkoutActive && phase !== "countdown" && (
         <ControlBar
           isPaused={isPaused}
           showTimeControls={phase === "working" && mode === "time"}
@@ -2239,6 +2348,11 @@ function ARTPWorkoutInner() {
             totalSteps={totalSteps}
             onSkip={advanceToNext}
             onEndWorkout={handleEndWorkout}
+            exercises={activeList}
+            exerciseIndex={exerciseIndex}
+            currentSet={currentSet}
+            supersets={supersets}
+            onAddSet={() => { setTotalSets(s => s + 1); speak("Set added", 1.05, 1.05); }}
           />
           {showExitSheet && (
             <ExitConfirmSheet key="exit" onConfirm={confirmEndWorkout} onCancel={() => setShowExitSheet(false)} />

@@ -92,6 +92,9 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
   const [repFlash,       setRepFlash]       = useState(false);
   const [partials,       setPartials]       = useState(0);  // shallow attempts this set
   const [shallowFlash,   setShallowFlash]   = useState(false);
+  // Live depth scale from the counter: your standing reading and the depth line
+  // it computed from it. Null until the standing read settles (about a second).
+  const [depthScale,     setDepthScale]     = useState(null);
   // ── Distance mode (bear crawl) ────────────────────────────────
   const distTrackerRef = useRef(null);
   const distModeRef    = useRef(initialConfig.mode === "distance"); // read inside the RAF loop
@@ -335,6 +338,13 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
                 setCurrentAngle(Math.round(u.angle));
               }
               setStage(u.stage);
+              // Depth exercises calibrate their own thresholds against your
+              // standing reading, so the meter has to draw the moving line
+              // rather than a fixed one — otherwise it shows you crossing a
+              // line that isn't the one being counted.
+              if (typeof u.topEst === "number" && u.topEst > 1) {
+                setDepthScale({ top: u.topEst, line: u.depthLine });
+              }
             }
             setRepCount(u.count);
             if (u.repCounted) { triggerRepFlash(); announceRep(u.count); }
@@ -507,12 +517,14 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     repCounterRef.current = new RepCounter(cfg);
     repCounterRef.current.setCount(repCount);
     setPartials(0); // shallow count belongs to the old exercise's thresholds
+    setDepthScale(null);
     setShowExPicker(false);
   }
 
   function resetCount() {
     setRepCount(0);
     setPartials(0);
+    setDepthScale(null);   // the standing read is re-taken from scratch
     if (repCounterRef.current) repCounterRef.current.reset();
     // In distance mode RESET means "re-measure from the mark", which has to
     // re-capture the reference — the phone or the person may have moved.
@@ -548,13 +560,20 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
   const meterCfg = exerciseConfig?.depthMeter || null;
   const meter = (() => {
     if (!meterCfg) return null;
-    const { top, target } = meterCfg;
+    // Prefer the counter's live scale — your standing reading and the line it
+    // derived from it. The config values are only the scale shown in the first
+    // second of a set, before the standing read settles.
+    const top = depthScale?.top ?? meterCfg.top;
+    const target = (typeof depthScale?.line === "number") ? depthScale.line : meterCfg.target;
     const floor = target - (top - target) * 0.35;
-    const frac = (v) => Math.max(0, Math.min(1, (top - v) / (top - floor)));
+    const span = top - floor;
+    if (!(span > 0)) return null;
+    const frac = (v) => Math.max(0, Math.min(1, (top - v) / span));
     return {
       fillPct: frac(currentAngle) * 100,
       targetPct: frac(target) * 100,
       atDepth: currentAngle <= target,
+      calibrated: !!depthScale,
     };
   })();
 

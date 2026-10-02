@@ -50,6 +50,15 @@ export function getDist(a, b) {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
+/** Median of a numeric array. Used wherever one bad frame must not move a
+ *  reference value that everything else is measured against. */
+export function median(arr) {
+  if (!arr || !arr.length) return 0;
+  const s = [...arr].sort((a, b) => a - b);
+  const m = s.length >> 1;
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
 // ── Shared joint-angle helpers (visibility-aware) ─────────────────────────────
 // Round 14: several variations (Diamond/Wide/Incline push-ups, Tricep Dip)
 // averaged BOTH arms with no visibility fallback — if one arm was occluded
@@ -614,16 +623,28 @@ export const EXERCISE_LIBRARY = [
     // downThreshold of 100° counted quarter squats — see squatDepthMetric()
     // above for why no knee-angle number could have fixed that.
     getAngle: (lm) => squatDepthMetric(lm),
-    upThreshold: 45,      // hips well above the knees — standing back up
-    downThreshold: 3,     // hip crease level with the top of the knee — parallel
-    partialThreshold: 30, // dipped into a real squat but never reached parallel
+    // 2026-10-01: the absolute thresholds below are now only FALLBACKS. What
+    // the counter actually uses is relativeDepth — fractions of your own
+    // standing reading — because a fixed number can't survive the perspective
+    // bias from where the phone is standing. The full explanation is on
+    // RepCounter._trackTop.
+    relativeDepth: {
+      arm: 0.80,     // back at the top: gap is 80%+ of standing
+      rep: 0.40,     // counts: gap has closed 60% — deep squat on a good camera,
+                     //         about parallel on a badly biased one
+      partial: 0.72, // a real attempt: gap closed 28%, i.e. past a quarter squat
+    },
+    upThreshold: 45,      // fallback only (used before the standing read settles)
+    downThreshold: 3,     // also a FLOOR: this deep always counts, estimate or not
+    partialThreshold: 30,
     minRepIntervalMs: 700,
-    // Time from crossing upThreshold to reaching depth. 450ms was the first
-    // guess and the simulation rejected an honest 400ms-descent squat with it —
-    // exactly the "too strict" failure the old 85° knee threshold had. 250ms
-    // still rejects a landmark jump (1-3 frames, 50-150ms) and a bounce off the
-    // bottom, which is all this guard is for.
-    minRepDurationMs: 250,
+    // Time from crossing the arm line to reaching depth — note that's a WINDOW
+    // INSIDE the descent, not the whole descent, so it's much shorter than the
+    // rep takes. Measured in simulation: a landmark teleport spans 50ms, an
+    // honest fast squat 200ms, a brisk cadence 150ms. 450ms and then 250ms both
+    // rejected honest reps; 130ms sits clear of all three. Glitch rejection is
+    // handled by depthFramesRequired instead, which doesn't depend on timing.
+    minRepDurationMs: 130,
     direction: 'down_then_up',
     primaryJoint: 'Depth',
     unit: '',
@@ -647,8 +668,11 @@ export const EXERCISE_LIBRARY = [
     // depth line is shallower than a strict squat and there's no duration
     // guard — the whole point is that it's fast.
     getAngle: (lm) => squatDepthMetric(lm),
-    upThreshold: 50,       // airborne/standing — hips highest of any leg move
-    downThreshold: 12,     // loaded landing position, not a full parallel squat
+    // Relative like the squat, but a jump squat's loaded landing is shallower
+    // than a strict squat and that's correct — the point is the jump, not depth.
+    relativeDepth: { arm: 0.82, rep: 0.55, partial: 0.80 },
+    upThreshold: 50,       // fallback only
+    downThreshold: 12,     // floor
     partialThreshold: 35,
     minRepIntervalMs: 500,
     direction: 'down_then_up',
@@ -669,12 +693,13 @@ export const EXERCISE_LIBRARY = [
     // hip-to-knee gap, so the top reading sits lower than a narrow squat's —
     // hence the gentler upThreshold. The depth line is the same: parallel.
     getAngle: (lm) => squatDepthMetric(lm),
-    upThreshold: 38,
-    downThreshold: 3,
+    relativeDepth: { arm: 0.80, rep: 0.42, partial: 0.74 },
+    upThreshold: 38,     // fallback only
+    downThreshold: 3,    // floor
     partialThreshold: 25,
     direction: 'down_then_up',
     minRepIntervalMs: 700,
-    minRepDurationMs: 250, // see the note on Squat
+    minRepDurationMs: 130, // see the note on Squat
     primaryJoint: 'Depth',
     unit: '',
     depthMeter: { top: 60, target: 3 },
@@ -1509,6 +1534,70 @@ export class RepCounter {
     this.partials = 0;
     this.deepest = null;        // best (lowest) reading of the attempt in progress
     this.leftTopAt = 0;         // when the current descent began
+    // Relative-depth state (squats). See the note on relativeDepth below.
+    this.topEst = null;         // this person's standing reading, as this camera sees it
+    this.topBuf = [];           // recent samples taken while standing at the top
+    this.atDepthFrames = 0;     // consecutive frames at or below the depth line
+    this.reachedDepthAt = 0;    // when depth was first reached this descent
+  }
+
+  /**
+   * Standing-reference tracking for relative depth.
+   *
+   * WHY THIS EXISTS — the 2026-10-01 field failure. The squat used an absolute
+   * depth threshold of 3, meaning "hip within 3% of torso length of the knee".
+   * Reported result: honest squats well past parallel were not counted at all.
+   *
+   * The reason is perspective, and it is not fixable with a different number.
+   * The metric reads the vertical hip-to-knee gap in the IMAGE. With the phone
+   * at hip height to your side, the knees travel forward toward the lens as you
+   * descend, and because they sit below the optical axis, moving closer pushes
+   * them further down the frame. The knee therefore appears lower than it is,
+   * which inflates the measured gap by a roughly constant amount for a given
+   * camera placement. Call that bias b. The gap reads L·cos(theta) + b, where L
+   * is thigh length and theta the thigh angle from vertical. Demanding a reading
+   * of ~0 demands cos(theta) = -b/L, i.e. a squat well BELOW parallel — more the
+   * bigger b is. Exactly the reported symptom. Every camera position gives a
+   * different b, so one absolute number cannot serve them all.
+   *
+   * What works is measuring each person's own standing reading and asking the
+   * gap to CLOSE by a fraction of it. The standing reading is L + b, so the
+   * closure fraction at parallel is L/(L+b): 100% with no bias, ~71% at b=0.4L,
+   * ~63% at b=0.6L. A 60% closure line therefore means a deep squat on a
+   * well-placed camera and roughly parallel on a badly-biased one, and it never
+   * demands the impossible.
+   *
+   * Seeding is reliable because ARTP runs a 3-2-1 countdown into the working
+   * phase: the first frames of a set are someone standing still.
+   */
+  _trackTop(d) {
+    const BUF = 15;
+    if (this.topEst === null) {
+      // Seeding — the set has just started and they're standing.
+      this.topBuf.push(d);
+      if (this.topBuf.length >= BUF) {
+        this.topEst = median(this.topBuf);
+        this.topBuf = [];
+      } else {
+        // Provisional, so the very first rep still has something to work with.
+        this.topEst = median(this.topBuf);
+      }
+      return;
+    }
+    // Refine whenever they're back near the top. Median of the dwell samples is
+    // the standing value; a single bad frame can't move it.
+    if (d >= this.topEst * 0.85) {
+      this.topBuf.push(d);
+      if (this.topBuf.length > BUF) this.topBuf.shift();
+      if (this.topBuf.length >= 5) {
+        const m = median(this.topBuf);
+        this.topEst = this.topEst * 0.6 + m * 0.4;
+      }
+    } else if (d > this.topEst) {
+      // A reading above the current estimate while NOT near the top shouldn't
+      // happen; treat it as the estimate being too low and raise it gently.
+      this.topEst = this.topEst * 0.9 + d * 0.1;
+    }
   }
 
   /**
@@ -1520,7 +1609,7 @@ export class RepCounter {
     }
 
     const angle = this.config.getAngle(landmarks);
-    const { upThreshold, downThreshold, direction } = this.config;
+    const { direction } = this.config;
 
     // ── Round 29: "no reading" handling ──────────────────────────────────────
     // A getAngle() may return null/NaN when it cannot measure honestly (see
@@ -1554,8 +1643,32 @@ export class RepCounter {
 
     const now = performance.now();
 
+    // ── Relative depth ───────────────────────────────────────────────────────
+    // When an exercise declares relativeDepth, the thresholds that matter are
+    // fractions of this person's own standing reading rather than fixed numbers
+    // (see _trackTop above for why fixed numbers cannot work here). The config's
+    // absolute downThreshold stays live as a floor: anything that deep counts
+    // whatever the estimate says, so a bad estimate can only ever be generous,
+    // never blocking.
+    const rel = this.config.relativeDepth;
+    let upThreshold = this.config.upThreshold;
+    let downThreshold = this.config.downThreshold;
+    let partialThreshold = this.config.partialThreshold;
+    if (rel) {
+      this._trackTop(angle);
+      const top = this.topEst;
+      if (top && top > 1) {
+        upThreshold = top * (rel.arm ?? 0.80);
+        downThreshold = Math.max(top * (rel.rep ?? 0.40), this.config.downThreshold ?? -Infinity);
+        partialThreshold = top * (rel.partial ?? 0.72);
+      }
+    }
+
     if (direction === 'down_then_up') {
-      const { partialThreshold, minRepDurationMs } = this.config;
+      // partialThreshold / downThreshold / upThreshold are the EFFECTIVE values
+      // computed above — relative to the standing reading when the exercise uses
+      // relativeDepth, straight from the config otherwise.
+      const { minRepDurationMs } = this.config;
 
       if (angle >= upThreshold) {
         // Back at the top, which closes out whatever just happened. If the
@@ -1578,16 +1691,47 @@ export class RepCounter {
         this.deepest = this.deepest === null ? angle : Math.min(this.deepest, angle);
       }
 
-      if (angle <= downThreshold && this.stage === 'up') {
-        // A descent faster than minRepDurationMs is a landmark jump or a bounce
-        // off the bottom, not a rep. Leaving `stage` armed means the attempt
-        // falls through to the partial check when they stand back up.
-        const fastEnough = !minRepDurationMs || !this.leftTopAt ||
-          (now - this.leftTopAt) >= minRepDurationMs;
-        if (fastEnough) {
+      // Frames spent continuously at or below the depth line. A real bottom
+      // position lasts several frames; a landmark glitch is one frame and then
+      // gone, so requiring two in a row throws out glitches without needing to
+      // guess at timing.
+      if (angle <= downThreshold) {
+        this.atDepthFrames++;
+        // When depth was FIRST reached this descent. The duration guard has to
+        // measure the descent, so it compares this against leftTopAt rather
+        // than against `now` — otherwise simply holding still at the bottom
+        // accumulated enough elapsed time to let a 100ms teleport qualify.
+        if (!this.reachedDepthAt) this.reachedDepthAt = now;
+      } else {
+        this.atDepthFrames = 0;
+        this.reachedDepthAt = 0;
+      }
+
+      // 2026-10-01 BUGFIX — the ascent re-fire. This test used to run on every
+      // frame below the line, including the whole way back UP. A 100ms bounce
+      // therefore scored a full rep the moment minRepDurationMs had elapsed,
+      // while the person was already standing again. `atBottom` confines
+      // counting to the bottom of the descent: `deepest` was updated from this
+      // same frame above, so while descending angle === deepest, and while
+      // rising angle is above it.
+      const atBottom = this.deepest === null || angle <= this.deepest + 1;
+
+      if (angle <= downThreshold && this.stage === 'up' && atBottom &&
+          this.atDepthFrames >= (this.config.depthFramesRequired ?? 2)) {
+        // A descent faster than minRepDurationMs isn't a squat — a body cannot
+        // travel from standing to depth that quickly. The attempt stays armed
+        // rather than being consumed, so a glitch can never steal a real rep;
+        // if they come back up without ever qualifying, the partial check at the
+        // top picks it up.
+        const descentMs = (this.reachedDepthAt || now) - (this.leftTopAt || now);
+        const slowEnough = !minRepDurationMs || !this.leftTopAt ||
+          descentMs >= minRepDurationMs;
+        if (slowEnough) {
           this.stage = 'down';
           this.deepest = null;
           this.leftTopAt = 0;
+          this.atDepthFrames = 0;
+          this.reachedDepthAt = 0;
           if (now - this.lastRepTime >= minInterval) {
             this.count++;
             repCounted = true;
@@ -1617,6 +1761,12 @@ export class RepCounter {
       partials: this.partials,
       partialCounted,
       tracking: true,
+      // The live thresholds, so the on-screen depth meter draws the line the
+      // counter is actually using. Showing a fixed line while counting against
+      // a moving one is how the last version looked broken.
+      topEst: this.topEst,
+      depthLine: downThreshold,
+      armLine: upThreshold,
     };
   }
 
@@ -1633,5 +1783,9 @@ export class RepCounter {
     this.partials = 0;
     this.deepest = null;
     this.leftTopAt = 0;
+    this.topEst = null;
+    this.topBuf = [];
+    this.atDepthFrames = 0;
+    this.reachedDepthAt = 0;
   }
 }

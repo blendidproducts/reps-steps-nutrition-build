@@ -1,61 +1,43 @@
-import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+/**
+ * MissingAssets.jsx — superseded by /ContentAudit (2026-09-30).
+ *
+ * This page listed names with no image_url and names with no youtube_url, from
+ * Exercise records only. /ContentAudit covers both of those plus stretches, the
+ * stretches that have no database row at all, instructions, descriptions, tips,
+ * muscle groups, hold durations and 3D models — grouped by how badly each one
+ * hurts the user, with a CSV export.
+ *
+ * Kept as a redirect rather than deleted so any existing link or bookmark still
+ * lands somewhere useful.
+ */
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { ClipboardCheck } from "lucide-react";
 
 export default function MissingAssets() {
-  const [exercises, setExercises] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
+  const target = createPageUrl("ContentAudit");
 
   useEffect(() => {
-    async function fetchExercises() {
-      try {
-        const data = await base44.entities.Exercise.list();
-        // Remove duplicates by name
-        const uniqueExercises = data.filter((exercise, index, self) => 
-          !exercise.is_deleted && index === self.findIndex(e => e.name?.toLowerCase() === exercise.name?.toLowerCase())
-        );
-        setExercises(uniqueExercises);
-      } catch (err) {
-        console.error(err);
-      }
-      setIsLoading(false);
-    }
-    fetchExercises();
-  }, []);
-
-  const missingImage = exercises.filter(e => !e.image_url || e.image_url.trim() === '').map(e => e.name).sort();
-  const missingYoutube = exercises.filter(e => !e.youtube_url || e.youtube_url.trim() === '').map(e => e.name).sort();
+    const t = setTimeout(() => navigate(target, { replace: true }), 1200);
+    return () => clearTimeout(t);
+  }, [navigate, target]);
 
   return (
-    <div className="p-6 bg-background text-foreground min-h-screen pb-24">
-      <h1 className="text-2xl font-bold mb-6">Missing Assets Report</h1>
-      {isLoading ? (
-        <p>Loading exercises...</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle>Missing Images ({missingImage.length})</CardTitle>
-            </CardHeader>
-            <CardContent className="max-h-[70vh] overflow-y-auto">
-              <ul className="list-disc pl-5 space-y-1 text-sm">
-                {missingImage.map((name, i) => <li key={i}>{name}</li>)}
-              </ul>
-            </CardContent>
-          </Card>
-          <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle>Missing YouTube Videos ({missingYoutube.length})</CardTitle>
-            </CardHeader>
-            <CardContent className="max-h-[70vh] overflow-y-auto">
-              <ul className="list-disc pl-5 space-y-1 text-sm">
-                {missingYoutube.map((name, i) => <li key={i}>{name}</li>)}
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+    <div className="min-h-screen bg-[#020817] text-white flex flex-col items-center justify-center px-6 text-center">
+      <ClipboardCheck className="w-10 h-10 text-blue-400 mb-3" />
+      <h1 className="text-lg font-bold">Moved to Content Audit</h1>
+      <p className="text-sm text-gray-400 mt-2 max-w-xs leading-snug">
+        The missing-assets report is now part of the full content audit, which also
+        covers stretches, instructions and tips. Taking you there…
+      </p>
+      <button
+        onClick={() => navigate(target, { replace: true })}
+        className="mt-5 text-blue-400 text-sm font-semibold underline"
+      >
+        Go now
+      </button>
     </div>
   );
 }
