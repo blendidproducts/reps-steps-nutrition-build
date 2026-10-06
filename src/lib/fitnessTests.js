@@ -259,33 +259,29 @@ export const BATTERIES = {
   // CCT, PJ, SR, TACP, STO, CRO and TACPO, used at several points in the
   // pipeline. It replaces the Tier 1 Air Force test for operators.
   //
-  // Nine scores from eight events (pro agility is run and scored both
-  // directions). None of them can be camera-tracked: this test is a rucksack, a
-  // pull-up bar, kettlebells, a measured lane and a pool. So every event is
-  // hand-entered, and the app's job here is to be an accurate scoresheet and a
-  // history, not a tracker.
+  // Nine scored components (pro agility counts twice, once per direction, and
+  // the cardio slot is a fin swim OR a run). None can be camera-tracked: this
+  // test is a rucksack, a pull-up bar, kettlebells, a measured lane and a pool.
+  // Every event is hand-entered and the app is the scoresheet.
   //
-  // UNSCORED on purpose: the official scoring chart is an image on the source
-  // page and its numbers are not in hand. The composite pass mark is 77 and any
-  // event below its own minimum is a failure regardless of composite — both
-  // facts are in the disclaimer, neither can be checked without the chart. So
-  // this scores against your own last attempt until the chart arrives.
+  // Scoring tables live in militaryStandards.js (OFT), read from the official
+  // chart on 2026-10-06.
   afspecwar: {
     key: "afspecwar",
     name: "AF Special Warfare — Tier 2 OFT",
     group: "military",
     branch: "specops",
-    standardsPending: true,
-    blurb: "The Tier 2 Operational Fitness Test. Nine scores, run in order, in combat uniform and boots.",
+    blurb: "The Tier 2 Operational Fitness Test. Nine components out of 100, run in order, in combat uniform and boots.",
     icon: "shield",
     accent: "#a78bfa",
-    scoring: "baseline",
+    scoring: "oft",
     needsProfile: false,
+    needsCardioChoice: true,   // Combat Fin OR Combat Run, never both
     disclaimer:
-      "Events, order, rest periods and equipment are the published Tier 2 OFT. The official " +
-      "scoring chart is not loaded yet, so this records your numbers and compares them to your " +
-      "last attempt — it does not tell you whether you passed. For reference, the minimum " +
-      "passing composite is 77, and any event below its own minimum fails that event outright.",
+      "Scored against the official AFSPECWAR OFT chart: 100 points across nine components, " +
+      "minimum composite 78, and any component below its own minimum fails outright however " +
+      "high the total. No age bands and no sex norming — one standard for every operator. " +
+      "Every event is hand-entered because none of them is something a phone camera can watch.",
     uniform: "Combat top and bottom with boots. Swim is combat uniform with booties, fins and mask; snorkel optional.",
     events: [
       { key: "ruck3", name: "3-Mile Ruck March", how: "entry", entryKind: "time",
@@ -314,9 +310,15 @@ export const BATTERIES = {
       { key: "shuttle300", name: "300-yd Shuttle Run", how: "entry", entryKind: "seconds",
         unit: "sec10", cue: "Six round trips on a 25-yard course. Run it twice with 5 minutes between — enter the average.",
         restAfter: 1200 },
-      { key: "finswim", name: "1500m Fin Swim", how: "entry", entryKind: "time",
+      // The chart's last column is "Combat Fin 1500M *Or* Combat Run 1.5mi" —
+      // one component worth up to 20 points, taken either way. Only the one you
+      // pick is run; `cardio: true` marks both as candidates for that slot.
+      { key: "finswim", name: "Combat Fin 1500M", how: "entry", entryKind: "time", cardio: true,
         unit: "secs", cue: "Side stroke, combat side stroke or lead-arm trail-arm. 30 laps in a 25m pool.",
         equipment: "Fins, mask, booties; snorkel optional", restAfter: 0 },
+      { key: "combatrun", name: "Combat Run 1.5mi", how: "entry", entryKind: "time", cardio: true,
+        unit: "secs", cue: "1.5 miles in boots and combat uniform. Enter your time.",
+        equipment: "Boots and combat uniform", restAfter: 0 },
     ],
   },
 
@@ -530,7 +532,8 @@ export function batteryMinutes(battery) {
 export const LOWER_IS_BETTER = new Set([
   "run15", "run2", "run3", "sdc",                          // Navy, Army, Air Force, Marines
   "swim500",                                               // SEAL PST
-  "ruck3", "agility_r", "agility_l", "farmers", "shuttle300", "finswim", // AFSPECWAR
+  "ruck3", "agility_r", "agility_l", "farmers", "shuttle300",  // AFSPECWAR
+  "finswim", "combatrun",                                      // either cardio choice
 ]);
 
 /** Per-event delta against the previous test of the same battery. */

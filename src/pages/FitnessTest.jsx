@@ -29,6 +29,7 @@ import {
 } from "@/lib/fitnessTests";
 import {
   PENDING, scoreAftTest, aftBand, scorePstTest, PST_PROGRAMS, PST_MINIMUMS,
+  scoreOftTest, OFT_CARDIO_OPTIONS, OFT_COMPOSITE_MIN, OFT_COMPOSITE_MAX,
 } from "@/lib/militaryStandards";
 import {
   ChevronLeft, Shield, Zap, Flame, Dumbbell, Play, Square, Timer as TimerIcon,
@@ -105,6 +106,10 @@ export default function FitnessTest() {
   // no sex norming — the program IS the standard, so it has to be chosen.
   const [pstProgram, setPstProgram] = useState("seal");
 
+  // AFSPECWAR only: the last component is a fin swim OR a run, worth up to 20
+  // points either way. Running both would double-count a fifth of the test.
+  const [oftCardio, setOftCardio] = useState("finswim");
+
   // Custom battery: the picked event keys, assembled on demand. Memoised so the
   // battery object keeps its identity between renders - finishEvent closes over
   // it, and a fresh object every render would re-fire its effects.
@@ -114,8 +119,16 @@ export default function FitnessTest() {
     if (batteryKey === "custom") {
       return customKeys.length ? buildCustomBattery(customKeys) : null;
     }
-    return BATTERIES[batteryKey] || null;
-  }, [batteryKey, customKeys]);
+    const b = BATTERIES[batteryKey];
+    if (!b) return null;
+    // A battery with a cardio choice carries both options in its event list;
+    // drop the one not chosen so the runner and the scorer see exactly the
+    // nine components the chart scores.
+    if (b.needsCardioChoice) {
+      return { ...b, events: b.events.filter((e) => !e.cardio || e.key === oftCardio) };
+    }
+    return b;
+  }, [batteryKey, customKeys, oftCardio]);
 
   const event = battery?.events[eventIndex] || null;
 
@@ -297,6 +310,33 @@ export default function FitnessTest() {
               </div>
             );
           })}
+
+          {/* The OFT's last component is a choice, worth up to 20 points —
+              a fifth of the test — whichever way you take it. */}
+          {battery?.needsCardioChoice && (
+            <div className="bg-[#111] border border-gray-800 rounded-2xl p-4 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                Final component
+              </p>
+              <p className="text-[11px] text-gray-500 leading-snug">
+                The chart lists these as alternatives — you take one, not both. Worth up to 20
+                points either way, with the minimum at 16.
+              </p>
+              <div className="grid grid-cols-1 gap-2">
+                {OFT_CARDIO_OPTIONS.map((o) => (
+                  <button key={o.key} onClick={() => setOftCardio(o.key)}
+                    className={`min-h-[52px] rounded-xl border px-3 py-2 text-left ${
+                      oftCardio === o.key
+                        ? "bg-[#a78bfa]/20 border-[#a78bfa] text-white"
+                        : "border-gray-700 text-gray-400"
+                    }`}>
+                    <span className="block text-sm font-bold">{o.label}</span>
+                    <span className="block text-[10px] text-gray-500 leading-tight">{o.sub}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* The PST asks a different question from every other scored test.
               There are no age bands and no sex norming in MILPERSMAN — the
@@ -759,7 +799,9 @@ function EventRunner({ event, index, total, accent, onDone, onAbort }) {
           <div className="flex items-end gap-2 my-8">
             <div>
               <label className="text-[10px] text-gray-500 block mb-1 text-left">MIN</label>
-              <input type="number" inputMode="numeric" min="0" max="59" value={entryA}
+              {/* Not capped at 59: the OFT fin swim's slowest scoring row is
+                  1:27:28, and a 3-mile ruck runs past an hour too. */}
+              <input type="number" inputMode="numeric" min="0" max="240" value={entryA}
                 onChange={(e) => setEntryA(e.target.value)} placeholder="0"
                 className="w-24 min-h-[64px] bg-[#0a0a0a] border border-gray-700 rounded-xl text-white text-center text-3xl font-black tabular-nums" />
             </div>
@@ -927,6 +969,9 @@ function Results({ record, onRestart, onExit }) {
     ? scorePstTest(record.events, record.program)
     : null;
 
+  // The OFT is points per component out of 100, with a per-component floor.
+  const oft = battery.scoring === "oft" ? scoreOftTest(record.events) : null;
+
   // The Line needs its three terms separated out of the events: rep-scored
   // events are reps, held events are time under load, the step burst is steps.
   const line = battery.scoring === "line" ? (() => {
@@ -948,6 +993,7 @@ function Results({ record, onRestart, onExit }) {
             {prt ? (prt.passed ? "🎖️" : "📋")
               : aft ? (aft.passed ? "🎖️" : "📋")
               : pst ? (pst.passed ? "🎖️" : "📋")
+              : oft ? (oft.passed ? "🎖️" : "📋")
               : "📊"}
           </div>
           <h1 className="text-2xl font-black">{battery.name}</h1>
@@ -1037,6 +1083,30 @@ function Results({ record, onRestart, onExit }) {
           </div>
         )}
 
+        {/* ── AFSPECWAR OFT result ─────────────────────────────────────── */}
+        {oft && oft.overall && (
+          <div className="rounded-2xl border-2 p-5 text-center"
+            style={{ borderColor: oft.overall.color, background: `${oft.overall.color}18` }}>
+            <p className="text-xs uppercase tracking-widest text-gray-400">Composite</p>
+            <p className="text-6xl font-black tabular-nums mt-1">
+              {oft.composite}
+              <span className="text-2xl text-gray-500">/{OFT_COMPOSITE_MAX}</span>
+            </p>
+            <p className="text-2xl font-black mt-1" style={{ color: oft.overall.color }}>
+              {oft.overall.label}
+            </p>
+            <p className="text-sm text-gray-400 mt-1">{oft.overall.detail}</p>
+            {/* A composite above 78 can still be a fail, and that's the part
+                people get wrong — so say it rather than showing a green number. */}
+            {!oft.everyComponentPassed && oft.composite >= OFT_COMPOSITE_MIN && (
+              <p className="text-[11px] text-red-300 mt-2 leading-snug">
+                You cleared {OFT_COMPOSITE_MIN} points but fell below the minimum on a component.
+                Banking points elsewhere doesn't cover it.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* ── The Line ─────────────────────────────────────────────────── */}
         {line && (
           <>
@@ -1074,8 +1144,13 @@ function Results({ record, onRestart, onExit }) {
               // Both scored tests produce points + a pass line per event, but
               // in different shapes. Normalise here so the row doesn't care
               // which service's table it came from.
-              const raw = (prt || aft || pst)?.scored.find((s) => s.key === e.key)?.result;
-              const scored = !raw ? null : prt ? {
+              const raw = (prt || aft || pst || oft)?.scored.find((s) => s.key === e.key)?.result;
+              const scored = !raw ? null : oft ? {
+                points: raw.points,
+                label: raw.pass ? `of ${raw.maxPoints}` : "Below minimum",
+                color: raw.pass ? "#4ade80" : "#ef4444",
+                min: raw.minimum, max: null,
+              } : prt ? {
                 points: raw.points, label: raw.category.label, color: raw.category.color,
                 min: raw.min, max: raw.max,
               } : aft ? {

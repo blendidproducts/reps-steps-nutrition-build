@@ -306,3 +306,125 @@ export function scorePstTest(events, program) {
     },
   };
 }
+
+// ── AFSPECWAR Tier 2 Operational Fitness Test ────────────────────────────────
+// Source: the official "AFSPECWAR OFT SCORES" chart, read 2026-10-06.
+//
+// Scored out of 100 across nine components, minimum composite 78. Each table is
+// [points, threshold] ordered best-first, and your score is the first row you
+// meet. Miss the lowest row and the component scores zero.
+//
+// HOW THE MINIMUMS WERE READ: the chart marks each component's minimum with a
+// blue cell, and the blue runs from the top of a column down to that minimum.
+// The lowest blue row per column is therefore the minimum. That reading is
+// self-checking — the nine minimums sum to exactly 78, the composite the chart
+// states — and the nine maxima sum to exactly 100. Both totals landing on the
+// nose is why these are trusted.
+//
+// Note the chart says 78; the instructions page accompanying it says 77. The
+// chart wins: its own arithmetic agrees with 78 and not with 77.
+export const OFT_COMPOSITE_MIN = 78;
+export const OFT_COMPOSITE_MAX = 100;
+
+const oft = (unit, lowerIsBetter, minPoints, table) =>
+  ({ unit, lowerIsBetter, minPoints, table });
+
+export const OFT = {
+  // The ruck is pass/fail and carries a fifth of the whole test on its own.
+  ruck3:      oft("secs",  true,  20, [[20, t(49, 0)]]),
+  longjump:   oft("in",    false,  8, [[10,94],[9,85],[8,76],[7,69],[6,62],[5,50],[4,42],[3,34],[2,25],[1,17]]),
+  agility_r:  oft("sec10", true,   3, [[5,4.99],[4,5.24],[3,5.50],[2,5.78],[1,6.07]]),
+  agility_l:  oft("sec10", true,   3, [[5,4.99],[4,5.24],[3,5.50],[2,5.78],[1,6.07]]),
+  trapbar:    oft("lbs",   false,  7, [[10,360],[9,325],[8,305],[7,270],[6,240],[5,205],[4,170],[3,135],[2,105],[1,70]]),
+  pullups:    oft("reps",  false,  6, [[10,16],[9,15],[8,14],[7,12],[6,10],[5,9],[4,8],[3,7],[2,5],[1,3]]),
+  farmers:    oft("sec10", true,   7, [[10,21],[9,24],[8,27],[7,29],[6,33],[5,36],[4,39],[3,43],[2,48],[1,52]]),
+  shuttle300: oft("sec10", true,   8, [[10,67.7],[9,71.1],[8,80.5],[7,84.5],[6,86.1],[5,90.3],[4,94.5],[3,99.8],[2,105.0],[1,110.3]]),
+};
+
+// The last component is a CHOICE, not two events: Combat Fin 1500M *or*
+// Combat Run 1.5mi. Both are worth up to 20 points and both have their minimum
+// at 16. Running both would double-count a fifth of the test.
+OFT.finswim = oft("secs", true, 16, [
+  [20, t(34,37)], [19, t(36,21)], [18, t(38,10)], [17, t(40, 4)], [16, t(42,50)],
+  [15, t(44,11)], [14, t(46,23)], [13, t(48,43)], [12, t(51, 9)], [11, t(53,42)],
+  [10, t(56,23)], [9, t(59,12)], [8, t(62,10)], [7, t(65,16)], [6, t(68,32)],
+  [5, t(71,58)], [4, t(75,34)], [3, t(79,21)], [2, t(83,19)], [1, t(87,28)],
+]);
+
+// The run table stops at 14 points — there is no published row below 12:59, so
+// a slower run scores zero rather than being extrapolated.
+OFT.combatrun = oft("secs", true, 16, [
+  [20, t(10,10)], [19, t(10,33)], [18, t(10,59)], [17, t(11,31)], [16, t(12,17)],
+  [15, t(12,42)], [14, t(12,59)],
+]);
+
+export const OFT_CARDIO_OPTIONS = [
+  { key: "finswim",   label: "Combat Fin 1500M", sub: "Fins, mask, booties — 30 laps in a 25m pool" },
+  { key: "combatrun", label: "Combat Run 1.5mi", sub: "In boots and combat uniform" },
+];
+
+/** The threshold value at a component's minimum score, for display. */
+export function oftMinimumValue(key) {
+  const ev = OFT[key];
+  if (!ev) return null;
+  const row = ev.table.find(([pts]) => pts === ev.minPoints);
+  return row ? row[1] : null;
+}
+
+/** Score one OFT component. Miss the lowest row and it's zero. */
+export function scoreOftEvent(key, value) {
+  const ev = OFT[key];
+  if (!ev || !Number.isFinite(Number(value))) return null;
+  const v = Number(value);
+  let points = 0;
+  for (const [pts, threshold] of ev.table) {
+    if (ev.lowerIsBetter ? v <= threshold : v >= threshold) { points = pts; break; }
+  }
+  return {
+    points,
+    maxPoints: ev.table[0][0],
+    minPoints: ev.minPoints,
+    minimum: oftMinimumValue(key),
+    pass: points >= ev.minPoints,
+    unit: ev.unit,
+    lowerIsBetter: ev.lowerIsBetter,
+  };
+}
+
+/**
+ * Whole OFT verdict.
+ *
+ * Two rules, both of which must hold, and they are not redundant:
+ *   1. composite >= 78
+ *   2. every component at or above its own minimum
+ * Because the nine minimums sum to exactly 78, rule 1 alone would pass someone
+ * who banked points on the deadlift to cover a failed swim. The chart's own
+ * note — "any score below the event minimum is a failure for the event" — is
+ * what rule 2 encodes.
+ */
+export function scoreOftTest(events) {
+  const scored = events.map((e) => ({ key: e.key, result: scoreOftEvent(e.key, e.value) }));
+  if (!scored.length || scored.some((s) => !s.result)) return { scored, overall: null };
+
+  const composite = scored.reduce((sum, s) => sum + s.result.points, 0);
+  const everyComponentPassed = scored.every((s) => s.result.pass);
+  const failed = scored.filter((s) => !s.result.pass).map((s) => s.key);
+  const passed = composite >= OFT_COMPOSITE_MIN && everyComponentPassed;
+
+  return {
+    scored,
+    composite,
+    everyComponentPassed,
+    failedComponents: failed,
+    passed,
+    overall: {
+      label: passed ? "PASS" : "FAIL",
+      color: passed ? "#4ade80" : "#ef4444",
+      detail: !everyComponentPassed
+        ? `${failed.length} component${failed.length === 1 ? "" : "s"} below minimum`
+        : composite < OFT_COMPOSITE_MIN
+          ? `${composite} of ${OFT_COMPOSITE_MIN} needed`
+          : `${composite} points`,
+    },
+  };
+}
