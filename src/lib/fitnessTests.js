@@ -375,13 +375,18 @@ export const BATTERIES = {
     accent: "#60a5fa",
     scoring: "baseline",
     needsProfile: false,
+    // Component weights confirmed from the Air Force's own September 2025
+    // release: cardio 50, waist-to-height 20, strength 15, core 15, out of 100.
+    // Nine age bands (<25 through 60+). The weights are known; the per-band
+    // numbers behind them are not, which is why this is still record-only.
     disclaimer:
       "The Air Force renamed and rebuilt this test: it is no longer the PFA, and the 1.5-mile " +
-      "run is gone. Components here are the run, strength and core events. Approved alternates " +
-      "exist (HAMR shuttle, standard push-ups, sit-ups, cross-leg reverse crunches) and are not " +
-      "yet offered. Waist-to-height is 20% of the official score and is a tape measurement, not " +
-      "a fitness event, so it is not measured here. Scoring charts not loaded — results are " +
-      "recorded and compared to your last attempt only.",
+      "run is gone. The official score is out of 100 — cardio 50, waist-to-height 20, strength " +
+      "15, core 15 — across nine age bands. Approved alternates exist (HAMR shuttle, 2km walk, " +
+      "standard push-ups, sit-ups, cross-leg reverse crunches) and are not yet offered. " +
+      "Waist-to-height is a tape measurement rather than a fitness event, so it is not measured " +
+      "here. The per-band scoring charts are not loaded, so results are recorded and compared to " +
+      "your last attempt only.",
     events: [
       { key: "hrp", name: "Hand-Release Push-ups", exercise: "Push-Up", how: "reps", seconds: 120,
         unit: "reps", cue: "2 minutes. Chest down, hands off the deck, then press.", restAfter: 180 },
