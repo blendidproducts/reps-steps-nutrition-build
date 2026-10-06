@@ -25,11 +25,13 @@ import {
   BATTERIES, BATTERY_LIST, batteryMinutes, scorePrtTest, lineScore, tierFor,
   compareToPrevious, ageBand, TEST_GROUPS, batteriesInGroup,
   CUSTOM_EVENT_POOL, buildCustomBattery,
+  MILITARY_SUBGROUPS, batteriesInSubgroup,
 } from "@/lib/fitnessTests";
+import { PENDING, scoreAftTest, aftBand } from "@/lib/militaryStandards";
 import {
   ChevronLeft, Shield, Zap, Flame, Dumbbell, Play, Square, Timer as TimerIcon,
   CheckCircle, AlertTriangle, TrendingUp, TrendingDown, Minus, RotateCcw, Footprints,
-  SlidersHorizontal, ChevronDown, Plus, Check,
+  SlidersHorizontal, ChevronDown, Plus, Check, Lock,
 } from "lucide-react";
 
 const ICONS = {
@@ -78,6 +80,11 @@ export default function FitnessTest() {
   const [openGroup, setOpenGroup] = useState(
     TEST_GROUPS.some((g) => g.key === groupParam) ? groupParam : "military"
   );
+
+  // Army only: the combat-arms standard is sex-neutral (everyone is scored on
+  // the male-normed column) and needs 350 total rather than just 60 per event.
+  // Which one applies is the soldier's MOS, so it's a question, not a guess.
+  const [aftCombat, setAftCombat] = useState(false);
 
   // Custom battery: the picked event keys, assembled on demand. Memoised so the
   // battery object keeps its identity between renders - finishEvent closes over
@@ -132,6 +139,9 @@ export default function FitnessTest() {
       taken_at: new Date().toISOString(),
       sex: profile.sex || null,
       age: profile.age ? Number(profile.age) : null,
+      // Stored on the record, not recomputed later: which standard you were
+      // held to is part of what the result MEANS, so a past test has to keep it.
+      combat: battery.hasCombatStandard ? aftCombat : false,
       events,
     };
     saveLocal(record);
@@ -203,7 +213,28 @@ export default function FitnessTest() {
                 {open && (
                   <div className="px-3 pb-3 space-y-3">
                     <p className="text-[11px] text-gray-400 leading-snug px-1">{g.detail}</p>
-                    {members.map((b) => (
+
+                    {/* The military group splits again — a branch's test of
+                        record and a selection screening test are different
+                        questions, so they don't belong in one flat list. */}
+                    {g.key === "military" ? MILITARY_SUBGROUPS.map((sg) => {
+                      const live = batteriesInSubgroup("military", sg.key);
+                      const pending = PENDING.filter((p) => p.subgroup === sg.key);
+                      return (
+                        <div key={sg.key} className="space-y-3">
+                          <div className="px-1 pt-1">
+                            <p className="text-[10px] font-black tracking-widest text-gray-400">{sg.label}</p>
+                            <p className="text-[10px] text-gray-600">{sg.sub}</p>
+                          </div>
+                          {live.map((b) => (
+                            <BatteryCard key={b.key} b={b}
+                              selected={batteryKey === b.key}
+                              onSelect={() => setBatteryKey(b.key)} />
+                          ))}
+                          {pending.map((p) => <PendingCard key={p.key} p={p} />)}
+                        </div>
+                      );
+                    }) : members.map((b) => (
                       <BatteryCard
                         key={b.key}
                         b={b}
@@ -238,9 +269,35 @@ export default function FitnessTest() {
                 Required for scoring
               </p>
               <p className="text-[11px] text-gray-500 leading-snug">
-                Navy standards are set per age group and sex. Without these the test can be
+                Service standards are set per age group and sex. Without these the test can be
                 run but not scored.
               </p>
+
+              {battery.hasCombatStandard && (
+                <div>
+                  <label className="text-[11px] text-gray-400 block mb-1.5">Which standard applies to you?</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      [false, "General", "60 pts per event"],
+                      [true, "Combat arms", "60 pts + 350 total"],
+                    ].map(([v, l, sub]) => (
+                      <button key={String(v)} onClick={() => setAftCombat(v)}
+                        className={`min-h-[52px] rounded-xl border px-2 py-1.5 text-left ${
+                          aftCombat === v
+                            ? "bg-[#84cc16]/20 border-[#84cc16] text-white"
+                            : "border-gray-700 text-gray-400"
+                        }`}>
+                        <span className="block text-sm font-semibold">{l}</span>
+                        <span className="block text-[10px] text-gray-500">{sub}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-gray-600 mt-1.5 leading-snug">
+                    The combat-arms standard is sex-neutral — everyone is scored on the
+                    male-normed column. It applies to 24 combat specialties.
+                  </p>
+                </div>
+              )}
               <div>
                 <label className="text-[11px] text-gray-400 block mb-1.5">Sex</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -266,9 +323,9 @@ export default function FitnessTest() {
                   placeholder="e.g. 34"
                   className="w-full min-h-[44px] bg-[#0a0a0a] border border-gray-700 rounded-xl px-3 text-white text-sm"
                 />
-                {profile.age && !ageBand(profile.age) && (
+                {profile.age && !(battery.scoring === "aft" ? aftBand(profile.age) : ageBand(profile.age)) && (
                   <p className="text-[10px] text-amber-400 mt-1">
-                    Navy tables start at 17 — the test will run but won't be scored.
+                    The service tables start at 17 — the test will run but won't be scored.
                   </p>
                 )}
               </div>
@@ -319,6 +376,29 @@ export default function FitnessTest() {
   }
 
   return null;
+}
+
+/* ── A branch whose standards aren't loaded yet ─────────────────────────────
+   Listed, named, and deliberately not runnable. The alternative was to ship the
+   events with invented thresholds, and a test that tells you you passed a
+   standard nobody verified is worse than no test at all. Each card says which
+   document is missing, so this is a to-do list rather than an apology. */
+function PendingCard({ p }) {
+  return (
+    <div className="rounded-2xl border border-gray-800 bg-[#0a0a0a] p-4 opacity-80">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-gray-900 border border-gray-800">
+          <Lock className="w-4 h-4 text-gray-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-sm text-gray-400">{p.name}</p>
+          <p className="text-[10px] text-gray-600 uppercase tracking-wide">Standards not loaded</p>
+        </div>
+      </div>
+      <p className="text-[11px] text-gray-500 mt-2.5 leading-snug">{p.events}</p>
+      <p className="text-[10px] text-gray-600 mt-2 leading-snug">{p.why}</p>
+    </div>
+  );
 }
 
 /* ── One preset battery ─────────────────────────────────────────────────────
@@ -459,6 +539,10 @@ function EventRunner({ event, index, total, accent, onDone, onAbort }) {
   const [taps, setTaps] = useState(0);
   const [steps, setSteps] = useState(0);
   const [distance, setDistance] = useState("");
+  // Hand-entered results: `entryA` is the whole number (pounds, or minutes) and
+  // `entryB` the seconds half of a mm:ss time.
+  const [entryA, setEntryA] = useState("");
+  const [entryB, setEntryB] = useState("");
   const stepBase = useRef(null);
 
   const cap = event.fixedSeconds ?? event.seconds ?? null;
@@ -536,6 +620,52 @@ function EventRunner({ event, index, total, accent, onDone, onAbort }) {
             <Square className="w-5 h-5" /> I DROPPED
           </button>
         )}
+      </Shell>
+    );
+  }
+
+  /* Hand-entered result — the deadlift and the sprint-drag-carry.
+     These need a hex bar, a sled and a measured lane. The phone can't watch any
+     of it, and pretending otherwise would mean swapping the event for something
+     camera-friendly and still calling the result an AFT score. So: do the event
+     properly, then type what you got. */
+  if (event.how === "entry") {
+    const isTime = event.entryKind === "time";
+    const value = isTime
+      ? (Number(entryA) || 0) * 60 + (Number(entryB) || 0)
+      : Number(entryA) || 0;
+    const ready = isTime ? value > 0 : Number(entryA) > 0;
+    return (
+      <Shell hint={event.equipment ? `Needs: ${event.equipment}` : undefined}>
+        {isTime ? (
+          <div className="flex items-end gap-2 my-8">
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-1 text-left">MIN</label>
+              <input type="number" inputMode="numeric" min="0" max="59" value={entryA}
+                onChange={(e) => setEntryA(e.target.value)} placeholder="0"
+                className="w-24 min-h-[64px] bg-[#0a0a0a] border border-gray-700 rounded-xl text-white text-center text-3xl font-black tabular-nums" />
+            </div>
+            <span className="text-3xl font-black text-gray-600 pb-4">:</span>
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-1 text-left">SEC</label>
+              <input type="number" inputMode="numeric" min="0" max="59" value={entryB}
+                onChange={(e) => setEntryB(e.target.value)} placeholder="00"
+                className="w-24 min-h-[64px] bg-[#0a0a0a] border border-gray-700 rounded-xl text-white text-center text-3xl font-black tabular-nums" />
+            </div>
+          </div>
+        ) : (
+          <div className="my-8">
+            <label className="text-[10px] text-gray-500 block mb-1">POUNDS</label>
+            <input type="number" inputMode="numeric" min="0" step="5" value={entryA}
+              onChange={(e) => setEntryA(e.target.value)} placeholder="0"
+              className="w-40 min-h-[64px] bg-[#0a0a0a] border border-gray-700 rounded-xl text-white text-center text-3xl font-black tabular-nums" />
+          </div>
+        )}
+        <button disabled={!ready} onClick={() => onDone(value)}
+          className="min-h-[56px] px-10 rounded-2xl font-black text-base text-black disabled:opacity-40 active:scale-95"
+          style={{ background: accent }}>
+          SAVE RESULT
+        </button>
       </Shell>
     );
   }
@@ -668,6 +798,12 @@ function Results({ record, onRestart, onExit }) {
     ? scorePrtTest(record.events, record.sex, record.age)
     : null;
 
+  // The AFT scores the same shape as the PRT — points per event, pass/fail
+  // overall — but its own tables and its own "did you clear the total" rule.
+  const aft = battery.scoring === "aft"
+    ? scoreAftTest(record.events, record.sex, record.age, record.combat)
+    : null;
+
   // The Line needs its three terms separated out of the events: rep-scored
   // events are reps, held events are time under load, the step burst is steps.
   const line = battery.scoring === "line" ? (() => {
@@ -685,7 +821,9 @@ function Results({ record, onRestart, onExit }) {
       <div className="max-w-lg mx-auto px-4 pt-[max(env(safe-area-inset-top),24px)] space-y-5">
 
         <div className="text-center space-y-1">
-          <div className="text-5xl">{prt ? (prt.passed ? "🎖️" : "📋") : "📊"}</div>
+          <div className="text-5xl">
+            {prt ? (prt.passed ? "🎖️" : "📋") : aft ? (aft.passed ? "🎖️" : "📋") : "📊"}
+          </div>
           <h1 className="text-2xl font-black">{battery.name}</h1>
           <p className="text-gray-500 text-xs">
             {new Date(record.taken_at).toLocaleString()}
@@ -716,6 +854,37 @@ function Results({ record, onRestart, onExit }) {
               <p className="text-xs text-amber-200/90 leading-snug">
                 Your results are saved, but there's no standards table for this age and sex, so
                 nothing was scored. Add them on the setup screen and retest to see where you land.
+              </p>
+            </div>
+          )
+        )}
+
+        {/* ── Army AFT result ──────────────────────────────────────────── */}
+        {aft && (
+          aft.overall ? (
+            <div className="rounded-2xl border-2 p-5 text-center"
+              style={{ borderColor: aft.overall.color, background: `${aft.overall.color}18` }}>
+              <p className="text-xs uppercase tracking-widest text-gray-400">
+                {record.combat ? "Combat arms standard" : "General standard"}
+              </p>
+              <p className="text-3xl font-black mt-1" style={{ color: aft.overall.color }}>
+                {aft.overall.label}
+              </p>
+              <p className="text-5xl font-black tabular-nums mt-2">{aft.total}</p>
+              <p className="text-sm text-gray-400 mt-1">{aft.overall.detail}</p>
+              {!aft.everyEventPassed && (
+                <p className="text-[11px] text-red-300 mt-2 leading-snug">
+                  60 points on every event is a hard floor — the total can't make up for a
+                  single event below it.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-amber-500/40 bg-amber-950/25 p-4 flex gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-200/90 leading-snug">
+                Your results are saved, but there's no AFT table for this age and sex, so
+                nothing was scored. Add them on the setup screen and retest.
               </p>
             </div>
           )
@@ -755,7 +924,18 @@ function Results({ record, onRestart, onExit }) {
           </div>
           <div className="divide-y divide-gray-800">
             {record.events.map((e, i) => {
-              const scored = prt?.scored.find((s) => s.key === e.key)?.result;
+              // Both scored tests produce points + a pass line per event, but
+              // in different shapes. Normalise here so the row doesn't care
+              // which service's table it came from.
+              const raw = (prt || aft)?.scored.find((s) => s.key === e.key)?.result;
+              const scored = !raw ? null : prt ? {
+                points: raw.points, label: raw.category.label, color: raw.category.color,
+                min: raw.min, max: raw.max,
+              } : {
+                points: raw.points, label: raw.pass ? "Pass" : "Below standard",
+                color: raw.pass ? "#4ade80" : "#ef4444",
+                min: raw.passValue, max: raw.maxValue,
+              };
               const d = deltas?.find((x) => x.key === e.key);
               return (
                 <div key={e.key} className="px-4 py-3">
@@ -767,8 +947,8 @@ function Results({ record, onRestart, onExit }) {
                   </div>
                   <div className="flex items-center gap-3 mt-1">
                     {scored && (
-                      <span className="text-[11px] font-bold" style={{ color: scored.category.color }}>
-                        {scored.points} pts · {scored.category.label}
+                      <span className="text-[11px] font-bold" style={{ color: scored.color }}>
+                        {scored.points} pts · {scored.label}
                       </span>
                     )}
                     {scored && (

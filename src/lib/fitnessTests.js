@@ -186,8 +186,9 @@ export const tierFor = (score) =>
 export const BATTERIES = {
   military: {
     key: "military",
-    name: "Military — Navy PRT",
+    name: "Navy PRT",
     group: "military",
+    subgroup: "service",
     blurb: "The real Navy Physical Readiness Test, scored against the published standards for your age and sex.",
     icon: "shield",
     accent: "#4ade80",
@@ -203,6 +204,43 @@ export const BATTERIES = {
         unit: "secs", cue: "Hold as long as you can. Tap STOP the moment your hips drop.", restAfter: 120 },
       { key: "run15", name: "1.5-Mile Run", how: "run", distanceLabel: "1.5 miles",
         unit: "secs", cue: "Run your measured 1.5-mile route. Tap STOP when you finish.", restAfter: 0 },
+    ],
+  },
+
+  // The AFT needs a hex bar, a 90-lb sled, two 40-lb kettlebells and a 25m lane.
+  // The app can't see any of that, so the deadlift and the sprint-drag-carry are
+  // entered by hand after you do them. That was the explicit call: keep the real
+  // Army standard rather than substitute a camera-friendly event and call it AFT.
+  army_aft: {
+    key: "army_aft",
+    name: "Army AFT",
+    group: "military",
+    subgroup: "service",
+    blurb: "The Army Fitness Test as it stands today — five events, scored against the published tables for your age and sex.",
+    icon: "shield",
+    accent: "#84cc16",
+    scoring: "aft",
+    needsProfile: true,
+    hasCombatStandard: true,
+    disclaimer:
+      "Tables from the Army's published AFT scoring scales (effective 1 June 2025). They were " +
+      "machine-read from the PDF, not checked by eye, and four cells look unusual — treat a " +
+      "borderline result as indicative. Two events need a hex bar and a sled, so you enter those yourself.",
+    events: [
+      { key: "deadlift", name: "3-Rep Max Deadlift", how: "entry", entryKind: "weight",
+        unit: "lbs", cue: "Three reps at the heaviest weight you can hold form on. Enter the weight.",
+        equipment: "60-lb hex bar + plates", restAfter: 120 },
+      { key: "hrp", name: "Hand-Release Push-ups", exercise: "Push-Up", how: "reps", seconds: 120,
+        unit: "reps", cue: "2 minutes. Chest to the deck, hands off the ground, then press.",
+        note: "The camera counts the press. It can't see the hand release, so keep yourself honest.",
+        restAfter: 120 },
+      { key: "sdc", name: "Sprint-Drag-Carry", how: "entry", entryKind: "time",
+        unit: "secs", cue: "Five 50m shuttles: sprint, drag, lateral, carry, sprint. Enter your time.",
+        equipment: "90-lb sled + two 40-lb kettlebells + 25m lane", restAfter: 120 },
+      { key: "plank", name: "Plank", exercise: "Plank", how: "hold",
+        unit: "secs", cue: "Hold. Tap STOP the moment your hips drop or rise.", restAfter: 120 },
+      { key: "run2", name: "Two-Mile Run", how: "run", distanceLabel: "2 miles",
+        unit: "secs", cue: "Run your measured two-mile route. Tap STOP when you finish.", restAfter: 0 },
     ],
   },
 
@@ -297,6 +335,13 @@ export function batteryMinutes(battery) {
   return Math.max(1, Math.round(secs / 60));
 }
 
+/**
+ * Events measured in seconds where FASTER is better. A hold measured in seconds
+ * is the opposite, so this can't be inferred from the unit — it has to be a
+ * list, and anything timed added later has to be added here too.
+ */
+export const LOWER_IS_BETTER = new Set(["run15", "run2", "sdc"]);
+
 /** Per-event delta against the previous test of the same battery. */
 export function compareToPrevious(events, previous) {
   if (!previous?.events?.length) return null;
@@ -304,7 +349,9 @@ export function compareToPrevious(events, previous) {
   return events.map((e) => {
     const before = prev[e.key];
     if (before == null) return { ...e, delta: null };
-    const lowerIsBetter = e.key === "run15";
+    // Timed events where a smaller number is a better result. Everything else
+    // (reps, held seconds, steps, pounds) improves upward.
+    const lowerIsBetter = LOWER_IS_BETTER.has(e.key);
     const diff = e.value - before;
     return {
       ...e,
@@ -326,8 +373,8 @@ export const TEST_GROUPS = [
   {
     key: "military",
     label: "MILITARY",
-    sub: "Official service standards",
-    detail: "Scored against published military standards for your age and sex. Pass or fail.",
+    sub: "Branch tests and spec ops screening",
+    detail: "Scored against published military standards for your age and sex. Pass or fail, the way the service scores it.",
     accent: "#4ade80",
     icon: "shield",
   },
@@ -351,6 +398,17 @@ export const TEST_GROUPS = [
 
 export const batteriesInGroup = (group) =>
   BATTERY_LIST.filter((b) => b.group === group);
+
+// The military group splits again, because a branch's test of record and a
+// special-operations screening test answer different questions: one is "am I
+// within standard", the other is "would I be competitive for selection".
+export const MILITARY_SUBGROUPS = [
+  { key: "service", label: "BRANCH TESTS", sub: "The test of record for each service" },
+  { key: "specops", label: "SPEC OPS SCREENING", sub: "Selection and qualification standards" },
+];
+
+export const batteriesInSubgroup = (group, subgroup) =>
+  BATTERY_LIST.filter((b) => b.group === group && b.subgroup === subgroup);
 
 // ── Build-your-own ───────────────────────────────────────────────────────────
 // Every event any preset battery uses, de-duplicated, offered as a pool. The

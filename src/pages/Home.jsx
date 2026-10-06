@@ -214,7 +214,7 @@ export default function Home() {
 
           <div className="grid grid-cols-3 gap-2 mt-4">
             {[
-              { key: "military", label: "MILITARY", sub: "Navy PRT standards" },
+              { key: "military", label: "MILITARY", sub: "Branch + spec ops" },
               { key: "private", label: "PRIVATE", sub: "RepsAndSteps output" },
               { key: "custom", label: "CUSTOM", sub: "Build your own" },
             ].map((g) => (
