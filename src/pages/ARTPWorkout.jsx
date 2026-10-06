@@ -24,6 +24,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import RepTracker, { releaseSharedCamera } from "@/components/workout/RepTracker";
 import { matchExercise } from "@/lib/exerciseTracking";
 import StepTracker from "@/components/StepTracker";
+import BuildStamp from "@/components/BuildStamp";
 import { thumbImg, mediumImg } from "@/lib/imgOpt";
 import {
   Brain, Timer, Zap, ChevronRight, ChevronLeft,
@@ -1114,13 +1115,17 @@ function WarmupScreen({ onFinish, onSkipAll, imageMap = {}, totalSteps = 0 }) {
   // no start button, so it blew through arm circles while you set up the phone.
   // Nothing runs until the user presses START WARM-UP.
   const [started, setStarted] = useState(false);
-  // Get-ready countdown before each move (2026-10-01). Jumping straight from
-  // one move's timer into the next gave you no time to read what was coming or
-  // get into position; the first few seconds of every move were wasted. `prep`
-  // counts 5 -> 0 before the move timer starts: the name is announced at 5, the
-  // digits at 3/2/1, "begin" at 0. Spaced like that because speak() cancels
-  // whatever is already talking, so back-to-back utterances cut each other off.
-  const PREP_SECS = 5;
+  // Get-ready countdown before each move (2026-10-01, shortened 10-06).
+  // Jumping straight from one move's timer into the next gave you no time to
+  // read what was coming or get into position.
+  //
+  // 3 seconds, not the 5 it shipped at: across six moves that was 30 seconds of
+  // standing still, and it made the warm-up feel padded. The trade is that the
+  // spoken name now has to share the 3 seconds with the digits, so it's been cut
+  // to "Next: Toe Touches" — the form cue is on screen to read and doesn't need
+  // saying. speak() cancels whatever is already talking, which is why the name
+  // goes at 3 and the digits only at 2 and 1.
+  const PREP_SECS = 3;
   const [prep, setPrep] = useState(null);   // null = not prepping
   const move = WARMUP_ROUTINE[idx];
   const moveImg = (move.imgKeys || []).map((k) => imageMap[k]).find(Boolean);
@@ -1132,8 +1137,8 @@ function WarmupScreen({ onFinish, onSkipAll, imageMap = {}, totalSteps = 0 }) {
   // Prep countdown. Announces the move at the top, then the digits.
   useEffect(() => {
     if (!started || prep === null) return;
-    if (prep === PREP_SECS) speak(`Get ready for ${move.name}. ${move.cue}`, 1.05, 1.05);
-    else if (prep > 0 && prep <= 3) speak(String(prep), 1.2, 1.2);
+    if (prep === PREP_SECS) speak(`Next: ${move.name}`, 1.05, 1.05);
+    else if (prep > 0) speak(String(prep), 1.2, 1.2);
     if (prep <= 0) {
       speak("Begin!", 1.1, 1.15);
       setPrep(null);           // hands over to the move timer below
@@ -2175,6 +2180,11 @@ function ARTPWorkoutInner() {
         </AnimatePresence>
 
       </div>
+
+      {/* Which build is this? Sits here because the ARTP setup screen is where
+          every test session starts, so it's the first thing to check when
+          something that was supposedly fixed still looks broken. */}
+      <BuildStamp />
 
       {/* Reserve the space the fixed START bar occupies, so the last exercise
           row can always be scrolled clear of it. */}

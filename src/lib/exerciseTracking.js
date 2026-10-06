@@ -208,6 +208,45 @@ export function squatDepthMetric(lm) {
   return ((kneeMid.y - hipMid.y) / Math.max(ref, 0.08)) * 100;
 }
 
+/** Single-leg squat depth — the working leg's hip-to-knee height gap, normalized
+ *  by torso length. Same idea as squatDepthMetric, same reason (see the note on
+ *  RepCounter._trackTop): a 2D knee angle is corrupted by perspective, a
+ *  comparison of two heights is not.
+ *
+ *  "Working leg" is the MORE FLEXED one, which is the smaller gap. In a lunge the
+ *  rear thigh stays near vertical, so its gap stays near full thigh length, while
+ *  the front thigh rotates toward horizontal and its gap closes toward zero.
+ *  Taking the minimum therefore picks the front leg automatically, whichever leg
+ *  is forward — which also removes the old left-leg-only bug without needing the
+ *  visibility heuristics workingKneeAngle used.
+ *
+ *  ⚠️ Do NOT use this for the pistol squat. There the non-working leg is held
+ *  out horizontally in FRONT of you, so its hip-to-knee gap is near zero from
+ *  the moment you stand up — the minimum would read "at depth" permanently and
+ *  every frame would count. Pistol stays on knee angle until it gets a metric
+ *  that identifies the standing leg (ankle below hip) first.
+ *
+ *  Returns null rather than a guess when the landmarks aren't visible. */
+export function singleLegDepthMetric(lm) {
+  const shVis = ((lm[11]?.visibility ?? 0) + (lm[12]?.visibility ?? 0)) / 2;
+  const hipVis = ((lm[23]?.visibility ?? 0) + (lm[24]?.visibility ?? 0)) / 2;
+  if (hipVis < 0.4) return null;
+
+  const hipMid = getMid(lm[23], lm[24]);
+  const ref = shVis >= 0.4
+    ? getDist(getMid(lm[11], lm[12]), hipMid)
+    : getDist(hipMid, getMid(lm[25], lm[26]));
+  const scale = Math.max(ref, 0.08);
+
+  // Per-side gap, using that side's own hip so a rotated torso doesn't skew it.
+  const sides = [];
+  if ((lm[25]?.visibility ?? 0) >= 0.4) sides.push((lm[25].y - lm[23].y) / scale * 100);
+  if ((lm[26]?.visibility ?? 0) >= 0.4) sides.push((lm[26].y - lm[24].y) / scale * 100);
+  if (!sides.length) return null;
+
+  return Math.min(...sides);
+}
+
 /** Apparent body width in normalized image units — the raw signal the distance
  *  tracker measures. Averages shoulder width and hip width when both are
  *  visible, falls back to whichever one is. Returns null when neither is.
@@ -713,15 +752,21 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Legs',
     color: '#22c55e',
-    // Round 20: use the SMALLER knee angle — symmetric, so crossed/swapped
-    // landmarks at 3/4 camera views don't matter, and EACH leg's lunge (left
-    // or right) dips the metric → alternating lunges count 1 rep per leg.
-    getAngle: (lm) => Math.min(getAngle(lm[23], lm[25], lm[27]), getAngle(lm[24], lm[26], lm[28])),
-    upThreshold: 155,
-    downThreshold: 100,
+    // 2026-10-06: knee angle replaced with the working leg's hip-vs-knee height,
+    // for the same perspective reason as the squat. The min-of-both-sides rule
+    // still gives the Round 20 property that either leg's lunge dips the metric,
+    // so alternating lunges count 1 rep per leg.
+    getAngle: (lm) => singleLegDepthMetric(lm),
+    relativeDepth: { arm: 0.80, rep: 0.45, partial: 0.75 },
+    upThreshold: 45,   // fallback only
+    downThreshold: 5,  // floor
+    partialThreshold: 32,
     direction: 'down_then_up',
     minRepIntervalMs: 600,
-    primaryJoint: 'Front Knee',
+    minRepDurationMs: 130,
+    primaryJoint: 'Depth',
+    unit: '',
+    depthMeter: { top: 70, target: 5 },
     formCues: ['Front knee behind toes', 'Back knee near floor', 'Left = 1 rep, right = 1 rep', 'Upright torso'],
   },
   {
@@ -732,13 +777,18 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Legs',
     color: '#22c55e',
-    // Round 20: min-knee metric — see Lunge note (alternating-leg + crossed-landmark proof)
-    getAngle: (lm) => Math.min(getAngle(lm[23], lm[25], lm[27]), getAngle(lm[24], lm[26], lm[28])),
-    upThreshold: 155,
-    downThreshold: 100,
+    // Depth metric — see the Lunge note above.
+    getAngle: (lm) => singleLegDepthMetric(lm),
+    relativeDepth: { arm: 0.80, rep: 0.45, partial: 0.75 },
+    upThreshold: 45,
+    downThreshold: 5,
+    partialThreshold: 32,
     direction: 'down_then_up',
     minRepIntervalMs: 600,
-    primaryJoint: 'Front Knee',
+    minRepDurationMs: 130,
+    primaryJoint: 'Depth',
+    unit: '',
+    depthMeter: { top: 70, target: 5 },
     formCues: ['Step backward', 'Control the descent', 'Left = 1 rep, right = 1 rep', 'Push through front heel'],
   },
   {
@@ -749,12 +799,19 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Legs',
     color: '#15803d',
-    getAngle: (lm) => workingKneeAngle(lm),
-    upThreshold: 155,
-    downThreshold: 100,
+    // Depth metric — see the Lunge note. The elevated rear foot keeps that
+    // thigh's gap wide, so the minimum picks the front leg as intended.
+    getAngle: (lm) => singleLegDepthMetric(lm),
+    relativeDepth: { arm: 0.80, rep: 0.45, partial: 0.75 },
+    upThreshold: 45,
+    downThreshold: 5,
+    partialThreshold: 32,
     direction: 'down_then_up',
     minRepIntervalMs: 700,
-    primaryJoint: 'Front Knee',
+    minRepDurationMs: 130,
+    primaryJoint: 'Depth',
+    unit: '',
+    depthMeter: { top: 70, target: 5 },
     formCues: ['Rear foot elevated on bench', 'Torso upright', 'Deep range of motion'],
   },
   {
@@ -765,6 +822,12 @@ export const EXERCISE_LIBRARY = [
     trackable: true,
     category: 'Legs',
     color: '#22c55e',
+    // Deliberately still on knee angle (2026-10-06). The lunge family moved to
+    // singleLegDepthMetric because the front thigh rotates to horizontal, which
+    // makes the hip-knee gap close predictably. A step-up doesn't do that — the
+    // working thigh is already flexed at the BOTTOM with the foot on the box, so
+    // the depth signal has a different shape and would need its own thresholds.
+    // Not changing it blind; it hasn't been reported as wrong.
     getAngle: (lm) => workingKneeAngle(lm),
     upThreshold: 155,
     downThreshold: 100,
