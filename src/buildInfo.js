@@ -3,5 +3,5 @@
 // string shown in the app can be found directly in git log.
 export const BUILD = {
   stamp: "2026-10-06 10:16",
-  iso: "2026-10-06T17:16:40Z",
+  iso: "2026-10-06T17:16:59Z",
 };
