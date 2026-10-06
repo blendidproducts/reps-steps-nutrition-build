@@ -334,29 +334,30 @@ export const BATTERIES = {
     name: "Navy SEAL / SWCC PST",
     group: "military",
     branch: "specops",
-    standardsPending: true,
-    blurb: "The Physical Screening Test for SEAL, SWCC, EOD, diver and rescue swimmer. Run as one continuous event.",
+    blurb: "The Physical Screening Test for SEAL, SWCC, EOD, diver and rescue swimmer. One continuous event, scored against the published minimums.",
     icon: "shield",
     accent: "#f59e0b",
-    scoring: "baseline",
+    scoring: "pst",
     needsProfile: false,
+    needsProgram: true,      // which pipeline — there are no age or sex bands
     disclaimer:
-      "Event list and order are the published PST. The official minimum and competitive scores " +
-      "live in MILPERSMAN 1220-410, which we have not read — so this records your numbers and " +
-      "shows your progress, but will not tell you whether you qualified. Rest periods below " +
-      "follow the published protocol and are part of the test.",
+      "Minimums from MILPERSMAN 1220-410. The PST has no age bands and no sex norming — one " +
+      "standard per pipeline. These are the MINIMUMS to receive a contract and stay eligible, " +
+      "not competitive scores: clearing them is the floor, not the bar. The rest periods below " +
+      "are part of the test, and the whole thing is run as a single event.",
     events: [
       { key: "swim500", name: "500-Yard Swim", how: "entry", entryKind: "time",
         unit: "secs", cue: "Side stroke or breaststroke. Enter your time.",
         equipment: "Pool", restAfter: 600 },
       { key: "pushups", name: "Push-ups", exercise: "Push-Up", how: "reps", seconds: 120,
-        unit: "reps", cue: "2 minutes. Full lockout at the top.", restAfter: 120 },
-      // The pose model was never reliable on sit-ups — it's a tap counter here
-      // rather than a camera event pretending to be accurate.
-      { key: "situps", name: "Sit-ups", how: "manual", seconds: 120,
-        unit: "reps", cue: "2 minutes. Tap for each rep — the camera can't count these.", restAfter: 120 },
+        unit: "reps", cue: "Maximum in 2 minutes. Full lockout at the top.", restAfter: 120 },
+      // MILPERSMAN calls these curl-ups, not sit-ups. Using the document's word
+      // matters when someone is comparing the app against the real scoresheet.
+      // Tap-counted: the pose model was never reliable on this movement.
+      { key: "curlups", name: "Curl-ups", how: "manual", seconds: 120,
+        unit: "reps", cue: "Maximum in 2 minutes. Tap for each rep — the camera can't count these.", restAfter: 120 },
       { key: "pullups", name: "Pull-ups", how: "entry", entryKind: "reps",
-        unit: "reps", cue: "Dead hang, no time limit. Enter your total.",
+        unit: "reps", cue: "Maximum, no time limit. Dead hang. Enter your total.",
         equipment: "Pull-up bar", restAfter: 600 },
       { key: "run15", name: "1.5-Mile Run", how: "run", distanceLabel: "1.5 miles",
         unit: "secs", cue: "Run your measured 1.5-mile route. Tap STOP when you finish.", restAfter: 0 },

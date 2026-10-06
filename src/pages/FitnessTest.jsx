@@ -27,7 +27,9 @@ import {
   CUSTOM_EVENT_POOL, buildCustomBattery,
   MILITARY_BRANCHES, batteriesInBranch,
 } from "@/lib/fitnessTests";
-import { PENDING, scoreAftTest, aftBand } from "@/lib/militaryStandards";
+import {
+  PENDING, scoreAftTest, aftBand, scorePstTest, PST_PROGRAMS, PST_MINIMUMS,
+} from "@/lib/militaryStandards";
 import {
   ChevronLeft, Shield, Zap, Flame, Dumbbell, Play, Square, Timer as TimerIcon,
   CheckCircle, AlertTriangle, TrendingUp, TrendingDown, Minus, RotateCcw, Footprints,
@@ -99,6 +101,10 @@ export default function FitnessTest() {
   // Which one applies is the soldier's MOS, so it's a question, not a guess.
   const [aftCombat, setAftCombat] = useState(false);
 
+  // PST only: which pipeline you're screening for. The PST has no age bands and
+  // no sex norming — the program IS the standard, so it has to be chosen.
+  const [pstProgram, setPstProgram] = useState("seal");
+
   // Custom battery: the picked event keys, assembled on demand. Memoised so the
   // battery object keeps its identity between renders - finishEvent closes over
   // it, and a fresh object every render would re-fire its effects.
@@ -155,6 +161,7 @@ export default function FitnessTest() {
       // Stored on the record, not recomputed later: which standard you were
       // held to is part of what the result MEANS, so a past test has to keep it.
       combat: battery.hasCombatStandard ? aftCombat : false,
+      program: battery.needsProgram ? pstProgram : null,
       events,
     };
     saveLocal(record);
@@ -290,6 +297,59 @@ export default function FitnessTest() {
               </div>
             );
           })}
+
+          {/* The PST asks a different question from every other scored test.
+              There are no age bands and no sex norming in MILPERSMAN — the
+              pipeline you're screening for IS the standard, and the gap between
+              them is wide (SEAL wants 10 pull-ups, a rescue swimmer 4). */}
+          {battery?.needsProgram && (
+            <div className="bg-[#111] border border-gray-800 rounded-2xl p-4 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                Which pipeline?
+              </p>
+              <p className="text-[11px] text-gray-500 leading-snug">
+                The PST has no age or sex bands — one set of minimums per program.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {PST_PROGRAMS.map((p) => (
+                  <button key={p.key} onClick={() => setPstProgram(p.key)}
+                    className={`min-h-[52px] rounded-xl border px-2.5 py-1.5 text-left ${
+                      pstProgram === p.key
+                        ? "bg-[#f59e0b]/20 border-[#f59e0b] text-white"
+                        : "border-gray-700 text-gray-400"
+                    }`}>
+                    <span className="block text-sm font-bold">{p.label}</span>
+                    <span className="block text-[10px] text-gray-500 leading-tight">{p.sub}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="pt-1 space-y-1 border-t border-white/10">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide pt-2">
+                  Minimums for {PST_PROGRAMS.find((p) => p.key === pstProgram)?.label}
+                </p>
+                <div className="grid grid-cols-5 gap-1 text-center">
+                  {[
+                    ["Swim", fmtSecs(PST_MINIMUMS[pstProgram].swim500)],
+                    ["Push", PST_MINIMUMS[pstProgram].pushups],
+                    ["Curl", PST_MINIMUMS[pstProgram].curlups],
+                    ["Pull", PST_MINIMUMS[pstProgram].pullups],
+                    ["Run", fmtSecs(PST_MINIMUMS[pstProgram].run15)],
+                  ].map(([l, v]) => (
+                    <div key={l}>
+                      <p className="text-[9px] text-gray-600 uppercase">{l}</p>
+                      <p className="text-xs font-bold tabular-nums text-gray-300">{v}</p>
+                    </div>
+                  ))}
+                </div>
+                {pstProgram === "eod" && (
+                  <p className="text-[10px] text-amber-300/90 leading-snug pt-1">
+                    EOD is scored on the combined swim + run: under 21:00 total, with neither
+                    over 12:30. A slower swim can be made up by a faster run.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Age and sex — only the military battery needs them, because only it
               scores against age- and sex-normed standards. Asking everyone for
@@ -862,6 +922,11 @@ function Results({ record, onRestart, onExit }) {
     ? scoreAftTest(record.events, record.sex, record.age, record.combat)
     : null;
 
+  // The PST is pass/fail against one program's minimums — no points at all.
+  const pst = battery.scoring === "pst"
+    ? scorePstTest(record.events, record.program)
+    : null;
+
   // The Line needs its three terms separated out of the events: rep-scored
   // events are reps, held events are time under load, the step burst is steps.
   const line = battery.scoring === "line" ? (() => {
@@ -880,7 +945,10 @@ function Results({ record, onRestart, onExit }) {
 
         <div className="text-center space-y-1">
           <div className="text-5xl">
-            {prt ? (prt.passed ? "🎖️" : "📋") : aft ? (aft.passed ? "🎖️" : "📋") : "📊"}
+            {prt ? (prt.passed ? "🎖️" : "📋")
+              : aft ? (aft.passed ? "🎖️" : "📋")
+              : pst ? (pst.passed ? "🎖️" : "📋")
+              : "📊"}
           </div>
           <h1 className="text-2xl font-black">{battery.name}</h1>
           <p className="text-gray-500 text-xs">
@@ -948,6 +1016,27 @@ function Results({ record, onRestart, onExit }) {
           )
         )}
 
+        {/* ── PST result ───────────────────────────────────────────────── */}
+        {pst && pst.overall && (
+          <div className="rounded-2xl border-2 p-5 text-center"
+            style={{ borderColor: pst.overall.color, background: `${pst.overall.color}18` }}>
+            <p className="text-xs uppercase tracking-widest text-gray-400">
+              {PST_PROGRAMS.find((p) => p.key === record.program)?.label || "PST"} minimums
+            </p>
+            <p className="text-2xl font-black mt-1" style={{ color: pst.overall.color }}>
+              {pst.overall.label}
+            </p>
+            <p className="text-sm text-gray-400 mt-1">{pst.overall.detail}</p>
+            {pst.cardioNote && (
+              <p className="text-[11px] text-amber-200/90 mt-2 leading-snug">{pst.cardioNote}</p>
+            )}
+            <p className="text-[11px] text-gray-500 mt-3 leading-snug">
+              These are minimums, not competitive scores. Clearing them is the floor for a
+              contract — candidates who get selected are well past it.
+            </p>
+          </div>
+        )}
+
         {/* ── The Line ─────────────────────────────────────────────────── */}
         {line && (
           <>
@@ -985,14 +1074,21 @@ function Results({ record, onRestart, onExit }) {
               // Both scored tests produce points + a pass line per event, but
               // in different shapes. Normalise here so the row doesn't care
               // which service's table it came from.
-              const raw = (prt || aft)?.scored.find((s) => s.key === e.key)?.result;
+              const raw = (prt || aft || pst)?.scored.find((s) => s.key === e.key)?.result;
               const scored = !raw ? null : prt ? {
                 points: raw.points, label: raw.category.label, color: raw.category.color,
                 min: raw.min, max: raw.max,
-              } : {
+              } : aft ? {
                 points: raw.points, label: raw.pass ? "Pass" : "Below standard",
                 color: raw.pass ? "#4ade80" : "#ef4444",
                 min: raw.passValue, max: raw.maxValue,
+              } : {
+                // The PST has no points at all — just the minimum and whether
+                // you cleared it. Showing a fabricated score here would be
+                // inventing a number the Navy doesn't publish.
+                points: null, label: raw.pass ? "Meets minimum" : "Below minimum",
+                color: raw.pass ? "#4ade80" : "#ef4444",
+                min: raw.minimum, max: null,
               };
               const d = deltas?.find((x) => x.key === e.key);
               return (
@@ -1004,12 +1100,14 @@ function Results({ record, onRestart, onExit }) {
                   <div className="flex items-center gap-3 mt-1">
                     {scored && (
                       <span className="text-[11px] font-bold" style={{ color: scored.color }}>
-                        {scored.points} pts · {scored.label}
+                        {scored.points != null ? `${scored.points} pts · ` : ""}{scored.label}
                       </span>
                     )}
                     {scored && (
                       <span className="text-[10px] text-gray-600">
-                        pass {fmtValue(scored.min, e.unit)} · max {fmtValue(scored.max, e.unit)}
+                        {scored.max != null
+                          ? `pass ${fmtValue(scored.min, e.unit)} · max ${fmtValue(scored.max, e.unit)}`
+                          : `minimum ${fmtValue(scored.min, e.unit)}`}
                       </span>
                     )}
                     {d?.delta != null && d.delta !== 0 && (

@@ -210,3 +210,99 @@ export const PENDING = [
     doc: "MARSOC Letter to the Candidate",
   },
 ];
+
+// ── Navy Physical Screening Test (PST) ───────────────────────────────────────
+// Source: MILPERSMAN 1220-410, read 2026-10-06.
+//
+// The PST is structurally unlike every other test in this file. There are NO
+// age bands and NO sex norming: one set of minimums per PROGRAM, and the whole
+// test is run as a single continuous event with fixed rests. So the question
+// the app has to ask is "which pipeline", not "how old are you".
+//
+// These are MINIMUMS — the floor to receive a contract and stay eligible. They
+// are not competitive scores, and MILPERSMAN doesn't publish those, so the app
+// must not imply that clearing a minimum makes anyone competitive.
+export const PST_PROGRAMS = [
+  { key: "seal",       label: "SEAL",                  sub: "Sea, Air and Land" },
+  { key: "swcc",       label: "SWCC",                  sub: "Special Warfare Combatant-craft Crewmen" },
+  { key: "eod",        label: "EOD",                   sub: "Explosive Ordnance Disposal" },
+  { key: "diver_m2dv", label: "Navy Diver (M2DV)",     sub: "Second Class Diver" },
+  { key: "diver_m1dv", label: "Navy Diver (M1DV)",     sub: "First Class Diver" },
+  { key: "airr",       label: "Rescue Swimmer (AIRR)", sub: "Aviation Rescue Swimmer" },
+];
+
+export const PST_MINIMUMS = {
+  seal:       { swim500: t(12,30), pushups: 50, curlups: 50, pullups: 10, run15: t(10,30) },
+  swcc:       { swim500: t(13,0),  pushups: 50, curlups: 50, pullups: 6,  run15: t(12,0) },
+  // EOD is scored differently and the rule is in the combined-time note below.
+  eod:        { swim500: t(12,30), pushups: 50, curlups: 50, pullups: 6,  run15: t(12,30) },
+  diver_m2dv: { swim500: t(12,0),  pushups: 50, curlups: 50, pullups: 6,  run15: t(11,30) },
+  diver_m1dv: { swim500: t(12,30), pushups: 50, curlups: 50, pullups: 6,  run15: t(12,30) },
+  airr:       { swim500: t(12,0),  pushups: 42, curlups: 50, pullups: 4,  run15: t(12,0) },
+};
+
+/**
+ * EOD's cardio rule is not "beat each minimum". MILPERSMAN sets a COMBINED
+ * ceiling: the 500-yard swim and the 1.5-mile run must total under 21:00, and
+ * neither one on its own may exceed 12:30. So an EOD candidate can swim slower
+ * than a SEAL candidate and still qualify, provided the run makes it up — and
+ * can fail having cleared both individual times, if the total is 21:00 or more.
+ * Scoring the two events independently would get this wrong in both directions.
+ */
+export const EOD_COMBINED_MAX = t(21, 0);
+export const EOD_SINGLE_MAX = t(12, 30);
+
+/** The two PST events where a smaller number is the better result. */
+const LOWER_IS_BETTER_PST = new Set(["swim500", "run15"]);
+
+/** One PST event against its program minimum. Times: lower passes. */
+export function scorePstEvent(eventKey, value, program) {
+  const mins = PST_MINIMUMS[program];
+  if (!mins || !(eventKey in mins) || !Number.isFinite(Number(value))) return null;
+  const min = mins[eventKey];
+  const lower = LOWER_IS_BETTER_PST.has(eventKey);
+  const v = Number(value);
+  return { pass: lower ? v <= min : v >= min, minimum: min, lowerIsBetter: lower };
+}
+
+/** Whole PST verdict for one program. */
+export function scorePstTest(events, program) {
+  if (!PST_MINIMUMS[program]) return { scored: [], overall: null };
+
+  const scored = events.map((e) => ({
+    key: e.key,
+    result: scorePstEvent(e.key, e.value, program),
+  }));
+  if (scored.some((s) => !s.result)) return { scored, overall: null };
+
+  const val = (k) => Number(events.find((e) => e.key === k)?.value ?? NaN);
+  let cardioPass;
+  let cardioNote = null;
+
+  if (program === "eod") {
+    const combined = val("swim500") + val("run15");
+    const neitherOver = val("swim500") <= EOD_SINGLE_MAX && val("run15") <= EOD_SINGLE_MAX;
+    cardioPass = combined < EOD_COMBINED_MAX && neitherOver;
+    cardioNote = `Swim + run combined ${Math.floor(combined / 60)}:${String(Math.round(combined % 60)).padStart(2, "0")} — must be under 21:00, neither over 12:30`;
+  } else {
+    cardioPass = scored
+      .filter((s) => LOWER_IS_BETTER_PST.has(s.key))
+      .every((s) => s.result.pass);
+  }
+
+  const strengthPass = scored
+    .filter((s) => !LOWER_IS_BETTER_PST.has(s.key))
+    .every((s) => s.result.pass);
+  const passed = cardioPass && strengthPass;
+
+  return {
+    scored, passed, program, cardioNote,
+    overall: {
+      label: passed ? "MEETS MINIMUMS" : "BELOW MINIMUMS",
+      color: passed ? "#4ade80" : "#ef4444",
+      detail: passed
+        ? "Every event at or above the published minimum"
+        : "At least one event below the published minimum",
+    },
+  };
+}
