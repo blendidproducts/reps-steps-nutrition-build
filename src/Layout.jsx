@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useNavigationManager, resolveTabForPath, TAB_ROOTS, pushTabPath } from "@/lib/NavigationManager";
 import { createPageUrl } from "@/utils";
 import rnsLogo from "@/assets/RnS_LOGO.png";
-import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box, Users, Clock, Brain, Watch, ShoppingBag, ListTodo, FileText } from "lucide-react";
+import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box, Users, Clock, Brain, Watch, ShoppingBag, ListTodo, FileText, ClipboardCheck } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { base44 } from "@/api/base44Client";
 import ProgramDayPopup from "@/components/ProgramDayPopup";
@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 
 const navigationItems = [
   { title: "Home", url: createPageUrl("Home"), icon: Home },
+  { title: "Fitness Tests", url: createPageUrl("FitnessTest"), icon: ClipboardCheck },
   { title: "AI Fitness Brain", url: createPageUrl("FitnessBrain"), icon: Brain },
   { title: "Exercises", url: createPageUrl("Exercises"), icon: Dumbbell },
   { title: "Stretches", url: createPageUrl("Stretches"), icon: Timer },

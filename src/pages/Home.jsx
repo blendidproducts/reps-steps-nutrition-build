@@ -4,7 +4,7 @@ import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Brain, Timer, Info, TrendingUp, Activity, CheckCircle2, Moon, ChevronRight, MoreVertical } from "lucide-react";
+import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Brain, Timer, Info, TrendingUp, Activity, CheckCircle2, Moon, ChevronRight, MoreVertical, ClipboardCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import GithubReleasesWidget from "@/components/dashboard/GithubReleasesWidget";
@@ -171,6 +171,73 @@ export default function Home() {
           taps open for today's plan + Start. Renders nothing when the user has
           no active program, so Home is untouched for everyone else. */}
       <ProgramStatusStrip />
+
+      {/* ── FITNESS TEST ─────────────────────────────────────────────────
+          First card on the page, above everything else, because a test is how
+          you decide what to train - it comes before the workout, not after it.
+          The three chips are the three kinds of test and each one deep-links
+          straight to its group on the Fitness Test page, so a returning user
+          taps twice to start a retest instead of scrolling a list. */}
+      <div className="px-6 mb-6">
+        <div
+          onClick={() => navigate(createPageUrl("FitnessTest"))}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === "Enter" && navigate(createPageUrl("FitnessTest"))}
+          className="relative rounded-2xl overflow-hidden cursor-pointer active:scale-[0.99] transition-transform p-5"
+          style={{
+            background: "linear-gradient(135deg, #0b2742 0%, #071a2e 45%, #03101c 100%)",
+            border: "2px solid rgba(0,169,255,0.55)",
+            boxShadow: "0 0 40px rgba(0,169,255,0.18), 0 8px 32px rgba(0,0,0,0.45)",
+          }}
+        >
+          <div className="flex items-start gap-4">
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{
+                background: "linear-gradient(135deg, #00a9ff, #0066cc)",
+                boxShadow: "0 0 22px rgba(0,169,255,0.4)",
+              }}
+            >
+              <ClipboardCheck className="w-7 h-7 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-2xl font-black text-white leading-none tracking-tight">
+                FITNESS TEST
+              </h2>
+              <p className="text-gray-300 text-sm mt-1.5 leading-snug">
+                Find out where you actually stand. Scored, timed, recorded.
+              </p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-[#00a9ff] ml-auto flex-shrink-0 mt-1" />
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            {[
+              { key: "military", label: "MILITARY", sub: "Navy PRT standards" },
+              { key: "private", label: "PRIVATE", sub: "RepsAndSteps output" },
+              { key: "custom", label: "CUSTOM", sub: "Build your own" },
+            ].map((g) => (
+              <button
+                key={g.key}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`${createPageUrl("FitnessTest")}?group=${g.key}`);
+                }}
+                className="text-left rounded-xl px-2.5 py-2 min-h-[52px] transition-colors hover:bg-white/10"
+                style={{ background: "rgba(0,169,255,0.10)", border: "1px solid rgba(0,169,255,0.30)" }}
+              >
+                <span className="block text-[11px] font-bold tracking-widest text-[#7fd4ff]">
+                  {g.label}
+                </span>
+                <span className="block text-[10px] text-gray-400 leading-tight mt-0.5">
+                  {g.sub}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* ── ARTP — AI Rep Tracking Program ──────────────────────────────── */}
       <div className="px-6 mb-6">

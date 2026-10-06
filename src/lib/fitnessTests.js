@@ -187,6 +187,7 @@ export const BATTERIES = {
   military: {
     key: "military",
     name: "Military — Navy PRT",
+    group: "military",
     blurb: "The real Navy Physical Readiness Test, scored against the published standards for your age and sex.",
     icon: "shield",
     accent: "#4ade80",
@@ -208,6 +209,7 @@ export const BATTERIES = {
   repsandsteps: {
     key: "repsandsteps",
     name: "RepsAndSteps Output",
+    group: "private",
     blurb: "Our own test. Not a pass/fail — it produces one number, your output score, from reps, steps and time under load.",
     icon: "zap",
     accent: "#00a9ff",
@@ -234,6 +236,7 @@ export const BATTERIES = {
   strength: {
     key: "strength",
     name: "Strength Endurance",
+    group: "custom",
     blurb: "Bodyweight max-effort. Scored against your own last test, not a population average.",
     icon: "dumbbell",
     accent: "#f97316",
@@ -259,6 +262,7 @@ export const BATTERIES = {
   conditioning: {
     key: "conditioning",
     name: "Conditioning",
+    group: "custom",
     blurb: "Work capacity under fatigue. Scored against your own last test.",
     icon: "flame",
     accent: "#ef4444",
@@ -309,4 +313,102 @@ export function compareToPrevious(events, previous) {
       before,
     };
   });
+}
+
+// ── The three kinds of test ──────────────────────────────────────────────────
+// These are the groups the Home card and the sidebar page are organised by.
+// The split is by WHAT YOU ARE SCORED AGAINST, which is the only difference
+// that changes how you should read a result:
+//   military -> an external, published standard (pass/fail, someone else's bar)
+//   private  -> our own output number (no pass/fail, just a score that moves)
+//   custom   -> yourself, last time (every event is a personal delta)
+export const TEST_GROUPS = [
+  {
+    key: "military",
+    label: "MILITARY",
+    sub: "Official service standards",
+    detail: "Scored against published military standards for your age and sex. Pass or fail.",
+    accent: "#4ade80",
+    icon: "shield",
+  },
+  {
+    key: "private",
+    label: "PRIVATE",
+    sub: "The RepsAndSteps test",
+    detail: "Our own battery. No pass/fail - it produces one output number you can chase.",
+    accent: "#00a9ff",
+    icon: "zap",
+  },
+  {
+    key: "custom",
+    label: "CUSTOM",
+    sub: "Your events, your baseline",
+    detail: "Preset or hand-picked events, scored against your own last result rather than a population average.",
+    accent: "#f97316",
+    icon: "sliders",
+  },
+];
+
+export const batteriesInGroup = (group) =>
+  BATTERY_LIST.filter((b) => b.group === group);
+
+// ── Build-your-own ───────────────────────────────────────────────────────────
+// Every event any preset battery uses, de-duplicated, offered as a pool. The
+// definitions are copied rather than referenced so a custom pick can carry its
+// own time cap without mutating the preset it came from.
+export const CUSTOM_EVENT_POOL = [
+  { key: "pushups", name: "Push-ups", exercise: "Push-Up", how: "reps", seconds: 120,
+    unit: "reps", cue: "Full lockout at the top.", restAfter: 120 },
+  { key: "squats", name: "Air Squats", exercise: "Squat", how: "reps", seconds: 120,
+    unit: "reps", cue: "Hip crease below the knee for the rep to count.", restAfter: 120 },
+  { key: "lunges", name: "Reverse Lunges", exercise: "Reverse Lunge", how: "reps", seconds: 90,
+    unit: "reps", cue: "Alternating. Left and right each count.", restAfter: 120 },
+  { key: "jumpsquats", name: "Jump Squats", exercise: "Jump Squat", how: "reps", seconds: 90,
+    unit: "reps", cue: "Land soft.", restAfter: 120 },
+  { key: "highknees", name: "High Knees", exercise: "High Knee", how: "reps", seconds: 60,
+    unit: "reps", cue: "Knees to hip height.", restAfter: 120 },
+  { key: "plank", name: "Plank Hold", exercise: "Plank", how: "hold",
+    unit: "secs", cue: "Hold as long as you can. Tap STOP when your hips drop.", restAfter: 120 },
+  { key: "wallsit", name: "Wall Sit", exercise: "Wall Sit", how: "hold",
+    unit: "secs", cue: "Thighs parallel, back flat. Hold.", restAfter: 120 },
+  { key: "burpees", name: "Burpees", how: "manual", seconds: 120,
+    unit: "reps", cue: "Tap the screen for each rep - the camera can't count these.", restAfter: 120 },
+  { key: "steps", name: "Step Burst", how: "steps", seconds: 180,
+    unit: "steps", cue: "Walk, jog or run - every step counts.", restAfter: 120 },
+  { key: "run15", name: "1.5-Mile Run", how: "run", distanceLabel: "1.5 miles",
+    unit: "secs", cue: "Run your measured 1.5-mile route. Tap STOP when you finish.", restAfter: 0 },
+  { key: "cooper", name: "Cooper Run (12 min)", how: "run", distanceLabel: "12 minutes",
+    unit: "secs", cue: "Run as far as you can in 12 minutes, then enter the distance.",
+    fixedSeconds: 720, restAfter: 0 },
+];
+
+/**
+ * A battery assembled from the pool.
+ *
+ * The key is the constant string "custom" on purpose. Baseline scoring looks up
+ * your previous test BY BATTERY KEY and then matches events individually, so a
+ * fixed key means "last time I did a custom test" still finds a comparison even
+ * if the event list changed; events you didn't do last time simply show no
+ * delta instead of hiding the whole history.
+ *
+ * The last event's rest is zeroed - resting after the final effort of a test is
+ * just a timer running on a finished test.
+ */
+export function buildCustomBattery(eventKeys) {
+  const picked = CUSTOM_EVENT_POOL
+    .filter((e) => eventKeys.includes(e.key))
+    .map((e, i, arr) => ({ ...e, restAfter: i === arr.length - 1 ? 0 : e.restAfter }));
+  return {
+    key: "custom",
+    name: "Custom Test",
+    group: "custom",
+    blurb: `${picked.length} event${picked.length === 1 ? "" : "s"} you picked. Scored against your own last custom test.`,
+    icon: "sliders",
+    accent: "#f97316",
+    scoring: "baseline",
+    needsProfile: false,
+    disclaimer: null,
+    custom: true,
+    events: picked,
+  };
 }

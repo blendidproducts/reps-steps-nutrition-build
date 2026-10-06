@@ -12,9 +12,9 @@
  * to localStorage either way. The local copy is what makes the "since your last
  * test" delta work on day one, before the entity has been created.
  */
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,14 +23,19 @@ import StepTracker from "@/components/StepTracker";
 import BuildStamp from "@/components/BuildStamp";
 import {
   BATTERIES, BATTERY_LIST, batteryMinutes, scorePrtTest, lineScore, tierFor,
-  compareToPrevious, ageBand,
+  compareToPrevious, ageBand, TEST_GROUPS, batteriesInGroup,
+  CUSTOM_EVENT_POOL, buildCustomBattery,
 } from "@/lib/fitnessTests";
 import {
   ChevronLeft, Shield, Zap, Flame, Dumbbell, Play, Square, Timer as TimerIcon,
   CheckCircle, AlertTriangle, TrendingUp, TrendingDown, Minus, RotateCcw, Footprints,
+  SlidersHorizontal, ChevronDown, Plus, Check,
 } from "lucide-react";
 
-const ICONS = { shield: Shield, zap: Zap, flame: Flame, dumbbell: Dumbbell };
+const ICONS = {
+  shield: Shield, zap: Zap, flame: Flame, dumbbell: Dumbbell,
+  sliders: SlidersHorizontal,
+};
 const STORE_KEY = "rns_fitness_tests";
 
 const fmtSecs = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
@@ -58,6 +63,7 @@ function saveProfile(p) {
 
 export default function FitnessTest() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const [phase, setPhase] = useState("setup");       // setup | running | results
   const [batteryKey, setBatteryKey] = useState(null);
   const [profile, setProfile] = useState(() => loadProfile() || { sex: "", age: "" });
@@ -65,7 +71,26 @@ export default function FitnessTest() {
   const [values, setValues] = useState({});          // key -> measured value
   const [resting, setResting] = useState(0);         // seconds left between events
 
-  const battery = batteryKey ? BATTERIES[batteryKey] : null;
+  // Which of the three groups is expanded. ?group=military|private|custom comes
+  // from the Home card's chips, so a tap there lands on the open group instead
+  // of a page the user has to go hunting through.
+  const groupParam = params.get("group");
+  const [openGroup, setOpenGroup] = useState(
+    TEST_GROUPS.some((g) => g.key === groupParam) ? groupParam : "military"
+  );
+
+  // Custom battery: the picked event keys, assembled on demand. Memoised so the
+  // battery object keeps its identity between renders - finishEvent closes over
+  // it, and a fresh object every render would re-fire its effects.
+  const [customKeys, setCustomKeys] = useState([]);
+  const battery = useMemo(() => {
+    if (!batteryKey) return null;
+    if (batteryKey === "custom") {
+      return customKeys.length ? buildCustomBattery(customKeys) : null;
+    }
+    return BATTERIES[batteryKey] || null;
+  }, [batteryKey, customKeys]);
+
   const event = battery?.events[eventIndex] || null;
 
   /* ── rest between events ─────────────────────────────────────────────── */
@@ -76,6 +101,12 @@ export default function FitnessTest() {
   }, [resting]);
 
   useEffect(() => () => releaseSharedCamera(), []);
+
+  // Arriving from a different Home chip while already on this page changes the
+  // query string without remounting, so the open group has to follow it.
+  useEffect(() => {
+    if (TEST_GROUPS.some((g) => g.key === groupParam)) setOpenGroup(groupParam);
+  }, [groupParam]);
 
   /** Record an event's result and move on (or finish). */
   const finishEvent = useCallback((value) => {
@@ -128,63 +159,73 @@ export default function FitnessTest() {
     return (
       <div className="min-h-screen bg-[#020817] text-white pb-28">
         <div className="bg-[#111] border-b border-gray-800 px-4 py-4 flex items-center gap-3 sticky top-0 z-10">
-          <button onClick={() => navigate(createPageUrl("AIWorkoutGenerator"))} className="text-gray-400">
+          <button onClick={() => navigate(createPageUrl("Home"))} className="text-gray-400">
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-base font-bold">Fitness Test</h1>
-            <p className="text-xs text-gray-500">Measure where you are — no workout</p>
+            <h1 className="text-lg font-black tracking-tight">FITNESS TEST</h1>
+            <p className="text-[11px] text-gray-500 tracking-wide">
+              Military · Private · Custom — measure, don't guess
+            </p>
           </div>
         </div>
 
         <div className="max-w-lg mx-auto px-4 py-5 space-y-3">
-          {BATTERY_LIST.map((b) => {
-            const Icon = ICONS[b.icon] || Shield;
-            const prev = lastOfBattery(b.key);
-            const selected = batteryKey === b.key;
+          {/* One section per kind of test. Collapsed by default except the one
+              you arrived at, because three open lists of batteries is a long
+              scroll on a phone and the choice of KIND is the real first
+              decision - what you're scored against. */}
+          {TEST_GROUPS.map((g) => {
+            const GroupIcon = ICONS[g.icon] || Shield;
+            const open = openGroup === g.key;
+            const members = batteriesInGroup(g.key);
             return (
-              <button key={b.key} onClick={() => setBatteryKey(b.key)}
-                className={`w-full text-left rounded-2xl border p-4 transition-all ${
-                  selected ? "border-2 bg-white/5" : "border-gray-800 bg-[#111]"
-                }`}
-                style={selected ? { borderColor: b.accent } : undefined}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: `${b.accent}22`, border: `1px solid ${b.accent}55` }}>
-                    <Icon className="w-5 h-5" style={{ color: b.accent }} />
+              <div key={g.key} className="rounded-2xl border border-gray-800 bg-[#0d0d0d] overflow-hidden">
+                <button
+                  onClick={() => setOpenGroup(open ? null : g.key)}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
+                >
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: `${g.accent}22`, border: `1px solid ${g.accent}55` }}>
+                    <GroupIcon className="w-5 h-5" style={{ color: g.accent }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm">{b.name}</p>
-                    <p className="text-[11px] text-gray-500">
-                      {b.events.length} events · about {batteryMinutes(b)} min
-                      {prev && ` · last ${new Date(prev.taken_at).toLocaleDateString()}`}
+                    <p className="font-black text-sm tracking-wider" style={{ color: g.accent }}>
+                      {g.label}
                     </p>
+                    <p className="text-[11px] text-gray-500">{g.sub}</p>
                   </div>
-                </div>
-                <p className="text-xs text-gray-400 mt-2.5 leading-snug">{b.blurb}</p>
+                  <ChevronDown
+                    className={`w-4 h-4 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
+                  />
+                </button>
 
-                {selected && (
-                  <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
-                    {b.events.map((e, i) => (
-                      <div key={e.key} className="flex items-center gap-2 text-[11px]">
-                        <span className="w-4 text-gray-600 font-bold">{i + 1}</span>
-                        <span className="text-gray-300 flex-1">{e.name}</span>
-                        <span className="text-gray-500">
-                          {e.fixedSeconds ? fmtSecs(e.fixedSeconds)
-                            : e.seconds ? fmtSecs(e.seconds)
-                            : e.how === "hold" ? "max hold" : "to failure"}
-                        </span>
-                      </div>
+                {open && (
+                  <div className="px-3 pb-3 space-y-3">
+                    <p className="text-[11px] text-gray-400 leading-snug px-1">{g.detail}</p>
+                    {members.map((b) => (
+                      <BatteryCard
+                        key={b.key}
+                        b={b}
+                        selected={batteryKey === b.key}
+                        onSelect={() => setBatteryKey(b.key)}
+                      />
                     ))}
-                    {b.disclaimer && (
-                      <div className="flex gap-2 mt-2 bg-amber-950/30 border border-amber-500/30 rounded-lg p-2.5">
-                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                        <p className="text-[10px] text-amber-200/90 leading-snug">{b.disclaimer}</p>
-                      </div>
+                    {g.key === "custom" && (
+                      <CustomPicker
+                        selectedKeys={customKeys}
+                        active={batteryKey === "custom"}
+                        onToggle={(k) => {
+                          setBatteryKey("custom");
+                          setCustomKeys((ks) =>
+                            ks.includes(k) ? ks.filter((x) => x !== k) : [...ks, k]
+                          );
+                        }}
+                      />
                     )}
                   </div>
                 )}
-              </button>
+              </div>
             );
           })}
 
@@ -278,6 +319,110 @@ export default function FitnessTest() {
   }
 
   return null;
+}
+
+/* ── One preset battery ─────────────────────────────────────────────────────
+   Collapsed it is a name and a one-liner; selected it opens to show every event
+   with its time cap, so nobody starts a 20-minute test expecting 5 minutes. */
+function BatteryCard({ b, selected, onSelect }) {
+  const Icon = ICONS[b.icon] || Shield;
+  const prev = lastOfBattery(b.key);
+  return (
+    <button onClick={onSelect}
+      className={`w-full text-left rounded-2xl border p-4 transition-all ${
+        selected ? "border-2 bg-white/5" : "border-gray-800 bg-[#111]"
+      }`}
+      style={selected ? { borderColor: b.accent } : undefined}>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: `${b.accent}22`, border: `1px solid ${b.accent}55` }}>
+          <Icon className="w-5 h-5" style={{ color: b.accent }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-sm">{b.name}</p>
+          <p className="text-[11px] text-gray-500">
+            {b.events.length} events · about {batteryMinutes(b)} min
+            {prev && ` · last ${new Date(prev.taken_at).toLocaleDateString()}`}
+          </p>
+        </div>
+      </div>
+      <p className="text-xs text-gray-400 mt-2.5 leading-snug">{b.blurb}</p>
+
+      {selected && (
+        <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+          {b.events.map((e, i) => (
+            <div key={e.key} className="flex items-center gap-2 text-[11px]">
+              <span className="w-4 text-gray-600 font-bold">{i + 1}</span>
+              <span className="text-gray-300 flex-1">{e.name}</span>
+              <span className="text-gray-500">
+                {e.fixedSeconds ? fmtSecs(e.fixedSeconds)
+                  : e.seconds ? fmtSecs(e.seconds)
+                  : e.how === "hold" ? "max hold" : "to failure"}
+              </span>
+            </div>
+          ))}
+          {b.disclaimer && (
+            <div className="flex gap-2 mt-2 bg-amber-950/30 border border-amber-500/30 rounded-lg p-2.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+              <p className="text-[10px] text-amber-200/90 leading-snug">{b.disclaimer}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </button>
+  );
+}
+
+/* ── Build your own ─────────────────────────────────────────────────────────
+   Pick events from the pool the presets are built from. Scored against your own
+   last custom test, event by event, so a changed list still gives you deltas on
+   the events that overlap. */
+function CustomPicker({ selectedKeys, active, onToggle }) {
+  const picked = active ? selectedKeys : [];
+  const preview = picked.length ? buildCustomBattery(picked) : null;
+  return (
+    <div className={`rounded-2xl border p-4 ${
+      active && picked.length ? "border-2 border-[#f97316] bg-white/5" : "border-gray-800 bg-[#111]"
+    }`}>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: "#f9731622", border: "1px solid #f9731655" }}>
+          <SlidersHorizontal className="w-5 h-5" style={{ color: "#f97316" }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-sm">Build Your Own</p>
+          <p className="text-[11px] text-gray-500">
+            {picked.length
+              ? `${picked.length} event${picked.length === 1 ? "" : "s"} · about ${batteryMinutes(preview)} min`
+              : "Tap the events you want to be tested on"}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 mt-3">
+        {CUSTOM_EVENT_POOL.map((e) => {
+          const on = picked.includes(e.key);
+          return (
+            <button key={e.key} onClick={() => onToggle(e.key)}
+              className={`flex items-start gap-2 rounded-xl px-2.5 py-2 min-h-[48px] text-left border text-[11px] ${
+                on ? "border-[#f97316] bg-[#f97316]/15 text-white" : "border-gray-700 bg-[#0a0a0a] text-gray-400"
+              }`}>
+              {on ? <Check className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[#f97316]" />
+                  : <Plus className="w-3.5 h-3.5 shrink-0 mt-0.5 text-gray-600" />}
+              <span className="leading-tight">
+                {e.name}
+                <span className="block text-[10px] text-gray-500">
+                  {e.fixedSeconds ? fmtSecs(e.fixedSeconds)
+                    : e.seconds ? fmtSecs(e.seconds)
+                    : e.how === "hold" ? "max hold" : "to failure"}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 /* ── Rest between events ─────────────────────────────────────────────────────
@@ -504,7 +649,17 @@ function EventRunner({ event, index, total, accent, onDone, onAbort }) {
      line      -> one output number and a plate tier
      baseline  -> per-event change since your last test */
 function Results({ record, onRestart, onExit }) {
-  const battery = BATTERIES[record.battery];
+  // A hand-built battery isn't in BATTERIES, and a record from an older build
+  // may name one that no longer exists. Either way the record carries its own
+  // events, so fall back to a descriptor good enough to render them rather than
+  // crashing on a result the user just earned.
+  const battery = BATTERIES[record.battery] || {
+    key: record.battery,
+    name: record.battery === "custom" ? "Custom Test" : "Fitness Test",
+    scoring: "baseline",
+    accent: "#f97316",
+    disclaimer: null,
+  };
   const previous = loadHistory().find(
     (r) => r.battery === record.battery && r.id !== record.id
   ) || null;
