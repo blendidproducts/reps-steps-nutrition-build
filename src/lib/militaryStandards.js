@@ -17,16 +17,27 @@
 const t = (mins, secs) => mins * 60 + secs;
 
 // ── Army Fitness Test (AFT) ──────────────────────────────────────────────────
-// Source: "Army Fitness Test Score Tables", approved 15 May 2025, effective
-// 1 June 2025 — https://www.army.mil/e2/downloads/rv7/aft/AFT_Scoring_Scales_250601.pdf
+// Source: "Army Fitness Test Score Tables", HQDA EXORD 218-25 Annex B.
+// Approved 1 May 2025, effective 1 June 2025.
 // The AFT replaced the ACFT on 1 June 2025; the standing power throw was dropped.
 //
-// VERIFICATION DEBT: these cells were extracted from the official PDF through a
-// text relay, repeated three times with identical results, and cross-checked
-// against one secondary table and three spot values quoted in press coverage.
-// They have NOT been read by human eye off the PDF. Four cells look unusual and
-// are called out in AFT_SUSPECT below. Until someone eyeballs the PDF, the app
-// shows the AFT disclaimer.
+// VERIFIED 2026-10-06 against the primary document (Annex B, read page by page).
+// All five events, 10 age bands, both columns, both anchors — every value below
+// matches the published table exactly.
+//
+// The four cells previously flagged as suspect were ALL CORRECT, including the
+// three that looked like transcription errors:
+//   - male deadlift 100-pt really does drop to 250 lb at 57-61
+//   - female push-up 100-pt really does drop to 24 reps at 57-61 and over 62
+//   - female sprint-drag-carry 60-pt really is 4:03 and 4:48, past the 4:00 cap
+//     the public AFT page states — the table is the authority here
+// The one genuine disagreement was a SECONDARY table claiming 24:00 for the male
+// 2-mile run at 52-56; the official annex says 22:50, which is what we use.
+//
+// Remaining approximation, by choice: the official table scores every point from
+// 0 to 100 as its own row. We store the 60 and 100 anchors and interpolate, so a
+// mid-range point total is close rather than exact. The pass/fail verdict is
+// exact, and that is the thing anyone acts on.
 export const AFT_BANDS = [
   "17-21", "22-26", "27-31", "32-36", "37-41",
   "42-46", "47-51", "52-56", "57-61", "62+",
@@ -102,15 +113,14 @@ AFT.run2 = {
 };
 
 /**
- * Cells that look wrong and want a human eye on the PDF before anyone trusts a
- * verdict built on them. They were identical across three extractions, so if
- * they're wrong it's the PDF relay that's wrong, not a transcription slip.
+ * Cells that LOOK like transcription errors but are what the official table
+ * says. Kept as a list because the next person to read this file will have the
+ * same doubt, and re-checking a verified number costs more than a comment does.
  */
-export const AFT_SUSPECT = [
-  "Male deadlift 100-pt drops to 250 lb at 57-61 (350 at 42-46)",
-  "Female push-up 100-pt drops to 24 reps at 57-61 (36 at 52-56)",
-  "Male 2-mile run at 52-56: 22:50 here, 24:00 in one secondary table",
-  "Female sprint-drag-carry 60-pt is 4:03 and 4:48, past the 4:00 cap the official page states",
+export const AFT_CONFIRMED_ODD = [
+  "Male deadlift 100-pt drops to 250 lb at 57-61 (350 at 42-46) — correct",
+  "Female push-up 100-pt drops to 24 reps at 57-61 and over 62 (36 at 52-56) — correct",
+  "Female sprint-drag-carry 60-pt is 4:03 and 4:48, past the 4:00 cap the public page states — the table wins",
 ];
 
 /**
@@ -215,12 +225,6 @@ export const PENDING = [
     why: "MILPERSMAN 1220-410 holds the official minimums and would not open. It covers SEAL, SWCC, EOD, diver and rescue swimmer.",
     events: "500-yard swim · push-ups · sit-ups · pull-ups · 1.5-mile run, run as one continuous event",
     doc: "MILPERSMAN 1220-410",
-  },
-  {
-    key: "afspecwar", subgroup: "specops", name: "Air Force Special Warfare", accent: "#a78bfa",
-    why: "AFSPECWAR and EOD charts not yet read; the public PAST worksheet is from 2021 and may be superseded.",
-    events: "Operator Physical Assessment / Initial Fitness Test",
-    doc: "AFSPECWAR and EOD PFRA Charts",
   },
   {
     key: "marsoc", subgroup: "specops", name: "MARSOC A&S", accent: "#fb7185",

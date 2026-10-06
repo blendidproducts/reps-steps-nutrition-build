@@ -41,7 +41,17 @@ const ICONS = {
 const STORE_KEY = "rns_fitness_tests";
 
 const fmtSecs = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
-const fmtValue = (v, unit) => (unit === "secs" ? fmtSecs(v) : `${v}`);
+
+// "sec10" is a short sprint timed to a tenth — a pro-agility run or a farmer's
+// carry. Rendering 4.7 seconds as "0:05" would throw away the digit the whole
+// event turns on, so it keeps its decimal instead of becoming mm:ss.
+const fmtValue = (v, unit) =>
+  unit === "secs" ? fmtSecs(v)
+  : unit === "sec10" ? `${Number(v).toFixed(1)}s`
+  : unit === "mi100" ? `${(Number(v) / 100).toFixed(2)} mi`
+  : unit === "in" ? `${v}"`
+  : `${v}`;
+const isTimeUnit = (unit) => unit === "secs" || unit === "sec10";
 
 /* ── local history ─────────────────────────────────────────────────────────── */
 function loadHistory() {
@@ -631,10 +641,20 @@ function EventRunner({ event, index, total, accent, onDone, onAbort }) {
      properly, then type what you got. */
   if (event.how === "entry") {
     const isTime = event.entryKind === "time";
+    // Everything that isn't mm:ss is one number; only the label and the step
+    // change. Decimal seconds matter for the sprint events, where a tenth is
+    // the difference between two rows of a scoring chart.
+    const SINGLE = {
+      weight:   { label: "POUNDS",  step: "5",   mode: "numeric" },
+      reps:     { label: "REPS",    step: "1",   mode: "numeric" },
+      distance: { label: "INCHES",  step: "1",   mode: "numeric" },
+      seconds:  { label: "SECONDS", step: "0.1", mode: "decimal" },
+    };
+    const single = SINGLE[event.entryKind] || SINGLE.weight;
     const value = isTime
       ? (Number(entryA) || 0) * 60 + (Number(entryB) || 0)
       : Number(entryA) || 0;
-    const ready = isTime ? value > 0 : Number(entryA) > 0;
+    const ready = value > 0;
     return (
       <Shell hint={event.equipment ? `Needs: ${event.equipment}` : undefined}>
         {isTime ? (
@@ -655,8 +675,8 @@ function EventRunner({ event, index, total, accent, onDone, onAbort }) {
           </div>
         ) : (
           <div className="my-8">
-            <label className="text-[10px] text-gray-500 block mb-1">POUNDS</label>
-            <input type="number" inputMode="numeric" min="0" step="5" value={entryA}
+            <label className="text-[10px] text-gray-500 block mb-1">{single.label}</label>
+            <input type="number" inputMode={single.mode} min="0" step={single.step} value={entryA}
               onChange={(e) => setEntryA(e.target.value)} placeholder="0"
               className="w-40 min-h-[64px] bg-[#0a0a0a] border border-gray-700 rounded-xl text-white text-center text-3xl font-black tabular-nums" />
           </div>
@@ -941,9 +961,7 @@ function Results({ record, onRestart, onExit }) {
                 <div key={e.key} className="px-4 py-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-300">{e.name}</span>
-                    <span className="font-bold tabular-nums">
-                      {e.key === "cooper" ? `${(e.value / 100).toFixed(2)} mi` : fmtValue(e.value, e.unit)}
-                    </span>
+                    <span className="font-bold tabular-nums">{fmtValue(e.value, e.unit)}</span>
                   </div>
                   <div className="flex items-center gap-3 mt-1">
                     {scored && (
@@ -960,7 +978,8 @@ function Results({ record, onRestart, onExit }) {
                       <span className={`text-[11px] font-bold flex items-center gap-0.5 ${
                         d.improved ? "text-green-400" : "text-amber-400"}`}>
                         {d.improved ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                        {d.delta > 0 ? "+" : ""}{e.unit === "secs" ? `${d.delta}s` : d.delta}
+                        {d.delta > 0 ? "+" : ""}
+                        {isTimeUnit(e.unit) ? `${Number(d.delta).toFixed(e.unit === "sec10" ? 1 : 0)}s` : d.delta}
                       </span>
                     )}
                     {d && d.delta === 0 && (

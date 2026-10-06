@@ -23,17 +23,22 @@
 
 // ── Navy PRT standards ───────────────────────────────────────────────────────
 //
-// SOURCE: Navy Physical Readiness Test Guide 5A (Dec 2025), as transcribed by
-// two independent secondary sources that agree on every value spot-checked.
-// The official PDF blocks direct fetching, so these have NOT been read from the
-// primary document.
+// SOURCE: Navy Physical Readiness Test Guide 5A, DEC 2025 (approved W.R. Bynum,
+// N171 Branch Head), Section 4-1, Table 4-1.
 //
-// ⚠️ VERIFY BEFORE ANY OF THIS IS USED FOR AN ACTUAL SERVICE SCREENING. It is
-// accurate enough to train against and wrong enough to matter if someone treats
-// it as official. The UI says so too.
+// VERIFIED 2026-10-06 against the primary document, page by page: all 11 age
+// bands x 2 sexes x 3 events, both anchors each — 132 values, zero mismatches.
+// These began life transcribed from secondary sources; the secondary sources
+// turned out to be right. No verification debt remains on this table.
 //
-// Values are [maximum (Outstanding), minimum (passing)]. Standards are for
-// altitudes below 5,000 ft; the Navy publishes separate tables above that.
+// Values are [100-point (Outstanding High), 45-point (Probationary)]. The real
+// table has THIRTEEN discrete rows — 100/95/90/85/80/75/70/65/60/55/50/45, each
+// a named category — and we interpolate between the two anchors, so a mid-range
+// point total lands within a few points of the official row. The pass/fail
+// verdict, which is the thing anyone acts on, is exact.
+//
+// Standards are for altitudes below 5,000 ft; the Navy publishes a separate set
+// above that (Guide 5A Section 4-2) which this app does not yet carry.
 // Plank and run times are in SECONDS.
 const M = (mmss) => {
   const [m, s] = mmss.split(":").map(Number);
@@ -41,7 +46,7 @@ const M = (mmss) => {
 };
 
 export const NAVY_PRT = {
-  source: "Navy PRT Guide 5A (Dec 2025), transcribed from secondary sources — verify before official use",
+  source: "Navy PRT Guide 5A (Dec 2025), Table 4-1 — verified against the primary document 2026-10-06",
   altitudeNote: "Below 5,000 ft. Separate standards apply above that.",
   male: {
     "17-19": { pushups: [92, 42], plank: [M("3:24"), M("1:11")], run15: [M("8:15"), M("12:45")] },
@@ -195,13 +200,18 @@ export const BATTERIES = {
     scoring: "standards",
     needsProfile: true,          // age + sex required before it can score
     disclaimer:
-      "Standards transcribed from Navy PRT Guide 5A. Accurate enough to train against — " +
-      "not a substitute for an official screening.",
+      "Standards verified against Navy PRT Guide 5A (Dec 2025), Table 4-1, for altitudes below " +
+      "5,000 ft. Accurate enough to train against — not a substitute for an official screening, " +
+      "which must be run by a qualified Command Fitness Leader.",
+    // Guide 5A §1.3: push-ups, forearm plank, then cardio, all on the same day,
+    // with AT LEAST 5 and no more than 15 minutes between modalities. The rests
+    // below are the official floor — they were 2 minutes before I read the guide,
+    // which would have made this a harder test than the real one.
     events: [
       { key: "pushups", name: "Push-ups", exercise: "Push-Up", how: "reps", seconds: 120,
-        unit: "reps", cue: "As many as you can in 2 minutes. Full lockout at the top.", restAfter: 120 },
+        unit: "reps", cue: "As many as you can in 2 minutes. Full lockout at the top.", restAfter: 300 },
       { key: "plank", name: "Forearm Plank", exercise: "Plank", how: "hold",
-        unit: "secs", cue: "Hold as long as you can. Tap STOP the moment your hips drop.", restAfter: 120 },
+        unit: "secs", cue: "Hold as long as you can. Tap STOP the moment your hips drop.", restAfter: 300 },
       { key: "run15", name: "1.5-Mile Run", how: "run", distanceLabel: "1.5 miles",
         unit: "secs", cue: "Run your measured 1.5-mile route. Tap STOP when you finish.", restAfter: 0 },
     ],
@@ -223,9 +233,10 @@ export const BATTERIES = {
     needsProfile: true,
     hasCombatStandard: true,
     disclaimer:
-      "Tables from the Army's published AFT scoring scales (effective 1 June 2025). They were " +
-      "machine-read from the PDF, not checked by eye, and four cells look unusual — treat a " +
-      "borderline result as indicative. Two events need a hex bar and a sled, so you enter those yourself.",
+      "Tables verified against HQDA EXORD 218-25 Annex B, the official AFT score tables " +
+      "(effective 1 June 2025). Mid-range point totals are interpolated and land within a few " +
+      "points of the published row; the pass/fail verdict is exact. Two events need a hex bar " +
+      "and a sled, so you enter those results yourself.",
     events: [
       { key: "deadlift", name: "3-Rep Max Deadlift", how: "entry", entryKind: "weight",
         unit: "lbs", cue: "Three reps at the heaviest weight you can hold form on. Enter the weight.",
@@ -241,6 +252,70 @@ export const BATTERIES = {
         unit: "secs", cue: "Hold. Tap STOP the moment your hips drop or rise.", restAfter: 120 },
       { key: "run2", name: "Two-Mile Run", how: "run", distanceLabel: "2 miles",
         unit: "secs", cue: "Run your measured two-mile route. Tap STOP when you finish.", restAfter: 0 },
+    ],
+  },
+
+  // Air Force Special Warfare Tier 2 Operational Fitness Test — the gate for
+  // CCT, PJ, SR, TACP, STO, CRO and TACPO, used at several points in the
+  // pipeline. It replaces the Tier 1 Air Force test for operators.
+  //
+  // Nine scores from eight events (pro agility is run and scored both
+  // directions). None of them can be camera-tracked: this test is a rucksack, a
+  // pull-up bar, kettlebells, a measured lane and a pool. So every event is
+  // hand-entered, and the app's job here is to be an accurate scoresheet and a
+  // history, not a tracker.
+  //
+  // UNSCORED on purpose: the official scoring chart is an image on the source
+  // page and its numbers are not in hand. The composite pass mark is 77 and any
+  // event below its own minimum is a failure regardless of composite — both
+  // facts are in the disclaimer, neither can be checked without the chart. So
+  // this scores against your own last attempt until the chart arrives.
+  afspecwar: {
+    key: "afspecwar",
+    name: "AF Special Warfare — Tier 2 OFT",
+    group: "military",
+    subgroup: "specops",
+    blurb: "The Tier 2 Operational Fitness Test. Nine scores, run in order, in combat uniform and boots.",
+    icon: "shield",
+    accent: "#a78bfa",
+    scoring: "baseline",
+    needsProfile: false,
+    disclaimer:
+      "Events, order, rest periods and equipment are the published Tier 2 OFT. The official " +
+      "scoring chart is not loaded yet, so this records your numbers and compares them to your " +
+      "last attempt — it does not tell you whether you passed. For reference, the minimum " +
+      "passing composite is 77, and any event below its own minimum fails that event outright.",
+    uniform: "Combat top and bottom with boots. Swim is combat uniform with booties, fins and mask; snorkel optional.",
+    events: [
+      { key: "ruck3", name: "3-Mile Ruck March", how: "entry", entryKind: "time",
+        unit: "secs", cue: "Level course, ruck over 60 lb dry weight. Running is not permitted.",
+        equipment: "Ruck, >60 lb dry", restAfter: 1200 },
+      { key: "longjump", name: "Standing Long Jump", how: "entry", entryKind: "distance",
+        unit: "in", cue: "Toes behind the line. Three trials — enter your best. Measured to the heel nearest the line.",
+        restAfter: 180 },
+      // unit "sec10" = seconds to a tenth. A pro-agility run is ~4-5 seconds and
+      // the tenth is the whole result, so these must not be stored as mm:ss.
+      { key: "agility_r", name: "Pro Agility — Right First", how: "entry", entryKind: "seconds",
+        unit: "sec10", cue: "5-10-5 from a 3-point stance, breaking right. Two trials allowed; enter the best.",
+        equipment: "3 cones at 5-yard intervals", restAfter: 180 },
+      { key: "agility_l", name: "Pro Agility — Left First", how: "entry", entryKind: "seconds",
+        unit: "sec10", cue: "Same course, breaking left. Scored separately from the right-first run.",
+        restAfter: 180 },
+      { key: "trapbar", name: "Trap Bar Deadlift 3RM", how: "entry", entryKind: "weight",
+        unit: "lbs", cue: "Hex bar, grip at mid-shin, slight pause at the top, bar touches the floor between reps.",
+        equipment: "Hex/trap bar + plates", restAfter: 180 },
+      { key: "pullups", name: "Pull-ups", how: "entry", entryKind: "reps",
+        unit: "reps", cue: "Dead hang, palms away, chin over the bar. Letting go ends the event.",
+        equipment: "Pull-up bar", restAfter: 180 },
+      { key: "farmers", name: "Farmer's Carry — 100 yd", how: "entry", entryKind: "seconds",
+        unit: "sec10", cue: "Two 53-lb kettlebells by the handle, not cradled. Sprint the 100 yards.",
+        equipment: "Two 53-lb kettlebells", restAfter: 180 },
+      { key: "shuttle300", name: "300-yd Shuttle Run", how: "entry", entryKind: "seconds",
+        unit: "sec10", cue: "Six round trips on a 25-yard course. Run it twice with 5 minutes between — enter the average.",
+        restAfter: 1200 },
+      { key: "finswim", name: "1500m Fin Swim", how: "entry", entryKind: "time",
+        unit: "secs", cue: "Side stroke, combat side stroke or lead-arm trail-arm. 30 laps in a 25m pool.",
+        equipment: "Fins, mask, booties; snorkel optional", restAfter: 0 },
     ],
   },
 
@@ -317,8 +392,14 @@ export const BATTERIES = {
       // event at all.
       { key: "burpees", name: "Burpees", how: "manual", seconds: 120,
         unit: "reps", cue: "2 minutes. Tap the screen for each rep — the camera can't count these.", restAfter: 180 },
+      // unit "mi100" = hundredths of a mile. The Cooper run is the one event
+      // whose VALUE is a distance even though the event is timed — the clock is
+      // fixed at 12 minutes and the result is how far you got. It was labelled
+      // "secs", which made it a time-that-isn't: the results row needed a
+      // special case to render it, and anything summing seconds would have
+      // counted 1.42 miles as 142 seconds of work.
       { key: "cooper", name: "Cooper Run", how: "run", distanceLabel: "12 minutes",
-        unit: "secs", cue: "Run as far as you can in 12 minutes, then enter the distance.",
+        unit: "mi100", cue: "Run as far as you can in 12 minutes, then enter the distance.",
         fixedSeconds: 720, restAfter: 0 },
     ],
   },
@@ -340,7 +421,10 @@ export function batteryMinutes(battery) {
  * is the opposite, so this can't be inferred from the unit — it has to be a
  * list, and anything timed added later has to be added here too.
  */
-export const LOWER_IS_BETTER = new Set(["run15", "run2", "sdc"]);
+export const LOWER_IS_BETTER = new Set([
+  "run15", "run2", "sdc",                                  // Navy + Army
+  "ruck3", "agility_r", "agility_l", "farmers", "shuttle300", "finswim", // AFSPECWAR
+]);
 
 /** Per-event delta against the previous test of the same battery. */
 export function compareToPrevious(events, previous) {
