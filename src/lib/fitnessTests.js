@@ -1,0 +1,312 @@
+/**
+ * fitnessTests.js — assessment batteries and their scoring.
+ *
+ * Four batteries, two different kinds of scoring:
+ *
+ *   military       Navy PRT — scored against the real published age- and
+ *                  sex-banded standards. A pass is a pass.
+ *   repsandsteps   Scored with The Line, this app's own output formula
+ *                  (see claude/02-gamification-spec.md §2).
+ *   strength       Scored against YOUR last test, not a population norm.
+ *   conditioning   Same — personal baseline.
+ *
+ * Why strength and conditioning have no absolute standards: there is no
+ * sourceable "good number of air squats for a 34-year-old" the way there is for
+ * a service PT test. Inventing one and presenting it as a standard would be
+ * worse than having none, so those batteries report your delta instead.
+ *
+ * EVERY event here is something the app can actually measure. The Army AFT is
+ * deliberately absent: three of its five events (3RM deadlift, sprint-drag-carry)
+ * need a hex bar, a sled and a 25m lane, so the app cannot run it and must not
+ * claim to. The Navy PRT is the only official battery that is fully bodyweight.
+ */
+
+// ── Navy PRT standards ───────────────────────────────────────────────────────
+//
+// SOURCE: Navy Physical Readiness Test Guide 5A (Dec 2025), as transcribed by
+// two independent secondary sources that agree on every value spot-checked.
+// The official PDF blocks direct fetching, so these have NOT been read from the
+// primary document.
+//
+// ⚠️ VERIFY BEFORE ANY OF THIS IS USED FOR AN ACTUAL SERVICE SCREENING. It is
+// accurate enough to train against and wrong enough to matter if someone treats
+// it as official. The UI says so too.
+//
+// Values are [maximum (Outstanding), minimum (passing)]. Standards are for
+// altitudes below 5,000 ft; the Navy publishes separate tables above that.
+// Plank and run times are in SECONDS.
+const M = (mmss) => {
+  const [m, s] = mmss.split(":").map(Number);
+  return m * 60 + s;
+};
+
+export const NAVY_PRT = {
+  source: "Navy PRT Guide 5A (Dec 2025), transcribed from secondary sources — verify before official use",
+  altitudeNote: "Below 5,000 ft. Separate standards apply above that.",
+  male: {
+    "17-19": { pushups: [92, 42], plank: [M("3:24"), M("1:11")], run15: [M("8:15"), M("12:45")] },
+    "20-24": { pushups: [87, 37], plank: [M("3:20"), M("1:10")], run15: [M("8:30"), M("13:30")] },
+    "25-29": { pushups: [84, 34], plank: [M("3:16"), M("1:09")], run15: [M("8:55"), M("14:00")] },
+    "30-34": { pushups: [80, 31], plank: [M("3:12"), M("1:07")], run15: [M("9:20"), M("14:30")] },
+    "35-39": { pushups: [76, 27], plank: [M("3:08"), M("1:06")], run15: [M("9:25"), M("15:00")] },
+    "40-44": { pushups: [72, 24], plank: [M("3:04"), M("1:05")], run15: [M("9:30"), M("15:30")] },
+    "45-49": { pushups: [68, 21], plank: [M("3:01"), M("1:03")], run15: [M("9:33"), M("16:08")] },
+    "50-54": { pushups: [64, 19], plank: [M("2:57"), M("1:02")], run15: [M("9:35"), M("16:45")] },
+    "55-59": { pushups: [60, 10], plank: [M("2:54"), M("1:01")], run15: [M("10:42"), M("17:09")] },
+    "60-64": { pushups: [57, 8],  plank: [M("2:50"), M("1:00")], run15: [M("11:21"), M("18:52")] },
+    "65+":   { pushups: [48, 4],  plank: [M("2:47"), M("0:58")], run15: [M("11:41"), M("20:35")] },
+  },
+  female: {
+    "17-19": { pushups: [51, 19], plank: [M("3:14"), M("1:01")], run15: [M("9:29"),  M("15:00")] },
+    "20-24": { pushups: [48, 16], plank: [M("3:10"), M("1:00")], run15: [M("9:47"),  M("15:30")] },
+    "25-29": { pushups: [46, 13], plank: [M("3:06"), M("0:59")], run15: [M("10:17"), M("16:08")] },
+    "30-34": { pushups: [44, 11], plank: [M("3:02"), M("0:58")], run15: [M("10:46"), M("16:45")] },
+    "35-39": { pushups: [43, 9],  plank: [M("2:59"), M("0:56")], run15: [M("10:51"), M("17:00")] },
+    "40-44": { pushups: [41, 7],  plank: [M("2:55"), M("0:55")], run15: [M("10:56"), M("17:15")] },
+    "45-49": { pushups: [40, 5],  plank: [M("2:52"), M("0:54")], run15: [M("10:58"), M("17:23")] },
+    "50-54": { pushups: [38, 2],  plank: [M("2:48"), M("0:53")], run15: [M("11:00"), M("17:30")] },
+    "55-59": { pushups: [30, 2],  plank: [M("2:45"), M("0:52")], run15: [M("12:23"), M("18:34")] },
+    "60-64": { pushups: [26, 2],  plank: [M("2:42"), M("0:51")], run15: [M("13:34"), M("19:43")] },
+    "65+":   { pushups: [22, 1],  plank: [M("2:38"), M("0:50")], run15: [M("14:45"), M("20:52")] },
+  },
+};
+
+export const AGE_BANDS = Object.keys(NAVY_PRT.male);
+
+/** The band a given age falls in, or null if it's below the youngest band. */
+export function ageBand(age) {
+  const n = Number(age);
+  if (!Number.isFinite(n) || n < 17) return null;
+  if (n >= 65) return "65+";
+  return AGE_BANDS.find((b) => {
+    const [lo, hi] = b.split("-").map(Number);
+    return n >= lo && n <= hi;
+  }) || null;
+}
+
+/** Navy performance categories, best first. */
+export const PRT_CATEGORIES = [
+  { key: "outstanding",  label: "Outstanding",  min: 90, color: "#22c55e" },
+  { key: "excellent",    label: "Excellent",    min: 75, color: "#4ade80" },
+  { key: "good",         label: "Good",         min: 60, color: "#00a9ff" },
+  { key: "satisfactory", label: "Satisfactory", min: 50, color: "#fbbf24" },
+  { key: "probationary", label: "Probationary", min: 45, color: "#fb923c" },
+  { key: "failure",      label: "Failure",      min: 0,  color: "#ef4444" },
+];
+
+const categoryFor = (points) =>
+  PRT_CATEGORIES.find((c) => points >= c.min) || PRT_CATEGORIES[PRT_CATEGORIES.length - 1];
+
+/**
+ * Score one Navy PRT event.
+ *
+ * The Navy's real tables are per-point lookups; this interpolates linearly
+ * between the published minimum (45 points, Probationary) and maximum (100,
+ * Outstanding), which tracks the published curve closely enough to train
+ * against and is honest about being an approximation. `lowerIsBetter` covers
+ * the run, where a smaller number is a better result.
+ *
+ * @returns {{points:number, category:object, min:number, max:number}|null}
+ *          null when no standards exist for that band — better to say "not
+ *          loaded" than to score someone against the wrong table.
+ */
+export function scorePrtEvent(eventKey, value, sex, age) {
+  const band = ageBand(age);
+  const table = NAVY_PRT[sex]?.[band]?.[eventKey];
+  if (!table || !Number.isFinite(Number(value))) return null;
+
+  const [max, min] = table;
+  const v = Number(value);
+  const lowerIsBetter = eventKey === "run15";
+
+  let frac;
+  if (lowerIsBetter) frac = (min - v) / (min - max);
+  else               frac = (v - min) / (max - min);
+
+  // 45 points is the passing floor, 100 the ceiling. Below the minimum the
+  // score falls away toward 0 at roughly the same rate it climbs above it.
+  const points = frac >= 0
+    ? Math.min(100, Math.round(45 + frac * 55))
+    : Math.max(0, Math.round(45 + frac * 45));
+
+  return { points, category: categoryFor(points), min, max, band };
+}
+
+/** Overall PRT result. Failing ANY event fails the test — that's the real rule. */
+export function scorePrtTest(events, sex, age) {
+  const scored = events.map((e) => ({ ...e, result: scorePrtEvent(e.key, e.value, sex, age) }));
+  const usable = scored.filter((e) => e.result);
+  if (!usable.length) return { scored, overall: null, passed: null, average: null };
+
+  const average = Math.round(usable.reduce((s, e) => s + e.result.points, 0) / usable.length);
+  const anyFailed = usable.some((e) => e.result.points < 45);
+  return {
+    scored,
+    average,
+    passed: !anyFailed,
+    overall: anyFailed ? PRT_CATEGORIES[PRT_CATEGORIES.length - 1] : categoryFor(average),
+  };
+}
+
+// ── The Line — this app's own output number ──────────────────────────────────
+// From claude/02-gamification-spec.md §2. The RepsAndSteps battery exists to
+// produce this number, which is why that battery mixes reps, steps and time
+// rather than being a list of max-effort events: all three terms have to be fed.
+export function lineScore({ cleanReps = 0, steps = 0, activeMinutes = 0 }) {
+  return Math.round(cleanReps * 1.0 + steps / 100 + activeMinutes * 2.0);
+}
+
+/** Plate tiers from the gamification spec — a ladder lifters already read. */
+export const PLATE_TIERS = [
+  { min: 0,   name: "White",  color: "#e5e7eb" },
+  { min: 150, name: "Green",  color: "#22c55e" },
+  { min: 300, name: "Yellow", color: "#eab308" },
+  { min: 500, name: "Blue",   color: "#3b82f6" },
+  { min: 750, name: "Red",    color: "#ef4444" },
+  { min: 1100, name: "Black", color: "#111827" },
+];
+
+export const tierFor = (score) =>
+  [...PLATE_TIERS].reverse().find((t) => score >= t.min) || PLATE_TIERS[0];
+
+// ── The batteries ────────────────────────────────────────────────────────────
+//
+// `how` tells the runner which tracker to hand the event to:
+//   reps   -> ARTP camera tracker, capped by `seconds` when present
+//   hold   -> a timer counting UP; the user taps when they drop
+//   run    -> a stopwatch; the user runs a route they measured and taps at the end
+//   steps  -> the native step counter over a fixed window
+//
+// The run is a stopwatch rather than a measured distance on purpose. The app
+// converts steps to miles with steps/2100, which is a WALKING stride — running
+// is nearer 1500-1700 steps/mile, so a step-measured run reads 25-35% long.
+// "Run your measured 1.5 miles and tap when you're back" is exact and needs no
+// new technology.
+
+export const BATTERIES = {
+  military: {
+    key: "military",
+    name: "Military — Navy PRT",
+    blurb: "The real Navy Physical Readiness Test, scored against the published standards for your age and sex.",
+    icon: "shield",
+    accent: "#4ade80",
+    scoring: "standards",
+    needsProfile: true,          // age + sex required before it can score
+    disclaimer:
+      "Standards transcribed from Navy PRT Guide 5A. Accurate enough to train against — " +
+      "not a substitute for an official screening.",
+    events: [
+      { key: "pushups", name: "Push-ups", exercise: "Push-Up", how: "reps", seconds: 120,
+        unit: "reps", cue: "As many as you can in 2 minutes. Full lockout at the top.", restAfter: 120 },
+      { key: "plank", name: "Forearm Plank", exercise: "Plank", how: "hold",
+        unit: "secs", cue: "Hold as long as you can. Tap STOP the moment your hips drop.", restAfter: 120 },
+      { key: "run15", name: "1.5-Mile Run", how: "run", distanceLabel: "1.5 miles",
+        unit: "secs", cue: "Run your measured 1.5-mile route. Tap STOP when you finish.", restAfter: 0 },
+    ],
+  },
+
+  repsandsteps: {
+    key: "repsandsteps",
+    name: "RepsAndSteps Output",
+    blurb: "Our own test. Not a pass/fail — it produces one number, your output score, from reps, steps and time under load.",
+    icon: "zap",
+    accent: "#00a9ff",
+    scoring: "line",
+    needsProfile: false,
+    disclaimer: null,
+    // Deliberately mixes the three terms The Line is built from — reps, steps
+    // and active minutes — because the score is meaningless if a battery only
+    // feeds one of them.
+    events: [
+      { key: "pushups", name: "Push-ups", exercise: "Push-Up", how: "reps", seconds: 90,
+        unit: "reps", cue: "90 seconds. Quality counts — shallow reps are tracked separately.", restAfter: 60 },
+      { key: "squats", name: "Air Squats", exercise: "Squat", how: "reps", seconds: 90,
+        unit: "reps", cue: "90 seconds. Hip crease below the knee for the rep to count.", restAfter: 60 },
+      { key: "lunges", name: "Reverse Lunges", exercise: "Reverse Lunge", how: "reps", seconds: 60,
+        unit: "reps", cue: "60 seconds, alternating. Left and right each count.", restAfter: 60 },
+      { key: "plank", name: "Plank Hold", exercise: "Plank", how: "hold",
+        unit: "secs", cue: "Hold as long as you can — this is your time under load.", restAfter: 60 },
+      { key: "steps", name: "Step Burst", how: "steps", seconds: 180,
+        unit: "steps", cue: "3 minutes. Walk, jog or run — every step counts toward your score.", restAfter: 0 },
+    ],
+  },
+
+  strength: {
+    key: "strength",
+    name: "Strength Endurance",
+    blurb: "Bodyweight max-effort. Scored against your own last test, not a population average.",
+    icon: "dumbbell",
+    accent: "#f97316",
+    scoring: "baseline",
+    needsProfile: false,
+    // Named "strength endurance", not "strength": with no load this measures how
+    // long you can keep going, not how much you can move. A lifter will notice.
+    disclaimer: "Bodyweight only, so this measures strength ENDURANCE rather than maximal strength.",
+    events: [
+      { key: "pushups", name: "Push-ups to failure", exercise: "Push-Up", how: "reps",
+        unit: "reps", cue: "No time limit. Go until you cannot complete another rep.", restAfter: 120 },
+      { key: "squats", name: "Air Squats", exercise: "Squat", how: "reps", seconds: 120,
+        unit: "reps", cue: "2 minutes, full depth.", restAfter: 120 },
+      { key: "lunges", name: "Reverse Lunges", exercise: "Reverse Lunge", how: "reps", seconds: 90,
+        unit: "reps", cue: "90 seconds, alternating legs.", restAfter: 120 },
+      { key: "wallsit", name: "Wall Sit", exercise: "Wall Sit", how: "hold",
+        unit: "secs", cue: "Thighs parallel, back flat. Hold.", restAfter: 120 },
+      { key: "plank", name: "Plank", exercise: "Plank", how: "hold",
+        unit: "secs", cue: "Hold as long as you can.", restAfter: 0 },
+    ],
+  },
+
+  conditioning: {
+    key: "conditioning",
+    name: "Conditioning",
+    blurb: "Work capacity under fatigue. Scored against your own last test.",
+    icon: "flame",
+    accent: "#ef4444",
+    scoring: "baseline",
+    needsProfile: false,
+    disclaimer: null,
+    events: [
+      { key: "jumpsquats", name: "Jump Squats", exercise: "Jump Squat", how: "reps", seconds: 120,
+        unit: "reps", cue: "2 minutes. Land soft.", restAfter: 120 },
+      { key: "highknees", name: "High Knees", exercise: "High Knee", how: "reps", seconds: 60,
+        unit: "reps", cue: "60 seconds. Knees to hip height.", restAfter: 120 },
+      // Burpees can't be pose-counted — the model was never reliable on them, so
+      // this one is tapped. Kept anyway: without it the battery has no full-body
+      // event at all.
+      { key: "burpees", name: "Burpees", how: "manual", seconds: 120,
+        unit: "reps", cue: "2 minutes. Tap the screen for each rep — the camera can't count these.", restAfter: 180 },
+      { key: "cooper", name: "Cooper Run", how: "run", distanceLabel: "12 minutes",
+        unit: "secs", cue: "Run as far as you can in 12 minutes, then enter the distance.",
+        fixedSeconds: 720, restAfter: 0 },
+    ],
+  },
+};
+
+export const BATTERY_LIST = Object.values(BATTERIES);
+
+/** Total wall-clock estimate for a battery, in minutes. */
+export function batteryMinutes(battery) {
+  const secs = battery.events.reduce((t, e) => {
+    const work = e.fixedSeconds ?? e.seconds ?? 90;   // 90s assumed for untimed holds
+    return t + work + (e.restAfter || 0);
+  }, 0);
+  return Math.max(1, Math.round(secs / 60));
+}
+
+/** Per-event delta against the previous test of the same battery. */
+export function compareToPrevious(events, previous) {
+  if (!previous?.events?.length) return null;
+  const prev = Object.fromEntries(previous.events.map((e) => [e.key, e.value]));
+  return events.map((e) => {
+    const before = prev[e.key];
+    if (before == null) return { ...e, delta: null };
+    const lowerIsBetter = e.key === "run15";
+    const diff = e.value - before;
+    return {
+      ...e,
+      delta: diff,
+      improved: lowerIsBetter ? diff < 0 : diff > 0,
+      before,
+    };
+  });
+}

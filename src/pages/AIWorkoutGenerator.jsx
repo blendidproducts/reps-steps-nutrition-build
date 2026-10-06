@@ -32,6 +32,24 @@ import {
 import { motion } from "framer-motion";
 import { findNamedExercisesInText } from "@/lib/exerciseNameMatch";
 
+/* Training focus — orthogonal to difficulty. Each one biases exercise selection
+   toward the movements that actually serve that goal, and `match` is checked
+   against the exercise name so it works off the existing library with no new
+   fields on the Exercise entity. */
+const FOCUS_OPTIONS = [
+  { id: "balanced", emoji: "⚖️", label: "Balanced", color: "#00a9ff",
+    hint: "A bit of everything", match: null },
+  { id: "strength", emoji: "🏋️", label: "Strength", color: "#f97316",
+    hint: "Push, pull, squat patterns",
+    match: /push|squat|lunge|dip|pull|plank|bridge|split/i },
+  { id: "conditioning", emoji: "🔥", label: "Conditioning", color: "#ef4444",
+    hint: "Keep the heart rate up",
+    match: /jump|burpee|knee|jack|climber|kick|crawl|sprint|skater/i },
+  { id: "military", emoji: "🎖️", label: "Military", color: "#4ade80",
+    hint: "Push-ups, plank, running",
+    match: /push|plank|sit|run|crawl|squat/i },
+];
+
 export default function AIWorkoutGenerator() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
@@ -40,6 +58,7 @@ export default function AIWorkoutGenerator() {
   const [justTranscribed, setJustTranscribed] = useState(false);
   const promptInputRef = useRef(null);
   const [workoutLevel, setWorkoutLevel] = useState(null);
+  const [workoutFocus, setWorkoutFocus] = useState("balanced");
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
   const [customTime, setCustomTime] = useState("");
@@ -101,6 +120,15 @@ export default function AIWorkoutGenerator() {
       filtered = filtered.filter(ex => ex.difficulty === 'beginner' || ex.difficulty === 'intermediate');
     } else if (workoutLevel === 'intermediate') {
       filtered = filtered.filter(ex => ex.difficulty !== 'advanced');
+    }
+
+    // Focus bias. Applied as a PREFERENCE, not a filter: if the focus leaves
+    // too few exercises to build a session from, fall back to the full pool
+    // rather than handing back a three-move workout.
+    const focus = FOCUS_OPTIONS.find((f) => f.id === workoutFocus);
+    if (focus?.match) {
+      const preferred = filtered.filter((ex) => focus.match.test(ex.name || ""));
+      if (preferred.length >= 5) filtered = preferred;
     }
 
     // Determine number of exercises based on time
@@ -788,6 +816,50 @@ export default function AIWorkoutGenerator() {
                       <div className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1 leading-tight">High intensity, maximum sets</div>
                     </div>
                     {workoutLevel === 'advanced' && <Check className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-red-500 flex-shrink-0" />}
+                  </div>
+                </button>
+
+                {/* ── Focus ─────────────────────────────────────────────────
+                    Difficulty says how hard; focus says what KIND. They're
+                    independent — an advanced conditioning session and an
+                    advanced strength session share nothing but the intensity. */}
+                <div className="pt-5 mt-5 border-t border-gray-800">
+                  <p className="text-sm font-semibold text-white mb-1">Training focus</p>
+                  <p className="text-xs text-gray-500 mb-3">Biases which movements get picked</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {FOCUS_OPTIONS.map((f) => (
+                      <button key={f.id} onClick={() => setWorkoutFocus(f.id)}
+                        aria-pressed={workoutFocus === f.id}
+                        className={`min-h-[56px] rounded-xl border-2 px-3 py-2 text-left transition-all ${
+                          workoutFocus === f.id
+                            ? "bg-white/5 text-white"
+                            : "bg-gray-800/50 border-gray-700 text-gray-300"
+                        }`}
+                        style={workoutFocus === f.id ? { borderColor: f.color } : undefined}>
+                        <div className="text-sm font-bold">{f.emoji} {f.label}</div>
+                        <div className="text-[10px] text-gray-500 leading-tight">{f.hint}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ── Assess me ─────────────────────────────────────────────
+                    Deliberately not a fourth difficulty chip. A test has no
+                    difficulty — every event is max effort by definition — so it
+                    is a different thing to start, not a different setting. */}
+                <button
+                  onClick={() => navigate(createPageUrl("FitnessTest"))}
+                  className="w-full mt-4 rounded-xl border-2 border-dashed border-[#00a9ff]/50 bg-[#00a9ff]/5 p-4 text-left active:scale-[0.99] transition">
+                  <div className="flex items-center gap-3">
+                    <div className="text-2xl">📋</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-bold text-sm">I just want a fitness test</p>
+                      <p className="text-gray-400 text-xs leading-snug mt-0.5">
+                        Measure where you are instead of training. Navy PRT, RepsAndSteps
+                        output score, strength or conditioning.
+                      </p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-[#00a9ff] shrink-0" />
                   </div>
                 </button>
               </CardContent>

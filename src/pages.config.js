@@ -56,6 +56,7 @@ const ProgramSeed         = React.lazy(() => import('./pages/ProgramSeed'));
 const ExerciseImages      = React.lazy(() => import('./pages/ExerciseImages'));
 const ContentAudit        = React.lazy(() => import('./pages/ContentAudit'));
 const Guides              = React.lazy(() => import('./pages/Guides'));
+const FitnessTest         = React.lazy(() => import('./pages/FitnessTest'));
 
 export const PAGES = {
   "AIWorkoutGenerator":  AIWorkoutGenerator,
@@ -103,6 +104,7 @@ export const PAGES = {
   "ExerciseImages":      ExerciseImages,
   "ContentAudit":        ContentAudit,
   "Guides":              Guides,
+  "FitnessTest":         FitnessTest,
 };
 
 export const pagesConfig = {

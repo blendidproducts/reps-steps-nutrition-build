@@ -1,0 +1,679 @@
+/**
+ * FitnessTest.jsx — pick a battery, run it, see where you stand.
+ *
+ * Three phases: setup -> running -> results.
+ *
+ * The runner hands each event to the machinery that already exists — the ARTP
+ * camera tracker for rep events, a count-up timer for holds, the step counter
+ * for the step burst — so there is no new tracking code here, only the frame
+ * around it.
+ *
+ * Results are persisted to the FitnessTest entity when it exists in Base44, and
+ * to localStorage either way. The local copy is what makes the "since your last
+ * test" delta work on day one, before the entity has been created.
+ */
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { base44 } from "@/api/base44Client";
+import { motion, AnimatePresence } from "framer-motion";
+import RepTracker, { releaseSharedCamera } from "@/components/workout/RepTracker";
+import StepTracker from "@/components/StepTracker";
+import BuildStamp from "@/components/BuildStamp";
+import {
+  BATTERIES, BATTERY_LIST, batteryMinutes, scorePrtTest, lineScore, tierFor,
+  compareToPrevious, ageBand,
+} from "@/lib/fitnessTests";
+import {
+  ChevronLeft, Shield, Zap, Flame, Dumbbell, Play, Square, Timer as TimerIcon,
+  CheckCircle, AlertTriangle, TrendingUp, TrendingDown, Minus, RotateCcw, Footprints,
+} from "lucide-react";
+
+const ICONS = { shield: Shield, zap: Zap, flame: Flame, dumbbell: Dumbbell };
+const STORE_KEY = "rns_fitness_tests";
+
+const fmtSecs = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+const fmtValue = (v, unit) => (unit === "secs" ? fmtSecs(v) : `${v}`);
+
+/* ── local history ─────────────────────────────────────────────────────────── */
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || "[]"); } catch { return []; }
+}
+function saveLocal(record) {
+  try {
+    const all = [record, ...loadHistory()].slice(0, 50);
+    localStorage.setItem(STORE_KEY, JSON.stringify(all));
+  } catch { /* storage full or blocked — the on-screen result is still correct */ }
+}
+const lastOfBattery = (key) => loadHistory().find((r) => r.battery === key) || null;
+
+/** Profile for the military battery, remembered so it's asked once. */
+function loadProfile() {
+  try { return JSON.parse(localStorage.getItem("rns_test_profile") || "null"); } catch { return null; }
+}
+function saveProfile(p) {
+  try { localStorage.setItem("rns_test_profile", JSON.stringify(p)); } catch {}
+}
+
+export default function FitnessTest() {
+  const navigate = useNavigate();
+  const [phase, setPhase] = useState("setup");       // setup | running | results
+  const [batteryKey, setBatteryKey] = useState(null);
+  const [profile, setProfile] = useState(() => loadProfile() || { sex: "", age: "" });
+  const [eventIndex, setEventIndex] = useState(0);
+  const [values, setValues] = useState({});          // key -> measured value
+  const [resting, setResting] = useState(0);         // seconds left between events
+
+  const battery = batteryKey ? BATTERIES[batteryKey] : null;
+  const event = battery?.events[eventIndex] || null;
+
+  /* ── rest between events ─────────────────────────────────────────────── */
+  useEffect(() => {
+    if (resting <= 0) return;
+    const t = setTimeout(() => setResting((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resting]);
+
+  useEffect(() => () => releaseSharedCamera(), []);
+
+  /** Record an event's result and move on (or finish). */
+  const finishEvent = useCallback((value) => {
+    const key = battery.events[eventIndex].key;
+    const next = { ...values, [key]: value };
+    setValues(next);
+    const rest = battery.events[eventIndex].restAfter || 0;
+    if (eventIndex + 1 >= battery.events.length) {
+      finishTest(next);
+    } else {
+      setEventIndex((i) => i + 1);
+      setResting(rest);
+    }
+  }, [battery, eventIndex, values]); // eslint-disable-line
+
+  function finishTest(finalValues) {
+    const events = battery.events.map((e) => ({
+      key: e.key, name: e.name, unit: e.unit, value: finalValues[e.key] ?? 0,
+    }));
+    const record = {
+      id: `local-${Date.now()}`,
+      battery: battery.key,
+      taken_at: new Date().toISOString(),
+      sex: profile.sex || null,
+      age: profile.age ? Number(profile.age) : null,
+      events,
+    };
+    saveLocal(record);
+    setResult(record);
+    setPhase("results");
+    releaseSharedCamera();
+
+    // Mirror to Base44 when the entity exists. It may not yet — the local copy
+    // above is the one the results screen actually reads, so a missing entity
+    // costs nothing but cross-device history.
+    (async () => {
+      try { await base44.entities.FitnessTest?.create?.(record); } catch (_) {}
+    })();
+  }
+
+  const [result, setResult] = useState(null);
+
+  function restart() {
+    setPhase("setup"); setBatteryKey(null); setEventIndex(0);
+    setValues({}); setResting(0); setResult(null);
+  }
+
+  /* ── SETUP ───────────────────────────────────────────────────────────── */
+  if (phase === "setup") {
+    return (
+      <div className="min-h-screen bg-[#020817] text-white pb-28">
+        <div className="bg-[#111] border-b border-gray-800 px-4 py-4 flex items-center gap-3 sticky top-0 z-10">
+          <button onClick={() => navigate(createPageUrl("AIWorkoutGenerator"))} className="text-gray-400">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-base font-bold">Fitness Test</h1>
+            <p className="text-xs text-gray-500">Measure where you are — no workout</p>
+          </div>
+        </div>
+
+        <div className="max-w-lg mx-auto px-4 py-5 space-y-3">
+          {BATTERY_LIST.map((b) => {
+            const Icon = ICONS[b.icon] || Shield;
+            const prev = lastOfBattery(b.key);
+            const selected = batteryKey === b.key;
+            return (
+              <button key={b.key} onClick={() => setBatteryKey(b.key)}
+                className={`w-full text-left rounded-2xl border p-4 transition-all ${
+                  selected ? "border-2 bg-white/5" : "border-gray-800 bg-[#111]"
+                }`}
+                style={selected ? { borderColor: b.accent } : undefined}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: `${b.accent}22`, border: `1px solid ${b.accent}55` }}>
+                    <Icon className="w-5 h-5" style={{ color: b.accent }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm">{b.name}</p>
+                    <p className="text-[11px] text-gray-500">
+                      {b.events.length} events · about {batteryMinutes(b)} min
+                      {prev && ` · last ${new Date(prev.taken_at).toLocaleDateString()}`}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-2.5 leading-snug">{b.blurb}</p>
+
+                {selected && (
+                  <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+                    {b.events.map((e, i) => (
+                      <div key={e.key} className="flex items-center gap-2 text-[11px]">
+                        <span className="w-4 text-gray-600 font-bold">{i + 1}</span>
+                        <span className="text-gray-300 flex-1">{e.name}</span>
+                        <span className="text-gray-500">
+                          {e.fixedSeconds ? fmtSecs(e.fixedSeconds)
+                            : e.seconds ? fmtSecs(e.seconds)
+                            : e.how === "hold" ? "max hold" : "to failure"}
+                        </span>
+                      </div>
+                    ))}
+                    {b.disclaimer && (
+                      <div className="flex gap-2 mt-2 bg-amber-950/30 border border-amber-500/30 rounded-lg p-2.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                        <p className="text-[10px] text-amber-200/90 leading-snug">{b.disclaimer}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+
+          {/* Age and sex — only the military battery needs them, because only it
+              scores against age- and sex-normed standards. Asking everyone for
+              them would be collecting data we have no use for. */}
+          {battery?.needsProfile && (
+            <div className="bg-[#111] border border-gray-800 rounded-2xl p-4 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                Required for scoring
+              </p>
+              <p className="text-[11px] text-gray-500 leading-snug">
+                Navy standards are set per age group and sex. Without these the test can be
+                run but not scored.
+              </p>
+              <div>
+                <label className="text-[11px] text-gray-400 block mb-1.5">Sex</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[["male", "Male"], ["female", "Female"]].map(([v, l]) => (
+                    <button key={v}
+                      onClick={() => { const p = { ...profile, sex: v }; setProfile(p); saveProfile(p); }}
+                      className={`min-h-[44px] rounded-xl border text-sm font-semibold ${
+                        profile.sex === v
+                          ? "bg-[#00a9ff]/20 border-[#00a9ff] text-white"
+                          : "border-gray-700 text-gray-400"
+                      }`}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] text-gray-400 block mb-1.5">Age</label>
+                <input
+                  type="number" inputMode="numeric" min="17" max="99"
+                  value={profile.age}
+                  onChange={(e) => { const p = { ...profile, age: e.target.value }; setProfile(p); saveProfile(p); }}
+                  placeholder="e.g. 34"
+                  className="w-full min-h-[44px] bg-[#0a0a0a] border border-gray-700 rounded-xl px-3 text-white text-sm"
+                />
+                {profile.age && !ageBand(profile.age) && (
+                  <p className="text-[10px] text-amber-400 mt-1">
+                    Navy tables start at 17 — the test will run but won't be scored.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <BuildStamp />
+        </div>
+
+        {battery && createPortal(
+          <div className="fixed left-0 right-0 px-4 pb-3 pt-3 bg-gradient-to-t from-[#020817] via-[#020817] to-transparent"
+            style={{ bottom: "calc(var(--nav-h, 68px) + env(safe-area-inset-bottom, 0px))", zIndex: 60 }}>
+            <button onClick={() => { setPhase("running"); setEventIndex(0); setValues({}); }}
+              className="w-full min-h-[56px] rounded-2xl font-black text-base text-white flex items-center justify-center gap-2 active:scale-95 transition"
+              style={{ background: `linear-gradient(135deg, ${battery.accent}, ${battery.accent}cc)` }}>
+              <Play className="w-5 h-5 fill-white" /> START {battery.name.toUpperCase()}
+            </button>
+          </div>,
+          document.body
+        )}
+      </div>
+    );
+  }
+
+  /* ── RUNNING ─────────────────────────────────────────────────────────── */
+  if (phase === "running" && event) {
+    if (resting > 0) {
+      return <RestBetween secs={resting} next={event} onSkip={() => setResting(0)}
+        index={eventIndex} total={battery.events.length} accent={battery.accent} />;
+    }
+    return (
+      <EventRunner
+        key={`${battery.key}-${event.key}`}
+        event={event}
+        index={eventIndex}
+        total={battery.events.length}
+        accent={battery.accent}
+        onDone={finishEvent}
+        onAbort={() => { releaseSharedCamera(); restart(); }}
+      />
+    );
+  }
+
+  /* ── RESULTS ─────────────────────────────────────────────────────────── */
+  if (phase === "results" && result) {
+    return <Results record={result} onRestart={restart}
+      onExit={() => navigate(createPageUrl("Home"))} />;
+  }
+
+  return null;
+}
+
+/* ── Rest between events ─────────────────────────────────────────────────────
+   Rest is part of the test, not a courtesy: every event is max effort and an
+   unrested second event measures your recovery, not the thing it claims to. */
+function RestBetween({ secs, next, onSkip, index, total, accent }) {
+  return createPortal(
+    <div className="fixed inset-0 bg-[#020817] flex flex-col items-center justify-center px-6 text-center"
+      style={{ zIndex: 99995 }}>
+      <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Rest</p>
+      <div className="text-8xl font-black tabular-nums my-3" style={{ color: accent }}>{secs}</div>
+      <p className="text-gray-400 text-sm">Event {index + 1} of {total} coming up</p>
+      <p className="text-white font-bold text-xl mt-4">{next.name}</p>
+      <p className="text-gray-500 text-xs mt-2 max-w-xs leading-snug">{next.cue}</p>
+      <button onClick={onSkip}
+        className="mt-8 min-h-[48px] px-6 rounded-xl border border-gray-700 text-gray-300 text-sm font-bold active:scale-95">
+        Skip rest — I'm ready
+      </button>
+    </div>,
+    document.body
+  );
+}
+
+/* ── One event ───────────────────────────────────────────────────────────────
+   Four shapes, all reusing machinery that already exists:
+     reps   -> RepTracker (camera)
+     hold   -> count-up timer
+     run    -> stopwatch, or a distance entry for the Cooper run
+     steps  -> StepTracker over a fixed window
+     manual -> tap counter, for burpees the pose model can't count */
+function EventRunner({ event, index, total, accent, onDone, onAbort }) {
+  const [elapsed, setElapsed] = useState(0);
+  const [running, setRunning] = useState(false);
+  const [taps, setTaps] = useState(0);
+  const [steps, setSteps] = useState(0);
+  const [distance, setDistance] = useState("");
+  const stepBase = useRef(null);
+
+  const cap = event.fixedSeconds ?? event.seconds ?? null;
+
+  useEffect(() => {
+    if (!running) return;
+    const t = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [running]);
+
+  // Auto-stop at the cap for capped events.
+  useEffect(() => {
+    if (cap && running && elapsed >= cap) {
+      setRunning(false);
+      if (event.how === "reps" || event.how === "manual") {
+        // handled by the finish button so the number can be checked first
+      }
+    }
+  }, [elapsed, cap, running, event.how]);
+
+  const remaining = cap ? Math.max(0, cap - elapsed) : null;
+
+  /* Rep events hand straight off to the existing camera tracker. */
+  if (event.how === "reps") {
+    return (
+      <RepTracker
+        exerciseName={event.exercise}
+        targetReps={0}
+        defaultFacingMode="user"
+        keepCameraAlive={true}
+        timedMode={!!event.seconds}
+        secondsLeft={event.seconds ? remaining : null}
+        onComplete={(reps) => onDone(reps)}
+        onClose={onAbort}
+      />
+    );
+  }
+
+  const Shell = ({ children, hint }) => createPortal(
+    <div className="fixed inset-0 bg-[#020817] flex flex-col text-white" style={{ zIndex: 99995 }}>
+      <div className="flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),20px)] pb-3">
+        <span className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
+          Event {index + 1} of {total}
+        </span>
+        <button onClick={onAbort} className="text-[11px] text-red-400 font-bold border border-red-500/40 rounded-full px-3 py-1.5">
+          Abandon
+        </button>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+        <h2 className="text-2xl font-black">{event.name}</h2>
+        <p className="text-gray-500 text-xs mt-2 max-w-xs leading-snug">{event.cue}</p>
+        {children}
+      </div>
+      {hint && <p className="text-center text-[11px] text-gray-600 pb-[max(env(safe-area-inset-bottom),20px)] px-6">{hint}</p>}
+    </div>,
+    document.body
+  );
+
+  /* Count-up hold: plank, wall sit. */
+  if (event.how === "hold") {
+    return (
+      <Shell hint="The timer counts up. Your score is how long you lasted.">
+        <div className="text-7xl font-black tabular-nums my-8" style={{ color: accent }}>
+          {fmtSecs(elapsed)}
+        </div>
+        {!running ? (
+          <button onClick={() => setRunning(true)}
+            className="min-h-[56px] px-10 rounded-2xl font-black text-base text-black flex items-center gap-2 active:scale-95"
+            style={{ background: accent }}>
+            <Play className="w-5 h-5 fill-black" /> START HOLD
+          </button>
+        ) : (
+          <button onClick={() => { setRunning(false); onDone(elapsed); }}
+            className="min-h-[56px] px-10 rounded-2xl font-black text-base bg-red-600 text-white flex items-center gap-2 active:scale-95">
+            <Square className="w-5 h-5" /> I DROPPED
+          </button>
+        )}
+      </Shell>
+    );
+  }
+
+  /* Run: a stopwatch for a fixed distance, or a fixed clock for the Cooper. */
+  if (event.how === "run") {
+    const isCooper = !!event.fixedSeconds;
+    return (
+      <Shell hint={isCooper
+        ? "Run for 12 minutes, then enter how far you got."
+        : "Start the clock as you set off. Tap STOP as you finish."}>
+        <div className="text-6xl font-black tabular-nums my-6" style={{ color: accent }}>
+          {isCooper && running ? fmtSecs(remaining) : fmtSecs(elapsed)}
+        </div>
+        <p className="text-gray-500 text-xs mb-6">{event.distanceLabel}</p>
+
+        {isCooper && (!running && elapsed > 0) ? (
+          <div className="w-full max-w-xs space-y-3">
+            <label className="text-xs text-gray-400 block">Distance covered (miles)</label>
+            <input type="number" step="0.01" inputMode="decimal" value={distance}
+              onChange={(e) => setDistance(e.target.value)} placeholder="e.g. 1.42"
+              className="w-full min-h-[48px] bg-[#0a0a0a] border border-gray-700 rounded-xl px-3 text-white text-center text-lg" />
+            <button disabled={!distance}
+              onClick={() => onDone(Math.round(Number(distance) * 100))}
+              className="w-full min-h-[52px] rounded-2xl font-black text-black disabled:opacity-40"
+              style={{ background: accent }}>
+              SAVE DISTANCE
+            </button>
+          </div>
+        ) : !running ? (
+          <button onClick={() => setRunning(true)}
+            className="min-h-[56px] px-10 rounded-2xl font-black text-base text-black flex items-center gap-2 active:scale-95"
+            style={{ background: accent }}>
+            <Play className="w-5 h-5 fill-black" /> START
+          </button>
+        ) : (
+          <button onClick={() => { setRunning(false); if (!isCooper) onDone(elapsed); }}
+            className="min-h-[56px] px-10 rounded-2xl font-black text-base bg-red-600 text-white flex items-center gap-2 active:scale-95">
+            <Square className="w-5 h-5" /> STOP
+          </button>
+        )}
+      </Shell>
+    );
+  }
+
+  /* Step burst — the native counter over a fixed window. */
+  if (event.how === "steps") {
+    return (
+      <Shell hint="Any pace. Steps feed your output score directly.">
+        <StepTracker isActive={running} onStepUpdate={(c) => {
+          if (stepBase.current === null) stepBase.current = c;
+          setSteps(Math.max(0, c - stepBase.current));
+        }} />
+        <div className="text-7xl font-black tabular-nums mt-8" style={{ color: accent }}>{steps}</div>
+        <p className="text-gray-500 text-xs mb-6">steps</p>
+        <div className="text-2xl font-bold tabular-nums text-gray-400 mb-6">
+          {running ? fmtSecs(remaining) : fmtSecs(cap)}
+        </div>
+        {!running ? (
+          <button onClick={() => setRunning(true)}
+            className="min-h-[56px] px-10 rounded-2xl font-black text-base text-black flex items-center gap-2 active:scale-95"
+            style={{ background: accent }}>
+            <Footprints className="w-5 h-5" /> START
+          </button>
+        ) : (
+          <button onClick={() => { setRunning(false); onDone(steps); }}
+            className={`min-h-[56px] px-10 rounded-2xl font-black text-base flex items-center gap-2 active:scale-95 ${
+              remaining === 0 ? "bg-green-500 text-black" : "bg-red-600 text-white"
+            }`}>
+            {remaining === 0 ? <><CheckCircle className="w-5 h-5" /> DONE</> : <><Square className="w-5 h-5" /> STOP EARLY</>}
+          </button>
+        )}
+      </Shell>
+    );
+  }
+
+  /* Manual tap — burpees. */
+  return (
+    <Shell hint="Tap anywhere on the big number for each rep.">
+      <button onClick={() => running && setTaps((t) => t + 1)}
+        className="my-6 w-56 h-56 rounded-full flex flex-col items-center justify-center active:scale-95 transition"
+        style={{ background: `${accent}22`, border: `3px solid ${accent}` }}>
+        <span className="text-7xl font-black tabular-nums" style={{ color: accent }}>{taps}</span>
+        <span className="text-xs text-gray-400 uppercase tracking-wide mt-1">tap to count</span>
+      </button>
+      <div className="text-2xl font-bold tabular-nums text-gray-400 mb-6">
+        {running ? fmtSecs(remaining) : fmtSecs(cap)}
+      </div>
+      {!running ? (
+        <button onClick={() => setRunning(true)}
+          className="min-h-[56px] px-10 rounded-2xl font-black text-base text-black active:scale-95"
+          style={{ background: accent }}>
+          START
+        </button>
+      ) : (
+        <button onClick={() => { setRunning(false); onDone(taps); }}
+          className={`min-h-[56px] px-10 rounded-2xl font-black text-base active:scale-95 ${
+            remaining === 0 ? "bg-green-500 text-black" : "bg-red-600 text-white"
+          }`}>
+          {remaining === 0 ? "DONE" : "STOP EARLY"}
+        </button>
+      )}
+    </Shell>
+  );
+}
+
+/* ── Results ─────────────────────────────────────────────────────────────────
+   Three ways to present a result, because the three kinds of battery mean
+   genuinely different things:
+     standards -> Navy pass/fail with per-event points
+     line      -> one output number and a plate tier
+     baseline  -> per-event change since your last test */
+function Results({ record, onRestart, onExit }) {
+  const battery = BATTERIES[record.battery];
+  const previous = loadHistory().find(
+    (r) => r.battery === record.battery && r.id !== record.id
+  ) || null;
+
+  const prt = battery.scoring === "standards"
+    ? scorePrtTest(record.events, record.sex, record.age)
+    : null;
+
+  // The Line needs its three terms separated out of the events: rep-scored
+  // events are reps, held events are time under load, the step burst is steps.
+  const line = battery.scoring === "line" ? (() => {
+    const reps = record.events.filter((e) => e.unit === "reps").reduce((s, e) => s + e.value, 0);
+    const steps = record.events.filter((e) => e.unit === "steps").reduce((s, e) => s + e.value, 0);
+    const secs = record.events.filter((e) => e.unit === "secs").reduce((s, e) => s + e.value, 0);
+    const score = lineScore({ cleanReps: reps, steps, activeMinutes: secs / 60 });
+    return { reps, steps, secs, score, tier: tierFor(score) };
+  })() : null;
+
+  const deltas = compareToPrevious(record.events, previous);
+
+  return (
+    <div className="min-h-screen bg-[#020817] text-white pb-28">
+      <div className="max-w-lg mx-auto px-4 pt-[max(env(safe-area-inset-top),24px)] space-y-5">
+
+        <div className="text-center space-y-1">
+          <div className="text-5xl">{prt ? (prt.passed ? "🎖️" : "📋") : "📊"}</div>
+          <h1 className="text-2xl font-black">{battery.name}</h1>
+          <p className="text-gray-500 text-xs">
+            {new Date(record.taken_at).toLocaleString()}
+          </p>
+        </div>
+
+        {/* ── Navy result ──────────────────────────────────────────────── */}
+        {prt && (
+          prt.overall ? (
+            <div className="rounded-2xl border-2 p-5 text-center"
+              style={{ borderColor: prt.overall.color, background: `${prt.overall.color}18` }}>
+              <p className="text-xs uppercase tracking-widest text-gray-400">Overall</p>
+              <p className="text-3xl font-black mt-1" style={{ color: prt.overall.color }}>
+                {prt.overall.label}
+              </p>
+              <p className="text-sm text-gray-400 mt-1">
+                {prt.average} points average · {prt.passed ? "PASS" : "FAIL"}
+              </p>
+              {!prt.passed && (
+                <p className="text-[11px] text-red-300 mt-2 leading-snug">
+                  Failing any single event fails the whole test — that's the real rule.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-amber-500/40 bg-amber-950/25 p-4 flex gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-200/90 leading-snug">
+                Your results are saved, but there's no standards table for this age and sex, so
+                nothing was scored. Add them on the setup screen and retest to see where you land.
+              </p>
+            </div>
+          )
+        )}
+
+        {/* ── The Line ─────────────────────────────────────────────────── */}
+        {line && (
+          <>
+            <div className="rounded-2xl border-2 p-5 text-center"
+              style={{ borderColor: line.tier.color, background: `${line.tier.color}18` }}>
+              <p className="text-xs uppercase tracking-widest text-gray-400">Output score</p>
+              <p className="text-6xl font-black tabular-nums mt-1">{line.score}</p>
+              <p className="text-sm font-bold mt-1" style={{ color: line.tier.color }}>
+                {line.tier.name} tier
+              </p>
+            </div>
+            <div className="bg-[#111] border border-gray-800 rounded-2xl p-4">
+              <p className="text-[11px] text-gray-500 uppercase tracking-wide mb-2">How it was built</p>
+              <div className="space-y-1.5 text-xs">
+                <Row label="Reps" value={`${line.reps}`} contrib={line.reps} />
+                <Row label="Steps" value={`${line.steps}`} contrib={Math.round(line.steps / 100)} />
+                <Row label="Time under load" value={fmtSecs(line.secs)}
+                  contrib={Math.round((line.secs / 60) * 2)} />
+                <div className="flex justify-between pt-2 mt-1 border-t border-gray-800 font-bold">
+                  <span className="text-gray-300">Output</span>
+                  <span className="text-white tabular-nums">{line.score}</span>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── Per event ────────────────────────────────────────────────── */}
+        <div className="bg-[#111] border border-gray-800 rounded-2xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-800">
+            <p className="text-sm font-semibold">Events</p>
+          </div>
+          <div className="divide-y divide-gray-800">
+            {record.events.map((e, i) => {
+              const scored = prt?.scored.find((s) => s.key === e.key)?.result;
+              const d = deltas?.find((x) => x.key === e.key);
+              return (
+                <div key={e.key} className="px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-300">{e.name}</span>
+                    <span className="font-bold tabular-nums">
+                      {e.key === "cooper" ? `${(e.value / 100).toFixed(2)} mi` : fmtValue(e.value, e.unit)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1">
+                    {scored && (
+                      <span className="text-[11px] font-bold" style={{ color: scored.category.color }}>
+                        {scored.points} pts · {scored.category.label}
+                      </span>
+                    )}
+                    {scored && (
+                      <span className="text-[10px] text-gray-600">
+                        pass {fmtValue(scored.min, e.unit)} · max {fmtValue(scored.max, e.unit)}
+                      </span>
+                    )}
+                    {d?.delta != null && d.delta !== 0 && (
+                      <span className={`text-[11px] font-bold flex items-center gap-0.5 ${
+                        d.improved ? "text-green-400" : "text-amber-400"}`}>
+                        {d.improved ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                        {d.delta > 0 ? "+" : ""}{e.unit === "secs" ? `${d.delta}s` : d.delta}
+                      </span>
+                    )}
+                    {d && d.delta === 0 && (
+                      <span className="text-[11px] text-gray-500 flex items-center gap-0.5">
+                        <Minus className="w-3 h-3" /> same
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {!previous && battery.scoring === "baseline" && (
+          <p className="text-[11px] text-gray-500 text-center leading-snug px-4">
+            This is your baseline. Retest in 4–6 weeks and every event will show its change.
+          </p>
+        )}
+
+        {battery.disclaimer && (
+          <p className="text-[10px] text-gray-600 leading-snug px-1">{battery.disclaimer}</p>
+        )}
+
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          <button onClick={onRestart}
+            className="min-h-[52px] rounded-xl border border-gray-700 text-gray-300 font-bold text-sm active:scale-95">
+            <RotateCcw className="w-4 h-4 inline mr-1.5" /> Another test
+          </button>
+          <button onClick={onExit}
+            className="min-h-[52px] rounded-xl bg-[#00a9ff] text-white font-bold text-sm active:scale-95">
+            Done
+          </button>
+        </div>
+
+        <BuildStamp />
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, value, contrib }) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-gray-400">{label}</span>
+      <span className="text-gray-300">
+        {value} <span className="text-gray-600">→ +{contrib}</span>
+      </span>
+    </div>
+  );
+}
