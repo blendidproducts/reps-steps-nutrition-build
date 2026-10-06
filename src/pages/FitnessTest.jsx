@@ -31,6 +31,7 @@ import {
   PENDING, scoreAftTest, aftBand, scorePstTest, PST_PROGRAMS, PST_MINIMUMS,
   scoreOftTest, OFT_CARDIO_OPTIONS, OFT_COMPOSITE_MIN, OFT_COMPOSITE_MAX,
 } from "@/lib/militaryStandards";
+import { scorePfraTest, pfraBand, PFRA_TOTAL_MAX } from "@/lib/airForceStandards";
 import {
   ChevronLeft, Shield, Zap, Flame, Dumbbell, Play, Square, Timer as TimerIcon,
   CheckCircle, AlertTriangle, TrendingUp, TrendingDown, Minus, RotateCcw, Footprints,
@@ -454,7 +455,9 @@ export default function FitnessTest() {
                   placeholder="e.g. 34"
                   className="w-full min-h-[44px] bg-[#0a0a0a] border border-gray-700 rounded-xl px-3 text-white text-sm"
                 />
-                {profile.age && !(battery.scoring === "aft" ? aftBand(profile.age) : ageBand(profile.age)) && (
+                {profile.age && !(battery.scoring === "aft" ? aftBand(profile.age)
+                                  : battery.scoring === "pfra" ? pfraBand(profile.age)
+                                  : ageBand(profile.age)) && (
                   <p className="text-[10px] text-amber-400 mt-1">
                     The service tables start at 17 — the test will run but won't be scored.
                   </p>
@@ -972,6 +975,12 @@ function Results({ record, onRestart, onExit }) {
   // The OFT is points per component out of 100, with a per-component floor.
   const oft = battery.scoring === "oft" ? scoreOftTest(record.events) : null;
 
+  // The PFRA scores components but publishes no composite pass mark, so it
+  // reports points and component minimums and stops short of a verdict.
+  const pfra = battery.scoring === "pfra"
+    ? scorePfraTest(record.events, record.sex, record.age)
+    : null;
+
   // The Line needs its three terms separated out of the events: rep-scored
   // events are reps, held events are time under load, the step burst is steps.
   const line = battery.scoring === "line" ? (() => {
@@ -1107,6 +1116,26 @@ function Results({ record, onRestart, onExit }) {
           </div>
         )}
 
+        {/* ── Air Force PFRA result ────────────────────────────────────── */}
+        {pfra && pfra.overall && (
+          <div className="rounded-2xl border-2 p-5 text-center"
+            style={{ borderColor: pfra.overall.color, background: `${pfra.overall.color}18` }}>
+            <p className="text-xs uppercase tracking-widest text-gray-400">Measured components</p>
+            <p className="text-6xl font-black tabular-nums mt-1">
+              {pfra.measured}
+              <span className="text-2xl text-gray-500">/{pfra.measuredMax}</span>
+            </p>
+            <p className="text-sm font-bold mt-1" style={{ color: pfra.overall.color }}>
+              {pfra.overall.label}
+            </p>
+            <p className="text-[11px] text-gray-500 mt-3 leading-snug">
+              The full PFRA is {PFRA_TOTAL_MAX} points; the other 20 are waist-to-height, which is
+              a tape measurement rather than a fitness event. The charts don't publish a composite
+              pass mark, so this doesn't claim one.
+            </p>
+          </div>
+        )}
+
         {/* ── The Line ─────────────────────────────────────────────────── */}
         {line && (
           <>
@@ -1144,8 +1173,8 @@ function Results({ record, onRestart, onExit }) {
               // Both scored tests produce points + a pass line per event, but
               // in different shapes. Normalise here so the row doesn't care
               // which service's table it came from.
-              const raw = (prt || aft || pst || oft)?.scored.find((s) => s.key === e.key)?.result;
-              const scored = !raw ? null : oft ? {
+              const raw = (prt || aft || pst || oft || pfra)?.scored.find((s) => s.key === e.key)?.result;
+              const scored = !raw ? null : (oft || pfra) ? {
                 points: raw.points,
                 label: raw.pass ? `of ${raw.maxPoints}` : "Below minimum",
                 color: raw.pass ? "#4ade80" : "#ef4444",

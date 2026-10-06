@@ -371,24 +371,22 @@ export const BATTERIES = {
     name: "Air Force PFRA",
     group: "military",
     branch: "airforce",
-    standardsPending: true,
-    blurb: "The Physical Fitness Readiness Assessment — the Air Force test as restructured for 2026.",
+    blurb: "The Physical Fitness Readiness Assessment — the Air Force test as rebuilt for 2026, scored against the published charts.",
     icon: "shield",
     accent: "#60a5fa",
-    scoring: "baseline",
-    needsProfile: false,
-    // Component weights confirmed from the Air Force's own September 2025
-    // release: cardio 50, waist-to-height 20, strength 15, core 15, out of 100.
-    // Nine age bands (<25 through 60+). The weights are known; the per-band
-    // numbers behind them are not, which is why this is still record-only.
+    scoring: "pfra",
+    needsProfile: true,
+    // Tables in airForceStandards.js, read from the official AFPC charts
+    // (effective 1 Mar 2026). The charts publish the tables but NOT a composite
+    // pass mark, so the app scores the components and declines to call the
+    // overall result — see scorePfraTest.
     disclaimer:
-      "The Air Force renamed and rebuilt this test: it is no longer the PFA, and the 1.5-mile " +
-      "run is gone. The official score is out of 100 — cardio 50, waist-to-height 20, strength " +
-      "15, core 15 — across nine age bands. Approved alternates exist (HAMR shuttle, 2km walk, " +
-      "standard push-ups, sit-ups, cross-leg reverse crunches) and are not yet offered. " +
-      "Waist-to-height is a tape measurement rather than a fitness event, so it is not measured " +
-      "here. The per-band scoring charts are not loaded, so results are recorded and compared to " +
-      "your last attempt only.",
+      "Scored against the official PFRA charts (effective 1 March 2026). The full test is 100 " +
+      "points — cardio 50, waist-to-height 20, strength 15, core 15 — and these three components " +
+      "are 80 of them; waist-to-height is a tape measurement, not a fitness event. Approved " +
+      "alternates (HAMR shuttle, 2km walk, standard push-ups, sit-ups, cross-leg reverse " +
+      "crunches) aren't offered yet. The charts don't publish a composite pass mark, so this " +
+      "scores every component and flags any below its minimum rather than declaring pass or fail.",
     events: [
       { key: "hrp", name: "Hand-Release Push-ups", exercise: "Push-Up", how: "reps", seconds: 120,
         unit: "reps", cue: "2 minutes. Chest down, hands off the deck, then press.", restAfter: 180 },
