@@ -214,8 +214,8 @@ export default function Home() {
 
           <div className="grid grid-cols-3 gap-2 mt-4">
             {[
-              { key: "military", label: "MILITARY", sub: "Branch + spec ops" },
-              { key: "private", label: "PRIVATE", sub: "RepsAndSteps output" },
+              { key: "military", label: "MILITARY", sub: "Every branch" },
+              { key: "repsandsteps", label: "REPS & STEPS", sub: "Your output score" },
               { key: "custom", label: "CUSTOM", sub: "Build your own" },
             ].map((g) => (
               <button

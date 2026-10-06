@@ -196,40 +196,17 @@ export function scoreAftTest(events, sex, age, combat = false) {
   };
 }
 
-// ── Not yet scorable ─────────────────────────────────────────────────────────
-// Researched 2026-10-06. Every one of these branches' official scoring
-// documents refused an automated read (.mil hosts return 403 to anything that
-// isn't a real browser). They are listed in the app so the roadmap is visible,
-// and they are NOT runnable, because a test with no standard behind it is a
-// stopwatch with a service badge on it.
+// ── Still not buildable ──────────────────────────────────────────────────────
+// Everything whose EVENT LIST we can state is now runnable, scored against your
+// own history, with `standardsPending` saying plainly that there is no verdict.
+// What's left here is the case where we don't even know what the events are —
+// there is nothing to put on a screen, so there's no card to unlock.
 export const PENDING = [
   {
-    key: "air_force", subgroup: "service", name: "Air Force PFRA", accent: "#60a5fa",
-    // Worth knowing: the Air Force test is no longer the "PFA". It was renamed
-    // the Physical Fitness Readiness Assessment and restructured — the
-    // 1.5-mile run is gone, replaced by a 2-mile run or the HAMR shuttle.
-    why: "Renamed and restructured in 2026 — new scoring charts not yet read.",
-    events: "2-mile run or HAMR · hand-release or standard push-ups · sit-ups, reverse crunches or plank · waist-to-height",
-    doc: "AFPC PFRA Scoring Charts + SAF/MR memo signed 26 Feb 2026",
-  },
-  {
-    key: "marines", subgroup: "service", name: "Marine Corps PFT / CFT", accent: "#dc2626",
-    why: "MCO 6100.13A tables unread. Combat-arms Marines moved to the male-normed table on 1 Jan 2026 (MARADMIN 613/25).",
-    events: "Pull-ups or push-ups · plank · 3-mile run — plus the CFT",
-    doc: "MCO 6100.13A w/ Ch 1",
-  },
-  {
-    key: "seal_pst", subgroup: "specops", name: "Navy SEAL / SWCC PST", accent: "#f59e0b",
-    // The one the request named directly. The governing document is known and
-    // names the events; its minimum-score table is what's missing.
-    why: "MILPERSMAN 1220-410 holds the official minimums and would not open. It covers SEAL, SWCC, EOD, diver and rescue swimmer.",
-    events: "500-yard swim · push-ups · sit-ups · pull-ups · 1.5-mile run, run as one continuous event",
-    doc: "MILPERSMAN 1220-410",
-  },
-  {
-    key: "marsoc", subgroup: "specops", name: "MARSOC A&S", accent: "#fb7185",
-    why: "No published standard read yet; MARSOC's candidate letter is the likely source.",
-    events: "Assessment & Selection screening",
+    key: "marsoc", branch: "specops", name: "MARSOC A&S", accent: "#fb7185",
+    why: "No published event list found. Unlike the others, this isn't a missing scoring chart — " +
+         "we don't know what the events are, so there is nothing to run.",
+    events: "Assessment & Selection screening — events not published",
     doc: "MARSOC Letter to the Candidate",
   },
 ];

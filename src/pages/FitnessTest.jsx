@@ -25,7 +25,7 @@ import {
   BATTERIES, BATTERY_LIST, batteryMinutes, scorePrtTest, lineScore, tierFor,
   compareToPrevious, ageBand, TEST_GROUPS, batteriesInGroup,
   CUSTOM_EVENT_POOL, buildCustomBattery,
-  MILITARY_SUBGROUPS, batteriesInSubgroup,
+  MILITARY_BRANCHES, batteriesInBranch,
 } from "@/lib/fitnessTests";
 import { PENDING, scoreAftTest, aftBand } from "@/lib/militaryStandards";
 import {
@@ -90,6 +90,9 @@ export default function FitnessTest() {
   const [openGroup, setOpenGroup] = useState(
     TEST_GROUPS.some((g) => g.key === groupParam) ? groupParam : "military"
   );
+  // Which branch is open inside MILITARY. Navy first because it's the test the
+  // app has scored longest, not for any grander reason.
+  const [openBranch, setOpenBranch] = useState("navy");
 
   // Army only: the combat-arms standard is sex-neutral (everyone is scored on
   // the male-normed column) and needs 350 total rather than just 60 per event.
@@ -185,7 +188,7 @@ export default function FitnessTest() {
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-black tracking-tight">FITNESS TEST</h1>
             <p className="text-[11px] text-gray-500 tracking-wide">
-              Military · Private · Custom — measure, don't guess
+              Military · Reps and Steps · Custom — measure, don't guess
             </p>
           </div>
         </div>
@@ -224,24 +227,42 @@ export default function FitnessTest() {
                   <div className="px-3 pb-3 space-y-3">
                     <p className="text-[11px] text-gray-400 leading-snug px-1">{g.detail}</p>
 
-                    {/* The military group splits again — a branch's test of
-                        record and a selection screening test are different
-                        questions, so they don't belong in one flat list. */}
-                    {g.key === "military" ? MILITARY_SUBGROUPS.map((sg) => {
-                      const live = batteriesInSubgroup("military", sg.key);
-                      const pending = PENDING.filter((p) => p.subgroup === sg.key);
+                    {/* MILITARY opens into branches, each of which opens into
+                        its own tests. Two taps to any service test, and no
+                        level of the list ever gets long enough to scroll. */}
+                    {g.key === "military" ? MILITARY_BRANCHES.map((br) => {
+                      const live = batteriesInBranch(br.key);
+                      const pending = PENDING.filter((p) => p.branch === br.key);
+                      const brOpen = openBranch === br.key;
+                      if (!live.length && !pending.length) return null;
                       return (
-                        <div key={sg.key} className="space-y-3">
-                          <div className="px-1 pt-1">
-                            <p className="text-[10px] font-black tracking-widest text-gray-400">{sg.label}</p>
-                            <p className="text-[10px] text-gray-600">{sg.sub}</p>
-                          </div>
-                          {live.map((b) => (
-                            <BatteryCard key={b.key} b={b}
-                              selected={batteryKey === b.key}
-                              onSelect={() => setBatteryKey(b.key)} />
-                          ))}
-                          {pending.map((p) => <PendingCard key={p.key} p={p} />)}
+                        <div key={br.key} className="rounded-xl border border-gray-800/80 bg-[#0a0a0a] overflow-hidden">
+                          <button
+                            onClick={() => setOpenBranch(brOpen ? null : br.key)}
+                            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left"
+                          >
+                            <span className="w-1.5 h-8 rounded-full shrink-0" style={{ background: br.accent }} />
+                            <span className="flex-1 min-w-0">
+                              <span className="block text-xs font-black tracking-wider text-white">{br.label}</span>
+                              <span className="block text-[10px] text-gray-500">{br.sub}</span>
+                            </span>
+                            <span className="text-[10px] text-gray-600 tabular-nums">
+                              {live.length || pending.length}
+                            </span>
+                            <ChevronDown
+                              className={`w-4 h-4 text-gray-500 transition-transform ${brOpen ? "rotate-180" : ""}`}
+                            />
+                          </button>
+                          {brOpen && (
+                            <div className="px-2 pb-2 space-y-2">
+                              {live.map((b) => (
+                                <BatteryCard key={b.key} b={b}
+                                  selected={batteryKey === b.key}
+                                  onSelect={() => setBatteryKey(b.key)} />
+                              ))}
+                              {pending.map((p) => <PendingCard key={p.key} p={p} />)}
+                            </div>
+                          )}
                         </div>
                       );
                     }) : members.map((b) => (
@@ -429,7 +450,24 @@ function BatteryCard({ b, selected, onSelect }) {
           <Icon className="w-5 h-5" style={{ color: b.accent }} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm">{b.name}</p>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="font-bold text-sm">{b.name}</p>
+            {/* The one distinction that changes how to read your result. A
+                scored test tells you pass or fail against the service's own
+                table; a record-only one is an accurate scoresheet and a
+                history, because we don't hold that service's table yet. */}
+            {b.standardsPending ? (
+              <span className="text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded"
+                style={{ background: "#78350f", color: "#fcd34d" }}>
+                RECORD ONLY
+              </span>
+            ) : (
+              <span className="text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded"
+                style={{ background: "#064e3b", color: "#6ee7b7" }}>
+                SCORED
+              </span>
+            )}
+          </div>
           <p className="text-[11px] text-gray-500">
             {b.events.length} events · about {batteryMinutes(b)} min
             {prev && ` · last ${new Date(prev.taken_at).toLocaleDateString()}`}

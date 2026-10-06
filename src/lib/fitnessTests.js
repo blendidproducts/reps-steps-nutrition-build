@@ -193,7 +193,7 @@ export const BATTERIES = {
     key: "military",
     name: "Navy PRT",
     group: "military",
-    subgroup: "service",
+    branch: "navy",
     blurb: "The real Navy Physical Readiness Test, scored against the published standards for your age and sex.",
     icon: "shield",
     accent: "#4ade80",
@@ -225,7 +225,7 @@ export const BATTERIES = {
     key: "army_aft",
     name: "Army AFT",
     group: "military",
-    subgroup: "service",
+    branch: "army",
     blurb: "The Army Fitness Test as it stands today — five events, scored against the published tables for your age and sex.",
     icon: "shield",
     accent: "#84cc16",
@@ -274,7 +274,8 @@ export const BATTERIES = {
     key: "afspecwar",
     name: "AF Special Warfare — Tier 2 OFT",
     group: "military",
-    subgroup: "specops",
+    branch: "specops",
+    standardsPending: true,
     blurb: "The Tier 2 Operational Fitness Test. Nine scores, run in order, in combat uniform and boots.",
     icon: "shield",
     accent: "#a78bfa",
@@ -319,10 +320,109 @@ export const BATTERIES = {
     ],
   },
 
+  // ── Unlocked for training and benchmarking, scored only against yourself ──
+  // The three below have event lists we can state with confidence but scoring
+  // tables we have NOT read from the governing document. They run, they record,
+  // they show your delta since last time. They do not say pass or fail, and
+  // `standardsPending` makes the UI say so on the card and on the result.
+  //
+  // That is the whole difference between these and the Navy/Army tests. It is a
+  // gap in what we hold, not a restriction on who can run them.
+
+  seal_pst: {
+    key: "seal_pst",
+    name: "Navy SEAL / SWCC PST",
+    group: "military",
+    branch: "specops",
+    standardsPending: true,
+    blurb: "The Physical Screening Test for SEAL, SWCC, EOD, diver and rescue swimmer. Run as one continuous event.",
+    icon: "shield",
+    accent: "#f59e0b",
+    scoring: "baseline",
+    needsProfile: false,
+    disclaimer:
+      "Event list and order are the published PST. The official minimum and competitive scores " +
+      "live in MILPERSMAN 1220-410, which we have not read — so this records your numbers and " +
+      "shows your progress, but will not tell you whether you qualified. Rest periods below " +
+      "follow the published protocol and are part of the test.",
+    events: [
+      { key: "swim500", name: "500-Yard Swim", how: "entry", entryKind: "time",
+        unit: "secs", cue: "Side stroke or breaststroke. Enter your time.",
+        equipment: "Pool", restAfter: 600 },
+      { key: "pushups", name: "Push-ups", exercise: "Push-Up", how: "reps", seconds: 120,
+        unit: "reps", cue: "2 minutes. Full lockout at the top.", restAfter: 120 },
+      // The pose model was never reliable on sit-ups — it's a tap counter here
+      // rather than a camera event pretending to be accurate.
+      { key: "situps", name: "Sit-ups", how: "manual", seconds: 120,
+        unit: "reps", cue: "2 minutes. Tap for each rep — the camera can't count these.", restAfter: 120 },
+      { key: "pullups", name: "Pull-ups", how: "entry", entryKind: "reps",
+        unit: "reps", cue: "Dead hang, no time limit. Enter your total.",
+        equipment: "Pull-up bar", restAfter: 600 },
+      { key: "run15", name: "1.5-Mile Run", how: "run", distanceLabel: "1.5 miles",
+        unit: "secs", cue: "Run your measured 1.5-mile route. Tap STOP when you finish.", restAfter: 0 },
+    ],
+  },
+
+  af_pfra: {
+    key: "af_pfra",
+    name: "Air Force PFRA",
+    group: "military",
+    branch: "airforce",
+    standardsPending: true,
+    blurb: "The Physical Fitness Readiness Assessment — the Air Force test as restructured for 2026.",
+    icon: "shield",
+    accent: "#60a5fa",
+    scoring: "baseline",
+    needsProfile: false,
+    disclaimer:
+      "The Air Force renamed and rebuilt this test: it is no longer the PFA, and the 1.5-mile " +
+      "run is gone. Components here are the run, strength and core events. Approved alternates " +
+      "exist (HAMR shuttle, standard push-ups, sit-ups, cross-leg reverse crunches) and are not " +
+      "yet offered. Waist-to-height is 20% of the official score and is a tape measurement, not " +
+      "a fitness event, so it is not measured here. Scoring charts not loaded — results are " +
+      "recorded and compared to your last attempt only.",
+    events: [
+      { key: "hrp", name: "Hand-Release Push-ups", exercise: "Push-Up", how: "reps", seconds: 120,
+        unit: "reps", cue: "2 minutes. Chest down, hands off the deck, then press.", restAfter: 180 },
+      { key: "plank", name: "Forearm Plank", exercise: "Plank", how: "hold",
+        unit: "secs", cue: "Hold. Tap STOP the moment your hips drop.", restAfter: 180 },
+      { key: "run2", name: "Two-Mile Run", how: "run", distanceLabel: "2 miles",
+        unit: "secs", cue: "Run your measured two-mile route. Tap STOP when you finish.", restAfter: 0 },
+    ],
+  },
+
+  usmc_pft: {
+    key: "usmc_pft",
+    name: "Marine Corps PFT",
+    group: "military",
+    branch: "marines",
+    standardsPending: true,
+    blurb: "The Marine Corps Physical Fitness Test — pull-ups, plank, three-mile run.",
+    icon: "shield",
+    accent: "#dc2626",
+    scoring: "baseline",
+    needsProfile: false,
+    disclaimer:
+      "Events are the PFT as set by MCO 6100.13A. Push-ups may be substituted for pull-ups but " +
+      "cap your score, so pull-ups are what's offered here. Scoring tables and the 1st/2nd/3rd " +
+      "class breakpoints are not loaded, so this records your numbers rather than classing you. " +
+      "Note that from 1 Jan 2026 combat-arms Marines are scored on the male-normed table " +
+      "regardless of sex, minimum 210 of 300.",
+    events: [
+      { key: "pullups", name: "Pull-ups", how: "entry", entryKind: "reps",
+        unit: "reps", cue: "Dead hang, chin over the bar. Enter your total.",
+        equipment: "Pull-up bar", restAfter: 300 },
+      { key: "plank", name: "Plank", exercise: "Plank", how: "hold",
+        unit: "secs", cue: "Hold. Tap STOP the moment your form breaks.", restAfter: 300 },
+      { key: "run3", name: "Three-Mile Run", how: "run", distanceLabel: "3 miles",
+        unit: "secs", cue: "Run your measured three-mile route. Tap STOP when you finish.", restAfter: 0 },
+    ],
+  },
+
   repsandsteps: {
     key: "repsandsteps",
     name: "RepsAndSteps Output",
-    group: "private",
+    group: "repsandsteps",
     blurb: "Our own test. Not a pass/fail — it produces one number, your output score, from reps, steps and time under load.",
     icon: "zap",
     accent: "#00a9ff",
@@ -422,7 +522,8 @@ export function batteryMinutes(battery) {
  * list, and anything timed added later has to be added here too.
  */
 export const LOWER_IS_BETTER = new Set([
-  "run15", "run2", "sdc",                                  // Navy + Army
+  "run15", "run2", "run3", "sdc",                          // Navy, Army, Air Force, Marines
+  "swim500",                                               // SEAL PST
   "ruck3", "agility_r", "agility_l", "farmers", "shuttle300", "finswim", // AFSPECWAR
 ]);
 
@@ -450,23 +551,25 @@ export function compareToPrevious(events, previous) {
 // These are the groups the Home card and the sidebar page are organised by.
 // The split is by WHAT YOU ARE SCORED AGAINST, which is the only difference
 // that changes how you should read a result:
-//   military -> an external, published standard (pass/fail, someone else's bar)
-//   private  -> our own output number (no pass/fail, just a score that moves)
-//   custom   -> yourself, last time (every event is a personal delta)
+//   military     -> an external, published standard (someone else's bar)
+//   repsandsteps -> our own output number (no pass/fail, a score that moves)
+//   custom       -> yourself, last time (every event is a personal delta)
 export const TEST_GROUPS = [
   {
     key: "military",
     label: "MILITARY",
-    sub: "Branch tests and spec ops screening",
-    detail: "Scored against published military standards for your age and sex. Pass or fail, the way the service scores it.",
+    sub: "Every branch, plus spec ops screening",
+    detail: "The services' own tests. Scored against published standards where we hold the tables, recorded as a scoresheet where we don't.",
     accent: "#4ade80",
     icon: "shield",
   },
   {
-    key: "private",
-    label: "PRIVATE",
-    sub: "The RepsAndSteps test",
-    detail: "Our own battery. No pass/fail - it produces one output number you can chase.",
+    // Was "PRIVATE" for one build. That was a placeholder word that never
+    // explained itself — this is the RepsAndSteps test, so it says so.
+    key: "repsandsteps",
+    label: "REPS AND STEPS",
+    sub: "Our own test",
+    detail: "No pass/fail - it produces one output number you can chase.",
     accent: "#00a9ff",
     icon: "zap",
   },
@@ -483,16 +586,22 @@ export const TEST_GROUPS = [
 export const batteriesInGroup = (group) =>
   BATTERY_LIST.filter((b) => b.group === group);
 
-// The military group splits again, because a branch's test of record and a
-// special-operations screening test answer different questions: one is "am I
-// within standard", the other is "would I be competitive for selection".
-export const MILITARY_SUBGROUPS = [
-  { key: "service", label: "BRANCH TESTS", sub: "The test of record for each service" },
-  { key: "specops", label: "SPEC OPS SCREENING", sub: "Selection and qualification standards" },
+// MILITARY opens into branches, and each branch opens into its tests. Two taps
+// to a specific service test, and the list stays short at every level.
+//
+// Spec ops is its own branch rather than living under Navy and Air Force,
+// because a selection screening test answers a different question from a test
+// of record: "would I be competitive" rather than "am I within standard".
+export const MILITARY_BRANCHES = [
+  { key: "navy",     label: "NAVY",            sub: "Physical Readiness Test",      accent: "#4ade80" },
+  { key: "army",     label: "ARMY",            sub: "Army Fitness Test",            accent: "#84cc16" },
+  { key: "airforce", label: "AIR FORCE",       sub: "Physical Fitness Readiness Assessment", accent: "#60a5fa" },
+  { key: "marines",  label: "MARINE CORPS",    sub: "Physical Fitness Test",        accent: "#dc2626" },
+  { key: "specops",  label: "SPECIAL OPERATIONS", sub: "Selection and qualification", accent: "#f59e0b" },
 ];
 
-export const batteriesInSubgroup = (group, subgroup) =>
-  BATTERY_LIST.filter((b) => b.group === group && b.subgroup === subgroup);
+export const batteriesInBranch = (branch) =>
+  BATTERY_LIST.filter((b) => b.group === "military" && b.branch === branch);
 
 // ── Build-your-own ───────────────────────────────────────────────────────────
 // Every event any preset battery uses, de-duplicated, offered as a pool. The
