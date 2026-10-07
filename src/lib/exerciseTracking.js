@@ -405,8 +405,36 @@ export const EXERCISE_LIBRARY = [
     // displacement normalized by torso length. See pushupDepthMetric() above.
     // Elbow angle is no longer read for counting; kept only as a form cue below.
     getAngle: (lm) => pushupDepthMetric(lm),
-    upThreshold: 28,    // ⚠️ uncalibrated first pass — shoulders clearly above hip line (top)
-    downThreshold: 6,   // ⚠️ uncalibrated first pass — shoulders near hip level (bottom)
+    // ── 2026-10-07: absolute thresholds demoted to fallbacks ──────────────
+    // The numbers below carried an UNCALIBRATED warning in this file for weeks,
+    // and the field result was JT's: push-ups "off, missed a lot of counting".
+    // Measured in _scratch/probe2.cjs against the metric's own geometry, where
+    // p is how much of the body axis projects into the image plane:
+    //
+    //   p      top   bottom   verdict with up=28 / down=6
+    //   1.00  24.3      5.0   NEVER ARMS    (top never reaches 28)  -> 0 reps
+    //   0.85  28.2      5.9   counts
+    //   0.70  33.6      7.1   NEVER BOTTOMS (bottom never reaches 6) -> 0 reps
+    //   0.30  64.0     16.4   NEVER BOTTOMS -> 0 reps
+    //
+    // The fixed pair only works in a thin band around p=0.85 and fails in
+    // OPPOSITE directions either side of it, and both failures look identical
+    // from the outside: missed reps. Side-on is p~1, and the form cue tells you
+    // to put the phone in FRONT, which is p<0.7 — so the two most likely
+    // placements both score zero. No single pair of numbers fixes that, for the
+    // same reason the squat's absolute depth line had to go (see
+    // squatDepthMetric): the error depends on where the phone is standing.
+    //
+    // A line at 40% of this person's OWN top reading counts the rep at every p
+    // in that table and still rejects a half-depth push-up at every p.
+    relativeDepth: {
+      arm: 0.80,     // back at the top: shoulders returned to 80%+ of the top read
+      rep: 0.40,     // counts: shoulders have dropped 60% of the way down
+      partial: 0.72, // a real attempt that stopped short of depth
+    },
+    upThreshold: 28,    // fallback only — used before the top read settles
+    downThreshold: 6,   // also a FLOOR: this deep always counts
+    partialThreshold: 20,
     minRepIntervalMs: 450,  // Round 20: fast sets (15+) were dropping reps at 600ms
     direction: 'down_then_up',
     primaryJoint: 'Torso Depth',
@@ -432,8 +460,12 @@ export const EXERCISE_LIBRARY = [
     // Replaced with vertical shoulder displacement normalized by torso length
     // (see pushupDepthMetric() above); elbow angle kept only as a form cue.
     getAngle: (lm) => pushupDepthMetric(lm),
-    upThreshold: 28,    // ⚠️ uncalibrated first pass — see pushupDepthMetric() note
-    downThreshold: 6,   // ⚠️ uncalibrated first pass — see pushupDepthMetric() note
+    // Same relative treatment as the regular push-up — see the note there for
+    // the measured reason the fixed pair below cannot work at every camera angle.
+    relativeDepth: { arm: 0.80, rep: 0.40, partial: 0.72 },
+    upThreshold: 28,    // fallback only
+    downThreshold: 6,   // also a FLOOR
+    partialThreshold: 20,
     direction: 'down_then_up',
     minRepIntervalMs: 450,
     primaryJoint: 'Torso Depth',
@@ -450,8 +482,12 @@ export const EXERCISE_LIBRARY = [
     // Finding 1 (2026-08-20): same head-on foreshortening problem as the base
     // Push-Up — see pushupDepthMetric() above.
     getAngle: (lm) => pushupDepthMetric(lm),
-    upThreshold: 28,    // ⚠️ uncalibrated first pass — see pushupDepthMetric() note
-    downThreshold: 6,   // ⚠️ uncalibrated first pass — see pushupDepthMetric() note
+    // Same relative treatment as the regular push-up — see the note there for
+    // the measured reason the fixed pair below cannot work at every camera angle.
+    relativeDepth: { arm: 0.80, rep: 0.40, partial: 0.72 },
+    upThreshold: 28,    // fallback only
+    downThreshold: 6,   // also a FLOOR
+    partialThreshold: 20,
     direction: 'down_then_up',
     minRepIntervalMs: 600,
     primaryJoint: 'Torso Depth',
@@ -504,8 +540,12 @@ export const EXERCISE_LIBRARY = [
     // Finding 1 (2026-08-20): same head-on foreshortening problem as the base
     // Push-Up — see pushupDepthMetric() above.
     getAngle: (lm) => pushupDepthMetric(lm),
-    upThreshold: 28,    // ⚠️ uncalibrated first pass — see pushupDepthMetric() note
-    downThreshold: 6,   // ⚠️ uncalibrated first pass — see pushupDepthMetric() note
+    // Same relative treatment as the regular push-up — see the note there for
+    // the measured reason the fixed pair below cannot work at every camera angle.
+    relativeDepth: { arm: 0.80, rep: 0.40, partial: 0.72 },
+    upThreshold: 28,    // fallback only
+    downThreshold: 6,   // also a FLOOR
+    partialThreshold: 20,
     direction: 'down_then_up',
     minRepIntervalMs: 600,
     primaryJoint: 'Torso Depth',
@@ -683,7 +723,13 @@ export const EXERCISE_LIBRARY = [
     // honest fast squat 200ms, a brisk cadence 150ms. 450ms and then 250ms both
     // rejected honest reps; 130ms sits clear of all three. Glitch rejection is
     // handled by depthFramesRequired instead, which doesn't depend on timing.
-    minRepDurationMs: 130,
+    // 2026-10-07: 130 -> 80. This is measured over the arm-line -> depth-line
+    // slice, about 40% of the travel, so 130ms implied a full descent of ~325ms
+    // and rejected anything brisker — which is the bug JT hit. 80ms implies
+    // ~200ms, faster than a real squat and slower than a glitch. It is now
+    // paired with transitFramesRequired, which covers the low-frame-rate case
+    // the clock cannot. See the gate in RepCounter.update().
+    minRepDurationMs: 80,
     direction: 'down_then_up',
     primaryJoint: 'Depth',
     unit: '',
@@ -1602,6 +1648,10 @@ export class RepCounter {
     this.topBuf = [];           // recent samples taken while standing at the top
     this.atDepthFrames = 0;     // consecutive frames at or below the depth line
     this.reachedDepthAt = 0;    // when depth was first reached this descent
+    // Frames this descent spent STRICTLY BETWEEN the arm line and the depth
+    // line. See the descent-continuity note in update() — this is what replaced
+    // the wall-clock descent gate that was eating honest brisk reps.
+    this.transitFrames = 0;
   }
 
   /**
@@ -1747,11 +1797,15 @@ export class RepCounter {
         this.stage = 'up';
         this.deepest = null;
         this.leftTopAt = 0;
+        this.transitFrames = 0;
       } else if (this.stage === 'up') {
         // Descending while still armed — remember the lowest point reached and
         // when the descent started, so depth and speed can both be judged.
         if (!this.leftTopAt) this.leftTopAt = now;
         this.deepest = this.deepest === null ? angle : Math.min(this.deepest, angle);
+        // In transit: below the arm line but not yet at depth. A real body
+        // passes through here; a landmark teleport jumps straight past it.
+        if (angle > downThreshold) this.transitFrames++;
       }
 
       // Frames spent continuously at or below the depth line. A real bottom
@@ -1781,20 +1835,62 @@ export class RepCounter {
 
       if (angle <= downThreshold && this.stage === 'up' && atBottom &&
           this.atDepthFrames >= (this.config.depthFramesRequired ?? 2)) {
-        // A descent faster than minRepDurationMs isn't a squat — a body cannot
-        // travel from standing to depth that quickly. The attempt stays armed
-        // rather than being consumed, so a glitch can never steal a real rep;
-        // if they come back up without ever qualifying, the partial check at the
-        // top picks it up.
+        // ── 2026-10-07 BUGFIX: the brisk-rep gate ────────────────────────
+        // This used to be a wall-clock test: the window from crossing the arm
+        // line to reaching depth had to last at least minRepDurationMs (130ms).
+        // It ate honest reps, and JT hit it in the field — a below-parallel
+        // squat at a brisk cadence counted ZERO and was logged as shallow.
+        //
+        // Why the wall clock cannot work here. The window it measures is only
+        // the middle slice of the descent (arm line 80% of standing, depth line
+        // 40%), so its duration shrinks with BOTH cadence and frame rate. At
+        // 20fps with a 300ms descent that slice is two frame steps = 100ms, so
+        // it failed the 130ms test. Worse, `reachedDepthAt` is frozen once set,
+        // so the comparison can never improve on a later frame: the rep is lost
+        // for good and the partial check at the top mislabels it shallow.
+        // Traced frame by frame in _scratch/probe2.cjs.
+        //
+        // What the gate is actually FOR is rejecting a landmark teleport — an
+        // instantaneous jump from standing to depth that is tracking error, not
+        // movement. The honest discriminator for that isn't elapsed time, it's
+        // whether the descent was OBSERVED: a real body produces readings in
+        // between the two lines, a teleport produces none. That test is immune
+        // to both cadence and frame rate, which is exactly what the old one
+        // wasn't. The bottom is still guarded by depthFramesRequired.
+        //
+        // BOTH tests are kept, because they guard DIFFERENT axes and each one
+        // alone is defeatable:
+        //
+        //   - The clock alone fails on frame rate. At 8fps one frame step is
+        //     125ms, so a teleport clears any threshold below that.
+        //   - Frame continuity alone fails on a slow frame rate too, from the
+        //     other side: at 20fps a 100ms bounce can still land one sample
+        //     mid-range and look like an observed descent. (Caught by
+        //     test-squat-counter's "bounce to depth in 100ms" — the first
+        //     attempt at this fix dropped the clock and let bounces count.)
+        //
+        // Together: a real descent is both observed in transit AND takes more
+        // than a reflex to perform. The threshold is 80ms on the arm-line ->
+        // depth-line slice, which is ~40% of the travel, so it corresponds to a
+        // full descent of ~200ms — faster than anyone actually squats, slower
+        // than any glitch. The old 130ms implied a ~325ms descent and that is
+        // what was rejecting JT's reps.
+        //
+        // `reachedDepthAt` stays the endpoint deliberately: measuring to `now`
+        // would let simply holding still at the bottom accumulate enough time
+        // for a teleport to qualify.
+        const DESCENT_MS_FLOOR = this.config.minRepDurationMs ?? 0;
         const descentMs = (this.reachedDepthAt || now) - (this.leftTopAt || now);
-        const slowEnough = !minRepDurationMs || !this.leftTopAt ||
-          descentMs >= minRepDurationMs;
-        if (slowEnough) {
+        const observed = this.transitFrames >= (this.config.transitFramesRequired ?? 1);
+        const notATeleport = !this.leftTopAt ||
+          (observed && descentMs >= DESCENT_MS_FLOOR);
+        if (notATeleport) {
           this.stage = 'down';
           this.deepest = null;
           this.leftTopAt = 0;
           this.atDepthFrames = 0;
           this.reachedDepthAt = 0;
+          this.transitFrames = 0;
           if (now - this.lastRepTime >= minInterval) {
             this.count++;
             repCounted = true;
