@@ -33,6 +33,9 @@ import {
 } from "@/lib/militaryStandards";
 import { scorePfraTest, pfraBand, PFRA_TOTAL_MAX } from "@/lib/airForceStandards";
 import {
+  scoreUsmcTest, usmcBand, USMC_MAX_TOTAL, USMC_EVENT_MIN_POINTS,
+} from "@/lib/usmcStandards";
+import {
   ChevronLeft, Shield, Zap, Flame, Dumbbell, Play, Square, Timer as TimerIcon,
   CheckCircle, AlertTriangle, TrendingUp, TrendingDown, Minus, RotateCcw, Footprints,
   SlidersHorizontal, ChevronDown, Plus, Check, Lock,
@@ -111,6 +114,10 @@ export default function FitnessTest() {
   // points either way. Running both would double-count a fifth of the test.
   const [oftCardio, setOftCardio] = useState("finswim");
 
+  // Marine PFT only: pull-ups reach 100 points, push-ups stop at 70. Defaulting
+  // to pull-ups because choosing push-ups caps the whole test at 270.
+  const [usmcUpper, setUsmcUpper] = useState("pullups");
+
   // Custom battery: the picked event keys, assembled on demand. Memoised so the
   // battery object keeps its identity between renders - finishEvent closes over
   // it, and a fresh object every render would re-fire its effects.
@@ -128,8 +135,11 @@ export default function FitnessTest() {
     if (b.needsCardioChoice) {
       return { ...b, events: b.events.filter((e) => !e.cardio || e.key === oftCardio) };
     }
+    if (b.needsUpperChoice) {
+      return { ...b, events: b.events.filter((e) => !e.upper || e.key === usmcUpper) };
+    }
     return b;
-  }, [batteryKey, customKeys, oftCardio]);
+  }, [batteryKey, customKeys, oftCardio, usmcUpper]);
 
   const event = battery?.events[eventIndex] || null;
 
@@ -312,6 +322,33 @@ export default function FitnessTest() {
             );
           })}
 
+          {/* The Marine upper-body choice is not cosmetic: push-ups are capped
+              at 70 points, so picking them caps the whole PFT at 270. Say that
+              where the choice is made, not afterwards. */}
+          {battery?.needsUpperChoice && (
+            <div className="bg-[#111] border border-gray-800 rounded-2xl p-4 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                Upper body event
+              </p>
+              <div className="grid grid-cols-1 gap-2">
+                {[
+                  ["pullups", "Pull-ups", "Worth up to 100 points"],
+                  ["pushups", "Push-ups", "Capped at 70 — caps your PFT at 270"],
+                ].map(([k, l, sub]) => (
+                  <button key={k} onClick={() => setUsmcUpper(k)}
+                    className={`min-h-[52px] rounded-xl border px-3 py-2 text-left ${
+                      usmcUpper === k
+                        ? "bg-[#dc2626]/20 border-[#dc2626] text-white"
+                        : "border-gray-700 text-gray-400"
+                    }`}>
+                    <span className="block text-sm font-bold">{l}</span>
+                    <span className="block text-[10px] text-gray-500 leading-tight">{sub}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* The OFT's last component is a choice, worth up to 20 points —
               a fifth of the test — whichever way you take it. */}
           {battery?.needsCardioChoice && (
@@ -409,9 +446,14 @@ export default function FitnessTest() {
                 <div>
                   <label className="text-[11px] text-gray-400 block mb-1.5">Which standard applies to you?</label>
                   <div className="grid grid-cols-2 gap-2">
+                    {/* Both the Army and the Marines have a combat-arms
+                        standard, but the numbers differ, so the labels come
+                        from the battery rather than being hard-coded. */}
                     {[
-                      [false, "General", "60 pts per event"],
-                      [true, "Combat arms", "60 pts + 350 total"],
+                      [false, battery.combatLabels?.general ?? "General",
+                              battery.combatLabels?.generalSub ?? "60 pts per event"],
+                      [true, battery.combatLabels?.combat ?? "Combat arms",
+                             battery.combatLabels?.combatSub ?? "60 pts + 350 total"],
                     ].map(([v, l, sub]) => (
                       <button key={String(v)} onClick={() => setAftCombat(v)}
                         className={`min-h-[52px] rounded-xl border px-2 py-1.5 text-left ${
@@ -426,7 +468,10 @@ export default function FitnessTest() {
                   </div>
                   <p className="text-[10px] text-gray-600 mt-1.5 leading-snug">
                     The combat-arms standard is sex-neutral — everyone is scored on the
-                    male-normed column. It applies to 24 combat specialties.
+                    male-normed column.
+                    {battery.scoring === "usmc"
+                      ? " It applies to combat-arms PMOSs from 1 Jan 2026 (MARADMIN 613/25)."
+                      : " It applies to 24 combat specialties."}
                   </p>
                 </div>
               )}
@@ -457,6 +502,7 @@ export default function FitnessTest() {
                 />
                 {profile.age && !(battery.scoring === "aft" ? aftBand(profile.age)
                                   : battery.scoring === "pfra" ? pfraBand(profile.age)
+                                  : battery.scoring === "usmc" ? usmcBand(profile.age)
                                   : ageBand(profile.age)) && (
                   <p className="text-[10px] text-amber-400 mt-1">
                     The service tables start at 17 — the test will run but won't be scored.
@@ -563,6 +609,14 @@ function BatteryCard({ b, selected, onSelect }) {
               <span className="text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded"
                 style={{ background: "#78350f", color: "#fcd34d" }}>
                 RECORD ONLY
+              </span>
+            ) : b.sourceCaveat ? (
+              // Scored, but from a transcription rather than the governing
+              // document. Worth its own badge: the numbers behave the same, the
+              // confidence behind them doesn't.
+              <span className="text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded"
+                style={{ background: "#1e3a5f", color: "#93c5fd" }}>
+                SCORED · 2ND-HAND TABLES
               </span>
             ) : (
               <span className="text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded"
@@ -981,6 +1035,12 @@ function Results({ record, onRestart, onExit }) {
     ? scorePfraTest(record.events, record.sex, record.age)
     : null;
 
+  // Marine PFT and CFT share one scorer — same 300-point shape, same class
+  // bands, same "40 in every event or the test fails" rule.
+  const usmc = battery.scoring === "usmc"
+    ? scoreUsmcTest(record.events, record.sex, record.age, record.combat)
+    : null;
+
   // The Line needs its three terms separated out of the events: rep-scored
   // events are reps, held events are time under load, the step burst is steps.
   const line = battery.scoring === "line" ? (() => {
@@ -1003,6 +1063,7 @@ function Results({ record, onRestart, onExit }) {
               : aft ? (aft.passed ? "🎖️" : "📋")
               : pst ? (pst.passed ? "🎖️" : "📋")
               : oft ? (oft.passed ? "🎖️" : "📋")
+              : usmc ? (usmc.passed ? "🎖️" : "📋")
               : "📊"}
           </div>
           <h1 className="text-2xl font-black">{battery.name}</h1>
@@ -1136,6 +1197,29 @@ function Results({ record, onRestart, onExit }) {
           </div>
         )}
 
+        {/* ── Marine Corps PFT / CFT result ────────────────────────────── */}
+        {usmc && usmc.overall && (
+          <div className="rounded-2xl border-2 p-5 text-center"
+            style={{ borderColor: usmc.overall.color, background: `${usmc.overall.color}18` }}>
+            <p className="text-xs uppercase tracking-widest text-gray-400">
+              {record.combat ? "Combat arms standard" : "Score"}
+            </p>
+            <p className="text-6xl font-black tabular-nums mt-1">
+              {usmc.total}<span className="text-2xl text-gray-500">/{USMC_MAX_TOTAL}</span>
+            </p>
+            <p className="text-2xl font-black mt-1" style={{ color: usmc.overall.color }}>
+              {usmc.overall.label}
+            </p>
+            <p className="text-sm text-gray-400 mt-1">{usmc.overall.detail}</p>
+            {!usmc.everyEventPassed && usmc.total >= usmc.needed && (
+              <p className="text-[11px] text-red-300 mt-2 leading-snug">
+                Your total clears {usmc.needed}, but {USMC_EVENT_MIN_POINTS} points in every event
+                is a hard floor — a strong total doesn't cover a failed event.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* ── The Line ─────────────────────────────────────────────────── */}
         {line && (
           <>
@@ -1173,8 +1257,13 @@ function Results({ record, onRestart, onExit }) {
               // Both scored tests produce points + a pass line per event, but
               // in different shapes. Normalise here so the row doesn't care
               // which service's table it came from.
-              const raw = (prt || aft || pst || oft || pfra)?.scored.find((s) => s.key === e.key)?.result;
-              const scored = !raw ? null : (oft || pfra) ? {
+              const raw = (prt || aft || pst || oft || pfra || usmc)?.scored.find((s) => s.key === e.key)?.result;
+              const scored = !raw ? null : usmc ? {
+                points: raw.points,
+                label: raw.pass ? `of ${raw.maxPoints}` : `below ${USMC_EVENT_MIN_POINTS}`,
+                color: raw.pass ? "#4ade80" : "#ef4444",
+                min: raw.minimum, max: raw.maxValue,
+              } : (oft || pfra) ? {
                 points: raw.points,
                 label: raw.pass ? `of ${raw.maxPoints}` : "Below minimum",
                 color: raw.pass ? "#4ade80" : "#ef4444",

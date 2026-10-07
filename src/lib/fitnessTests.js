@@ -397,31 +397,72 @@ export const BATTERIES = {
     ],
   },
 
+  // Tables in usmcStandards.js. They came from a secondary source citing
+  // MCO 6100.13A rather than the order itself — `sourceCaveat` makes the UI say
+  // so, because every other scored test here was read from its own document.
   usmc_pft: {
     key: "usmc_pft",
     name: "Marine Corps PFT",
     group: "military",
     branch: "marines",
-    standardsPending: true,
-    blurb: "The Marine Corps Physical Fitness Test — pull-ups, plank, three-mile run.",
+    blurb: "The Physical Fitness Test — upper body, plank, three-mile run. 300 points, three classes.",
     icon: "shield",
     accent: "#dc2626",
-    scoring: "baseline",
-    needsProfile: false,
+    scoring: "usmc",
+    needsProfile: true,
+    hasCombatStandard: true,
+    combatLabels: { general: "General", combat: "Combat arms", generalSub: "150 total", combatSub: "210 total" },
+    needsUpperChoice: true,
+    sourceCaveat: true,
     disclaimer:
-      "Events are the PFT as set by MCO 6100.13A. Push-ups may be substituted for pull-ups but " +
-      "cap your score, so pull-ups are what's offered here. Scoring tables and the 1st/2nd/3rd " +
-      "class breakpoints are not loaded, so this records your numbers rather than classing you. " +
-      "Note that from 1 Jan 2026 combat-arms Marines are scored on the male-normed table " +
-      "regardless of sex, minimum 210 of 300.",
+      "Scored out of 300 — 100 per event, minimum 40 in every event and 150 overall, with " +
+      "1st class at 235 and 2nd at 200. Choosing push-ups caps that event at 70 points and so " +
+      "caps the whole test at 270. From 1 Jan 2026 combat-arms Marines are scored on the " +
+      "male-normed table regardless of sex and need 210 (MARADMIN 613/25). " +
+      "SOURCE: a secondary transcription of the MCO 6100.13A tables, not the order itself — " +
+      "it reflects the 2026 changes, which the 2019 order predates, but it has not been checked " +
+      "against the governing document.",
     events: [
-      { key: "pullups", name: "Pull-ups", how: "entry", entryKind: "reps",
-        unit: "reps", cue: "Dead hang, chin over the bar. Enter your total.",
+      // Upper body is a choice and the choice costs you: pull-ups reach 100,
+      // push-ups stop at 70. `upper: true` marks both as candidates for the slot.
+      { key: "pullups", name: "Pull-ups", how: "entry", entryKind: "reps", upper: true,
+        unit: "reps", cue: "Dead hang, chin over the bar. Worth up to 100 points.",
         equipment: "Pull-up bar", restAfter: 300 },
+      { key: "pushups", name: "Push-ups", exercise: "Push-Up", how: "reps", seconds: 120, upper: true,
+        unit: "reps", cue: "Worth up to 70 points — this caps your whole PFT at 270.", restAfter: 300 },
       { key: "plank", name: "Plank", exercise: "Plank", how: "hold",
         unit: "secs", cue: "Hold. Tap STOP the moment your form breaks.", restAfter: 300 },
       { key: "run3", name: "Three-Mile Run", how: "run", distanceLabel: "3 miles",
         unit: "secs", cue: "Run your measured three-mile route. Tap STOP when you finish.", restAfter: 0 },
+    ],
+  },
+
+  usmc_cft: {
+    key: "usmc_cft",
+    name: "Marine Corps CFT",
+    group: "military",
+    branch: "marines",
+    blurb: "The Combat Fitness Test — run in boots and utilities, simulating combat tasks.",
+    icon: "shield",
+    accent: "#b91c1c",
+    scoring: "usmc",
+    needsProfile: true,
+    hasCombatStandard: true,
+    combatLabels: { general: "General", combat: "Combat arms", generalSub: "150 total", combatSub: "210 total" },
+    sourceCaveat: true,
+    disclaimer:
+      "Same 300-point structure and class bands as the PFT: 40 minimum per event, 150 to pass. " +
+      "Run in boots and utilities, three minutes between events. " +
+      "SOURCE: a secondary transcription of the MCO 6100.13A tables, not the order itself.",
+    events: [
+      { key: "mtc", name: "Movement to Contact", how: "entry", entryKind: "time",
+        unit: "secs", cue: "880-yard sprint. Enter your time.", restAfter: 180 },
+      { key: "ammocan", name: "Ammo Can Lifts", how: "manual", seconds: 120,
+        unit: "reps", cue: "2 minutes of overhead presses with a 30-lb ammo can. Tap each rep.",
+        equipment: "30-lb ammo can", restAfter: 180 },
+      { key: "muf", name: "Maneuver Under Fire", how: "entry", entryKind: "time",
+        unit: "secs", cue: "300-yard course: crawls, buddy drag, fireman carry, ammo can carry, push-ups, grenade throw.",
+        restAfter: 0 },
     ],
   },
 
@@ -529,6 +570,7 @@ export function batteryMinutes(battery) {
  */
 export const LOWER_IS_BETTER = new Set([
   "run15", "run2", "run3", "sdc",                          // Navy, Army, Air Force, Marines
+  "mtc", "muf",                                            // Marine CFT
   "swim500",                                               // SEAL PST
   "ruck3", "agility_r", "agility_l", "farmers", "shuttle300",  // AFSPECWAR
   "finswim", "combatrun",                                      // either cardio choice
