@@ -33,6 +33,10 @@ import {
 } from "@/lib/militaryStandards";
 import { scorePfraTest, pfraBand, PFRA_TOTAL_MAX } from "@/lib/airForceStandards";
 import {
+  scoreMarsocTest, MARSOC_GATES, MARSOC_RUCK_LBS,
+  MARSOC_PFT_MIN, MARSOC_PFT_RECOMMENDED,
+} from "@/lib/marsocStandards";
+import {
   scoreUsmcTest, usmcBand, USMC_MAX_TOTAL, USMC_EVENT_MIN_POINTS,
 } from "@/lib/usmcStandards";
 import {
@@ -57,6 +61,8 @@ const fmtValue = (v, unit) =>
   : unit === "sec10" ? `${Number(v).toFixed(1)}s`
   : unit === "mi100" ? `${(Number(v) / 100).toFixed(2)} mi`
   : unit === "in" ? `${v}"`
+  : unit === "pts" ? `${v} pts`
+  : unit === "m" ? `${v} m`
   : `${v}`;
 const isTimeUnit = (unit) => unit === "secs" || unit === "sec10";
 
@@ -118,6 +124,11 @@ export default function FitnessTest() {
   // to pull-ups because choosing push-ups caps the whole test at 270.
   const [usmcUpper, setUsmcUpper] = useState("pullups");
 
+  // MARSOC load movement only: which distance. The gate is a PACE, so the
+  // distance picks its own cutoff rather than changing the standard. Defaults
+  // to 8 miles, the shorter of the two graded Phase I hikes.
+  const [marsocRuck, setMarsocRuck] = useState("ruck8");
+
   // Custom battery: the picked event keys, assembled on demand. Memoised so the
   // battery object keeps its identity between renders - finishEvent closes over
   // it, and a fresh object every render would re-fire its effects.
@@ -138,8 +149,14 @@ export default function FitnessTest() {
     if (b.needsUpperChoice) {
       return { ...b, events: b.events.filter((e) => !e.upper || e.key === usmcUpper) };
     }
+    // The load movement is one ruck, not four. Which distance you picked is
+    // carried by the surviving event's own key, so the result recomputes its
+    // gate from the record alone and nothing extra has to be stored.
+    if (b.needsRuckChoice) {
+      return { ...b, events: b.events.filter((e) => !e.ruck || e.key === marsocRuck) };
+    }
     return b;
-  }, [batteryKey, customKeys, oftCardio, usmcUpper]);
+  }, [batteryKey, customKeys, oftCardio, usmcUpper, marsocRuck]);
 
   const event = battery?.events[eventIndex] || null;
 
@@ -373,6 +390,72 @@ export default function FitnessTest() {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* MARSOC's load standard is a pace, not a distance — "regardless of
+              distance", the page says. So picking a distance doesn't pick an
+              easier or harder standard, it only picks how long you're out. */}
+          {battery?.needsRuckChoice && (
+            <div className="bg-[#111] border border-gray-800 rounded-2xl p-4 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                Distance
+              </p>
+              <p className="text-[11px] text-gray-500 leading-snug">
+                {MARSOC_RUCK_LBS} lb excluding MRE and water, at 15:00 per mile. The same pace
+                applies at every distance — these only set how long the cutoff is.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  ["ruck4", "4 miles", "Prep program"],
+                  ["ruck8", "8 miles", "Graded Phase I hike"],
+                  ["ruck10", "10 miles", "Graded Phase I hike"],
+                  ["ruck13", "13 miles", "Prep program"],
+                ].map(([k, l, sub]) => (
+                  <button key={k} onClick={() => setMarsocRuck(k)}
+                    className={`min-h-[60px] rounded-xl border px-2.5 py-1.5 text-left ${
+                      marsocRuck === k
+                        ? "bg-[#f43f5e]/20 border-[#f43f5e] text-white"
+                        : "border-gray-700 text-gray-400"
+                    }`}>
+                    <span className="block text-sm font-bold">{l}</span>
+                    <span className="block text-[10px] text-gray-500 leading-tight">{sub}</span>
+                    <span className="block text-[10px] font-bold tabular-nums text-gray-400">
+                      cutoff {fmtSecs(MARSOC_GATES[k].max)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* MARSOC publishes a PFT gate but no table behind it, so the setup
+              screen states the two numbers plainly rather than implying the app
+              knows more than the page does. */}
+          {battery?.key === "marsoc_screen" && (
+            <div className="bg-[#111] border border-gray-800 rounded-2xl p-4 space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                The published gates
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-center pt-1">
+                {[
+                  ["PFT", `${MARSOC_PFT_MIN}`, `${MARSOC_PFT_RECOMMENDED} asked for`],
+                  ["300m swim", "Complete", "no time published"],
+                  ["Underwater", "25 m", "in PT gear"],
+                  ["Tread", "10:00", "utilities, no boots"],
+                ].map(([l, v, sub]) => (
+                  <div key={l} className="rounded-xl border border-gray-800 py-2">
+                    <p className="text-[9px] text-gray-600 uppercase tracking-wide">{l}</p>
+                    <p className="text-sm font-bold tabular-nums text-gray-200">{v}</p>
+                    <p className="text-[9px] text-gray-600 leading-tight">{sub}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-amber-300/90 leading-snug pt-1">
+                These are the prerequisites to attend, and they are all MARSOC publishes. The
+                standards for each Phase I screening event are handed out on arrival, so this
+                reports gates cleared and never a pass.
+              </p>
             </div>
           )}
 
@@ -610,6 +693,14 @@ function BatteryCard({ b, selected, onSelect }) {
                 style={{ background: "#78350f", color: "#fcd34d" }}>
                 RECORD ONLY
               </span>
+            ) : b.scoring === "gate" ? (
+              // A third thing again: the standard IS published, it just isn't a
+              // scoring table. Pass/fail per gate, no points, no total — so
+              // neither SCORED nor RECORD ONLY would be true.
+              <span className="text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded"
+                style={{ background: "#4c1d24", color: "#fda4af" }}>
+                PASS / FAIL GATES
+              </span>
             ) : b.sourceCaveat ? (
               // Scored, but from a transcription rather than the governing
               // document. Worth its own badge: the numbers behave the same, the
@@ -844,6 +935,9 @@ function EventRunner({ event, index, total, accent, onDone, onAbort }) {
       reps:     { label: "REPS",    step: "1",   mode: "numeric" },
       distance: { label: "INCHES",  step: "1",   mode: "numeric" },
       seconds:  { label: "SECONDS", step: "0.1", mode: "decimal" },
+      // MARSOC: a PFT total you already hold, and a distance covered underwater.
+      points:   { label: "POINTS",  step: "1",   mode: "numeric" },
+      meters:   { label: "METRES",  step: "1",   mode: "numeric" },
     };
     const single = SINGLE[event.entryKind] || SINGLE.weight;
     const value = isTime
@@ -1035,6 +1129,13 @@ function Results({ record, onRestart, onExit }) {
     ? scorePfraTest(record.events, record.sex, record.age)
     : null;
 
+  // MARSOC is the one test here with no points and no pass mark. Its scorer
+  // returns a count of published gates cleared and nothing else — see
+  // marsocStandards.js for why anything more would be invented.
+  const gate = battery.scoring === "gate"
+    ? scoreMarsocTest(record.events)
+    : null;
+
   // Marine PFT and CFT share one scorer — same 300-point shape, same class
   // bands, same "40 in every event or the test fails" rule.
   const usmc = battery.scoring === "usmc"
@@ -1064,6 +1165,7 @@ function Results({ record, onRestart, onExit }) {
               : pst ? (pst.passed ? "🎖️" : "📋")
               : oft ? (oft.passed ? "🎖️" : "📋")
               : usmc ? (usmc.passed ? "🎖️" : "📋")
+              : gate ? "📋"
               : "📊"}
           </div>
           <h1 className="text-2xl font-black">{battery.name}</h1>
@@ -1197,6 +1299,28 @@ function Results({ record, onRestart, onExit }) {
           </div>
         )}
 
+        {/* ── MARSOC gates ─────────────────────────────────────────────────
+            Deliberately shaped unlike every card above it. There is no total,
+            no class, no PASS — because MARSOC publishes none of those. What it
+            can say honestly is how many of the published prerequisites you
+            cleared, and that Phase I sets the rest when you get there. */}
+        {gate && gate.overall && (
+          <div className="rounded-2xl border-2 p-5 text-center"
+            style={{ borderColor: gate.overall.color, background: `${gate.overall.color}18` }}>
+            <p className="text-xs uppercase tracking-widest text-gray-400">
+              Published prerequisites
+            </p>
+            <p className="text-3xl font-black mt-1" style={{ color: gate.overall.color }}>
+              {gate.overall.label}
+            </p>
+            <p className="text-sm text-gray-400 mt-1">{gate.overall.detail}</p>
+            <p className="text-[11px] text-gray-500 mt-3 leading-snug">
+              This is not a score and not a pass. MARSOC hands out the standard for each Phase I
+              screening event on arrival, so the app checks what is published and stops.
+            </p>
+          </div>
+        )}
+
         {/* ── Marine Corps PFT / CFT result ────────────────────────────── */}
         {usmc && usmc.overall && (
           <div className="rounded-2xl border-2 p-5 text-center"
@@ -1257,8 +1381,22 @@ function Results({ record, onRestart, onExit }) {
               // Both scored tests produce points + a pass line per event, but
               // in different shapes. Normalise here so the row doesn't care
               // which service's table it came from.
-              const raw = (prt || aft || pst || oft || pfra || usmc)?.scored.find((s) => s.key === e.key)?.result;
-              const scored = !raw ? null : usmc ? {
+              const raw = (prt || aft || pst || oft || pfra || usmc || gate)?.scored.find((s) => s.key === e.key)?.result;
+              const scored = !raw ? null : gate ? {
+                // No points exist to show. The row carries the verdict word and
+                // the published threshold, and for an event with no threshold
+                // it says RECORDED rather than quietly showing a green tick.
+                points: null,
+                label: raw.pass === null ? "Recorded"
+                  : raw.dir === "complete" ? "Completed"
+                  : raw.pass ? "Gate met" : "Below gate",
+                color: raw.pass === null ? "#9ca3af"
+                  : raw.pass ? "#4ade80" : "#ef4444",
+                min: raw.minimum, max: null,
+                gateText: raw.gate,
+                recommended: raw.recommended,
+                meetsRecommended: raw.meetsRecommended,
+              } : usmc ? {
                 points: raw.points,
                 label: raw.pass ? `of ${raw.maxPoints}` : `below ${USMC_EVENT_MIN_POINTS}`,
                 color: raw.pass ? "#4ade80" : "#ef4444",
@@ -1296,11 +1434,20 @@ function Results({ record, onRestart, onExit }) {
                         {scored.points != null ? `${scored.points} pts · ` : ""}{scored.label}
                       </span>
                     )}
-                    {scored && (
+                    {scored && (gate ? (
+                      <span className="text-[10px] text-gray-600">
+                        {scored.min != null ? `gate ${scored.gateText}` : "no standard published"}
+                      </span>
+                    ) : (
                       <span className="text-[10px] text-gray-600">
                         {scored.max != null
                           ? `pass ${fmtValue(scored.min, e.unit)} · max ${fmtValue(scored.max, e.unit)}`
                           : `minimum ${fmtValue(scored.min, e.unit)}`}
+                      </span>
+                    ))}
+                    {scored?.meetsRecommended === false && (
+                      <span className="text-[10px] text-amber-400 font-bold">
+                        below the {scored.recommended} asked for
                       </span>
                     )}
                     {d?.delta != null && d.delta !== 0 && (

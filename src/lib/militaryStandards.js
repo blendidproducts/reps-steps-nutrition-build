@@ -197,19 +197,15 @@ export function scoreAftTest(events, sex, age, combat = false) {
 }
 
 // ── Still not buildable ──────────────────────────────────────────────────────
-// Everything whose EVENT LIST we can state is now runnable, scored against your
-// own history, with `standardsPending` saying plainly that there is no verdict.
-// What's left here is the case where we don't even know what the events are —
-// there is nothing to put on a screen, so there's no card to unlock.
-export const PENDING = [
-  {
-    key: "marsoc", branch: "specops", name: "MARSOC A&S", accent: "#fb7185",
-    why: "No published event list found. Unlike the others, this isn't a missing scoring chart — " +
-         "we don't know what the events are, so there is nothing to run.",
-    events: "Assessment & Selection screening — events not published",
-    doc: "MARSOC Letter to the Candidate",
-  },
-];
+// Empty, and worth keeping empty rather than deleting: this is where a branch
+// goes when we can't even state its event list, and the UI already knows how to
+// render that case honestly. Nothing is in it today.
+//
+// MARSOC was the last entry. It came out when the A&S page and MARSOC's own
+// preparation program gave us the event list — not a scoring table, which
+// MARSOC does not publish, but the published prerequisite GATES, which is a
+// different thing and is modelled as one in marsocStandards.js.
+export const PENDING = [];
 
 // ── Navy Physical Screening Test (PST) ───────────────────────────────────────
 // Source: MILPERSMAN 1220-410, read 2026-10-06.

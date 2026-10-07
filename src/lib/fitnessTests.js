@@ -466,6 +466,93 @@ export const BATTERIES = {
     ],
   },
 
+  // ── MARSOC: gates, not scores ──────────────────────────────────────────────
+  // These two are the only batteries in the app that don't score. MARSOC says
+  // why in as many words: "During Phase I, candidates will be given the
+  // standards for each fitness screening event." The standards are handed out
+  // at Camp Lejeune, not published — so there is no table to read and nothing
+  // to interpolate.
+  //
+  // What IS published is a short list of prerequisites you must arrive with,
+  // and that is what these run: one yes/no per published gate, and no total.
+  // See marsocStandards.js for why adding gates up and calling it a pass would
+  // be inventing the very standards the page declines to give.
+  //
+  // Split in two because Phase I runs them on different days and so must you: a
+  // pool session plus a PFT score is one sitting, a graded hike is another.
+  marsoc_screen: {
+    key: "marsoc_screen",
+    name: "MARSOC A&S Screening",
+    group: "military",
+    branch: "specops",
+    blurb: "The published prerequisites for Assessment & Selection Phase I — PFT score and the three water events.",
+    icon: "shield",
+    accent: "#fb7185",
+    scoring: "gate",
+    needsProfile: false,
+    disclaimer:
+      "These are PREREQUISITES, not scores. MARSOC publishes the gates you must arrive with and " +
+      "nothing else — \"during Phase I, candidates will be given the standards for each fitness " +
+      "screening event\" — so this says whether you cleared each published gate and stops there. " +
+      "Clearing them all means you are eligible to be assessed; it says nothing about selection, " +
+      "and the page is explicit that the minimum \"will not guarantee success\". Phase I also " +
+      "includes retrieving a rifle from the pool bottom and blouse/trouser flotation, which the " +
+      "phone can't time. Source: marsoc.marines.mil A&S program page, read 2026-10-06.",
+    events: [
+      // Typed in, not run: the PFT is its own battery under Marines. Entering
+      // the score here is how the gate gets checked without running it twice.
+      { key: "pft", name: "PFT Score", how: "entry", entryKind: "points",
+        unit: "pts", cue: "Your most recent PFT total. 235 to attend, 260 recommended.",
+        restAfter: 0 },
+      { key: "swim300", name: "300m Swim, Uniform", how: "entry", entryKind: "time",
+        unit: "secs", cue: "Side or breast stroke, MCCU uniform, no boots. Continuous. Enter your time.",
+        equipment: "Pool, MCCU uniform", restAfter: 600 },
+      { key: "uwswim25", name: "Underwater Swim", how: "entry", entryKind: "meters",
+        unit: "m", cue: "PT gear. Enter the distance you covered underwater — 25 m is the gate.",
+        equipment: "Pool", restAfter: 600 },
+      { key: "tread", name: "Water Tread", how: "hold",
+        unit: "secs", cue: "Full utility uniform, no boots. Tap STOP when you can't hold it. 10 minutes is the gate.",
+        equipment: "Pool, utility uniform", restAfter: 0 },
+    ],
+  },
+
+  marsoc_ruck: {
+    key: "marsoc_ruck",
+    name: "MARSOC Load Movement",
+    group: "military",
+    branch: "specops",
+    blurb: "45 lb at 15 minutes per mile — the one load standard MARSOC publishes, at the Phase I graded distances.",
+    icon: "shield",
+    accent: "#f43f5e",
+    scoring: "gate",
+    needsProfile: false,
+    needsRuckChoice: true,
+    disclaimer:
+      "One published standard: \"movements under load of 45 LBS (weight excluding MRE and water) " +
+      "within a prescribed standard of (4 MPH) 15 minutes per mile\". Every cutoff below is that " +
+      "same pace multiplied by the distance — not a table, because MARSOC publishes no table. " +
+      "The 8- and 10-mile distances are the graded Phase I hikes; 4 and 13 miles are the ruck " +
+      "assessments in MARSOC's own 11-week preparation program. A&S asks for this pace " +
+      "\"regardless of distance\". Sources: marsoc.marines.mil A&S page and the Assessment & " +
+      "Selection Preparation Program, both read 2026-10-06.",
+    events: [
+      // Four distances, one slot. The gate is a pace, so each event carries its
+      // own cutoff derived from the same 15:00/mile rather than a looked-up row.
+      { key: "ruck4", name: "4-Mile Ruck", how: "entry", entryKind: "time", ruck: true,
+        unit: "secs", cue: "45 lb, excluding MRE and water. Gate is 1:00:00.",
+        equipment: "45-lb ruck", restAfter: 0 },
+      { key: "ruck8", name: "8-Mile Ruck", how: "entry", entryKind: "time", ruck: true,
+        unit: "secs", cue: "45 lb, excluding MRE and water. Gate is 2:00:00.",
+        equipment: "45-lb ruck", restAfter: 0 },
+      { key: "ruck10", name: "10-Mile Ruck", how: "entry", entryKind: "time", ruck: true,
+        unit: "secs", cue: "45 lb, excluding MRE and water. Gate is 2:30:00.",
+        equipment: "45-lb ruck", restAfter: 0 },
+      { key: "ruck13", name: "13-Mile Ruck", how: "entry", entryKind: "time", ruck: true,
+        unit: "secs", cue: "45 lb, excluding MRE and water. Gate is 3:15:00.",
+        equipment: "45-lb ruck", restAfter: 0 },
+    ],
+  },
+
   repsandsteps: {
     key: "repsandsteps",
     name: "RepsAndSteps Output",
@@ -574,6 +661,10 @@ export const LOWER_IS_BETTER = new Set([
   "swim500",                                               // SEAL PST
   "ruck3", "agility_r", "agility_l", "farmers", "shuttle300",  // AFSPECWAR
   "finswim", "combatrun",                                      // either cardio choice
+  // MARSOC. The 300 m swim has no published time but is still a time you want
+  // coming down. `tread` is seconds and deliberately absent — a longer hold is
+  // the better result, so it must not read as a regression.
+  "swim300", "ruck4", "ruck8", "ruck10", "ruck13",
 ]);
 
 /** Per-event delta against the previous test of the same battery. */
