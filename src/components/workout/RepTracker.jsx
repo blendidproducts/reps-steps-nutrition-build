@@ -30,6 +30,7 @@ import {
   X, Camera, Activity, CheckCircle,
   ChevronUp, ChevronDown, AlertTriangle, RotateCcw, Hand, FlaskConical,
   Pause, Play as PlayIcon, Users, Route, Crosshair,
+  Video, VideoOff, Circle, Square, Download, Mic, MicOff, CameraOff,
 } from "lucide-react";
 
 // ─── MediaPipe CDN ────────────────────────────────────────────────────────────
@@ -49,20 +50,50 @@ const CONNECTIONS = [
 // workout page passes keepCameraAlive and calls releaseSharedCamera() at the end.
 let sharedStream = null;
 let sharedFacing = null;
+// Set by the mounted tracker so the module can report a stream dying from
+// OUTSIDE React — the 'ended' event fires on the track, not on a component.
+let onCameraLost = null;
+export function setCameraLostHandler(fn) { onCameraLost = fn; }
+
 export function releaseSharedCamera() {
   try { sharedStream?.getTracks().forEach((t) => t.stop()); } catch (_) {}
   sharedStream = null;
   sharedFacing = null;
 }
+
+/** Is the shared stream actually usable right now? */
+export function cameraIsLive() {
+  return !!sharedStream?.getVideoTracks?.().some(
+    (t) => t.readyState === "live" && !t.muted
+  );
+}
+
 async function acquireCamera(mode) {
-  const live = sharedStream?.getVideoTracks?.().some((t) => t.readyState === "live");
+  const live = cameraIsLive();
   if (sharedStream && live && sharedFacing === mode) return sharedStream;
   try { sharedStream?.getTracks().forEach((t) => t.stop()); } catch (_) {}
   sharedStream = await navigator.mediaDevices.getUserMedia({
     video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } },
-    audio: false,
+    audio: false,   // the microphone is requested ONLY when recording with sound
   });
   sharedFacing = mode;
+
+  // ── 2026-10-07: watch the track ─────────────────────────────────────────
+  // JT's report: "the camera is not able to record video". On iOS Safari a
+  // camera track is taken away by the system for ordinary reasons — the page
+  // is backgrounded, another app or an incoming call claims the camera, or iOS
+  // reclaims it on a long session. The track goes to readyState 'ended' (or
+  // 'muted'), but <video> keeps its last frame and video.readyState stays >= 2,
+  // so the detection loop carried on forever against a FROZEN image. No error,
+  // no recovery, reps silently stop counting.
+  //
+  // One shared stream held for a whole workout — which is right, it stops iOS
+  // re-prompting per exercise — makes this far more likely, because the window
+  // for the system to take it is the entire session rather than one set.
+  for (const t of sharedStream.getVideoTracks()) {
+    t.addEventListener("ended", () => onCameraLost?.("ended"));
+    t.addEventListener("mute",  () => onCameraLost?.("muted"));
+  }
   return sharedStream;
 }
 
@@ -90,6 +121,23 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     try { return sharedFacing || localStorage.getItem("rns_cam_facing") || defaultFacingMode; } catch (_) { return defaultFacingMode; }
   });
   const [repFlash,       setRepFlash]       = useState(false);
+  // ── Camera health (2026-10-07) ────────────────────────────────
+  // `cameraLost` is the reason string when the stream dies, null when healthy.
+  const [cameraLost,     setCameraLost]     = useState(null);
+  const [reacquiring,    setReacquiring]    = useState(false);
+  const lastFrameTime    = useRef({ t: 0, at: 0 });
+  // ── Recording (2026-10-07) ────────────────────────────────────
+  const recorderRef      = useRef(null);
+  const recChunksRef     = useRef([]);
+  const recAudioRef      = useRef(null);   // the mic track, if sound was on
+  const recTimerRef      = useRef(null);
+  const [recording,      setRecording]      = useState(false);
+  const [recSeconds,     setRecSeconds]     = useState(0);
+  const [recError,       setRecError]       = useState(null);
+  const [recReady,       setRecReady]       = useState(null); // { url, name, size }
+  const [recWithSound,   setRecWithSound]   = useState(() => {
+    try { return localStorage.getItem("rns_rec_sound") !== "0"; } catch (_) { return true; }
+  });
   const [partials,       setPartials]       = useState(0);  // shallow attempts this set
   const [shallowFlash,   setShallowFlash]   = useState(false);
   // Live depth scale from the counter: your standing reading and the depth line
@@ -222,6 +270,159 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     try { localStorage.setItem("rns_cam_facing", next); } catch (_) {}
     await startCamera(next);
   }, [facingMode, startCamera]);
+
+  /** Re-acquire the camera after the system took it away. */
+  const recoverCamera = useCallback(async () => {
+    setReacquiring(true);
+    try {
+      releaseSharedCamera();                 // drop the dead one first
+      lastFrameTime.current = { t: 0, at: 0 };
+      await startCamera(facingModeRef.current);
+      setCameraLost(null);
+    } catch (e) {
+      setCameraLost(e?.name === "NotAllowedError" ? "denied" : "failed");
+    } finally {
+      setReacquiring(false);
+    }
+  }, [startCamera]);
+
+  // ── Workout video recording (2026-10-07) ─────────────────────────────────
+  // Records the RAW camera, not the canvas: JT wants the video for his own
+  // records, and the skeleton overlay would only get in the way. Recording a
+  // CLONE of the live video track means the pose loop keeps its own track
+  // untouched — a second getUserMedia call would fight the shared stream, and
+  // on iOS would re-prompt.
+  //
+  // iOS Safari records MP4 (H.264 + AAC) and does NOT support WebM, so the
+  // mime list is ordered mp4-first rather than the usual webm-first.
+  // Source: https://webkit.org/blog/11353/mediarecorder-api/
+  const REC_MIMES = [
+    'video/mp4;codecs="avc1.42E01E,mp4a.40.2"',
+    "video/mp4",
+    'video/webm;codecs="vp9,opus"',
+    'video/webm;codecs="vp8,opus"',
+    "video/webm",
+  ];
+  const pickRecMime = () => {
+    if (typeof MediaRecorder === "undefined") return null;
+    for (const m of REC_MIMES) {
+      try { if (MediaRecorder.isTypeSupported(m)) return m; } catch (_) {}
+    }
+    return "";   // let the browser choose
+  };
+
+  const stopRecording = useCallback(() => {
+    try { recorderRef.current?.state === "recording" && recorderRef.current.stop(); } catch (_) {}
+    // Release the microphone the moment recording ends. On iOS the mic is what
+    // puts the recording indicator in the status bar, so holding it open past
+    // the recording would leave that showing for the rest of the workout.
+    try { recAudioRef.current?.getTracks().forEach((t) => t.stop()); } catch (_) {}
+    recAudioRef.current = null;
+    if (recTimerRef.current) { clearInterval(recTimerRef.current); recTimerRef.current = null; }
+    recorderRef.current = null;
+    setRecording(false);
+  }, []);
+
+  const startRecording = useCallback(async () => {
+    setRecError(null);
+    // Revoke the previous clip's URL before dropping the reference to it —
+    // otherwise every re-record pins another whole video in memory, which on a
+    // phone is how a long workout runs the tab out of it.
+    setRecReady((prev) => {
+      if (prev?.url) { try { URL.revokeObjectURL(prev.url); } catch (_) {} }
+      return null;
+    });
+    if (typeof MediaRecorder === "undefined") {
+      setRecError("This browser can't record video. On iPhone, use Safari.");
+      return;
+    }
+    const camera = streamRef.current;
+    const videoTrack = camera?.getVideoTracks?.()[0];
+    if (!videoTrack || videoTrack.readyState !== "live") {
+      setRecError("The camera isn't running — start it before recording.");
+      return;
+    }
+    try {
+      const tracks = [videoTrack.clone()];
+      if (recWithSound) {
+        // Requested here and nowhere else, so the mic is only ever on while a
+        // recording is actually running.
+        const mic = await navigator.mediaDevices.getUserMedia({ audio: true });
+        recAudioRef.current = mic;
+        tracks.push(...mic.getAudioTracks());
+      }
+      const mixed = new MediaStream(tracks);
+      const mimeType = pickRecMime();
+      const rec = new MediaRecorder(mixed, mimeType ? { mimeType } : undefined);
+      recChunksRef.current = [];
+      rec.ondataavailable = (e) => { if (e.data?.size) recChunksRef.current.push(e.data); };
+      rec.onerror = () => { setRecError("Recording stopped unexpectedly."); stopRecording(); };
+      rec.onstop = () => {
+        const type = rec.mimeType || mimeType || "video/mp4";
+        const blob = new Blob(recChunksRef.current, { type });
+        recChunksRef.current = [];
+        try { mixed.getTracks().forEach((t) => t.stop()); } catch (_) {}
+        if (!blob.size) { setRecError("Nothing was recorded."); return; }
+        const ext = type.includes("mp4") ? "mp4" : "webm";
+        const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+        setRecReady({
+          url: URL.createObjectURL(blob),
+          blob,
+          name: `repsandsteps-${(exerciseName || "workout").toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${stamp}.${ext}`,
+          size: blob.size,
+        });
+      };
+      rec.start(1000);           // 1s chunks, so a crash still leaves something
+      recorderRef.current = rec;
+      setRecording(true);
+      setRecSeconds(0);
+      recTimerRef.current = setInterval(() => setRecSeconds((n) => n + 1), 1000);
+    } catch (e) {
+      // The mic is the usual refusal here, and it must not take the camera with it.
+      try { recAudioRef.current?.getTracks().forEach((t) => t.stop()); } catch (_) {}
+      recAudioRef.current = null;
+      setRecError(
+        e?.name === "NotAllowedError"
+          ? "Microphone permission was declined. Turn SOUND off to record video only."
+          : "Couldn't start recording on this device."
+      );
+      setRecording(false);
+    }
+  }, [recWithSound, exerciseName, stopRecording]);
+
+  /** Hand the finished file to the person: the share sheet on iOS, else a download. */
+  const saveRecording = useCallback(async () => {
+    if (!recReady) return;
+    const file = new File([recReady.blob], recReady.name, { type: recReady.blob.type });
+    // iOS Safari ignores <a download> for blobs; the share sheet is the only
+    // route to Photos or Files, so try it first where it is actually available.
+    try {
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: "RepsAndSteps workout" });
+        return;
+      }
+    } catch (_) { /* cancelled, or unsupported — fall through */ }
+    const a = document.createElement("a");
+    a.href = recReady.url;
+    a.download = recReady.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }, [recReady]);
+
+  // Recording must never outlive the tracker, or the mic stays open.
+  const recReadyRef = useRef(null);
+  useEffect(() => { recReadyRef.current = recReady; }, [recReady]);
+  useEffect(() => () => {
+    try { recorderRef.current?.state === "recording" && recorderRef.current.stop(); } catch (_) {}
+    try { recAudioRef.current?.getTracks().forEach((t) => t.stop()); } catch (_) {}
+    if (recTimerRef.current) clearInterval(recTimerRef.current);
+    const url = recReadyRef.current?.url;
+    if (url) { try { URL.revokeObjectURL(url); } catch (_) {} }
+  }, []);
+
+  // A camera that dies mid-recording ends the recording too — the file is kept.
+  useEffect(() => { if (cameraLost && recording) stopRecording(); }, [cameraLost, recording, stopRecording]);
 
   const cleanup = useCallback(() => {
     cancelAnimationFrame(animFrameRef.current);
@@ -367,6 +568,60 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
   useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
   const facingModeRef = useRef(facingMode);
   useEffect(() => { facingModeRef.current = facingMode; }, [facingMode]);
+
+  // ── Camera loss: detect it, say so, offer to recover ──────────────────────
+  // JT's report, 2026-10-07: "the camera is not able to record video".
+  //
+  // On iOS Safari a camera track gets taken away for ordinary reasons — the
+  // page is backgrounded, another app or a real incoming call claims the
+  // camera, or iOS reclaims it on a long session. The track moves to
+  // readyState 'ended' (or 'muted'), but <video> keeps showing its LAST FRAME
+  // and video.readyState stays >= 2, so detect() happily carried on against a
+  // frozen image: no error, no recovery, reps silently stop.
+  //
+  // Holding one shared stream for a whole workout — right in itself, it stops
+  // iOS re-prompting per exercise — widens the window for this from one set to
+  // the entire session, which is why it shows up in real use and never in a
+  // quick test.
+  //
+  // Three signals, because iOS uses all three depending on the cause:
+  //   1. the track fires 'ended' / 'mute'   (wired in acquireCamera)
+  //   2. the page returns from background with a dead track
+  //   3. neither fires and frames simply stop arriving
+  useEffect(() => {
+    setCameraLostHandler((reason) => setCameraLost(reason));
+    return () => setCameraLostHandler(null);
+  }, []);
+
+  useEffect(() => {
+    if (initialConfig.trackable === false) return;
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (!cameraIsLive()) setCameraLost("backgrounded");
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [initialConfig.trackable]);
+
+  useEffect(() => {
+    if (initialConfig.trackable === false || cameraLost) return;
+    // Signal 3. A live camera advances video.currentTime continuously. If it
+    // hasn't moved in 3s while the page is visible, the feed is frozen whatever
+    // the track claims about itself.
+    const FROZEN_MS = 3000;
+    const id = setInterval(() => {
+      const v = videoRef.current;
+      if (!v || document.visibilityState !== "visible") return;
+      const now = performance.now();
+      const seen = lastFrameTime.current;
+      if (v.currentTime !== seen.t) {
+        lastFrameTime.current = { t: v.currentTime, at: now };
+        return;
+      }
+      if (seen.at && now - seen.at > FROZEN_MS) setCameraLost("frozen");
+    }, 1000);
+    return () => clearInterval(id);
+  }, [cameraLost, initialConfig.trackable]);
   // Pause + multi-person refs (read inside RAF closure)
   const pausedRef = useRef(paused);
   useEffect(() => { pausedRef.current = paused; }, [paused]);
@@ -998,6 +1253,88 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
             {/* Round 20: skeleton toggle moved into the bottom bar */}
           </div>
 
+          {/* ── Camera stopped ──────────────────────────────────────────
+              Previously this state was invisible: the feed froze on its last
+              frame and the rep count simply stopped moving with nothing said.
+              Saying so, and offering the one button that fixes it, is the whole
+              feature. */}
+          {cameraLost && (
+            <div className="absolute inset-x-0 bottom-0 z-30 px-4 pb-4">
+              <div className="rounded-2xl border border-amber-500/50 bg-[#1a1206]/95 backdrop-blur-sm p-4">
+                <div className="flex items-start gap-2.5">
+                  <CameraOff className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-amber-200">Camera stopped</p>
+                    <p className="text-[11px] text-amber-200/80 leading-snug mt-0.5">
+                      {cameraLost === "denied"
+                        ? "Camera permission was turned off. Allow it in your browser settings, then tap Resume."
+                        : cameraLost === "backgrounded"
+                          ? "iOS released the camera while the app was in the background. Your count is safe."
+                          : cameraLost === "frozen"
+                            ? "The camera stopped sending frames. Your count is safe — reps just weren't being read."
+                            : "Something else took the camera. Your count is safe."}
+                    </p>
+                    <button onClick={recoverCamera} disabled={reacquiring}
+                      className="mt-2.5 min-h-[44px] w-full rounded-xl bg-amber-500 text-black font-black text-sm active:scale-95 disabled:opacity-50">
+                      {reacquiring ? "RESTARTING…" : "RESUME CAMERA"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Recording indicator ─────────────────────────────────────── */}
+          {recording && (
+            <div className="absolute top-14 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5
+                            rounded-full bg-red-600/95 px-3 py-1 shadow-lg">
+              <Circle className="w-2.5 h-2.5 fill-white text-white animate-pulse" />
+              <span className="text-white text-[11px] font-black tabular-nums tracking-wide">
+                REC {Math.floor(recSeconds / 60)}:{String(recSeconds % 60).padStart(2, "0")}
+              </span>
+              {recWithSound
+                ? <Mic className="w-3 h-3 text-white/90" />
+                : <MicOff className="w-3 h-3 text-white/70" />}
+            </div>
+          )}
+
+          {/* ── Finished recording ──────────────────────────────────────── */}
+          {recReady && !recording && (
+            <div className="absolute inset-x-0 bottom-0 z-30 px-4 pb-4">
+              <div className="rounded-2xl border border-[#00a9ff]/50 bg-[#041020]/95 backdrop-blur-sm p-4 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <Video className="w-4 h-4 text-[#00a9ff]" />
+                  <p className="text-sm font-bold text-white">
+                    Recording ready · {(recReady.size / 1048576).toFixed(1)} MB
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={saveRecording}
+                    className="min-h-[44px] rounded-xl bg-[#00a9ff] text-white font-black text-sm active:scale-95 flex items-center justify-center gap-1.5">
+                    <Download className="w-4 h-4" /> SAVE
+                  </button>
+                  <button onClick={() => { try { URL.revokeObjectURL(recReady.url); } catch (_) {} setRecReady(null); }}
+                    className="min-h-[44px] rounded-xl border border-gray-700 text-gray-300 font-bold text-sm active:scale-95">
+                    DISCARD
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-500 leading-snug">
+                  SAVE opens your phone's share sheet, so you can send it to Photos, Files or anywhere else.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {recError && (
+            <div className="absolute inset-x-0 bottom-0 z-30 px-4 pb-4">
+              <div className="rounded-2xl border border-red-500/50 bg-[#1a0606]/95 backdrop-blur-sm p-3 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <p className="flex-1 text-[11px] text-red-200 leading-snug">{recError}</p>
+                <button onClick={() => setRecError(null)} className="text-red-300 text-xs font-bold px-1">OK</button>
+              </div>
+            </div>
+          )}
+
           {/* Bottom bar */}
           <div className="bg-[#020817]/95 backdrop-blur-sm border-t border-white/10 px-4 pt-2 flex flex-col gap-2"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 12px) + 12px + var(--artp-cb-h, 0px))' }}>
@@ -1038,6 +1375,31 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
                 <RotateCcw className="w-5 h-5 text-gray-400" />
                 <span className="text-gray-400 text-[9px] font-bold leading-none">RESET</span>
               </button>
+              {/* Record the set. Long-press isn't discoverable enough for a
+                  gym, so sound is its own small toggle beside it. */}
+              <button onClick={recording ? stopRecording : startRecording}
+                className={`flex-shrink-0 flex flex-col items-center justify-center gap-1 w-12 h-14 rounded-2xl border active:scale-95 transition-transform ${
+                  recording ? "bg-red-600/30 border-red-500/60" : "bg-gray-800 border-white/15"
+                }`}>
+                {recording
+                  ? <><Square className="w-5 h-5 text-red-400" /><span className="text-red-400 text-[9px] font-bold leading-none">STOP</span></>
+                  : <><Video className="w-5 h-5 text-gray-400" /><span className="text-gray-400 text-[9px] font-bold leading-none">REC</span></>}
+              </button>
+              {!recording && (
+                <button
+                  onClick={() => setRecWithSound((p) => {
+                    const next = !p;
+                    try { localStorage.setItem("rns_rec_sound", next ? "1" : "0"); } catch (_) {}
+                    return next;
+                  })}
+                  className={`flex-shrink-0 flex flex-col items-center justify-center gap-1 w-12 h-14 rounded-2xl border active:scale-95 transition-transform ${
+                    recWithSound ? "bg-[#00a9ff]/25 border-[#00a9ff]/60" : "bg-gray-800 border-white/15"
+                  }`}>
+                  {recWithSound
+                    ? <><Mic className="w-5 h-5 text-[#00a9ff]" /><span className="text-[#00a9ff] text-[9px] font-bold leading-none">SOUND</span></>
+                    : <><MicOff className="w-5 h-5 text-gray-500" /><span className="text-gray-500 text-[9px] font-bold leading-none">MUTE</span></>}
+                </button>
+              )}
               <button onClick={handleDone}
                 className="flex-1 h-14 bg-[#00a9ff] hover:bg-[#0090e0] active:scale-95 transition-transform text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-[#00a9ff]/30">
                 <CheckCircle className="w-5 h-5" />
