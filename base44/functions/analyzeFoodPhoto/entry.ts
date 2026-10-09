@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
+import { hasNutritionAi } from '../../shared/entitlements.ts';
 
 // Narrow, app-specific operation: analyzes an uploaded food photo and returns
 // estimated macros. The client uploads the file (UploadFile) then passes the
@@ -8,6 +9,11 @@ export default async function(req: Request): Promise<Response> {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+    // Server-side entitlement check — the paywall must not rely on the UI alone.
+    if (!hasNutritionAi(user)) {
+      return Response.json({ error: 'The AI Nutrition add-on is required to analyze food photos.' }, { status: 403 });
+    }
 
     const body = await req.json();
     const { file_url } = body;

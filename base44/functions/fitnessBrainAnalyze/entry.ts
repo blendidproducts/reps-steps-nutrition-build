@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
+import { hasFitnessBrain } from '../../shared/entitlements.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -10,6 +11,11 @@ Deno.serve(async (req) => {
     const { action, data } = body;
 
     if (action === 'analyze') {
+      // Server-side entitlement check — the paywall must not rely on the UI alone.
+      if (!hasFitnessBrain(user)) {
+        return Response.json({ error: 'The Fitness Brain add-on is required for AI analysis.' }, { status: 403 });
+      }
+
       const { profile, workouts, sleepLogs, recoveryLogs, measurements, hormoneLogs } = data;
 
       const prompt = `You are an elite AI fitness coach, nutritionist, and recovery specialist with 20 years of experience.

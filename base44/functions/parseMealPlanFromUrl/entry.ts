@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
+import { hasNutritionAi } from '../../shared/entitlements.ts';
 
 // Block private/loopback/link-local IPs to prevent SSRF
 const isPrivateIp = (ip) => {
@@ -101,6 +102,11 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+    // Server-side entitlement check — the paywall must not rely on the UI alone.
+    if (!hasNutritionAi(user)) {
+      return Response.json({ error: 'The AI Nutrition add-on is required to import meal plans.' }, { status: 403 });
+    }
 
     const { url } = await req.json();
     if (!url) return Response.json({ error: 'URL is required' }, { status: 400 });

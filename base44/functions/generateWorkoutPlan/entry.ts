@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
+import { isPro } from '../../shared/entitlements.ts';
 
 // Narrow, app-specific operation: generates a structured calisthenics workout
 // from a free-text prompt. The prompt and exercise list live server-side so
@@ -8,6 +9,11 @@ export default async function(req: Request): Promise<Response> {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+    // Server-side entitlement check — the paywall must not rely on the UI alone.
+    if (!isPro(user)) {
+      return Response.json({ error: 'A Pro subscription is required for AI workout generation.' }, { status: 403 });
+    }
 
     const body = await req.json();
     const { prompt: userPrompt, duration } = body;
