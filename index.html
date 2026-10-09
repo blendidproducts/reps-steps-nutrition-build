@@ -2,10 +2,31 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="https://base44.com/logo_v2.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- 2026-10-08: this file was the Base44 scaffold default. It said
+         "Base44 APP" and served Base44's logo as the favicon from base44.com,
+         so every browser tab and every Add-to-Home-Screen showed their brand,
+         not ours, and pulled an asset off someone else's domain to do it. -->
+    <title>Reps &amp; Steps: AI Rep Counter</title>
+    <meta name="description" content="Your camera counts your reps. Calisthenics workouts, step tracking, nutrition and military fitness tests in one app." />
+
+    <!-- Own icons, served from our own origin. -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+
+    <!-- The manifest was referenced here but never existed, so the request
+         404'd and Add-to-Home-Screen fell back to the page title and a
+         screenshot of the tab. It exists now. -->
     <link rel="manifest" href="/manifest.json" />
-    <title>Base44 APP</title>
+
+    <meta name="theme-color" content="#020817" />
+    <!-- iOS needs these three to launch without Safari chrome. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="RepsAndSteps" />
+    <meta name="mobile-web-app-capable" content="yes" />
   </head>
   <body>
     <div id="root"></div>
