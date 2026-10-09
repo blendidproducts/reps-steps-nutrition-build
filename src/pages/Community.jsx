@@ -11,13 +11,6 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-// Strip HTML metacharacters from user-supplied display names before storing,
-// preventing stored XSS if the value is ever rendered in a non-text context.
-const sanitizeName = (name) => {
-  if (!name) return '';
-  return String(name).replace(/[<>&"']/g, '').slice(0, 50);
-};
-
 export default function Community() {
   const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
@@ -80,7 +73,10 @@ export default function Community() {
       const sessions = await base44.entities.WorkoutSession.list('-created_date', 1);
       const latestSession = sessions[0];
 
-      await base44.entities.CommunityPost.create({
+      // Author name and like counters are derived server-side from the verified
+      // account; the client never supplies them.
+      await base44.functions.invoke('communityPost', {
+        action: 'create',
         caption: caption.trim(),
         photo_url: photoUrl,
         workout_session_id: latestSession?.id,
@@ -88,9 +84,7 @@ export default function Community() {
           total_reps: latestSession.total_reps,
           duration: latestSession.duration,
           calories: latestSession.calories_burned
-        } : null,
-        user_name: sanitizeName(currentUser?.full_name) || 'Anonymous',
-        is_public: true
+        } : null
       });
 
       toast.success('Posted to community!');
@@ -112,12 +106,12 @@ export default function Community() {
     const likedBy = post.liked_by || [];
     const hasLiked = likedBy.includes(userEmail);
     const newLikedBy = hasLiked ? likedBy.filter(e => e !== userEmail) : [...likedBy, userEmail];
-    const newCount = hasLiked ? (post.likes_count || 0) - 1 : (post.likes_count || 0) + 1;
 
+    // The like count is recomputed server-side from the verified identity.
     mutate(
-      () => base44.entities.CommunityPost.update(post.id, { liked_by: newLikedBy, likes_count: newCount }),
+      () => base44.functions.invoke('communityPost', { action: 'toggle_like', post_id: post.id }),
       () => setPosts(prev => prev.map(p =>
-        p.id === post.id ? { ...p, liked_by: newLikedBy, likes_count: newCount } : p
+        p.id === post.id ? { ...p, liked_by: newLikedBy, likes_count: newLikedBy.length } : p
       ))
     );
   };

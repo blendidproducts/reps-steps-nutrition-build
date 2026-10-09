@@ -32,7 +32,14 @@
     "likes_count": {
       "type": "number",
       "default": 0,
-      "description": "Number of likes"
+      "description": "Number of likes (server-managed)",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "liked_by": {
       "type": "array",
@@ -40,7 +47,14 @@
         "type": "string"
       },
       "default": [],
-      "description": "User emails who liked this post"
+      "description": "User emails who liked this post (server-managed)",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "is_public": {
       "type": "boolean",
@@ -49,7 +63,14 @@
     },
     "user_name": {
       "type": "string",
-      "description": "Display name of poster"
+      "description": "Display name of poster, derived server-side from the verified account",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     }
   },
   "required": [

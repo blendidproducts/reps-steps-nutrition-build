@@ -12,11 +12,25 @@
     },
     "is_pro": {
       "type": "boolean",
-      "default": false
+      "default": false,
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "pro_expires_at": {
       "type": "string",
-      "format": "date-time"
+      "format": "date-time",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "fitness_level": {
       "type": "string",
@@ -100,15 +114,48 @@
         "pro_lifetime"
       ],
       "default": "free",
-      "description": "Core subscription tier"
+      "description": "Core subscription tier",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "stripe_customer_id": {
       "type": "string",
-      "description": "Stripe customer ID for this user"
+      "description": "Stripe customer ID for this user",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "subscription_start_date": {
       "type": "string",
-      "format": "date-time"
+      "format": "date-time",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
+    },
+    "trial_expires_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "End of the 7-day Pro trial, if one is active",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "active_products": {
       "type": "array",
@@ -116,7 +163,14 @@
         "type": "string"
       },
       "default": [],
-      "description": "List of active Stripe product keys, e.g. ['pro_monthly', 'fitness_brain']. Used to correctly restore entitlements on cancellation."
+      "description": "List of active Stripe product keys, e.g. ['pro_monthly', 'fitness_brain']. Used to correctly restore entitlements on cancellation.",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "nutrition_plan": {
       "type": "string",
@@ -126,12 +180,107 @@
         "all_access"
       ],
       "default": "none",
-      "description": "Nutrition subscription tier"
+      "description": "Nutrition subscription tier",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "fitness_brain_addon": {
       "type": "boolean",
       "default": false,
-      "description": "AI Fitness Brain add-on active"
+      "description": "AI Fitness Brain add-on active",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
+    },
+    "deletion_code": {
+      "type": "string",
+      "description": "Pending account-deletion OTP (server-managed)",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
+    },
+    "deletion_code_expiry": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Expiry of the pending account-deletion OTP (server-managed)",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
+    },
+    "deletion_send_attempts": {
+      "type": "number",
+      "description": "OTP send attempts within the current rate-limit window (server-managed)",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
+    },
+    "deletion_window_start": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Start of the current OTP send rate-limit window (server-managed)",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
+    },
+    "deletion_confirm_attempts": {
+      "type": "number",
+      "description": "Failed OTP confirm attempts, for brute-force lockout (server-managed)",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
+    },
+    "account_deletion_requested": {
+      "type": "boolean",
+      "default": false,
+      "description": "Account marked for deletion (server-managed)",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
+    },
+    "account_deletion_requested_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When account deletion was confirmed (server-managed)",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     }
   },
   "required": []
