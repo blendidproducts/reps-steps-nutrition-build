@@ -1,24 +1,115 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
 import { hasNutritionAi } from '../../shared/entitlements.ts';
 
-// Block private/loopback/link-local IPs to prevent SSRF
-const isPrivateIp = (ip) => {
-  const v4 = ip.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
-  if (v4) {
-    const [a, b] = [Number(v4[1]), Number(v4[2])];
-    return a === 0 || a === 10 || a === 127 ||
-      (a === 169 && b === 254) ||
-      (a === 172 && b >= 16 && b <= 31) ||
-      (a === 192 && b === 168) ||
-      (a === 100 && b >= 64 && b <= 127);
+// ── Private / internal address detection (SSRF guard) ───────────────────────
+// Every host is parsed into a canonical NUMERIC form before it is classified.
+// Textual matching is not safe here: the URL parser rewrites non-canonical
+// literals (0177.0.0.1, 2130706433, 0x7f.0.0.1) into a real address, and
+// rewrites IPv6 such as [::ffff:127.0.0.1] into [::ffff:7f00:1] — so a check
+// that only understands one spelling can be walked straight past.
+
+// Canonical dotted-decimal IPv4 → unsigned 32-bit int, or null. Leading zeros
+// are rejected outright: "0177" is octal to the URL parser, not 177.
+const parseIPv4 = (str: string): number | null => {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(str);
+  if (!m) return null;
+  let n = 0;
+  for (let i = 1; i <= 4; i++) {
+    const part = m[i];
+    if (part.length > 1 && part[0] === '0') return null;
+    const octet = Number(part);
+    if (octet > 255) return null;
+    n = n * 256 + octet;
   }
-  const v6 = ip.toLowerCase();
-  if (v6 === '::1' || v6 === '::') return true;
-  if (v6.startsWith('fc') || v6.startsWith('fd')) return true;
-  if (v6.startsWith('fe80')) return true;
-  const mapped = v6.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-  if (mapped) return isPrivateIp(mapped[1]);
+  return n;
+};
+
+// Any IPv6 textual form → 8 sixteen-bit groups, or null if not valid IPv6.
+const parseIPv6 = (str: string): number[] | null => {
+  let s = str;
+  const zone = s.indexOf('%');
+  if (zone !== -1) s = s.slice(0, zone); // drop zone id (fe80::1%eth0)
+  if (s === '' || s.indexOf(':') === -1) return null;
+
+  // Fold a trailing embedded IPv4 quad into two hex groups, so that
+  // ::ffff:127.0.0.1 and ::ffff:7f00:1 become the same address.
+  const lastColon = s.lastIndexOf(':');
+  const tail = s.slice(lastColon + 1);
+  if (tail.includes('.')) {
+    const v4 = parseIPv4(tail);
+    if (v4 === null) return null;
+    s = `${s.slice(0, lastColon + 1)}${((v4 >>> 16) & 0xffff).toString(16)}:${(v4 & 0xffff).toString(16)}`;
+  }
+
+  const dc = s.indexOf('::');
+  if (dc !== -1 && s.indexOf('::', dc + 1) !== -1) return null; // at most one "::"
+
+  const groups = (part: string): number[] | null => {
+    if (part === '') return [];
+    const out: number[] = [];
+    for (const g of part.split(':')) {
+      if (!/^[0-9a-fA-F]{1,4}$/.test(g)) return null;
+      out.push(parseInt(g, 16));
+    }
+    return out;
+  };
+
+  const head = groups(dc === -1 ? s : s.slice(0, dc));
+  const rest = groups(dc === -1 ? '' : s.slice(dc + 2));
+  if (head === null || rest === null) return null;
+  if (dc === -1) return head.length === 8 ? head : null;
+
+  const fill = 8 - head.length - rest.length;
+  if (fill < 1) return null; // "::" must stand for at least one group
+  return [...head, ...new Array(fill).fill(0), ...rest];
+};
+
+// Reserved / non-public IPv4 ranges, from the canonical 32-bit value.
+const isPrivateIPv4 = (n: number): boolean => {
+  const a = (n >>> 24) & 0xff;
+  const b = (n >>> 16) & 0xff;
+  return (
+    a === 0 ||                                // 0.0.0.0/8     "this network"
+    a === 10 ||                               // 10.0.0.0/8
+    a === 127 ||                              // 127.0.0.0/8   loopback
+    (a === 100 && b >= 64 && b <= 127) ||     // 100.64.0.0/10 CGNAT
+    (a === 169 && b === 254) ||               // 169.254.0.0/16 link-local
+    (a === 172 && b >= 16 && b <= 31) ||      // 172.16.0.0/12
+    (a === 192 && b === 168) ||               // 192.168.0.0/16
+    (a === 192 && b === 0) ||                 // 192.0.0.0/24 + 192.0.2.0/24
+    (a === 198 && (b === 18 || b === 19)) ||  // 198.18.0.0/15 benchmarking
+    a >= 224                                  // multicast / reserved / broadcast
+  );
+};
+
+// Reserved / non-public IPv6 ranges, from the expanded 8-group form.
+const isPrivateIPv6 = (g: number[]): boolean => {
+  const v4From = (hi: number, lo: number) => isPrivateIPv4(((hi << 16) >>> 0) + lo);
+  const zeros = (from: number, to: number) => g.slice(from, to).every((x) => x === 0);
+
+  if (zeros(0, 7)) return g[7] <= 1;                              // ::  and  ::1
+  if (zeros(0, 5) && g[5] === 0xffff) return v4From(g[6], g[7]);  // ::ffff:a.b.c.d
+  if (zeros(0, 6)) return v4From(g[6], g[7]);                     // ::a.b.c.d (deprecated)
+  if ((g[0] & 0xfe00) === 0xfc00) return true;                    // fc00::/7  unique-local
+  if ((g[0] & 0xffc0) === 0xfe80) return true;                    // fe80::/10 link-local
+  if ((g[0] & 0xff00) === 0xff00) return true;                    // ff00::/8  multicast
+  if (g[0] === 0x2001 && g[1] === 0x0db8) return true;            // 2001:db8::/32 docs
+  if (g[0] === 0x2002) return v4From(g[1], g[2]);                 // 2002::/16 6to4
+  if (g[0] === 0x0064 && g[1] === 0xff9b && zeros(2, 6)) {        // 64:ff9b::/96 NAT64
+    return v4From(g[6], g[7]);
+  }
   return false;
+};
+
+// true = private/internal, false = public, null = not an IP literal (a hostname
+// the caller must resolve). Anything unclassifiable is treated as unsafe.
+const classifyIp = (host: string): boolean | null => {
+  const bare = host.startsWith('[') && host.endsWith(']') ? host.slice(1, -1) : host;
+  const v4 = parseIPv4(bare);
+  if (v4 !== null) return isPrivateIPv4(v4);
+  const v6 = parseIPv6(bare);
+  if (v6 !== null) return isPrivateIPv6(v6);
+  return null;
 };
 
 // Validate scheme + resolve hostname + reject internal destinations.
