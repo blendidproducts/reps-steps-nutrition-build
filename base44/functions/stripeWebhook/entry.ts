@@ -3,12 +3,18 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 /**
  * Stripe webhook — activates / revokes entitlements on the Base44 User entity.
  *
- * Handles: checkout.session.completed (purchase) and
+ * Handles: checkout.session.completed (purchase),
+ *          checkout.session.async_payment_succeeded (purchase settled),
  *          customer.subscription.deleted (cancellation).
  *
  * ── REQUIRED SETUP ─────────────────────────────────────────────────────────
  * STRIPE_WEBHOOK_SECRET  (required) — signing secret from the Stripe webhook.
- * STRIPE_SECRET_KEY      (optional) — enables reliable line-item/price lookup.
+ *
+ * ── PAYMENT VERIFICATION ───────────────────────────────────────────────────
+ * Entitlements are granted only once the payment has actually settled — see
+ * isFulfillable() below. A session that completes while an async payment
+ * method is still pending is deferred to
+ * checkout.session.async_payment_succeeded.
  *
  * ── HOW PRODUCT DETECTION WORKS (read this) ────────────────────────────────
  * The OLD version tried to match the buy.stripe.com URL suffix by string-
@@ -20,18 +26,15 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
  *   1. session.metadata.product_key      ← RECOMMENDED. Set this on each
  *                                           Stripe Payment Link (one-time, in
  *                                           the dashboard). Most reliable.
- *   2. line item price ID                 ← used if STRIPE_SECRET_KEY is set
- *                                           and PRICE_TO_KEY is filled in.
- *   3. amount_total match                 ← optional fallback, AMOUNT_TO_KEY.
- *   4. legacy URL-suffix scan             ← best-effort, usually misses.
- *   5. FALLBACK_GRANT_PRO_ON_UNKNOWN      ← if still unknown.
+ *   2. amount_total match                 ← optional fallback, AMOUNT_TO_KEY.
+ *   3. legacy URL-suffix scan             ← best-effort, usually misses.
+ *   4. FALLBACK_GRANT_PRO_ON_UNKNOWN      ← if still unknown.
  *
  * Once you've added product_key metadata to every link, detection is exact and
  * you can set FALLBACK_GRANT_PRO_ON_UNKNOWN = false for strictness.
  */
 
 const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET");
-const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY"); // optional
 
 // If we can't identify the product, grant generic Pro (true) or grant nothing
 // and log for manual follow-up (false). Now that every Payment Link has
@@ -84,12 +87,6 @@ const FIELD_DEFAULTS: Record<string, any> = {
   subscription_status: "free",
   fitness_brain_addon: false,
   nutrition_plan: "none",
-};
-
-// OPTIONAL: map Stripe Price IDs → product_key (needs STRIPE_SECRET_KEY).
-// Fill these from your Stripe dashboard (Products → each price's price_xxx id).
-const PRICE_TO_KEY: Record<string, string> = {
-  // "price_123abc": "pro_monthly",
 };
 
 // OPTIONAL: map exact amount_total (in cents) → product_key. Brittle if you
@@ -171,41 +168,17 @@ async function verifySignature(signature: string | null, body: string): Promise<
   return safeEqualHex(v1, expected);
 }
 
-/** Fetch line items for a session to read its price IDs (needs secret key). */
-async function fetchPriceKeys(sessionId: string): Promise<string | null> {
-  if (!STRIPE_SECRET_KEY || Object.keys(PRICE_TO_KEY).length === 0) return null;
-  try {
-    const res = await fetch(
-      `https://api.stripe.com/v1/checkout/sessions/${sessionId}/line_items?limit=10`,
-      { headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` } },
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    for (const item of data.data || []) {
-      const priceId = item?.price?.id;
-      if (priceId && PRICE_TO_KEY[priceId]) return PRICE_TO_KEY[priceId];
-    }
-  } catch (e) {
-    console.error("Price lookup failed:", e?.message);
-  }
-  return null;
-}
-
 /** Resolve the product_key for a completed checkout session. */
 async function detectProductKey(session: any): Promise<string | null> {
   // 1. Explicit metadata (recommended).
   const metaKey = session.metadata?.product_key;
   if (metaKey && PRODUCT_CATALOG[metaKey]) return metaKey;
 
-  // 2. Price ID via Stripe API.
-  const byPrice = await fetchPriceKeys(session.id);
-  if (byPrice && PRODUCT_CATALOG[byPrice]) return byPrice;
-
-  // 3. Exact amount match.
+  // 2. Exact amount match.
   const amt = String(session.amount_total ?? "");
   if (AMOUNT_TO_KEY[amt] && PRODUCT_CATALOG[AMOUNT_TO_KEY[amt]]) return AMOUNT_TO_KEY[amt];
 
-  // 4. Legacy URL-suffix scan (best effort).
+  // 3. Legacy URL-suffix scan (best effort).
   const blob = JSON.stringify(session);
   for (const [suffix, key] of Object.entries(LINK_SUFFIX_TO_KEY)) {
     if (blob.includes(suffix)) return key;
@@ -239,6 +212,60 @@ async function findUser(base44: any, opts: { refId?: string | null; email?: stri
   return null;
 }
 
+/**
+ * Only fulfil a checkout once the money has actually settled.
+ *   "paid"                → payment captured; grant now.
+ *   "no_payment_required" → a subscription whose first charge is deferred to a
+ *                           trial (Stripe uses this when the first invoice is
+ *                           $0), so a real subscription exists and will bill.
+ *   "unpaid"              → an async payment method is still pending, or the
+ *                           payment failed. Never grant here.
+ */
+function isFulfillable(session: any): boolean {
+  if (session.payment_status === "paid") return true;
+  return session.mode === "subscription" && session.payment_status === "no_payment_required";
+}
+
+/** Grant the entitlements for a settled checkout session. */
+async function activateSession(base44: any, session: any) {
+  const email = session.customer_email || session.customer_details?.email || null;
+  const refId = session.client_reference_id || null;
+
+  const user = await findUser(base44, { refId, email });
+  if (!user) {
+    console.error(`No user for purchase. refId=${refId} email=${email} session=${session.id}`);
+    return Response.json({ error: "User not found" }, { status: 404 });
+  }
+
+  const key = await detectProductKey(session);
+  const currentProducts = Array.isArray(user.active_products) ? user.active_products : [];
+
+  if (!key) {
+    if (!FALLBACK_GRANT_PRO_ON_UNKNOWN) {
+      console.error(`UNKNOWN product, no grant. session=${session.id}. Add product_key metadata to this link.`);
+      return Response.json({ received: true, warning: "unknown product, not granted" });
+    }
+    console.warn(`UNKNOWN product, falling back to pro. session=${session.id}`);
+    await base44.asServiceRole.entities.User.update(user.id, {
+      subscription_status: "pro",
+      stripe_customer_id: session.customer,
+      subscription_start_date: user.subscription_start_date || new Date().toISOString(),
+    });
+    return Response.json({ success: true, message: "Fallback: pro granted" });
+  }
+
+  const newProducts = [...new Set([...currentProducts, key])];
+  await base44.asServiceRole.entities.User.update(user.id, {
+    ...buildUpdates(key),
+    stripe_customer_id: session.customer,
+    subscription_start_date: user.subscription_start_date || new Date().toISOString(),
+    active_products: newProducts,
+  });
+
+  console.log(`Activated [${key}] for ${user.email}. Active: ${newProducts.join(", ")}`);
+  return Response.json({ success: true, message: `Activated: ${key}` });
+}
+
 Deno.serve(async (req) => {
   try {
     const signature = req.headers.get("stripe-signature");
@@ -254,42 +281,25 @@ Deno.serve(async (req) => {
     // ── PURCHASE ────────────────────────────────────────────────────────────
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
-      const email = session.customer_email || session.customer_details?.email || null;
-      const refId = session.client_reference_id || null;
 
-      const user = await findUser(base44, { refId, email });
-      if (!user) {
-        console.error(`No user for purchase. refId=${refId} email=${email} session=${session.id}`);
-        return Response.json({ error: "User not found" }, { status: 404 });
+      // Do NOT grant on the event type alone. A session completes as soon as
+      // the customer finishes the flow, which for delayed-notification payment
+      // methods (bank debit, SEPA, Klarna, …) is BEFORE the money settles.
+      if (!isFulfillable(session)) {
+        console.warn(
+          `Checkout not settled (payment_status=${session.payment_status}, mode=${session.mode}). ` +
+          `Deferring grant. session=${session.id}`,
+        );
+        return Response.json({ received: true, deferred: "payment not settled" });
       }
 
-      const key = await detectProductKey(session);
-      const currentProducts = Array.isArray(user.active_products) ? user.active_products : [];
+      return await activateSession(base44, session);
+    }
 
-      if (!key) {
-        if (!FALLBACK_GRANT_PRO_ON_UNKNOWN) {
-          console.error(`UNKNOWN product, no grant. session=${session.id}. Add product_key metadata to this link.`);
-          return Response.json({ received: true, warning: "unknown product, not granted" });
-        }
-        console.warn(`UNKNOWN product, falling back to pro. session=${session.id}`);
-        await base44.asServiceRole.entities.User.update(user.id, {
-          subscription_status: "pro",
-          stripe_customer_id: session.customer,
-          subscription_start_date: user.subscription_start_date || new Date().toISOString(),
-        });
-        return Response.json({ success: true, message: "Fallback: pro granted" });
-      }
-
-      const newProducts = [...new Set([...currentProducts, key])];
-      await base44.asServiceRole.entities.User.update(user.id, {
-        ...buildUpdates(key),
-        stripe_customer_id: session.customer,
-        subscription_start_date: user.subscription_start_date || new Date().toISOString(),
-        active_products: newProducts,
-      });
-
-      console.log(`Activated [${key}] for ${user.email}. Active: ${newProducts.join(", ")}`);
-      return Response.json({ success: true, message: `Activated: ${key}` });
+    // An async payment method settled after the session completed. At this
+    // point the money is captured, so the deferred grant can be applied.
+    if (event.type === "checkout.session.async_payment_succeeded") {
+      return await activateSession(base44, event.data.object);
     }
 
     // ── CANCELLATION ──────────────────────────────────────────────────────────
@@ -311,9 +321,6 @@ Deno.serve(async (req) => {
         cancelledKey = null;
         for (const [suffix, key] of Object.entries(LINK_SUFFIX_TO_KEY)) {
           if (blob.includes(suffix)) { cancelledKey = key; break; }
-        }
-        for (const [priceId, key] of Object.entries(PRICE_TO_KEY)) {
-          if (blob.includes(priceId)) { cancelledKey = key; break; }
         }
       }
 
