@@ -21,6 +21,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
+import { loadProgram, isRestPlan, createProgramDayWorkout } from "@/lib/programDay";
 import { ChevronDown, ChevronUp, Moon, Play, CheckCircle2, Calendar } from "lucide-react";
 
 const OPEN_KEY = "rns_program_strip_open";
@@ -31,6 +32,29 @@ export default function ProgramStatusStrip() {
   const [open, setOpen] = useState(() => {
     try { return localStorage.getItem(OPEN_KEY) === "1"; } catch { return false; }
   });
+
+  // 2026-10-14: "Start Day N" used to navigate to ProgramProgress, whose own
+  // Start button opened the exercise library instead of the day's workout —
+  // so a program could not be continued once the daily popup was dismissed.
+  // It now builds and opens the day directly. Rest days still go to the
+  // program page, where the rest-day skip lives.
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState(null);
+  const startToday = async () => {
+    if (!data || starting) return;
+    if (data.isRest) { navigate(createPageUrl("ProgramProgress")); return; }
+    setStarting(true);
+    setStartError(null);
+    try {
+      const program = await loadProgram(data.programId);
+      if (!program) throw new Error("Couldn't load your program — check your connection.");
+      const workoutId = await createProgramDayWorkout(program, data.day);
+      navigate(`${createPageUrl("ActiveWorkout")}?workoutId=${workoutId}`);
+    } catch (e) {
+      setStartError(e?.message || "Couldn't start this day.");
+      setStarting(false);
+    }
+  };
 
   const toggle = () => {
     setOpen((v) => {
@@ -56,8 +80,8 @@ export default function ProgramStatusStrip() {
         const day = ap.current_day || 1;
         const plan = program.daily_plans?.[day - 1];
 
-        // Rest days are stored as a plan with no exercises (same test Layout uses).
-        const isRest = !!plan && (!plan.exercises || plan.exercises.length === 0);
+        // Rest days: the explicit flag OR a plan with no exercises — one shared test.
+        const isRest = isRestPlan(plan);
 
         // Prefer the enrollment's real completed count; fall back to day-1.
         let done = Math.max(0, day - 1);
@@ -70,6 +94,7 @@ export default function ProgramStatusStrip() {
 
         if (!alive) return;
         setData({
+          programId: program.id,
           name: program.name || "Program",
           day,
           totalDays,
@@ -165,7 +190,8 @@ export default function ProgramStatusStrip() {
                   </span>
                 </div>
                 <button
-                  onClick={() => navigate(createPageUrl("ProgramProgress"))}
+                  onClick={startToday}
+                  disabled={starting}
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-[13px] font-bold text-white active:scale-[0.99] transition-transform border-2 border-white/85"
                   style={{
                     background: data.isRest
@@ -173,7 +199,16 @@ export default function ProgramStatusStrip() {
                       : "linear-gradient(135deg,#2563EB,#7C3AED)",
                   }}
                 >
-                  {data.isRest ? "Open program" : `Start Day ${data.day}`}
+                  {data.isRest ? "Open program" : starting ? "Starting…" : `Start Day ${data.day}`}
+                </button>
+                {startError && (
+                  <p className="text-[11px] text-red-400 mt-2" role="alert">{startError}</p>
+                )}
+                <button
+                  onClick={() => navigate(createPageUrl("ProgramProgress"))}
+                  className="w-full mt-2 py-1.5 text-[11px] text-gray-400 font-semibold active:text-white"
+                >
+                  See all days
                 </button>
               </>
             )}

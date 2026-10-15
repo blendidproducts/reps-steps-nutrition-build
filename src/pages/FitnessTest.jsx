@@ -871,6 +871,9 @@ function EventRunner({ event, index, total, accent, onDone, onAbort }) {
         keepCameraAlive={true}
         timedMode={!!event.seconds}
         secondsLeft={event.seconds ? remaining : null}
+        // Scored against a published standard: the depth requirement and
+        // "count at my depth" are never offered here (2026-10-14).
+        strictDepth={true}
         onComplete={(reps) => onDone(reps)}
         onClose={onAbort}
       />

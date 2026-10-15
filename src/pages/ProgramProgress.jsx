@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { ProgramEnrollment } from "@/entities/ProgramEnrollment";
-import { PresetProgram } from "@/entities/PresetProgram";
-import { WorkoutSession } from "@/entities/WorkoutSession";
+import { isRestPlan, completeRestDay, createProgramDayWorkout } from "@/lib/programDay";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -32,6 +30,9 @@ export default function ProgramProgress() {
   const [program, setProgram] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [selectedDay, setSelectedDay] = useState(null);
+  const [userDay, setUserDay] = useState(null);   // user.active_program.current_day
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState(null);
 
   useEffect(() => {
     loadProgramProgress();
@@ -49,10 +50,10 @@ export default function ProgramProgress() {
       const enrollmentId = params.get('enrollmentId');
       
       if (enrollmentId) {
-        const enrollments = await ProgramEnrollment.filter({ id: enrollmentId });
+        const enrollments = await base44.entities.ProgramEnrollment.filter({ id: enrollmentId });
         activeEnrollment = enrollments[0];
       } else if (user.active_program) {
-        const enrollments = await ProgramEnrollment.filter({ 
+        const enrollments = await base44.entities.ProgramEnrollment.filter({ 
           program_id: user.active_program.program_id,
           status: 'active'
         });
@@ -65,15 +66,16 @@ export default function ProgramProgress() {
       }
       
       setEnrollment(activeEnrollment);
+      if (user?.active_program?.program_id === activeEnrollment.program_id) setUserDay(user.active_program.current_day || null);
       
       // Load program details
-      const programs = await PresetProgram.filter({ id: activeEnrollment.program_id });
+      const programs = await base44.entities.PresetProgram.filter({ id: activeEnrollment.program_id });
       if (programs.length > 0) {
         setProgram(programs[0]);
       }
       
       // Load workout sessions for this program
-      const allSessions = await WorkoutSession.list('-created_date', 100);
+      const allSessions = await base44.entities.WorkoutSession.list('-created_date', 100);
       const programSessions = allSessions.filter(s => {
         // Match sessions that are part of this program
         return s.workout_id && activeEnrollment.completed_days?.some(day => {
@@ -90,11 +92,25 @@ export default function ProgramProgress() {
     }
   };
 
+  // 2026-10-14: "current" is the furthest day EITHER record has reached, plus
+  // one past the last completed day. These used to be read from the enrollment
+  // alone; when it lagged user.active_program, the real current day showed as
+  // locked with no Start button and the program could not be continued.
+  const currentDay = () => {
+    const done = enrollment?.completed_days || [];
+    const afterDone = done.length ? Math.max(...done) + 1 : 1;
+    const total = totalDays();
+    return Math.min(Math.max(enrollment?.current_day || 1, userDay || 1, afterDone), total || Infinity);
+  };
+  const totalDays = () => enrollment?.total_days || program?.duration_days || program?.daily_plans?.length || 0;
+  const doneCount = () => enrollment?.days_completed_count ?? enrollment?.completed_days?.length ?? 0;
+
   const getDayStatus = (dayNumber) => {
     if (!enrollment) return 'locked';
     if (enrollment.completed_days?.includes(dayNumber)) return 'completed';
-    if (dayNumber === enrollment.current_day) return 'current';
-    if (dayNumber < enrollment.current_day) return 'available';
+    const cur = currentDay();
+    if (dayNumber === cur) return 'current';
+    if (dayNumber < cur) return 'available';
     return 'locked';
   };
 
@@ -105,41 +121,27 @@ export default function ProgramProgress() {
   };
 
   const startDay = async (dayNumber) => {
+    if (starting) return;
+    setStartError(null);
     try {
       const dayPlan = program.daily_plans[dayNumber - 1];
-      
-      if (dayPlan.is_rest_day) {
+      if (isRestPlan(dayPlan)) {
         if (window.confirm('This is a rest day. Would you like to mark it as complete and skip to the next day?')) {
-          const completedDays = enrollment.completed_days || [];
-          if (!completedDays.includes(dayNumber)) {
-            completedDays.push(dayNumber);
-            const nextDay = dayNumber < enrollment.total_days ? dayNumber + 1 : dayNumber;
-            
-            await base44.entities.ProgramEnrollment.update(enrollment.id, {
-              completed_days: completedDays,
-              current_day: nextDay,
-              days_completed_count: (enrollment.days_completed_count || 0) + 1
-            });
-            
-            const user = await base44.auth.me();
-            if (user.active_program && user.active_program.program_id === enrollment.program_id) {
-              await base44.auth.updateMe({
-                active_program: {
-                  ...user.active_program,
-                  current_day: nextDay
-                }
-              });
-            }
-            window.location.reload();
-          }
+          await completeRestDay(program, dayNumber);
+          window.location.reload();
         }
         return;
       }
-      
-      // Navigate to exercises page to build workout for this day
-      navigate(createPageUrl("Exercises"));
+      // 2026-10-14 BUGFIX (JT, "can't continue day 4"): this navigated to the
+      // Exercises library and never built the day. It now creates the day's
+      // workout — same builder as the daily popup — and opens it.
+      setStarting(true);
+      const workoutId = await createProgramDayWorkout(program, dayNumber);
+      navigate(`${createPageUrl("ActiveWorkout")}?workoutId=${workoutId}`);
     } catch (error) {
       console.error('Failed to start day:', error);
+      setStartError(error?.message || "Couldn't start this day. Check your connection and try again.");
+      setStarting(false);
     }
   };
 
@@ -169,8 +171,8 @@ export default function ProgramProgress() {
     );
   }
 
-  const completionPercentage = Math.round((enrollment.days_completed_count / enrollment.total_days) * 100);
-  const daysRemaining = enrollment.total_days - enrollment.days_completed_count;
+  const completionPercentage = totalDays() > 0 ? Math.round((doneCount() / totalDays()) * 100) : 0;
+  const daysRemaining = Math.max(0, totalDays() - doneCount());
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/80 pb-24">
@@ -193,7 +195,7 @@ export default function ProgramProgress() {
               <p className="text-gray-300 max-w-2xl">{program.description}</p>
             </div>
             <Badge className="bg-brand-blue text-white text-sm px-3 py-1">
-              Day {enrollment.current_day}/{enrollment.total_days}
+              Day {currentDay()}/{totalDays()}
             </Badge>
           </div>
         </div>
@@ -225,7 +227,7 @@ export default function ProgramProgress() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-400">Days Completed</p>
-                  <p className="text-2xl font-bold text-white">{enrollment.days_completed_count}</p>
+                  <p className="text-2xl font-bold text-white">{doneCount()}</p>
                 </div>
               </div>
             </CardContent>
@@ -282,7 +284,7 @@ export default function ProgramProgress() {
                         {status === 'locked' && <Circle className="w-6 h-6 text-gray-600" />}
                       </div>
                       <div className="text-[10px] text-gray-500 truncate">
-                        {day.is_rest_day ? '🧘 Rest' : day.day_name || 'Workout'}
+                        {isRestPlan(day) ? '🧘 Rest' : day.day_name || 'Workout'}
                       </div>
                     </div>
                     {status === 'current' && (
@@ -317,11 +319,16 @@ export default function ProgramProgress() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {selectedDay.is_rest_day ? (
+              {isRestPlan(selectedDay.plan || selectedDay) ? (
                 <div className="text-center py-8">
                   <div className="text-6xl mb-4">🧘</div>
                   <h3 className="text-xl font-semibold text-white mb-2">Rest Day</h3>
                   <p className="text-gray-400">Take a break and let your body recover. You've earned it!</p>
+                  {['current', 'available'].includes(getDayStatus(selectedDay.day_number)) && (
+                    <Button onClick={() => startDay(selectedDay.day_number)} className="mt-5 min-h-[48px]">
+                      Mark rest day done
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <>
@@ -358,15 +365,17 @@ export default function ProgramProgress() {
                     </div>
                   )}
 
-                  {getDayStatus(selectedDay.day_number) === 'current' && (
+                  {['current', 'available'].includes(getDayStatus(selectedDay.day_number)) && (
                     <Button 
                       onClick={() => startDay(selectedDay.day_number)}
-                      className="w-full bg-brand-blue hover:bg-brand-blue/90"
+                      disabled={starting}
+                      className="w-full min-h-[48px] bg-brand-blue hover:bg-brand-blue/90"
                     >
-                      Start Day {selectedDay.day_number}
+                      {starting ? 'Starting…' : `Start Day ${selectedDay.day_number}`}
                       <ChevronRight className="w-4 h-4 ml-2" />
                     </Button>
                   )}
+                  {startError && <p className="text-sm text-red-400" role="alert">{startError}</p>}
                 </>
               )}
             </CardContent>

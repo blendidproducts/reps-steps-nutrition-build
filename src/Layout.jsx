@@ -6,6 +6,7 @@ import rnsLogo from "@/assets/RnS_LOGO.png";
 import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box, Users, Clock, Brain, Watch, ShoppingBag, ListTodo, FileText, ClipboardCheck } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { base44 } from "@/api/base44Client";
+import { loadProgram, isRestPlan, completeRestDay, createProgramDayWorkout } from "@/lib/programDay";
 import ProgramDayPopup from "@/components/ProgramDayPopup";
 import MobileHeader from "@/components/MobileHeader";
 import MobileRouteTransition from "@/components/MobileRouteTransition";
@@ -142,131 +143,30 @@ export default function Layout({ children, currentPageName }) {
     }
   };
 
+  // 2026-10-14: the builder moved to lib/programDay.js so Home's program strip
+  // and the Program page can start a day too — before this, dismissing this
+  // popup left no working way to continue a program (JT, day 4).
   const startProgramDay = async () => {
     try {
-      const programs = await base44.entities.PresetProgram.filter({ id: activeProgram.program_id });
-      if (programs.length === 0) return;
-      
-      const program = programs[0];
-      const day = program.daily_plans[activeProgram.current_day - 1];
-      
-      if (day.is_rest_day) {
-        if (window.confirm(`Day ${activeProgram.current_day} is a rest day. Would you like to mark it as complete and skip to the next day?`)) {
-           const user = await base44.auth.me();
-           const enrollments = await base44.entities.ProgramEnrollment.filter({ 
-             program_id: activeProgram.program_id,
-             status: 'active'
-           });
-           if (enrollments.length > 0) {
-             const enrollment = enrollments[0];
-             const completedDays = enrollment.completed_days || [];
-             if (!completedDays.includes(activeProgram.current_day)) {
-               completedDays.push(activeProgram.current_day);
-               const nextDay = activeProgram.current_day < program.duration_days ? activeProgram.current_day + 1 : activeProgram.current_day;
-               await base44.entities.ProgramEnrollment.update(enrollment.id, {
-                 completed_days: completedDays,
-                 current_day: nextDay,
-                 days_completed_count: (enrollment.days_completed_count || 0) + 1
-               });
-               await base44.auth.updateMe({
-                 active_program: {
-                   ...activeProgram,
-                   current_day: nextDay
-                 }
-               });
-             }
-           }
-           setShowProgramPopup(false);
-           window.location.reload();
+      const program = await loadProgram(activeProgram.program_id);
+      if (!program) return;
+      const dayNumber = activeProgram.current_day || 1;
+      if (isRestPlan(program.daily_plans?.[dayNumber - 1])) {
+        if (window.confirm(`Day ${dayNumber} is a rest day. Would you like to mark it as complete and skip to the next day?`)) {
+          await completeRestDay(program, dayNumber);
+          setShowProgramPopup(false);
+          window.location.reload();
         } else {
-           setShowProgramPopup(false);
+          setShowProgramPopup(false);
         }
         return;
       }
-
-      const allExercises = await base44.entities.Exercise.list();
-      const exercises = day.exercises.map(ex => {
-        const dbExercise = allExercises.find(e => e.name.toLowerCase() === ex.exercise_name.toLowerCase());
-        return {
-          exercise_id: dbExercise?.id || 'custom',
-          exercise_name: ex.exercise_name,
-          target_reps: ex.target_reps,
-          sets: ex.sets || 1,
-          completed_reps: 0,
-          completed_time: 0,
-          metric: 'reps',
-          category: dbExercise?.category || 'full_body',
-          image_url: dbExercise?.image_url,
-          instructions: dbExercise?.instructions
-        };
-      });
-
-      const categories = new Set(exercises.map(ex => ex.category));
-      let baseWarmups = [
-        { id: 'warmup-1', name: 'High Knees', category: 'warmup', metric: 'time', target_time: 60 }
-      ];
-
-      if (categories.has('upper_body')) {
-        baseWarmups.push({ id: 'warmup-upper-1', name: 'Arm Circles Forward', category: 'warmup', metric: 'reps', target_reps: 20 });
-        baseWarmups.push({ id: 'warmup-upper-2', name: 'Arm Circles Backward', category: 'warmup', metric: 'reps', target_reps: 20 });
-        baseWarmups.push({ id: 'warmup-upper-3', name: 'Chest Opener Stretch', category: 'warmup', metric: 'time', target_time: 30 });
-        
-        // Always include 1-2 lower body stretches and 1 lower back mobility for upper body workouts
-        baseWarmups.push({ id: 'warmup-lower-1', name: 'Leg Swings', category: 'warmup', metric: 'time', target_time: 30 });
-        baseWarmups.push({ id: 'warmup-core-1', name: 'Torso Twists', category: 'warmup', metric: 'time', target_time: 30 }); 
-      }
-      
-      if (categories.has('lower_body')) {
-        baseWarmups.push({ id: 'warmup-lower-2', name: 'Hip Circles', category: 'warmup', metric: 'time', target_time: 30 });
-        if (!baseWarmups.find(w => w.id === 'warmup-lower-1')) {
-          baseWarmups.push({ id: 'warmup-lower-1', name: 'Leg Swings', category: 'warmup', metric: 'time', target_time: 30 });
-        }
-        baseWarmups.push({ id: 'warmup-lower-3', name: 'Toe Touches', category: 'warmup', metric: 'time', target_time: 20 });
-        // Include supporting full-body mobility exercises
-        baseWarmups.push({ id: 'warmup-full-1', name: 'World\'s Greatest Stretch', category: 'warmup', metric: 'reps', target_reps: 10 });
-      }
-
-      if (categories.has('core') || categories.has('full_body')) {
-        if (!baseWarmups.find(w => w.id === 'warmup-upper-1')) {
-           baseWarmups.push({ id: 'warmup-upper-1', name: 'Arm Circles Forward', category: 'warmup', metric: 'reps', target_reps: 20 });
-           baseWarmups.push({ id: 'warmup-upper-2', name: 'Arm Circles Backward', category: 'warmup', metric: 'reps', target_reps: 20 });
-        }
-        if (!baseWarmups.find(w => w.id === 'warmup-lower-2')) {
-           baseWarmups.push({ id: 'warmup-lower-2', name: 'Hip Circles', category: 'warmup', metric: 'time', target_time: 30 });
-        }
-        if (!baseWarmups.find(w => w.id === 'warmup-core-1')) {
-          baseWarmups.push({ id: 'warmup-core-1', name: 'Torso Twists', category: 'warmup', metric: 'time', target_time: 30 });
-        }
-      }
-
-      const warmupExercises = baseWarmups.map(ex => ({
-        exercise_id: ex.id,
-        exercise_name: ex.name,
-        target_reps: ex.target_reps || 0,
-        target_time: ex.target_time || 0,
-        sets: 1,
-        completed_reps: 0,
-        completed_time: 0,
-        metric: ex.metric,
-        category: 'warmup'
-      }));
-
-      const workoutData = {
-        name: `${program.name} - Day ${activeProgram.current_day}`,
-        exercises: [...warmupExercises, ...exercises],
-        workout_type: "rep_based",
-        difficulty: program.difficulty,
-        rest_time: day.exercises[0]?.rest_after_circuit_seconds || 300,
-        program_id: program.id,
-        program_day: activeProgram.current_day
-      };
-
-      const workout = await base44.entities.Workout.create(workoutData);
+      const workoutId = await createProgramDayWorkout(program, dayNumber);
       setShowProgramPopup(false);
-      navigate(`${createPageUrl("ActiveWorkout")}?workoutId=${workout.id}`);
+      navigate(`${createPageUrl("ActiveWorkout")}?workoutId=${workoutId}`);
     } catch (error) {
       console.error('Failed to start program day:', error);
-      alert('Failed to start workout');
+      alert(error?.message || 'Failed to start workout');
     }
   };
 

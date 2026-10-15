@@ -120,7 +120,7 @@ function workingKneeAngle(lm) {
  *  real length runs along the depth axis, not the image plane), which could
  *  make the normalization denominator small and noisy. The floor below
  *  guards divide-by-zero, not jitter. */
-function pushupDepthMetric(lm) {
+export function pushupDepthMetric(lm) {
   const lSh = lm[11], rSh = lm[12], lHip = lm[23], rHip = lm[24];
   const shVis  = ((lSh?.visibility ?? 0) + (rSh?.visibility ?? 0)) / 2;
   const hipVis = ((lHip?.visibility ?? 0) + (rHip?.visibility ?? 0)) / 2;
@@ -245,6 +245,114 @@ export function singleLegDepthMetric(lm) {
   if (!sides.length) return null;
 
   return Math.min(...sides);
+}
+
+/** Body scale that survives BOTH camera placements. Torso length is stable from
+ *  the side but collapses head-on when you lean toward the lens; shoulder width
+ *  is stable head-on but collapses side-on. The larger of the two (shoulder
+ *  width scaled to torso proportions) is stable from either. Returns null when
+ *  neither can be measured. */
+function bodyScale(lm) {
+  const shOk = (lm[11]?.visibility ?? 0) >= 0.4 && (lm[12]?.visibility ?? 0) >= 0.4;
+  const hipOk = (lm[23]?.visibility ?? 0) >= 0.4 && (lm[24]?.visibility ?? 0) >= 0.4;
+  if (!shOk) return null;
+  const shW = getDist(lm[11], lm[12]) * 1.35;
+  const torso = hipOk ? getDist(getMid(lm[11], lm[12]), getMid(lm[23], lm[24])) : 0;
+  const s = Math.max(shW, torso);
+  return s > 0.03 ? s : null;
+}
+
+/** Hip drop — how far the hips have travelled DOWN from where this person
+ *  stands, in units of their own body scale. PRIMARY signal for squats and
+ *  lunges as of 2026-10-14. Reads 100 standing and falls as you descend:
+ *      100   standing
+ *       ~0   hips dropped one torso length (~a parallel squat)
+ *
+ *  WHY (JT field test 2026-10-14, phone low and in front, feet sometimes out
+ *  of frame). Squats past parallel read 41/51/67 against depth lines of 40-55
+ *  and never counted; lunges counted nothing. Measured in
+ *  _scratch/probe-frontview2.cjs:
+ *
+ *   - From the front, the thighs point at the lens and hide the pelvis, and
+ *     MediaPipe parks the hip landmarks at the waistband. With that drift the
+ *     old hip-to-KNEE gap only closed to 39-78% of standing at FULL depth,
+ *     which is exactly the field readout. No depth line can fix a signal that
+ *     barely moves.
+ *   - The old metric also divided by the live torso length, which shrinks as
+ *     you lean toward a front camera — inflating the reading at the bottom.
+ *   - The lunge frames have the feet out of frame, so anything anchored to the
+ *     ankles reads nothing there.
+ *
+ *  A hip drop needs neither knees nor ankles, and a full squat drops the hips a
+ *  whole torso length, so even a waistband-high landmark still travels most of
+ *  the way. The scale is FROZEN while standing so a forward lean can't change
+ *  the ruler mid-rep.
+ *
+ *  Stateful (the standing hip height is learned), so it's a factory: every
+ *  RepCounter makes its own via config.makeMetric.
+ *
+ *  Standing reference:
+ *   - seeded from the first frames (ARTP's 3-2-1 countdown = standing still)
+ *   - moves UP immediately when you stand still taller than it thinks
+ *   - creeps DOWN slowly, and only while still and already near the top, so a
+ *     paused squat at the bottom can never redefine "standing"
+ *   - jumps don't move it: a jump is never still
+ */
+export function makeHipDropMetric() {
+  let standY = null, standScale = null, lastY = null, lastT = 0, stillMs = 0;
+  const recent = [];
+  return (lm) => {
+    const hipOk = (lm[23]?.visibility ?? 0) >= 0.4 && (lm[24]?.visibility ?? 0) >= 0.4;
+    if (!hipOk) return null;
+    const scaleNow = bodyScale(lm);
+    const scale = standScale ?? scaleNow;
+    if (!scale) return null;
+
+    // Median of the last 3 hip heights: one-frame landmark spikes can't move it.
+    recent.push(getMid(lm[23], lm[24]).y);
+    if (recent.length > 3) recent.shift();
+    const y = median(recent);
+
+    const t = performance.now();
+    const dt = lastT ? Math.min(0.25, Math.max(0, (t - lastT) / 1000)) : 0;
+    const speed = lastY === null || dt === 0 ? 0 : Math.abs(y - lastY) / dt / scale; // torso lengths per second
+    lastY = y; lastT = t;
+    stillMs = speed < 0.25 ? stillMs + dt * 1000 : 0;
+
+    if (standY === null) {
+      standY = y;
+      standScale = scaleNow ?? scale;
+    } else if (stillMs >= 300) {
+      if (y < standY) {
+        standY = standY * 0.5 + y * 0.5;              // standing taller than we thought
+        if (scaleNow) standScale = standScale * 0.8 + scaleNow * 0.2;
+      } else if ((y - standY) / standScale < 0.15) {
+        standY += Math.min(y - standY, 0.03 * standScale * dt);   // slow creep, near the top only
+        if (scaleNow) standScale = standScale * 0.95 + scaleNow * 0.05;
+      }
+    }
+    return 100 - ((y - standY) / standScale) * 100;
+  };
+}
+
+/** Shoulder height above the hands — PRIMARY signal for the push-up family as
+ *  of 2026-10-14. (wristY - shoulderY) / bodyScale * 100: arm length at the
+ *  top, closing toward zero as the chest nears the floor.
+ *
+ *  Replaces pushupDepthMetric's torso tilt. Head-on, that one went NEGATIVE
+ *  (JT's "Torso Depth -83"), and a negative standing read silently switched the
+ *  relative thresholds off (they need top > 1), dropping the counter back to
+ *  the fixed 28/6 pair that doc 15 measured as broken. In
+ *  _scratch/probe-frontview2.cjs this signal reads 59% / 26% / 18% of the top
+ *  at half / 90-degree / chest-to-floor depth from EVERY camera position
+ *  tested — the hands are planted, so it's the shoulders' own travel. */
+export function shoulderHeightMetric(lm) {
+  const scale = bodyScale(lm);
+  if (!scale) return null;
+  const wr = [lm[15], lm[16]].filter((p) => (p?.visibility ?? 0) >= 0.4);
+  if (!wr.length) return null;
+  const wristY = wr.reduce((a, p) => a + p.y, 0) / wr.length;
+  return ((wristY - getMid(lm[11], lm[12]).y) / scale) * 100;
 }
 
 /** Apparent body width in normalized image units — the raw signal the distance
@@ -404,7 +512,10 @@ export const EXERCISE_LIBRARY = [
     // camera (foreshortening, not flexion) — replaced with vertical shoulder
     // displacement normalized by torso length. See pushupDepthMetric() above.
     // Elbow angle is no longer read for counting; kept only as a form cue below.
-    getAngle: (lm) => pushupDepthMetric(lm),
+    // 2026-10-14: shoulder height above the hands (shoulderHeightMetric).
+    // Head-on, torso tilt went NEGATIVE (JT: "Torso Depth -83"), which switched
+    // the relative thresholds off and left the broken 28/6 pair in charge.
+    getAngle: (lm) => shoulderHeightMetric(lm),
     // ── 2026-10-07: absolute thresholds demoted to fallbacks ──────────────
     // The numbers below carried an UNCALIBRATED warning in this file for weeks,
     // and the field result was JT's: push-ups "off, missed a lot of counting".
@@ -427,17 +538,15 @@ export const EXERCISE_LIBRARY = [
     //
     // A line at 40% of this person's OWN top reading counts the rep at every p
     // in that table and still rejects a half-depth push-up at every p.
-    relativeDepth: {
-      arm: 0.80,     // back at the top: shoulders returned to 80%+ of the top read
-      rep: 0.40,     // counts: shoulders have dropped 60% of the way down
-      partial: 0.72, // a real attempt that stopped short of depth
-    },
-    upThreshold: 28,    // fallback only — used before the top read settles
-    downThreshold: 6,   // also a FLOOR: this deep always counts
-    partialThreshold: 20,
+    relativeDepth: { arm: 0.85, rep: 0.50, partial: 0.80 },  // rep ~ elbows at 90 deg
+    upThreshold: 80,    // fallback only — used before the top read settles
+    downThreshold: 3,    // also a FLOOR: this deep always counts
+    partialThreshold: 70,
     minRepIntervalMs: 450,  // Round 20: fast sets (15+) were dropping reps at 600ms
     direction: 'down_then_up',
-    primaryJoint: 'Torso Depth',
+    primaryJoint: 'Depth',
+    unit: '',
+    depthMeter: { top: 110, target: 55 },
     formCues: [
       'Camera can stay in front — keep hips to head in frame the whole rep',
       'Keep back straight — no sagging hips',
@@ -459,16 +568,21 @@ export const EXERCISE_LIBRARY = [
     // downThreshold value can work when the signal itself isn't monotonic.
     // Replaced with vertical shoulder displacement normalized by torso length
     // (see pushupDepthMetric() above); elbow angle kept only as a form cue.
-    getAngle: (lm) => pushupDepthMetric(lm),
+    // 2026-10-14: shoulder height above the hands (shoulderHeightMetric).
+    // Head-on, torso tilt went NEGATIVE (JT: "Torso Depth -83"), which switched
+    // the relative thresholds off and left the broken 28/6 pair in charge.
+    getAngle: (lm) => shoulderHeightMetric(lm),
     // Same relative treatment as the regular push-up — see the note there for
     // the measured reason the fixed pair below cannot work at every camera angle.
-    relativeDepth: { arm: 0.80, rep: 0.40, partial: 0.72 },
-    upThreshold: 28,    // fallback only
-    downThreshold: 6,   // also a FLOOR
-    partialThreshold: 20,
+    relativeDepth: { arm: 0.85, rep: 0.50, partial: 0.80 },  // rep ~ elbows at 90 deg
+    upThreshold: 80,    // fallback only
+    downThreshold: 3,    // also a FLOOR
+    partialThreshold: 70,
     direction: 'down_then_up',
     minRepIntervalMs: 450,
-    primaryJoint: 'Torso Depth',
+    primaryJoint: 'Depth',
+    unit: '',
+    depthMeter: { top: 110, target: 55 },
     formCues: ['Hands form a diamond', 'Elbows tight to body', 'Full tricep extension'],
   },
   {
@@ -481,16 +595,21 @@ export const EXERCISE_LIBRARY = [
     color: '#ef4444',
     // Finding 1 (2026-08-20): same head-on foreshortening problem as the base
     // Push-Up — see pushupDepthMetric() above.
-    getAngle: (lm) => pushupDepthMetric(lm),
+    // 2026-10-14: shoulder height above the hands (shoulderHeightMetric).
+    // Head-on, torso tilt went NEGATIVE (JT: "Torso Depth -83"), which switched
+    // the relative thresholds off and left the broken 28/6 pair in charge.
+    getAngle: (lm) => shoulderHeightMetric(lm),
     // Same relative treatment as the regular push-up — see the note there for
     // the measured reason the fixed pair below cannot work at every camera angle.
-    relativeDepth: { arm: 0.80, rep: 0.40, partial: 0.72 },
-    upThreshold: 28,    // fallback only
-    downThreshold: 6,   // also a FLOOR
-    partialThreshold: 20,
+    relativeDepth: { arm: 0.85, rep: 0.50, partial: 0.80 },  // rep ~ elbows at 90 deg
+    upThreshold: 80,    // fallback only
+    downThreshold: 3,    // also a FLOOR
+    partialThreshold: 70,
     direction: 'down_then_up',
     minRepIntervalMs: 600,
-    primaryJoint: 'Torso Depth',
+    primaryJoint: 'Depth',
+    unit: '',
+    depthMeter: { top: 110, target: 55 },
     formCues: ['Hands wider than shoulders', 'Chest to floor', 'Squeeze chest at top'],
   },
   {
@@ -539,16 +658,21 @@ export const EXERCISE_LIBRARY = [
     color: '#ef4444',
     // Finding 1 (2026-08-20): same head-on foreshortening problem as the base
     // Push-Up — see pushupDepthMetric() above.
-    getAngle: (lm) => pushupDepthMetric(lm),
+    // 2026-10-14: shoulder height above the hands (shoulderHeightMetric).
+    // Head-on, torso tilt went NEGATIVE (JT: "Torso Depth -83"), which switched
+    // the relative thresholds off and left the broken 28/6 pair in charge.
+    getAngle: (lm) => shoulderHeightMetric(lm),
     // Same relative treatment as the regular push-up — see the note there for
     // the measured reason the fixed pair below cannot work at every camera angle.
-    relativeDepth: { arm: 0.80, rep: 0.40, partial: 0.72 },
-    upThreshold: 28,    // fallback only
-    downThreshold: 6,   // also a FLOOR
-    partialThreshold: 20,
+    relativeDepth: { arm: 0.85, rep: 0.50, partial: 0.80 },  // rep ~ elbows at 90 deg
+    upThreshold: 80,    // fallback only
+    downThreshold: 3,    // also a FLOOR
+    partialThreshold: 70,
     direction: 'down_then_up',
     minRepIntervalMs: 600,
-    primaryJoint: 'Torso Depth',
+    primaryJoint: 'Depth',
+    unit: '',
+    depthMeter: { top: 110, target: 55 },
     formCues: ['Hands on elevated surface', 'Great for beginners', 'Lower chest focus'],
   },
   {
@@ -701,21 +825,33 @@ export const EXERCISE_LIBRARY = [
     // 2026-09-30: knee angle replaced with hip-vs-knee height. The old
     // downThreshold of 100° counted quarter squats — see squatDepthMetric()
     // above for why no knee-angle number could have fixed that.
-    getAngle: (lm) => squatDepthMetric(lm),
-    // 2026-10-01: the absolute thresholds below are now only FALLBACKS. What
-    // the counter actually uses is relativeDepth — fractions of your own
-    // standing reading — because a fixed number can't survive the perspective
-    // bias from where the phone is standing. The full explanation is on
-    // RepCounter._trackTop.
+    // 2026-10-14: hip-to-knee gap replaced with HIP DROP (see
+    // makeHipDropMetric). From a front camera the old signal only closed to
+    // 39-78% of standing at full depth, so JT's below-parallel reps logged as
+    // "too shallow". getAngle is a stub; the counter builds its own metric.
+    makeMetric: makeHipDropMetric,
+    getAngle: () => null,
+    // Reading is 100 standing, ~0 when the hips have dropped one torso length.
+    //   rep 0.50  -> hips down 0.50 torso: thigh ~65-70 deg, just above
+    //               parallel, and still reached at real depth when MediaPipe
+    //               parks the hip landmark at the waistband (front camera).
+    //   half squat (thigh 45 deg) drops ~0.32 torso and does NOT count.
+    // Lines measured in _scratch/probe-hipdrop.cjs (deepest reading, % of standing):
+    //                      half squat   parallel (thigh 90)
+    //   phone on ground        64-82        1-33
+    //   phone at hip           78-91       22-46
+    //   phone at chest         85-94       35-55   <- hardest: looking down + drift
+    //   side, hip height       76-88       13-39
+    // rep 0.50 counts parallel everywhere but the chest-height worst case (which
+    // still counts below parallel) and never counts a half squat (64+).
     relativeDepth: {
-      arm: 0.80,     // back at the top: gap is 80%+ of standing
-      rep: 0.40,     // counts: gap has closed 60% — deep squat on a good camera,
-                     //         about parallel on a badly biased one
-      partial: 0.72, // a real attempt: gap closed 28%, i.e. past a quarter squat
+      arm: 0.90,     // back at the top: within 0.1 torso of standing
+      rep: 0.50,
+      partial: 0.86, // a real attempt: hips down 0.14 torso or more
     },
-    upThreshold: 45,      // fallback only (used before the standing read settles)
-    downThreshold: 3,     // also a FLOOR: this deep always counts, estimate or not
-    partialThreshold: 30,
+    upThreshold: 90,      // fallback only (used before the standing read settles)
+    downThreshold: -60,   // FLOOR: hips down 1.6 torso always counts
+    partialThreshold: 86,
     minRepIntervalMs: 700,
     // Time from crossing the arm line to reaching depth — note that's a WINDOW
     // INSIDE the descent, not the whole descent, so it's much shorter than the
@@ -733,9 +869,9 @@ export const EXERCISE_LIBRARY = [
     direction: 'down_then_up',
     primaryJoint: 'Depth',
     unit: '',
-    depthMeter: { top: 70, target: 3 },
+    depthMeter: { top: 100, target: 50 },
     formCues: [
-      'Place phone to your SIDE at HIP HEIGHT — depth is measured from there',
+      'Phone in front or to the side — keep hips and shoulders in frame',
       'Hip crease below the top of the knee — that is the rep',
       'Shallow reps are counted separately, not thrown away',
       'Knees track over toes, drive through the heels',
@@ -752,18 +888,22 @@ export const EXERCISE_LIBRARY = [
     // Depth metric, same as Squat. A jump squat's landing is quick, so the
     // depth line is shallower than a strict squat and there's no duration
     // guard — the whole point is that it's fast.
-    getAngle: (lm) => squatDepthMetric(lm),
-    // Relative like the squat, but a jump squat's loaded landing is shallower
-    // than a strict squat and that's correct — the point is the jump, not depth.
-    relativeDepth: { arm: 0.82, rep: 0.55, partial: 0.80 },
-    upThreshold: 50,       // fallback only
-    downThreshold: 12,     // floor
-    partialThreshold: 35,
+    // 2026-10-14: hip drop, same as Squat (JT logged 14 "too shallow" and 0
+    // reps on a front camera). A jump never moves the standing reference -
+    // it isn't still - so landing depth is still measured from standing.
+    makeMetric: makeHipDropMetric,
+    getAngle: () => null,
+    // Shallower line than a strict squat: the point is the jump, not depth.
+    relativeDepth: { arm: 0.90, rep: 0.68, partial: 0.86 },  // a loaded dip of ~60% of a squat, then the jump
+    upThreshold: 90,       // fallback only
+    downThreshold: -60,    // floor
+    partialThreshold: 86,
     minRepIntervalMs: 500,
+    minRepDurationMs: 80,
     direction: 'down_then_up',
     primaryJoint: 'Depth',
     unit: '',
-    depthMeter: { top: 70, target: 12 },
+    depthMeter: { top: 100, target: 68 },
     formCues: ['Explode upward', 'Land softly with bent knees', 'Absorb impact through hips'],
   },
   {
@@ -777,17 +917,21 @@ export const EXERCISE_LIBRARY = [
     // Depth metric, same as Squat. A wide stance shortens the standing
     // hip-to-knee gap, so the top reading sits lower than a narrow squat's —
     // hence the gentler upThreshold. The depth line is the same: parallel.
-    getAngle: (lm) => squatDepthMetric(lm),
-    relativeDepth: { arm: 0.80, rep: 0.42, partial: 0.74 },
-    upThreshold: 38,     // fallback only
-    downThreshold: 3,    // floor
-    partialThreshold: 25,
+    // 2026-10-14: hip drop, same as Squat. JT's wide-stance reps read 41 and
+    // 51 against a line of ~38 and never counted. The 130ms descent gate that
+    // doc 15 fixed for Squat was also still live here; now 80 like Squat.
+    makeMetric: makeHipDropMetric,
+    getAngle: () => null,
+    relativeDepth: { arm: 0.90, rep: 0.50, partial: 0.86 },  // same lines as Squat
+    upThreshold: 90,     // fallback only
+    downThreshold: -60,  // floor
+    partialThreshold: 86,
     direction: 'down_then_up',
     minRepIntervalMs: 700,
-    minRepDurationMs: 130, // see the note on Squat
+    minRepDurationMs: 80,  // see the note on Squat
     primaryJoint: 'Depth',
     unit: '',
-    depthMeter: { top: 60, target: 3 },
+    depthMeter: { top: 100, target: 50 },
     formCues: ['Wide stance', 'Toes pointed out 45°', 'Inner thigh emphasis'],
   },
   {
@@ -802,17 +946,23 @@ export const EXERCISE_LIBRARY = [
     // for the same perspective reason as the squat. The min-of-both-sides rule
     // still gives the Round 20 property that either leg's lunge dips the metric,
     // so alternating lunges count 1 rep per leg.
-    getAngle: (lm) => singleLegDepthMetric(lm),
-    relativeDepth: { arm: 0.80, rep: 0.45, partial: 0.75 },
-    upThreshold: 45,   // fallback only
-    downThreshold: 5,  // floor
-    partialThreshold: 32,
+    // 2026-10-14: hip drop (see makeHipDropMetric). JT's front-camera lunges
+    // counted NOTHING: the front thigh points at the lens, and in his frames
+    // the feet were out of shot, so neither the knee gap nor anything anchored
+    // to the ankles could see the rep. The hips dropping is visible either way.
+    // The 130ms descent gate doc 15 fixed for Squat was also still live; 80 now.
+    makeMetric: makeHipDropMetric,
+    getAngle: () => null,
+    relativeDepth: { arm: 0.90, rep: 0.50, partial: 0.86 },  // full lunge ~ hips down 0.8 torso
+    upThreshold: 90,   // fallback only
+    downThreshold: -60,  // floor
+    partialThreshold: 86,
     direction: 'down_then_up',
     minRepIntervalMs: 600,
-    minRepDurationMs: 130,
+    minRepDurationMs: 80,
     primaryJoint: 'Depth',
     unit: '',
-    depthMeter: { top: 70, target: 5 },
+    depthMeter: { top: 100, target: 50 },
     formCues: ['Front knee behind toes', 'Back knee near floor', 'Left = 1 rep, right = 1 rep', 'Upright torso'],
   },
   {
@@ -824,17 +974,23 @@ export const EXERCISE_LIBRARY = [
     category: 'Legs',
     color: '#22c55e',
     // Depth metric — see the Lunge note above.
-    getAngle: (lm) => singleLegDepthMetric(lm),
-    relativeDepth: { arm: 0.80, rep: 0.45, partial: 0.75 },
-    upThreshold: 45,
-    downThreshold: 5,
-    partialThreshold: 32,
+    // 2026-10-14: hip drop (see makeHipDropMetric). JT's front-camera lunges
+    // counted NOTHING: the front thigh points at the lens, and in his frames
+    // the feet were out of shot, so neither the knee gap nor anything anchored
+    // to the ankles could see the rep. The hips dropping is visible either way.
+    // The 130ms descent gate doc 15 fixed for Squat was also still live; 80 now.
+    makeMetric: makeHipDropMetric,
+    getAngle: () => null,
+    relativeDepth: { arm: 0.90, rep: 0.50, partial: 0.86 },  // full lunge ~ hips down 0.8 torso
+    upThreshold: 90,
+    downThreshold: -60,
+    partialThreshold: 86,
     direction: 'down_then_up',
     minRepIntervalMs: 600,
-    minRepDurationMs: 130,
+    minRepDurationMs: 80,
     primaryJoint: 'Depth',
     unit: '',
-    depthMeter: { top: 70, target: 5 },
+    depthMeter: { top: 100, target: 50 },
     formCues: ['Step backward', 'Control the descent', 'Left = 1 rep, right = 1 rep', 'Push through front heel'],
   },
   {
@@ -847,17 +1003,23 @@ export const EXERCISE_LIBRARY = [
     color: '#15803d',
     // Depth metric — see the Lunge note. The elevated rear foot keeps that
     // thigh's gap wide, so the minimum picks the front leg as intended.
-    getAngle: (lm) => singleLegDepthMetric(lm),
-    relativeDepth: { arm: 0.80, rep: 0.45, partial: 0.75 },
-    upThreshold: 45,
-    downThreshold: 5,
-    partialThreshold: 32,
+    // 2026-10-14: hip drop (see makeHipDropMetric). JT's front-camera lunges
+    // counted NOTHING: the front thigh points at the lens, and in his frames
+    // the feet were out of shot, so neither the knee gap nor anything anchored
+    // to the ankles could see the rep. The hips dropping is visible either way.
+    // The 130ms descent gate doc 15 fixed for Squat was also still live; 80 now.
+    makeMetric: makeHipDropMetric,
+    getAngle: () => null,
+    relativeDepth: { arm: 0.90, rep: 0.55, partial: 0.86 },  // full lunge ~ hips down 0.8 torso
+    upThreshold: 90,
+    downThreshold: -60,
+    partialThreshold: 86,
     direction: 'down_then_up',
     minRepIntervalMs: 700,
-    minRepDurationMs: 130,
+    minRepDurationMs: 80,
     primaryJoint: 'Depth',
     unit: '',
-    depthMeter: { top: 70, target: 5 },
+    depthMeter: { top: 100, target: 55 },
     formCues: ['Rear foot elevated on bench', 'Torso upright', 'Deep range of motion'],
   },
   {
@@ -1652,6 +1814,51 @@ export class RepCounter {
     // line. See the descent-continuity note in update() — this is what replaced
     // the wall-clock descent gate that was eating honest brisk reps.
     this.transitFrames = 0;
+    // Stateful metrics (hip drop learns where you stand) get one instance per
+    // counter, so two exercises never share a standing reference.
+    this.metric = typeof exerciseConfig.makeMetric === "function" ? exerciseConfig.makeMetric() : null;
+    this._baseGetAngle = exerciseConfig.getAngle;
+    // ── Depth requirement (2026-10-14) ──────────────────────────────────────
+    // JT: "these movements need ... a deviation for the amount of going down
+    // ... an offset for people with a disability trying to get back into
+    // shape." Two controls, both only on exercises that use relativeDepth:
+    //   assist    - fraction of the standard descent required (1 = standard,
+    //               0.5 = half as far). Scales the distance below standing,
+    //               so it means the same thing on every exercise.
+    //   customRep - "count at MY depth": a rep line learned from this person's
+    //               own attempts (see suggestCustomRep). Overrides assist.
+    // Neither touches exercises scored against a published standard - the
+    // caller decides that (RepTracker's strictDepth).
+    this.assist = 1;
+    this.customRep = null;
+    this.partialFracs = [];     // depth of each shallow attempt, as a fraction of standing
+  }
+
+  /** Effective relative-depth fractions after assist / custom range. */
+  effectiveFractions() {
+    const rel = this.config.relativeDepth;
+    if (!rel) return null;
+    const arm = rel.arm ?? 0.80;
+    let rep = rel.rep ?? 0.40;
+    if (typeof this.customRep === "number") rep = this.customRep;
+    else rep = 1 - (1 - rep) * Math.min(1, Math.max(0.2, this.assist || 1));
+    rep = Math.min(rep, arm - 0.05);          // there must always be a real descent
+    let partial = rel.partial ?? 0.72;
+    if (!(partial > rep + 0.02)) partial = (rep + arm) / 2;
+    partial = Math.min(partial, arm - 0.02);
+    return { arm, rep, partial };
+  }
+
+  /** A rep line that would have counted this person's recent shallow attempts:
+   *  the median depth they actually reached, plus a little margin so the same
+   *  depth counts next time. Null until there are two attempts to learn from. */
+  suggestCustomRep() {
+    const f = this.partialFracs.slice(-3);
+    if (f.length < 2) return null;
+    const rel = this.config.relativeDepth;
+    if (!rel) return null;
+    const arm = rel.arm ?? 0.80;
+    return Math.min(median(f) + 0.04, arm - 0.05);
   }
 
   /**
@@ -1721,7 +1928,11 @@ export class RepCounter {
       return { count: this.count, angle: 0, stage: this.stage, repCounted: false, partials: this.partials, partialCounted: false, tracking: false };
     }
 
-    const angle = this.config.getAngle(landmarks);
+    // The stateful metric is used only while config.getAngle is still the
+    // library's own - a caller (or a test harness) that supplies its own
+    // getAngle gets exactly what it supplied.
+    const ownMetric = this.metric && this.config.getAngle === this._baseGetAngle;
+    const angle = ownMetric ? this.metric(landmarks) : this.config.getAngle(landmarks);
     const { direction } = this.config;
 
     // ── Round 29: "no reading" handling ──────────────────────────────────────
@@ -1771,9 +1982,10 @@ export class RepCounter {
       this._trackTop(angle);
       const top = this.topEst;
       if (top && top > 1) {
-        upThreshold = top * (rel.arm ?? 0.80);
-        downThreshold = Math.max(top * (rel.rep ?? 0.40), this.config.downThreshold ?? -Infinity);
-        partialThreshold = top * (rel.partial ?? 0.72);
+        const f = this.effectiveFractions();
+        upThreshold = top * f.arm;
+        downThreshold = Math.max(top * f.rep, this.config.downThreshold ?? -Infinity);
+        partialThreshold = top * f.partial;
       }
     }
 
@@ -1793,6 +2005,10 @@ export class RepCounter {
             this.deepest !== null && this.deepest <= partialThreshold) {
           this.partials++;
           partialCounted = true;
+          if (this.topEst > 1) {
+            this.partialFracs.push(this.deepest / this.topEst);
+            if (this.partialFracs.length > 6) this.partialFracs.shift();
+          }
         }
         this.stage = 'up';
         this.deepest = null;
@@ -1946,5 +2162,10 @@ export class RepCounter {
     this.topBuf = [];
     this.atDepthFrames = 0;
     this.reachedDepthAt = 0;
+    this.transitFrames = 0;
+    this.partialFracs = [];
+    // Re-learn where you stand - the phone or the person may have moved.
+    // assist / customRep are the person's settings and survive a reset.
+    this.metric = typeof this.config.makeMetric === "function" ? this.config.makeMetric() : null;
   }
 }

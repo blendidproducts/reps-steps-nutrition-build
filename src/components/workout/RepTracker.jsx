@@ -92,13 +92,39 @@ async function acquireCamera(mode) {
   // for the system to take it is the entire session rather than one set.
   for (const t of sharedStream.getVideoTracks()) {
     t.addEventListener("ended", () => onCameraLost?.("ended"));
-    t.addEventListener("mute",  () => onCameraLost?.("muted"));
+    // 2026-10-14: iOS mutes the track for TRANSIENT reasons too — the system
+    // "Camera in use" banner in JT's screenshots, Control Center, a
+    // notification — and unmutes it a moment later. Treating every mute as a
+    // dead camera put up "Camera stopped" mid-set for nothing. Only a mute
+    // that is still in place after 2.5s is a loss.
+    let muteTimer = null;
+    t.addEventListener("mute", () => {
+      clearTimeout(muteTimer);
+      muteTimer = setTimeout(() => { if (t.muted) onCameraLost?.("muted"); }, 2500);
+    });
+    t.addEventListener("unmute", () => clearTimeout(muteTimer));
   }
   return sharedStream;
 }
 
+// ─── Depth requirement levels (2026-10-14) ────────────────────────────────────
+// Fraction of the standard descent required. Scales the distance below
+// standing, so "Assisted" means half as far down on every exercise.
+const DEPTH_LEVELS = [
+  { v: 1,    label: "Standard" },
+  { v: 0.75, label: "Easier" },
+  { v: 0.5,  label: "Assisted" },
+  { v: 0.3,  label: "Mobility" },
+];
+function readCustomDepths() {
+  try { return JSON.parse(localStorage.getItem("rns_depth_custom") || "{}") || {}; } catch (_) { return {}; }
+}
+function writeCustomDepths(map) {
+  try { localStorage.setItem("rns_depth_custom", JSON.stringify(map)); } catch (_) {}
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function RepTracker({ exerciseName, targetReps, onComplete, onClose, defaultFacingMode = "user", exerciseEmoji = "", setLabel = "", paused = false, onPause, autoAdvance = false, onCountChange, keepCameraAlive = false, secondsLeft = null, timedMode = false }) {
+export default function RepTracker({ exerciseName, targetReps, onComplete, onClose, defaultFacingMode = "user", exerciseEmoji = "", setLabel = "", paused = false, onPause, autoAdvance = false, onCountChange, keepCameraAlive = false, secondsLeft = null, timedMode = false, strictDepth = false }) {
   const initialConfig = matchExercise(exerciseName);
 
   const videoRef       = useRef(null);
@@ -143,6 +169,19 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
   // Live depth scale from the counter: your standing reading and the depth line
   // it computed from it. Null until the standing read settles (about a second).
   const [depthScale,     setDepthScale]     = useState(null);
+  // ── Depth requirement (2026-10-14) ────────────────────────────
+  // JT: reps "need a deviation for the amount of going down ... an offset for
+  // people with a disability trying to get back into shape." Two controls,
+  // only on depth-judged exercises and never on a fitness test (strictDepth):
+  //   level  - how much of the standard descent is required, remembered for
+  //            every exercise (Standard / Easier / Assisted / Mobility)
+  //   custom - "count at my depth": a line learned from your own attempts,
+  //            remembered per exercise, overrides the level
+  const [depthLevel,     setDepthLevel]     = useState(() => {
+    try { const v = parseFloat(localStorage.getItem("rns_depth_assist")); return DEPTH_LEVELS.some((l) => l.v === v) ? v : 1; } catch (_) { return 1; }
+  });
+  const [customDepth,    setCustomDepth]    = useState(() => readCustomDepths());
+  const [canLearnDepth,  setCanLearnDepth]  = useState(false);
   // ── Distance mode (bear crawl) ────────────────────────────────
   const distTrackerRef = useRef(null);
   const distModeRef    = useRef(initialConfig.mode === "distance"); // read inside the RAF loop
@@ -193,6 +232,50 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
       distModeRef.current = false;
     }
   }, [exerciseName]);
+
+  // Apply the depth requirement to whichever counter is live. Declared after
+  // the init effect so it runs after the counter exists; re-runs when the
+  // exercise, the level or the learned line changes. A fitness test
+  // (strictDepth) is scored against a published standard, so it always gets
+  // the standard line.
+  const depthAdjustable = !strictDepth && !!exerciseConfig?.relativeDepth;
+  const myDepth = exerciseConfig?.id ? customDepth[exerciseConfig.id] : undefined;
+  useEffect(() => {
+    const c = repCounterRef.current;
+    if (!c) return;
+    c.assist = depthAdjustable ? depthLevel : 1;
+    c.customRep = depthAdjustable && typeof myDepth === "number" ? myDepth : null;
+    setCanLearnDepth(false);
+  }, [exerciseName, exerciseConfig, depthLevel, myDepth, depthAdjustable]);
+
+  function cycleDepthLevel() {
+    // Leaving "my depth" goes back to the level; otherwise step to the next level.
+    if (typeof myDepth === "number") { clearMyDepth(); return; }
+    const i = DEPTH_LEVELS.findIndex((l) => l.v === depthLevel);
+    const next = DEPTH_LEVELS[(i + 1) % DEPTH_LEVELS.length].v;
+    setDepthLevel(next);
+    try { localStorage.setItem("rns_depth_assist", String(next)); } catch (_) {}
+  }
+  function learnMyDepth() {
+    const c = repCounterRef.current;
+    const line = c?.suggestCustomRep?.();
+    if (typeof line !== "number" || !exerciseConfig?.id) return;
+    const map = { ...readCustomDepths(), [exerciseConfig.id]: line };
+    writeCustomDepths(map);
+    setCustomDepth(map);
+    setCanLearnDepth(false);
+    speakOnce("Got it. Counting at your depth.");
+  }
+  function clearMyDepth() {
+    if (!exerciseConfig?.id) return;
+    const map = { ...readCustomDepths() };
+    delete map[exerciseConfig.id];
+    writeCustomDepths(map);
+    setCustomDepth(map);
+  }
+  const depthLabel = typeof myDepth === "number"
+    ? "My depth"
+    : (DEPTH_LEVELS.find((l) => l.v === depthLevel)?.label || "Standard");
 
   // ── Load MediaPipe (skipped when starting in manual mode) ──────
   useEffect(() => {
@@ -548,10 +631,19 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
               }
             }
             setRepCount(u.count);
-            if (u.repCounted) { triggerRepFlash(); announceRep(u.count); }
+            if (u.repCounted) { triggerRepFlash(); announceRep(u.count); setCanLearnDepth(false); }
             // A shallow attempt. Saying so is the whole point — a rep that
             // silently doesn't count reads as the tracker being broken.
-            if (u.partialCounted) { setPartials(u.partials); flagShallow(); }
+            if (u.partialCounted) {
+              setPartials(u.partials);
+              flagShallow();
+              // Two or more attempts that keep stopping at the same depth:
+              // offer to count at that depth (never on a fitness test).
+              if (!strictRef.current && counter.customRep == null &&
+                  exConfigRef.current?.relativeDepth && counter.suggestCustomRep?.() != null) {
+                setCanLearnDepth(true);
+              }
+            }
           }
         } else { setPoseDetected(false); }
       } catch (_) {}
@@ -564,6 +656,8 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
   // Mirrored for the RAF closure, which captures first-render values.
   const exConfigRef = useRef(exerciseConfig);
   useEffect(() => { exConfigRef.current = exerciseConfig; }, [exerciseConfig]);
+  const strictRef = useRef(strictDepth);
+  useEffect(() => { strictRef.current = strictDepth; }, [strictDepth]);
   const onCompleteRef = useRef(onComplete);
   useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
   const facingModeRef = useRef(facingMode);
@@ -593,6 +687,25 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     return () => setCameraLostHandler(null);
   }, []);
 
+  // 2026-10-14: try ONE silent recovery before asking. Most losses are iOS
+  // reclaiming the camera briefly; re-acquiring works without a tap, and the
+  // panel only appears if it doesn't. A denied permission can't be fixed
+  // silently, so that goes straight to the panel. The attempt counter resets
+  // once the camera has been healthy for 20s, so a later loss gets its own try.
+  const autoRecoverTries = useRef(0);
+  const [autoRecovering, setAutoRecovering] = useState(false);
+  useEffect(() => {
+    if (!cameraLost) {
+      const t = setTimeout(() => { autoRecoverTries.current = 0; }, 20000);
+      return () => clearTimeout(t);
+    }
+    if (cameraLost === "denied" || cameraLost === "failed" || autoRecoverTries.current >= 1) return;
+    autoRecoverTries.current += 1;
+    setAutoRecovering(true);
+    const t = setTimeout(() => { recoverCamera().finally(() => setAutoRecovering(false)); }, 600);
+    return () => { clearTimeout(t); setAutoRecovering(false); };
+  }, [cameraLost, recoverCamera]);
+
   useEffect(() => {
     if (initialConfig.trackable === false) return;
     const onVisible = () => {
@@ -613,6 +726,8 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
       const v = videoRef.current;
       if (!v || document.visibilityState !== "visible") return;
       const now = performance.now();
+      // A paused workout isn't a frozen camera. Restart the clock instead.
+      if (pausedRef.current) { lastFrameTime.current = { t: v.currentTime, at: now }; return; }
       const seen = lastFrameTime.current;
       if (v.currentTime !== seen.t) {
         lastFrameTime.current = { t: v.currentTime, at: now };
@@ -1163,6 +1278,27 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
                   <span className="text-amber-400 text-xs font-bold tabular-nums">{partials} too shallow</span>
                 </motion.div>
               )}
+
+              {/* Depth requirement (2026-10-14). Shown on depth-judged exercises,
+                  never on a fitness test. "Count at my depth" appears only after
+                  repeated attempts stop at the same depth. */}
+              {depthAdjustable && canLearnDepth && (
+                <button onClick={learnMyDepth}
+                  className="block mt-1.5 min-h-[44px] rounded-xl px-3 bg-amber-500 text-black text-xs font-black active:scale-95 shadow-lg pointer-events-auto">
+                  COUNT AT MY DEPTH
+                </button>
+              )}
+              {depthAdjustable && (
+                <button onClick={cycleDepthLevel}
+                  aria-label={`Depth requirement: ${depthLabel}. Tap to change.`}
+                  className={`block mt-1.5 min-h-[36px] rounded-full px-3 border text-[11px] font-bold active:scale-95 pointer-events-auto backdrop-blur-sm ${
+                    depthLabel === "Standard"
+                      ? "bg-black/70 border-white/20 text-white/70"
+                      : "bg-[#00a9ff]/20 border-[#00a9ff]/60 text-[#7fd4ff]"
+                  }`}>
+                  Depth: {depthLabel}{typeof myDepth === "number" ? " ✕" : ""}
+                </button>
+              )}
             </div>
 
             {/* Distance progress — same slot the depth meter uses, since no
@@ -1258,13 +1394,27 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
               frame and the rep count simply stopped moving with nothing said.
               Saying so, and offering the one button that fixes it, is the whole
               feature. */}
-          {cameraLost && (
-            <div className="absolute inset-x-0 bottom-0 z-30 px-4 pb-4">
-              <div className="rounded-2xl border border-amber-500/50 bg-[#1a1206]/95 backdrop-blur-sm p-4">
+          {/* 2026-10-14: this panel used to sit at the BOTTOM of the tracker,
+              where ARTP's PAUSE / END bar covers the screen — JT's screenshots
+              show the RESUME button half-hidden behind it. It is now centred
+              over the video, above everything, with a full-width 56px button.
+              While the one silent retry runs, only a small notice shows. */}
+          {cameraLost && autoRecovering && (
+            <div className="absolute inset-x-0 top-1/3 z-40 flex justify-center pointer-events-none px-6">
+              <div className="rounded-full bg-black/80 border border-amber-500/50 px-4 py-2 flex items-center gap-2">
+                <CameraOff className="w-4 h-4 text-amber-400" />
+                <span className="text-xs font-bold text-amber-200">Reconnecting camera…</span>
+              </div>
+            </div>
+          )}
+          {cameraLost && !autoRecovering && (
+            <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/55 px-5"
+              role="alertdialog" aria-labelledby="cam-stopped-title">
+              <div className="w-full max-w-sm rounded-2xl border border-amber-500/60 bg-[#1a1206]/95 backdrop-blur-sm p-5 shadow-2xl">
                 <div className="flex items-start gap-2.5">
                   <CameraOff className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-amber-200">Camera stopped</p>
+                    <p id="cam-stopped-title" className="text-base font-bold text-amber-200">Camera stopped</p>
                     <p className="text-[11px] text-amber-200/80 leading-snug mt-0.5">
                       {cameraLost === "denied"
                         ? "Camera permission was turned off. Allow it in your browser settings, then tap Resume."
@@ -1274,8 +1424,8 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
                             ? "The camera stopped sending frames. Your count is safe — reps just weren't being read."
                             : "Something else took the camera. Your count is safe."}
                     </p>
-                    <button onClick={recoverCamera} disabled={reacquiring}
-                      className="mt-2.5 min-h-[44px] w-full rounded-xl bg-amber-500 text-black font-black text-sm active:scale-95 disabled:opacity-50">
+                    <button onClick={recoverCamera} disabled={reacquiring} autoFocus
+                      className="mt-4 min-h-[56px] w-full rounded-xl bg-amber-500 text-black font-black text-base active:scale-95 disabled:opacity-50">
                       {reacquiring ? "RESTARTING…" : "RESUME CAMERA"}
                     </button>
                   </div>
@@ -1300,7 +1450,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
 
           {/* ── Finished recording ──────────────────────────────────────── */}
           {recReady && !recording && (
-            <div className="absolute inset-x-0 bottom-0 z-30 px-4 pb-4">
+            <div className="absolute inset-x-0 z-30 px-4 pb-4" style={{ bottom: "calc(var(--artp-cb-h, 0px) + 96px)" }}>
               <div className="rounded-2xl border border-[#00a9ff]/50 bg-[#041020]/95 backdrop-blur-sm p-4 space-y-2.5">
                 <div className="flex items-center gap-2">
                   <Video className="w-4 h-4 text-[#00a9ff]" />
@@ -1326,7 +1476,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
           )}
 
           {recError && (
-            <div className="absolute inset-x-0 bottom-0 z-30 px-4 pb-4">
+            <div className="absolute inset-x-0 z-30 px-4 pb-4" style={{ bottom: "calc(var(--artp-cb-h, 0px) + 96px)" }}>
               <div className="rounded-2xl border border-red-500/50 bg-[#1a0606]/95 backdrop-blur-sm p-3 flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                 <p className="flex-1 text-[11px] text-red-200 leading-snug">{recError}</p>
