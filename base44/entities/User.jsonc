@@ -281,6 +281,41 @@
           }
         }
       }
+    },
+    "chat_rate_count": {
+      "type": "number",
+      "description": "Chatbot messages sent in the current rate-limit window (server-managed)",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
+    },
+    "chat_window_start": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Start of the current chatbot rate-limit window (server-managed)",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
+    },
+    "quiz_notified_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When admins were last notified that this user completed the quiz (server-managed)",
+      "rls": {
+        "write": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     }
   },
   "required": []

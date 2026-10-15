@@ -15,6 +15,23 @@ export default async function(req: Request): Promise<Response> {
       return Response.json({ error: 'Messages array is required' }, { status: 400 });
     }
 
+    // Per-user rate limit. Every call spends the app's LLM integration credits,
+    // so cap how often a single account can trigger it. The counters are
+    // server-managed (admin-only write), so a user can't reset their own limit.
+    const CHAT_LIMIT = 30;
+    const CHAT_WINDOW_MS = 60 * 60 * 1000;
+    const now = Date.now();
+    const windowStart = user.chat_window_start ? Date.parse(user.chat_window_start) : 0;
+    const inWindow = Number.isFinite(windowStart) && now - windowStart < CHAT_WINDOW_MS;
+    const used = inWindow ? Number(user.chat_rate_count) || 0 : 0;
+    if (used >= CHAT_LIMIT) {
+      return Response.json({ error: 'Too many messages. Please try again later.' }, { status: 429 });
+    }
+    await base44.asServiceRole.entities.User.update(user.id, {
+      chat_rate_count: used + 1,
+      chat_window_start: new Date(inWindow ? windowStart : now).toISOString(),
+    });
+
     // Cap conversation history to limit token / credit usage
     const recent = messages.slice(-12);
 

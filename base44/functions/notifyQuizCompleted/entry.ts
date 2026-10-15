@@ -22,6 +22,12 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Deduplicate: notify admins at most once per user. Without this a signed-in
+    // user could call this endpoint repeatedly and flood every admin's inbox.
+    if (user.quiz_notified_at) {
+      return Response.json({ success: true, notified: 0 });
+    }
+
     const payload = await req.json();
     const { answers } = payload;
     
@@ -47,6 +53,12 @@ Here are their details:
 
 You can log in to your dashboard to see more.
 `;
+
+    // Mark as notified BEFORE sending, so concurrent calls can't both slip past
+    // the dedupe check above and send duplicate batches.
+    await base44.asServiceRole.entities.User.update(user.id, {
+        quiz_notified_at: new Date().toISOString(),
+    });
 
     // Send an email to all admins
     for (const email of adminEmails) {
