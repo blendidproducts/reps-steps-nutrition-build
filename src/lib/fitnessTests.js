@@ -553,6 +553,178 @@ export const BATTERIES = {
     ],
   },
 
+  // ── PUBLIC SAFETY (2026-10-14) ─────────────────────────────────────────────
+  // Pass/fail against official published minimums. Standards and sources live
+  // in publicSafetyStandards.js; scoring "gate" + a PUBLIC_SAFETY entry is what
+  // routes a battery to that scorer instead of MARSOC's.
+  //
+  // Sit-ups are tap-counted everywhere: the pose model was never reliable on
+  // them. Push-ups use the camera. Short sprints are hand-entered to a tenth
+  // of a second from a stopwatch — the phone can't time a 300 m sprint it's
+  // not carried on, and a tenth is the whole result at that distance.
+  police_pa: {
+    key: "police_pa",
+    name: "Police Academy — Pennsylvania",
+    group: "publicsafety",
+    branch: "police",
+    blurb: "Four events against the 30th-percentile Cooper standard for your age and sex — the state's published academy entrance test.",
+    icon: "shield",
+    accent: "#3b82f6",
+    scoring: "gate",
+    needsProfile: true,
+    profileBands: "pa",
+    disclaimer:
+      "Standards from the Pennsylvania MPOETC \"Physical Fitness\" page (pa.gov), read 2026-10-14: " +
+      "the 30th percentile of the Cooper norms by sex and age, required in EACH event. Many " +
+      "departments in other states use the same Cooper events with their own percentile — check " +
+      "yours. MPOETC doesn't publish rest periods; 5 minutes is used here.",
+    events: [
+      { key: "situps1", name: "Sit-ups", how: "manual", seconds: 60,
+        unit: "reps", cue: "1 minute. Tap for each rep — the camera can't count sit-ups.", restAfter: 300 },
+      { key: "sprint300", name: "300-Meter Run", how: "entry", entryKind: "seconds",
+        unit: "sec10", cue: "All-out 300 m on a track. Enter your time to a tenth of a second.",
+        equipment: "Track or measured 300 m", restAfter: 300 },
+      { key: "pushups1", name: "Push-ups", exercise: "Push-Up", how: "reps", seconds: 60,
+        unit: "reps", cue: "1 minute. Full lockout at the top.", restAfter: 300 },
+      { key: "run15", name: "1.5-Mile Run", how: "run", distanceLabel: "1.5 miles",
+        unit: "secs", cue: "Run your measured 1.5-mile route. Tap STOP when you finish.", restAfter: 0 },
+    ],
+  },
+
+  hsi_agent: {
+    key: "hsi_agent",
+    name: "HSI Special Agent",
+    group: "publicsafety",
+    branch: "federal",
+    blurb: "Homeland Security Investigations' published minimums — one standard for every applicant.",
+    icon: "shield",
+    accent: "#6366f1",
+    scoring: "gate",
+    needsProfile: false,
+    disclaimer:
+      "Minimums from ICE Policy 6006.1 (Physical Fitness Testing for Law Enforcement Applicants " +
+      "and Trainees), quoting the HSI Handbook of 19 July 2022 — read 2026-10-14 from ice.gov. " +
+      "No age or sex bands. Rest between events isn't stated in the document; 5 minutes is used.",
+    events: [
+      { key: "situps1", name: "Sit-ups", how: "manual", seconds: 60,
+        unit: "reps", cue: "1 minute. Tap for each rep. 32 is the minimum.", restAfter: 300 },
+      { key: "sprint220y", name: "220-Yard Sprint", how: "entry", entryKind: "seconds",
+        unit: "sec10", cue: "All-out 220 yards. Enter your time. 47.73 seconds is the minimum.",
+        equipment: "Track or measured 220 yd", restAfter: 300 },
+      { key: "pushups1", name: "Push-ups", exercise: "Push-Up", how: "reps", seconds: 60,
+        unit: "reps", cue: "1 minute. Full lockout. 22 is the minimum.", restAfter: 300 },
+      { key: "run15", name: "1.5-Mile Run", how: "run", distanceLabel: "1.5 miles",
+        unit: "secs", cue: "Measured 1.5 miles. 14:25 is the minimum. Tap STOP when you finish.", restAfter: 0 },
+    ],
+  },
+
+  // One walk, three duty levels. Like the MARSOC ruck, the battery carries all
+  // three and the setup screen keeps the one you pick (needsLevelChoice).
+  wildland_wct: {
+    key: "wildland_wct",
+    name: "Wildland Firefighter Pack Test",
+    group: "publicsafety",
+    branch: "fire",
+    blurb: "The NWCG Work Capacity Test — a timed walk with a pack. The phone times it live.",
+    icon: "flame",
+    accent: "#f97316",
+    scoring: "gate",
+    needsProfile: false,
+    needsLevelChoice: true,
+    disclaimer:
+      "From the NWCG \"Work Capacity Test (WCT)\" standard (nwcg.gov), read 2026-10-14. Walked on " +
+      "level terrain over a measured course — it's a walking test. Official tests are given by a " +
+      "WCT administrator under PMS 307, with a health screening first.",
+    events: [
+      { key: "wct_pack", name: "Pack Test — Arduous", how: "run", distanceLabel: "3 miles", level: true,
+        unit: "secs", cue: "3 miles with a 45-lb pack, walking, level ground. 45:00 or less. Tap STOP at the finish.",
+        equipment: "45-lb pack", restAfter: 0 },
+      { key: "wct_field", name: "Field Test — Moderate", how: "run", distanceLabel: "2 miles", level: true,
+        unit: "secs", cue: "2 miles with a 25-lb pack, walking. 30:00 or less. Tap STOP at the finish.",
+        equipment: "25-lb pack", restAfter: 0 },
+      { key: "wct_walk", name: "Walk Test — Light", how: "run", distanceLabel: "1 mile", level: true,
+        unit: "secs", cue: "1 mile, no pack, walking. 16:00 or less. Tap STOP at the finish.", restAfter: 0 },
+    ],
+  },
+
+  cpat: {
+    key: "cpat",
+    name: "Firefighter CPAT",
+    group: "publicsafety",
+    branch: "fire",
+    blurb: "Eight events in a 50-lb vest in 10:20 or less. Needs a CPAT course — log your official or practice time here.",
+    icon: "flame",
+    accent: "#ef4444",
+    scoring: "gate",
+    needsProfile: false,
+    disclaimer:
+      "From the CPAT Orientation Guide (Fire Service Joint Labor Management Wellness-Fitness " +
+      "Initiative), as published by Seattle Fire, read 2026-10-14. Events in order: stair climb " +
+      "(3:00 at 60 steps/min, +25 lb), hose drag, equipment carry, ladder raise and extension, " +
+      "forcible entry, search, 165-lb rescue drag, ceiling breach and pull. Orientation and two " +
+      "timed practice runs are a condition of the official test. The app can't see any of these " +
+      "events — it's the scoresheet, not the course.",
+    events: [
+      { key: "cpat_time", name: "CPAT Total Time", how: "entry", entryKind: "time",
+        unit: "secs", cue: "Your total time for all eight events. 10:20 or less passes — a disqualifying infraction fails regardless.",
+        equipment: "CPAT course, 50-lb vest", restAfter: 0 },
+    ],
+  },
+
+  lifeguard_usla: {
+    key: "lifeguard_usla",
+    name: "Ocean Lifeguard — USLA",
+    group: "publicsafety",
+    branch: "lifeguard",
+    blurb: "The national open water minimum: 500 meters in 10 minutes, no aids.",
+    icon: "waves",
+    accent: "#06b6d4",
+    scoring: "gate",
+    needsProfile: false,
+    disclaimer:
+      "From the United States Lifesaving Association's sample policy language for its Lifeguard " +
+      "Agency Certification Program (usla.org), read 2026-10-14. Agencies — Huntington Beach " +
+      "Marine Safety included — set tryouts on top of this with ocean swims, runs and rescues; " +
+      "this is the floor, not their test.",
+    events: [
+      { key: "swim500m", name: "500-Meter Swim", how: "entry", entryKind: "time",
+        unit: "secs", cue: "Measured course, no fins or buoyancy aids. Enter your time. 10:00 or less.",
+        equipment: "Pool or measured open water course", restAfter: 0 },
+    ],
+  },
+
+  // SECOND-HAND, ONE AGENCY — see publicSafetyStandards.js. There is no
+  // national SWAT standard; this is one team's tryout as a news report gave it.
+  swat_pasco: {
+    key: "swat_pasco",
+    name: "SWAT Tryout — Pasco County SO",
+    group: "publicsafety",
+    branch: "swat",
+    blurb: "One sheriff's office's published tryout — there is no national SWAT standard. Use it as a benchmark, not as your team's test.",
+    icon: "shield",
+    accent: "#64748b",
+    scoring: "gate",
+    needsProfile: false,
+    sourceCaveat: true,
+    disclaimer:
+      "No national or state SWAT fitness standard exists — every team sets its own. These are the " +
+      "Pasco County (FL) Sheriff's Office tryout standards as reported in \"SWAT Standards and " +
+      "Performance\", Police and Security News, 24 Jan 2018 — second-hand and eight years old. " +
+      "Your own team's published standard is the one that counts; the Custom group can hold it.",
+    events: [
+      { key: "pushups1", name: "Push-ups", exercise: "Push-Up", how: "reps", seconds: 60,
+        unit: "reps", cue: "1 minute. 40 is the tryout standard.", restAfter: 120 },
+      { key: "situps1", name: "Sit-ups", how: "manual", seconds: 60,
+        unit: "reps", cue: "1 minute. Tap for each rep. 45 is the tryout standard.", restAfter: 300 },
+      { key: "swim200bdu", name: "200 m Swim in BDUs", how: "entry", entryKind: "time",
+        unit: "secs", cue: "Pool swim in BDUs. Completing it is the standard — enter your time.",
+        equipment: "Pool, BDUs", restAfter: 300 },
+      { key: "tread15", name: "Water Tread in BDUs", how: "hold",
+        unit: "secs", cue: "Tread in BDUs. Tap STOP when you can't hold it. 15:00 is the standard.",
+        equipment: "Pool, BDUs", restAfter: 0 },
+    ],
+  },
+
   repsandsteps: {
     key: "repsandsteps",
     name: "RepsAndSteps Output",
@@ -665,6 +837,9 @@ export const LOWER_IS_BETTER = new Set([
   // coming down. `tread` is seconds and deliberately absent — a longer hold is
   // the better result, so it must not read as a regression.
   "swim300", "ruck4", "ruck8", "ruck10", "ruck13",
+  // Public safety. `tread15` is a hold and deliberately absent, like `tread`.
+  "sprint300", "sprint220y", "wct_pack", "wct_field", "wct_walk",
+  "cpat_time", "swim500m", "swim200bdu",
 ]);
 
 /** Per-event delta against the previous test of the same battery. */
@@ -704,6 +879,17 @@ export const TEST_GROUPS = [
     icon: "shield",
   },
   {
+    // 2026-10-14. Same kind of test as MILITARY — someone else's published bar —
+    // but its own group: a police or fire candidate shouldn't have to dig
+    // through five service branches to find their academy test.
+    key: "publicsafety",
+    label: "PUBLIC SAFETY",
+    sub: "Police, federal agents, fire, SWAT, lifeguard",
+    detail: "Entrance and qualification tests, pass/fail against each agency's published minimums. Where nothing official is published, the card says so.",
+    accent: "#3b82f6",
+    icon: "shield",
+  },
+  {
     // Was "PRIVATE" for one build. That was a placeholder word that never
     // explained itself — this is the RepsAndSteps test, so it says so.
     key: "repsandsteps",
@@ -740,8 +926,10 @@ export const MILITARY_BRANCHES = [
   { key: "specops",  label: "SPECIAL OPERATIONS", sub: "Selection and qualification", accent: "#f59e0b" },
 ];
 
+// Branch keys are unique across groups (military and public safety), so the
+// branch alone identifies its tests.
 export const batteriesInBranch = (branch) =>
-  BATTERY_LIST.filter((b) => b.group === "military" && b.branch === branch);
+  BATTERY_LIST.filter((b) => b.branch === branch);
 
 // ── Build-your-own ───────────────────────────────────────────────────────────
 // Every event any preset battery uses, de-duplicated, offered as a pool. The

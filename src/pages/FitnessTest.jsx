@@ -42,13 +42,21 @@ import {
 import {
   ChevronLeft, Shield, Zap, Flame, Dumbbell, Play, Square, Timer as TimerIcon,
   CheckCircle, AlertTriangle, TrendingUp, TrendingDown, Minus, RotateCcw, Footprints,
-  SlidersHorizontal, ChevronDown, Plus, Check, Lock,
+  SlidersHorizontal, ChevronDown, Plus, Check, Lock, Waves,
 } from "lucide-react";
+import {
+  PUBLIC_SAFETY, PUBLIC_SAFETY_BRANCHES, PUBLIC_SAFETY_PENDING,
+  scorePublicSafetyTest, paBand,
+} from "@/lib/publicSafetyStandards";
 
 const ICONS = {
   shield: Shield, zap: Zap, flame: Flame, dumbbell: Dumbbell,
-  sliders: SlidersHorizontal,
+  sliders: SlidersHorizontal, waves: Waves,
 };
+// Groups that open into branches before their tests (2026-10-14: public
+// safety joined military). Pending cards from both lists render the same way.
+const GROUP_BRANCHES = { military: MILITARY_BRANCHES, publicsafety: PUBLIC_SAFETY_BRANCHES };
+const ALL_PENDING = [...PENDING, ...PUBLIC_SAFETY_PENDING];
 const STORE_KEY = "rns_fitness_tests";
 
 const fmtSecs = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
@@ -129,6 +137,11 @@ export default function FitnessTest() {
   // to 8 miles, the shorter of the two graded Phase I hikes.
   const [marsocRuck, setMarsocRuck] = useState("ruck8");
 
+  // Wildland Work Capacity Test only: which duty level. Each level is its own
+  // pass/fail standard (distance, pack and time all change), so it's a choice.
+  // Defaults to the arduous pack test, the one fireline jobs require.
+  const [wctLevel, setWctLevel] = useState("wct_pack");
+
   // Custom battery: the picked event keys, assembled on demand. Memoised so the
   // battery object keeps its identity between renders - finishEvent closes over
   // it, and a fresh object every render would re-fire its effects.
@@ -155,8 +168,11 @@ export default function FitnessTest() {
     if (b.needsRuckChoice) {
       return { ...b, events: b.events.filter((e) => !e.ruck || e.key === marsocRuck) };
     }
+    if (b.needsLevelChoice) {
+      return { ...b, events: b.events.filter((e) => !e.level || e.key === wctLevel) };
+    }
     return b;
-  }, [batteryKey, customKeys, oftCardio, usmcUpper, marsocRuck]);
+  }, [batteryKey, customKeys, oftCardio, usmcUpper, marsocRuck, wctLevel]);
 
   const event = battery?.events[eventIndex] || null;
 
@@ -278,9 +294,9 @@ export default function FitnessTest() {
                     {/* MILITARY opens into branches, each of which opens into
                         its own tests. Two taps to any service test, and no
                         level of the list ever gets long enough to scroll. */}
-                    {g.key === "military" ? MILITARY_BRANCHES.map((br) => {
+                    {GROUP_BRANCHES[g.key] ? GROUP_BRANCHES[g.key].map((br) => {
                       const live = batteriesInBranch(br.key);
-                      const pending = PENDING.filter((p) => p.branch === br.key);
+                      const pending = ALL_PENDING.filter((p) => p.branch === br.key);
                       const brOpen = openBranch === br.key;
                       if (!live.length && !pending.length) return null;
                       return (
@@ -423,6 +439,36 @@ export default function FitnessTest() {
                     <span className="block text-[10px] font-bold tabular-nums text-gray-400">
                       cutoff {fmtSecs(MARSOC_GATES[k].max)}
                     </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Work Capacity Test: three duty levels, three separate standards. */}
+          {battery?.needsLevelChoice && (
+            <div className="bg-[#111] border border-gray-800 rounded-2xl p-4 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                Duty level
+              </p>
+              <p className="text-[11px] text-gray-500 leading-snug">
+                Each level is its own pass/fail standard. Fireline jobs need the arduous pack test.
+                Walk it on level ground over a measured course.
+              </p>
+              <div className="grid grid-cols-1 gap-2">
+                {[
+                  ["wct_pack", "Arduous — Pack Test", "3 miles · 45-lb pack · 45:00"],
+                  ["wct_field", "Moderate — Field Test", "2 miles · 25-lb pack · 30:00"],
+                  ["wct_walk", "Light — Walk Test", "1 mile · no pack · 16:00"],
+                ].map(([k, l, sub]) => (
+                  <button key={k} onClick={() => setWctLevel(k)}
+                    className={`min-h-[52px] rounded-xl border px-3 py-2 text-left ${
+                      wctLevel === k
+                        ? "bg-[#f97316]/20 border-[#f97316] text-white"
+                        : "border-gray-700 text-gray-400"
+                    }`}>
+                    <span className="block text-sm font-bold">{l}</span>
+                    <span className="block text-[10px] text-gray-500 leading-tight tabular-nums">{sub}</span>
                   </button>
                 ))}
               </div>
@@ -583,12 +629,15 @@ export default function FitnessTest() {
                   placeholder="e.g. 34"
                   className="w-full min-h-[44px] bg-[#0a0a0a] border border-gray-700 rounded-xl px-3 text-white text-sm"
                 />
-                {profile.age && !(battery.scoring === "aft" ? aftBand(profile.age)
+                {profile.age && !(battery.profileBands === "pa" ? paBand(profile.age)
+                                  : battery.scoring === "aft" ? aftBand(profile.age)
                                   : battery.scoring === "pfra" ? pfraBand(profile.age)
                                   : battery.scoring === "usmc" ? usmcBand(profile.age)
                                   : ageBand(profile.age)) && (
                   <p className="text-[10px] text-amber-400 mt-1">
-                    The service tables start at 17 — the test will run but won't be scored.
+                    {battery.profileBands === "pa"
+                      ? "The published table starts at 18 — the test will run but won't be scored."
+                      : "The service tables start at 17 — the test will run but won't be scored."}
                   </p>
                 )}
               </div>
@@ -692,6 +741,20 @@ function BatteryCard({ b, selected, onSelect }) {
               <span className="text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded"
                 style={{ background: "#78350f", color: "#fcd34d" }}>
                 RECORD ONLY
+              </span>
+            ) : PUBLIC_SAFETY[b.key]?.secondHand ? (
+              // One agency's tryout from a news report. Pass/fail like the
+              // others, but the badge has to say how much to trust the bar.
+              <span className="text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded"
+                style={{ background: "#334155", color: "#cbd5e1" }}>
+                PASS / FAIL · 2ND-HAND · ONE AGENCY
+              </span>
+            ) : PUBLIC_SAFETY[b.key]?.passMark ? (
+              // Published minimums AND a published pass rule — unlike MARSOC,
+              // clearing them all is a pass, so the badge can say so.
+              <span className="text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded"
+                style={{ background: "#1e3a8a", color: "#bfdbfe" }}>
+                PASS / FAIL
               </span>
             ) : b.scoring === "gate" ? (
               // A third thing again: the standard IS published, it just isn't a
@@ -1136,7 +1199,11 @@ function Results({ record, onRestart, onExit }) {
   // returns a count of published gates cleared and nothing else — see
   // marsocStandards.js for why anything more would be invented.
   const gate = battery.scoring === "gate"
-    ? scoreMarsocTest(record.events)
+    ? (PUBLIC_SAFETY[battery.key]
+        // Public safety: same gate shape, plus a real `passed` — these tests
+        // publish their pass rule. Banded ones need the age/sex on the record.
+        ? scorePublicSafetyTest(battery.key, record.events, { sex: record.sex, age: record.age })
+        : scoreMarsocTest(record.events))
     : null;
 
   // Marine PFT and CFT share one scorer — same 300-point shape, same class
@@ -1168,7 +1235,7 @@ function Results({ record, onRestart, onExit }) {
               : pst ? (pst.passed ? "🎖️" : "📋")
               : oft ? (oft.passed ? "🎖️" : "📋")
               : usmc ? (usmc.passed ? "🎖️" : "📋")
-              : gate ? "📋"
+              : gate ? (gate.passed ? "🎖️" : "📋")
               : "📊"}
           </div>
           <h1 className="text-2xl font-black">{battery.name}</h1>
@@ -1311,15 +1378,14 @@ function Results({ record, onRestart, onExit }) {
           <div className="rounded-2xl border-2 p-5 text-center"
             style={{ borderColor: gate.overall.color, background: `${gate.overall.color}18` }}>
             <p className="text-xs uppercase tracking-widest text-gray-400">
-              Published prerequisites
+              {gate.cardTitle || "Published prerequisites"}
             </p>
             <p className="text-3xl font-black mt-1" style={{ color: gate.overall.color }}>
               {gate.overall.label}
             </p>
             <p className="text-sm text-gray-400 mt-1">{gate.overall.detail}</p>
             <p className="text-[11px] text-gray-500 mt-3 leading-snug">
-              This is not a score and not a pass. MARSOC hands out the standard for each Phase I
-              screening event on arrival, so the app checks what is published and stops.
+              {gate.cardNote || "This is not a score and not a pass. MARSOC hands out the standard for each Phase I screening event on arrival, so the app checks what is published and stops."}
             </p>
           </div>
         )}
@@ -1390,13 +1456,16 @@ function Results({ record, onRestart, onExit }) {
                 // the published threshold, and for an event with no threshold
                 // it says RECORDED rather than quietly showing a green tick.
                 points: null,
-                label: raw.pass === null ? "Recorded"
+                label: raw.unresolved ? "Not scored"
+                  : raw.pass === null ? "Recorded"
                   : raw.dir === "complete" ? "Completed"
+                  : PUBLIC_SAFETY[battery.key] ? (raw.pass ? "Meets standard" : "Below standard")
                   : raw.pass ? "Gate met" : "Below gate",
                 color: raw.pass === null ? "#9ca3af"
                   : raw.pass ? "#4ade80" : "#ef4444",
                 min: raw.minimum, max: null,
                 gateText: raw.gate,
+                unresolved: !!raw.unresolved,
                 recommended: raw.recommended,
                 meetsRecommended: raw.meetsRecommended,
               } : usmc ? {
@@ -1439,7 +1508,10 @@ function Results({ record, onRestart, onExit }) {
                     )}
                     {scored && (gate ? (
                       <span className="text-[10px] text-gray-600">
-                        {scored.min != null ? `gate ${scored.gateText}` : "no standard published"}
+                        {scored.unresolved ? "standard depends on age and sex"
+                          : scored.min != null ? `${PUBLIC_SAFETY[battery.key] ? "standard" : "gate"} ${scored.gateText}`
+                          : scored.gateText && PUBLIC_SAFETY[battery.key] ? scored.gateText
+                          : "no standard published"}
                       </span>
                     ) : (
                       <span className="text-[10px] text-gray-600">
