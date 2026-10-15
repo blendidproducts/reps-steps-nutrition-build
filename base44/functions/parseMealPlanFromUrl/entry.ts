@@ -87,9 +87,15 @@ const isPrivateIPv6 = (g: number[]): boolean => {
   const v4From = (hi: number, lo: number) => isPrivateIPv4(((hi << 16) >>> 0) + lo);
   const zeros = (from: number, to: number) => g.slice(from, to).every((x) => x === 0);
 
-  if (zeros(0, 7)) return g[7] <= 1;                              // ::  and  ::1
-  if (zeros(0, 5) && g[5] === 0xffff) return v4From(g[6], g[7]);  // ::ffff:a.b.c.d
-  if (zeros(0, 6)) return v4From(g[6], g[7]);                     // ::a.b.c.d (deprecated)
+  // 0000::/8 — unspecified (::), loopback (::1), IPv4-mapped (::ffff:a.b.c.d),
+  // IPv4-compatible (::a.b.c.d) and IPv4-translated (::ffff:0:a.b.c.d). None of
+  // these are globally routable, and the last three embed an IPv4 address in
+  // the low 32 bits — so classify that embedded address rather than the text.
+  if (g[0] === 0) {
+    if (g[4] === 0xffff || g[5] === 0xffff) return v4From(g[6], g[7]); // mapped / translated
+    if (zeros(0, 6)) return v4From(g[6], g[7]);                        // ::a.b.c.d, ::, ::1
+    return true;                                                       // rest of 0000::/8 reserved
+  }
   if ((g[0] & 0xfe00) === 0xfc00) return true;                    // fc00::/7  unique-local
   if ((g[0] & 0xffc0) === 0xfe80) return true;                    // fe80::/10 link-local
   if ((g[0] & 0xff00) === 0xff00) return true;                    // ff00::/8  multicast
@@ -131,15 +137,24 @@ const validateUrl = async (rawUrl) => {
     throw new Error('Non-standard ports are not allowed');
   }
   const host = parsed.hostname;
+  const bareHost = host.startsWith('[') && host.endsWith(']') ? host.slice(1, -1) : host;
+
   let addresses = [];
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(host) || (host.startsWith('[') && host.endsWith(']'))) {
-    addresses = [host.startsWith('[') ? host.slice(1, -1) : host];
+  if (classifyIp(host) !== null) {
+    // A canonical IP literal — no DNS lookup, classify it directly.
+    addresses = [bareHost];
+  } else if (/^[0-9.]+$/.test(bareHost) || /^0[xX][0-9a-fA-F]+$/.test(bareHost) || bareHost.includes(':')) {
+    // An IP-shaped host the canonical parsers rejected: octal/short/decimal
+    // IPv4 (0177.0.0.1, 127.1, 2130706433), a hex integer, or malformed IPv6.
+    // The URL parser may re-normalize these into an address we never saw, so
+    // refuse them outright rather than trusting the text form.
+    throw new Error('URLs pointing to private or internal addresses are not allowed');
   } else {
     try {
-      addresses = await Deno.resolveDns(host, 'A');
+      addresses = await Deno.resolveDns(bareHost, 'A');
     } catch {
       try {
-        addresses = await Deno.resolveDns(host, 'AAAA');
+        addresses = await Deno.resolveDns(bareHost, 'AAAA');
       } catch {
         throw new Error('Could not resolve hostname');
       }
@@ -148,7 +163,9 @@ const validateUrl = async (rawUrl) => {
   if (addresses.length === 0) throw new Error('Could not resolve hostname');
   let validatedIp = null;
   for (const ip of addresses) {
-    if (isPrivateIp(ip)) {
+    // Fail closed: anything that is private, or that we cannot classify as a
+    // canonical public IP, is refused.
+    if (classifyIp(ip) !== false) {
       throw new Error('URLs pointing to private or internal addresses are not allowed');
     }
     if (!validatedIp) validatedIp = ip;
