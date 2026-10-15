@@ -124,8 +124,10 @@ function writeCustomDepths(map) {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function RepTracker({ exerciseName, targetReps, onComplete, onClose, defaultFacingMode = "user", exerciseEmoji = "", setLabel = "", paused = false, onPause, autoAdvance = false, onCountChange, keepCameraAlive = false, secondsLeft = null, timedMode = false, strictDepth = false }) {
-  const initialConfig = matchExercise(exerciseName);
+export default function RepTracker({ exerciseName, targetReps, onComplete, onClose, defaultFacingMode = "user", exerciseEmoji = "", setLabel = "", paused = false, onPause, autoAdvance = false, onCountChange, keepCameraAlive = false, secondsLeft = null, timedMode = false, strictDepth = false, customConfig = null }) {
+  // customConfig (2026-10-14): a movement learned by the Movement Trainer
+  // (lib/movementTemplates.js) is counted in place of a library exercise.
+  const initialConfig = customConfig || matchExercise(exerciseName);
 
   const videoRef       = useRef(null);
   const canvasRef      = useRef(null);
@@ -212,7 +214,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
 
   // ── Init exercise ──────────────────────────────────────────────
   useEffect(() => {
-    const cfg = matchExercise(exerciseName);
+    const cfg = customConfig || matchExercise(exerciseName);
     setExerciseConfig(cfg);
     setSelectedEx(cfg);
     setIsManualMode(cfg.trackable === false);
