@@ -299,8 +299,29 @@ function bodyScale(lm) {
  *   - jumps don't move it: a jump is never still
  */
 export function makeHipDropMetric() {
-  let standY = null, standScale = null, lastY = null, lastT = 0, stillMs = 0;
-  const recent = [];
+  // 2026-10-19 (JT: "the depth is too far down and not counting"). The
+  // standing reference used to be the FIRST frame the camera saw. In real use
+  // that's you next to the phone having just tapped Start. With the phone low,
+  // walking back to your spot moves your hips DOWN the image, so at your spot
+  // you already read as part-way into a squat, never get back above the arm
+  // line, and the set counts 0-1 reps (_scratch/test-realstart.cjs). Now:
+  //   1. SEED only once you've stood still for SEED_MS, not on frame one.
+  //   2. While your apparent body size is more than MOVED off the size the
+  //      reference was learned at, you're at a different distance from the
+  //      phone: no reading (so walking can't fake a rep), and once you've
+  //      stood still there for RESEED_MS, learn the reference fresh.
+  //      Body size (bodyScale) moves <= ~10% through a full squat from every
+  //      camera tested - shoulder width alone does not: side-on it falls 60%
+  //      as you lean - while walking 1 m changes it 30-60%.
+  //   3. Once you've done a rep (been down and back up), you're set up: only a
+  //      big move (MOVED_MIDSET, held still RESEED_MIDSET_MS) re-learns, so a
+  //      long pause at the bottom of a squat can never redefine standing.
+  const SEED_MS = 500, RESEED_MS = 800, MOVED = 0.20;
+  const MOVED_MIDSET = 0.30, RESEED_MIDSET_MS = 1500;
+  let standY = null, standScale = null, lowSeen = false, cycled = false;
+  let stillMs = 0, lastT = 0;
+  const recent = [], recentS = [];
+  const hist = [];          // [t, y, size] over the last ~400 ms, for steadier speeds
   return (lm) => {
     const hipOk = (lm[23]?.visibility ?? 0) >= 0.4 && (lm[24]?.visibility ?? 0) >= 0.4;
     if (!hipOk) return null;
@@ -315,13 +336,24 @@ export function makeHipDropMetric() {
 
     const t = performance.now();
     const dt = lastT ? Math.min(0.25, Math.max(0, (t - lastT) / 1000)) : 0;
-    const speed = lastY === null || dt === 0 ? 0 : Math.abs(y - lastY) / dt / scale; // torso lengths per second
-    lastY = y; lastT = t;
-    stillMs = speed < 0.25 ? stillMs + dt * 1000 : 0;
+    lastT = t;
+    if (scaleNow) { recentS.push(scaleNow); if (recentS.length > 5) recentS.shift(); }
+    const sNow = recentS.length ? median(recentS) : null;   // de-jittered size
+    hist.push([t, y, sNow]);
+    while (hist.length > 2 && t - hist[0][0] > 400) hist.shift();
+    const span = (t - hist[0][0]) / 1000;
+    const speed = span > 0 ? Math.abs(y - hist[0][1]) / span / scale : 0; // torso lengths per second
+    // Walking toward or away from the phone can barely move the hips in the
+    // image (camera low and far), so "still" also needs your size to hold.
+    const grow = span > 0.15 && sNow && hist[0][2] ? Math.abs(sNow / hist[0][2] - 1) / span : 0;
+    stillMs = speed < 0.25 && grow < 0.25 ? stillMs + dt * 1000 : 0;
 
     if (standY === null) {
-      standY = y;
-      standScale = scaleNow ?? scale;
+      if (stillMs < SEED_MS || !sNow) return null;       // not settled yet - no reading
+      standY = y; standScale = sNow;
+    } else if (sNow && Math.abs(sNow / standScale - 1) > (cycled ? MOVED_MIDSET : MOVED)) {
+      if (stillMs < (cycled ? RESEED_MIDSET_MS : RESEED_MS)) return null;   // moving to / from your spot
+      standY = y; standScale = sNow; lowSeen = false; cycled = false;      // settled somewhere new
     } else if (stillMs >= 300) {
       if (y < standY) {
         standY = standY * 0.5 + y * 0.5;              // standing taller than we thought
@@ -331,7 +363,10 @@ export function makeHipDropMetric() {
         if (scaleNow) standScale = standScale * 0.95 + scaleNow * 0.05;
       }
     }
-    return 100 - ((y - standY) / standScale) * 100;
+    const reading = 100 - ((y - standY) / standScale) * 100;
+    if (reading < 80) lowSeen = true;
+    else if (lowSeen && reading > 90) cycled = true;
+    return reading;
   };
 }
 
@@ -349,6 +384,14 @@ export function makeHipDropMetric() {
 export function shoulderHeightMetric(lm) {
   const scale = bodyScale(lm);
   if (!scale) return null;
+  // 2026-10-19: no reading while UPRIGHT. The counter learns its top from the
+  // first readings it gets, and in real use those are you standing in front of
+  // the phone (arms hanging = shoulders a full arm above the wrists) before
+  // you get down. That top can sit above your real plank, so the arm line is
+  // never reached and nothing counts. Upright = hips well below the shoulders
+  // in the image; in a plank they're level, from any camera.
+  const hipOk = (lm[23]?.visibility ?? 0) >= 0.4 && (lm[24]?.visibility ?? 0) >= 0.4;
+  if (hipOk && (getMid(lm[23], lm[24]).y - getMid(lm[11], lm[12]).y) / scale > 0.55) return null;
   const wr = [lm[15], lm[16]].filter((p) => (p?.visibility ?? 0) >= 0.4);
   if (!wr.length) return null;
   const wristY = wr.reduce((a, p) => a + p.y, 0) / wr.length;
