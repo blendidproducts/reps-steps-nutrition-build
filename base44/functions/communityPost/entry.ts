@@ -8,6 +8,10 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
  * inflate a like count by calling the entity API directly. This function derives
  * them from the authenticated identity instead.
  *
+ * liked_by stores the OPAQUE user id, never the email address. CommunityPost is
+ * world-readable while is_public is true, so an email there would hand every
+ * user's address to the whole user base; a user id carries no contact details.
+ *
  *   { action: "create", caption, photo_url, workout_session_id, workout_stats }
  *   { action: "toggle_like", post_id }
  */
@@ -70,10 +74,12 @@ export default async function (req) {
       }
 
       const post = posts[0];
-      const email = user.email;
+      // Opaque user id — never the email. The record is world-readable, so
+      // storing an address here would leak it to every app user.
+      const userId = user.id;
       const likedBy = Array.isArray(post.liked_by) ? post.liked_by : [];
-      const hasLiked = likedBy.includes(email);
-      const newLikedBy = hasLiked ? likedBy.filter((e) => e !== email) : [...likedBy, email];
+      const hasLiked = likedBy.includes(userId);
+      const newLikedBy = hasLiked ? likedBy.filter((id) => id !== userId) : [...likedBy, userId];
 
       // Count is always recomputed from the verified list, never trusted.
       await base44.asServiceRole.entities.CommunityPost.update(postId, {
@@ -81,7 +87,9 @@ export default async function (req) {
         likes_count: newLikedBy.length,
       });
 
-      return Response.json({ success: true, liked_by: newLikedBy, likes_count: newLikedBy.length });
+      // Return only what the caller needs: the count and whether THIS user
+      // liked it. The raw list stays server-side.
+      return Response.json({ success: true, liked_by_me: !hasLiked, likes_count: newLikedBy.length });
     }
 
     return Response.json({ error: 'Invalid action. Use "create" or "toggle_like".' }, { status: 400 });
