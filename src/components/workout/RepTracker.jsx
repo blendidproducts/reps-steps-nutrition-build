@@ -156,6 +156,10 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
   const lastFrameTime    = useRef({ t: 0, at: 0 });
   // ── Recording (2026-10-07) ────────────────────────────────────
   const recorderRef      = useRef(null);
+  // 2026-10-19: recordings now capture the CANVAS (camera + skeleton) with the
+  // counter's live numbers stamped on, so a clip shows what the counter saw.
+  const recOverlayRef    = useRef(false);   // true while a canvas recording runs
+  const lastUpdateRef    = useRef(null);    // last counter.update() result, for the stamp
   const recChunksRef     = useRef([]);
   const recAudioRef      = useRef(null);   // the mic track, if sound was on
   const recTimerRef      = useRef(null);
@@ -372,11 +376,13 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
   }, [startCamera]);
 
   // ── Workout video recording (2026-10-07) ─────────────────────────────────
-  // Records the RAW camera, not the canvas: JT wants the video for his own
-  // records, and the skeleton overlay would only get in the way. Recording a
-  // CLONE of the live video track means the pose loop keeps its own track
-  // untouched — a second getUserMedia call would fight the shared stream, and
-  // on iOS would re-prompt.
+  // 2026-10-19: records the CANVAS — camera image + skeleton + a strip with the
+  // live rep count and depth readings — so a clip of a missed rep shows exactly
+  // what the counter saw (JT: "enable the skeleton in the video"). The skeleton
+  // is drawn while recording even if SKEL is off. Browsers without
+  // canvas.captureStream fall back to the old behaviour: a CLONE of the raw
+  // camera track (a second getUserMedia would fight the shared stream, and on
+  // iOS would re-prompt).
   //
   // iOS Safari records MP4 (H.264 + AAC) and does NOT support WebM, so the
   // mime list is ordered mp4-first rather than the usual webm-first.
@@ -405,6 +411,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     recAudioRef.current = null;
     if (recTimerRef.current) { clearInterval(recTimerRef.current); recTimerRef.current = null; }
     recorderRef.current = null;
+    recOverlayRef.current = false;
     setRecording(false);
   }, []);
 
@@ -428,7 +435,13 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
       return;
     }
     try {
-      const tracks = [videoTrack.clone()];
+      let canvasTrack = null;
+      try {
+        const cs = canvasRef.current?.captureStream?.(30);
+        canvasTrack = cs?.getVideoTracks?.()[0] || null;
+      } catch (_) { canvasTrack = null; }
+      const tracks = [canvasTrack || videoTrack.clone()];
+      recOverlayRef.current = !!canvasTrack;
       if (recWithSound) {
         // Requested here and nowhere else, so the mic is only ever on while a
         // recording is actually running.
@@ -436,9 +449,20 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
         recAudioRef.current = mic;
         tracks.push(...mic.getAudioTracks());
       }
-      const mixed = new MediaStream(tracks);
+      let mixed = new MediaStream(tracks);
       const mimeType = pickRecMime();
-      const rec = new MediaRecorder(mixed, mimeType ? { mimeType } : undefined);
+      let rec;
+      try {
+        rec = new MediaRecorder(mixed, mimeType ? { mimeType } : undefined);
+      } catch (err) {
+        if (!recOverlayRef.current) throw err;
+        // This browser won't record a canvas: fall back to the raw camera.
+        try { tracks[0].stop(); } catch (_) {}
+        tracks[0] = videoTrack.clone();
+        recOverlayRef.current = false;
+        mixed = new MediaStream(tracks);
+        rec = new MediaRecorder(mixed, mimeType ? { mimeType } : undefined);
+      }
       recChunksRef.current = [];
       rec.ondataavailable = (e) => { if (e.data?.size) recChunksRef.current.push(e.data); };
       rec.onerror = () => { setRecError("Recording stopped unexpectedly."); stopRecording(); };
@@ -466,6 +490,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
       // The mic is the usual refusal here, and it must not take the camera with it.
       try { recAudioRef.current?.getTracks().forEach((t) => t.stop()); } catch (_) {}
       recAudioRef.current = null;
+      recOverlayRef.current = false;
       setRecError(
         e?.name === "NotAllowedError"
           ? "Microphone permission was declined. Turn SOUND off to record video only."
@@ -570,7 +595,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
         if (numPeople > 0) {
           const lm = confidentPeople[0]; // most-prominent confident person
           setPoseDetected(true);
-          if (skl) drawSkeleton(ctx, lm, sW, sH, fm, 0, 1, dX, dY, dW, dH);
+          if (skl || recOverlayRef.current) drawSkeleton(ctx, lm, sW, sH, fm, 0, 1, dX, dY, dW, dH);
 
           // ── Distance mode (bear crawl) ───────────────────────────────
           // Measures travel instead of counting reps. Two phases: hold still on
@@ -605,6 +630,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
           // Only count when: not paused, single confident person
           else if (counter && !pausedRef.current && !isMulti) {
             const u = counter.update(lm);
+            lastUpdateRef.current = u;
             // Finding 4a (2026-08-20): the no-pose banner (React state) could
             // show stale info while the skeleton (drawn straight to canvas,
             // outside React) already reflected the current frame — this
@@ -648,6 +674,30 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
             }
           }
         } else { setPoseDetected(false); }
+      } catch (_) {}
+    }
+    // Recording stamp: the counter's own numbers, burned into the clip. The
+    // on-screen HUD is HTML over the canvas, so it never reaches the recording.
+    if (recOverlayRef.current) {
+      try {
+        const u = lastUpdateRef.current || {};
+        const f = (v) => (typeof v === "number" && !Number.isNaN(v) ? Math.round(v) : "--");
+        const lines = [
+          `${exConfigRef.current?.name || "Exercise"}   ${new Date().toLocaleTimeString()}`,
+          `REPS ${u.count ?? 0}   SHALLOW ${u.partials ?? 0}   ${u.stage ? u.stage.toUpperCase() : "-"}${u.tracking === false ? "   NO READING" : ""}`,
+          `DEPTH ${f(u.angle)}   REP LINE ${f(u.depthLine)}   ARM ${f(u.armLine)}   TOP ${f(u.topEst)}`,
+        ];
+        const fs = Math.max(12, Math.round(sW / 30));
+        ctx.save();
+        ctx.font = `bold ${fs}px ui-monospace, Menlo, monospace`;
+        const pad = Math.round(fs * 0.5), lh = Math.round(fs * 1.3);
+        const w = Math.min(sW - 2 * pad, Math.max(...lines.map((l) => ctx.measureText(l).width)) + 2 * pad);
+        ctx.fillStyle = "rgba(0,0,0,0.65)";
+        ctx.fillRect(pad, pad, w, lh * lines.length + pad);
+        ctx.fillStyle = "#ffffff";
+        ctx.textBaseline = "top";
+        lines.forEach((l, i) => ctx.fillText(l, pad * 2, pad + pad / 2 + i * lh, w - 2 * pad));
+        ctx.restore();
       } catch (_) {}
     }
     animFrameRef.current = requestAnimationFrame(detect);
