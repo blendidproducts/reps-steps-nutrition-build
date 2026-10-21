@@ -100,13 +100,12 @@ export default function Community() {
   };
 
   const toggleLike = (post) => {
-    // liked_by holds opaque user ids, not emails.
-    const userId = currentUser?.id;
-    if (!userId) return;
+    const userEmail = currentUser?.email;
+    if (!userEmail) return;
 
     const likedBy = post.liked_by || [];
-    const hasLiked = likedBy.includes(userId);
-    const newLikedBy = hasLiked ? likedBy.filter(id => id !== userId) : [...likedBy, userId];
+    const hasLiked = likedBy.includes(userEmail);
+    const newLikedBy = hasLiked ? likedBy.filter(e => e !== userEmail) : [...likedBy, userEmail];
 
     // The like count is recomputed server-side from the verified identity.
     mutate(
@@ -287,13 +286,13 @@ export default function Community() {
                           size="sm"
                           onClick={() => toggleLike(post)}
                           className={`gap-2 ${
-                            post.liked_by?.includes(currentUser?.id) 
+                            post.liked_by?.includes(currentUser?.email) 
                               ? 'text-red-400' 
                               : 'text-gray-400'
                           }`}
                         >
                           <Heart className={`w-4 h-4 ${
-                            post.liked_by?.includes(currentUser?.id) ? 'fill-red-400' : ''
+                            post.liked_by?.includes(currentUser?.email) ? 'fill-red-400' : ''
                           }`} />
                           {post.likes_count || 0}
                         </Button>

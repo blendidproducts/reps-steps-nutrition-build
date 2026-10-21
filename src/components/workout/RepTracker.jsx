@@ -697,6 +697,23 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
         ctx.fillStyle = "#ffffff";
         ctx.textBaseline = "top";
         lines.forEach((l, i) => ctx.fillText(l, pad * 2, pad + pad / 2 + i * lh, w - 2 * pad));
+        // Big rep count, bottom-right, readable at a glance like the live HUD
+        // (JT 2026-10-21: "I want it to show the rep count").
+        const big = Math.max(40, Math.round(sW / 5));
+        const label = Math.max(12, Math.round(big / 4));
+        const cnt = String(u.count ?? 0);
+        ctx.font = `900 ${big}px system-ui, -apple-system, sans-serif`;
+        const cw = ctx.measureText(cnt).width;
+        const bw = Math.max(cw, big * 1.1) + big * 0.4, bh = big * 1.25 + label;
+        const bx = sW - bw - pad, by = sH - bh - pad * 2 - Math.round(sH * 0.12);
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(bx, by, bw, bh);
+        ctx.fillStyle = "#00e5ff";
+        ctx.textAlign = "center";
+        ctx.fillText(cnt, bx + bw / 2, by + label * 0.4);
+        ctx.font = `800 ${label}px system-ui, -apple-system, sans-serif`;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(`REPS${u.partials ? `  ·  ${u.partials} SHALLOW` : ""}`, bx + bw / 2, by + big * 1.05 + label * 0.2, bw - pad);
         ctx.restore();
       } catch (_) {}
     }

@@ -316,56 +316,105 @@ export function makeHipDropMetric() {
   //   3. Once you've done a rep (been down and back up), you're set up: only a
   //      big move (MOVED_MIDSET, held still RESEED_MIDSET_MS) re-learns, so a
   //      long pause at the bottom of a squat can never redefine standing.
-  const SEED_MS = 500, RESEED_MS = 800, MOVED = 0.20;
+  //   4. 2026-10-21 (JT: squats "did NOT calculate at all" on the phone).
+  //      Real tracking shakes far more than the simulation did, and "still"
+  //      was an endpoint speed over 400 ms that reset to zero on one noisy
+  //      window - at real-phone noise it could stay "not still" forever, so the
+  //      reference was never learned and there was never a reading. Now:
+  //      speeds are least-squares SLOPES over ~600 ms, size is a 15-frame
+  //      median, a noisy window only drains stillness instead of zeroing it,
+  //      and if you're tracked for FALLBACK_MS without walking it seeds anyway
+  //      from the last second's median. It can be late; it can't be never.
+  const SEED_MS = 500, RESEED_MS = 800, MOVED = 0.17, FALLBACK_MS = 2500;
   const MOVED_MIDSET = 0.30, RESEED_MIDSET_MS = 1500;
   let standY = null, standScale = null, lowSeen = false, cycled = false;
-  let stillMs = 0, lastT = 0;
+  let stillMs = 0, lastT = 0, waitMs = 0;
   const recent = [], recentS = [];
-  const hist = [];          // [t, y, size] over the last ~400 ms, for steadier speeds
+  const win = [];           // [t, y, size] over the last ~600 ms (slopes)
+  const longY = [];         // [t, y] over the last ~1 s (fallback seed)
+  const slope = (pts, k) => {           // least-squares d(value)/dt, per second
+    const n = pts.length; if (n < 4) return 0;
+    let st = 0, sv = 0; for (const p of pts) { st += p[0]; sv += p[k]; }
+    const mt = st / n, mv = sv / n; let num = 0, den = 0;
+    for (const p of pts) { const dt0 = p[0] - mt; num += dt0 * (p[k] - mv); den += dt0 * dt0; }
+    return den > 0 ? (num / den) * 1000 : 0;
+  };
   return (lm) => {
     const hipOk = (lm[23]?.visibility ?? 0) >= 0.4 && (lm[24]?.visibility ?? 0) >= 0.4;
     if (!hipOk) return null;
     const scaleNow = bodyScale(lm);
-    const scale = standScale ?? scaleNow;
+    if (scaleNow) { recentS.push(scaleNow); if (recentS.length > 15) recentS.shift(); }
+    const sNow = recentS.length ? median(recentS) : null;    // steady size (seeding)
+    // Quicker size for "have you moved?": a 15-frame median lags half a second,
+    // long enough for walking away from a low phone to fake a rep first.
+    const sFast = recentS.length ? median(recentS.slice(-5)) : null;
+    const scale = standScale ?? sNow;
     if (!scale) return null;
 
     // Median of the last 3 hip heights: one-frame landmark spikes can't move it.
-    recent.push(getMid(lm[23], lm[24]).y);
+    const yRaw = getMid(lm[23], lm[24]).y;
+    recent.push(yRaw);
     if (recent.length > 3) recent.shift();
     const y = median(recent);
 
     const t = performance.now();
     const dt = lastT ? Math.min(0.25, Math.max(0, (t - lastT) / 1000)) : 0;
     lastT = t;
-    if (scaleNow) { recentS.push(scaleNow); if (recentS.length > 5) recentS.shift(); }
-    const sNow = recentS.length ? median(recentS) : null;   // de-jittered size
-    hist.push([t, y, sNow]);
-    while (hist.length > 2 && t - hist[0][0] > 400) hist.shift();
-    const span = (t - hist[0][0]) / 1000;
-    const speed = span > 0 ? Math.abs(y - hist[0][1]) / span / scale : 0; // torso lengths per second
-    // Walking toward or away from the phone can barely move the hips in the
-    // image (camera low and far), so "still" also needs your size to hold.
-    const grow = span > 0.15 && sNow && hist[0][2] ? Math.abs(sNow / hist[0][2] - 1) / span : 0;
-    stillMs = speed < 0.25 && grow < 0.25 ? stillMs + dt * 1000 : 0;
+    win.push([t, yRaw, sFast]);
+    while (win.length > 2 && t - win[0][0] > 600) win.shift();
+    longY.push([t, y]);
+    while (longY.length > 2 && t - longY[0][0] > 1000) longY.shift();
+    const speed = Math.abs(slope(win, 1)) / scale;                 // torso lengths / s
+    // Walking toward or away from a low, far phone barely moves the hips in
+    // the image, so "still" also needs your size to hold.
+    const grow = sNow ? Math.abs(slope(win, 2)) / sNow : 0;        // fraction / s
+    const walking = grow >= 0.35;   // a squat changes size <= ~0.11/s; walking far more
+    const stillNow = speed < 0.3 && grow < 0.25;
+    if (stillNow) stillMs += dt * 1000;
+    else stillMs = Math.max(0, stillMs - dt * 2000);
+    waitMs = walking ? 0 : waitMs + dt * 1000;
+    const fallbackSeed = () => {
+      standY = median(longY.map((p) => p[1])); standScale = sNow;
+      lowSeen = false; cycled = false; stillMs = 0; waitMs = 0;
+    };
 
+    // Walking toward or away from the phone: never a reading. Hips seen from a
+    // low phone slide down the image as you walk away, which looks like a squat.
+    if (walking) return null;
     if (standY === null) {
-      if (stillMs < SEED_MS || !sNow) return null;       // not settled yet - no reading
-      standY = y; standScale = sNow;
-    } else if (sNow && Math.abs(sNow / standScale - 1) > (cycled ? MOVED_MIDSET : MOVED)) {
-      if (stillMs < (cycled ? RESEED_MIDSET_MS : RESEED_MS)) return null;   // moving to / from your spot
-      standY = y; standScale = sNow; lowSeen = false; cycled = false;      // settled somewhere new
-    } else if (stillMs >= 300) {
-      if (y < standY) {
-        standY = standY * 0.5 + y * 0.5;              // standing taller than we thought
-        if (scaleNow) standScale = standScale * 0.8 + scaleNow * 0.2;
-      } else if ((y - standY) / standScale < 0.15) {
-        standY += Math.min(y - standY, 0.03 * standScale * dt);   // slow creep, near the top only
-        if (scaleNow) standScale = standScale * 0.95 + scaleNow * 0.05;
+      if (!sNow) return null;
+      if (stillMs >= SEED_MS) { standY = y; standScale = sNow; waitMs = 0; }
+      else if (waitMs >= FALLBACK_MS) fallbackSeed();
+      else return null;                                  // not settled yet - no reading
+    } else if (sFast && Math.abs(sFast / standScale - 1) > (cycled ? MOVED_MIDSET : MOVED)) {
+      if (stillMs >= (cycled ? RESEED_MIDSET_MS : RESEED_MS)) {
+        standY = y; standScale = sNow; lowSeen = false; cycled = false; waitMs = 0;   // settled somewhere new
+      } else if (!cycled && waitMs >= FALLBACK_MS) {
+        fallbackSeed();
+      } else {
+        return null;                                     // moving to / from your spot
+      }
+    } else {
+      waitMs = 0;
+      // Only while still RIGHT NOW: stillness drains slowly, and a jump's
+      // takeoff must never read as "standing taller".
+      // Compared on the last second's MEDIAN, not this frame: with real-phone
+      // shake, "taller than we thought" on single frames was a one-way ratchet
+      // that lifted standing until standing up no longer re-armed the counter.
+      if (stillNow && stillMs >= 300 && longY.length >= 5) {
+        const yMed = median(longY.map((p) => p[1]));
+        if ((standY - yMed) / standScale > 0.03) {
+          standY = standY * 0.5 + yMed * 0.5;           // standing taller than we thought
+          if (sNow) standScale = standScale * 0.8 + sNow * 0.2;
+        } else if (yMed > standY && (yMed - standY) / standScale < 0.15) {
+          standY += Math.min(yMed - standY, 0.03 * standScale * dt);   // slow creep, near the top only
+          if (sNow) standScale = standScale * 0.95 + sNow * 0.05;
+        }
       }
     }
     const reading = 100 - ((y - standY) / standScale) * 100;
     if (reading < 80) lowSeen = true;
-    else if (lowSeen && reading > 90) cycled = true;
+    else if (lowSeen && reading > 84) cycled = true;   // matches the squat arm line
     return reading;
   };
 }
@@ -396,6 +445,67 @@ export function shoulderHeightMetric(lm) {
   if (!wr.length) return null;
   const wristY = wr.reduce((a, p) => a + p.y, 0) / wr.length;
   return ((wristY - getMid(lm[11], lm[12]).y) / scale) * 100;
+}
+
+/** Stateful push-up metric (2026-10-21, JT: push-ups "too strict with going
+ *  all the way down"). Same reading as shoulderHeightMetric, made steady for a
+ *  real phone, measured in _scratch/test-realstart.cjs at 3-4x the old noise:
+ *   - SIZE is a 15-frame median of full-body bodyScale. A single frame's scale
+ *     is noisy, and the reading divides by it, so every small-scale frame
+ *     spiked the reading UP. The counter's top only ever rises on readings
+ *     above it, so those spikes ratcheted the top up - and the rep line
+ *     (half the top) down - until only chest-to-floor counted. Side-on it was
+ *     worse: when the hips drop out, bodyScale falls back to shoulder width,
+ *     which side-on is a few pixels, and one frame read 5-7x the top.
+ *   - Without hips this frame, the remembered size is used.
+ *   - The reading is a median of the last 3 frames: spikes die, the bottom of
+ *     a rep (3+ frames) survives.
+ *   - Upright is sticky across frames where the hips drop out, and standing
+ *     clears the size memory so the plank's own size is learned. */
+export function makeShoulderHeightMetric() {
+  const sBuf = [], rBuf = [];
+  // Unknown until the hips have been seen: setting the phone up with your face
+  // close to it (no hips) produced readings - and a false rep - in JT's video.
+  let upright = null, upRun = 0, downRun = 0;
+  return (lm) => {
+    const shOk = (lm[11]?.visibility ?? 0) >= 0.4 && (lm[12]?.visibility ?? 0) >= 0.4;
+    if (!shOk) return null;
+    const hipOk = (lm[23]?.visibility ?? 0) >= 0.4 && (lm[24]?.visibility ?? 0) >= 0.4;
+    const sNow = bodyScale(lm);
+    if (hipOk && sNow) { sBuf.push(sNow); if (sBuf.length > 15) sBuf.shift(); }
+    const scale = sBuf.length ? median(sBuf) : null;
+    if (!scale) return null;
+    const shY = getMid(lm[11], lm[12]).y;
+    // Upright needs 3 frames in a row over 0.75 (standing reads ~0.9-1.0), and
+    // plank 3 frames under 0.6. JT's head-on plank reads 0.0-0.5 but spiked over
+    // the old single-frame 0.55 cut in 6% of frames, each one blanking the
+    // counter and wiping its size memory mid-set.
+    let oddFrame = false;
+    if (hipOk) {
+      const r = (getMid(lm[23], lm[24]).y - shY) / (sNow || scale);
+      upRun = r > 0.75 ? upRun + 1 : 0;
+      downRun = r < 0.55 ? downRun + 1 : 0;
+      if (upRun >= 3) upright = true;
+      else if (downRun >= 3 || (upright === null && r < 0.55)) upright = false;
+      // A lone upright-looking frame mid-plank is a tracking misread: skip just
+      // that frame (its reading is junk - 100+ in JT's video), keep the memory.
+      oddFrame = upright === false && r > 0.55;
+    }
+    if (upright !== false) { if (upright) sBuf.length = 0; rBuf.length = 0; return null; }
+    if (oddFrame) return null;
+    const wr = [lm[15], lm[16]].filter((p) => (p?.visibility ?? 0) >= 0.4);
+    if (!wr.length) return null;
+    const wristY = wr.reduce((a, p) => a + p.y, 0) / wr.length;
+    const raw = ((wristY - shY) / scale) * 100;
+    // Physically a shoulder sits at most about an arm's length above the hand:
+    // that reads ~105-120 at the very top in every simulated camera, 57-70 in
+    // JT's real video. 175-185 appeared right after tracking re-found him and
+    // poisoned the top for seconds. Out-of-range frames are dropped.
+    if (raw > 150 || raw < -60) return null;
+    rBuf.push(raw);
+    if (rBuf.length > 3) rBuf.shift();
+    return median(rBuf);
+  };
 }
 
 /** Apparent body width in normalized image units — the raw signal the distance
@@ -558,6 +668,14 @@ export const EXERCISE_LIBRARY = [
     // 2026-10-14: shoulder height above the hands (shoulderHeightMetric).
     // Head-on, torso tilt went NEGATIVE (JT: "Torso Depth -83"), which switched
     // the relative thresholds off and left the broken 28/6 pair in charge.
+    makeMetric: makeShoulderHeightMetric,   // 2026-10-21: steadied for real phones
+    // 2026-10-21 from JT's real push-up video (20 done, 4 counted): top from
+    // recent highs; the metric's median-of-3 already rejects one-frame
+    // glitches, so a fast rep that skips straight to depth, or spends a single
+    // frame there, still counts.
+    topWindowMs: 3000,
+    transitFramesRequired: 0,
+    depthFramesRequired: 1,
     getAngle: (lm) => shoulderHeightMetric(lm),
     // ── 2026-10-07: absolute thresholds demoted to fallbacks ──────────────
     // The numbers below carried an UNCALIBRATED warning in this file for weeks,
@@ -581,7 +699,7 @@ export const EXERCISE_LIBRARY = [
     //
     // A line at 40% of this person's OWN top reading counts the rep at every p
     // in that table and still rejects a half-depth push-up at every p.
-    relativeDepth: { arm: 0.85, rep: 0.50, partial: 0.80 },  // rep ~ elbows at 90 deg
+    relativeDepth: { arm: 0.78, rep: 0.65, partial: 0.73 },  // 2026-10-21 from JT's real push-up video: head-on reps bottom at 50-60% of top and his tops between reps drift; was 0.85/0.50. JT: "shouldn't have to touch the ground".
     upThreshold: 80,    // fallback only — used before the top read settles
     downThreshold: 3,    // also a FLOOR: this deep always counts
     partialThreshold: 70,
@@ -614,10 +732,18 @@ export const EXERCISE_LIBRARY = [
     // 2026-10-14: shoulder height above the hands (shoulderHeightMetric).
     // Head-on, torso tilt went NEGATIVE (JT: "Torso Depth -83"), which switched
     // the relative thresholds off and left the broken 28/6 pair in charge.
+    makeMetric: makeShoulderHeightMetric,   // 2026-10-21: steadied for real phones
+    // 2026-10-21 from JT's real push-up video (20 done, 4 counted): top from
+    // recent highs; the metric's median-of-3 already rejects one-frame
+    // glitches, so a fast rep that skips straight to depth, or spends a single
+    // frame there, still counts.
+    topWindowMs: 3000,
+    transitFramesRequired: 0,
+    depthFramesRequired: 1,
     getAngle: (lm) => shoulderHeightMetric(lm),
     // Same relative treatment as the regular push-up — see the note there for
     // the measured reason the fixed pair below cannot work at every camera angle.
-    relativeDepth: { arm: 0.85, rep: 0.50, partial: 0.80 },  // rep ~ elbows at 90 deg
+    relativeDepth: { arm: 0.78, rep: 0.65, partial: 0.73 },  // 2026-10-21 from JT's real push-up video: head-on reps bottom at 50-60% of top and his tops between reps drift; was 0.85/0.50. JT: "shouldn't have to touch the ground".
     upThreshold: 80,    // fallback only
     downThreshold: 3,    // also a FLOOR
     partialThreshold: 70,
@@ -641,10 +767,18 @@ export const EXERCISE_LIBRARY = [
     // 2026-10-14: shoulder height above the hands (shoulderHeightMetric).
     // Head-on, torso tilt went NEGATIVE (JT: "Torso Depth -83"), which switched
     // the relative thresholds off and left the broken 28/6 pair in charge.
+    makeMetric: makeShoulderHeightMetric,   // 2026-10-21: steadied for real phones
+    // 2026-10-21 from JT's real push-up video (20 done, 4 counted): top from
+    // recent highs; the metric's median-of-3 already rejects one-frame
+    // glitches, so a fast rep that skips straight to depth, or spends a single
+    // frame there, still counts.
+    topWindowMs: 3000,
+    transitFramesRequired: 0,
+    depthFramesRequired: 1,
     getAngle: (lm) => shoulderHeightMetric(lm),
     // Same relative treatment as the regular push-up — see the note there for
     // the measured reason the fixed pair below cannot work at every camera angle.
-    relativeDepth: { arm: 0.85, rep: 0.50, partial: 0.80 },  // rep ~ elbows at 90 deg
+    relativeDepth: { arm: 0.78, rep: 0.65, partial: 0.73 },  // 2026-10-21 from JT's real push-up video: head-on reps bottom at 50-60% of top and his tops between reps drift; was 0.85/0.50. JT: "shouldn't have to touch the ground".
     upThreshold: 80,    // fallback only
     downThreshold: 3,    // also a FLOOR
     partialThreshold: 70,
@@ -704,10 +838,18 @@ export const EXERCISE_LIBRARY = [
     // 2026-10-14: shoulder height above the hands (shoulderHeightMetric).
     // Head-on, torso tilt went NEGATIVE (JT: "Torso Depth -83"), which switched
     // the relative thresholds off and left the broken 28/6 pair in charge.
+    makeMetric: makeShoulderHeightMetric,   // 2026-10-21: steadied for real phones
+    // 2026-10-21 from JT's real push-up video (20 done, 4 counted): top from
+    // recent highs; the metric's median-of-3 already rejects one-frame
+    // glitches, so a fast rep that skips straight to depth, or spends a single
+    // frame there, still counts.
+    topWindowMs: 3000,
+    transitFramesRequired: 0,
+    depthFramesRequired: 1,
     getAngle: (lm) => shoulderHeightMetric(lm),
     // Same relative treatment as the regular push-up — see the note there for
     // the measured reason the fixed pair below cannot work at every camera angle.
-    relativeDepth: { arm: 0.85, rep: 0.50, partial: 0.80 },  // rep ~ elbows at 90 deg
+    relativeDepth: { arm: 0.78, rep: 0.65, partial: 0.73 },  // 2026-10-21 from JT's real push-up video: head-on reps bottom at 50-60% of top and his tops between reps drift; was 0.85/0.50. JT: "shouldn't have to touch the ground".
     upThreshold: 80,    // fallback only
     downThreshold: 3,    // also a FLOOR
     partialThreshold: 70,
@@ -873,6 +1015,7 @@ export const EXERCISE_LIBRARY = [
     // 39-78% of standing at full depth, so JT's below-parallel reps logged as
     // "too shallow". getAngle is a stub; the counter builds its own metric.
     makeMetric: makeHipDropMetric,
+    fixedTop: 100,          // the metric reads 100 standing by construction
     getAngle: () => null,
     // Reading is 100 standing, ~0 when the hips have dropped one torso length.
     //   rep 0.50  -> hips down 0.50 torso: thigh ~65-70 deg, just above
@@ -888,9 +1031,12 @@ export const EXERCISE_LIBRARY = [
     // rep 0.50 counts parallel everywhere but the chest-height worst case (which
     // still counts below parallel) and never counts a half squat (64+).
     relativeDepth: {
-      arm: 0.90,     // back at the top: within 0.1 torso of standing
-      rep: 0.50,
-      partial: 0.86, // a real attempt: hips down 0.14 torso or more
+      // 2026-10-21 real video: between continuous reps JT's top read 87-90, so a
+      // 0.90 arm line skipped the next squat entirely (no rep, no shallow).
+      arm: 0.84,     // back at the top: within ~0.16 torso of standing
+      // 2026-10-21 from JT's real video (phone in front, ~waist height): full-depth squats bottomed at Depth 49-56 against a line of 50, so 2 of 7 were called shallow. Real tracking sees about half the hip drop the simulation did.
+      rep: 0.62,     // was 0.50
+      partial: 0.80, // a real attempt: hips down 0.20 torso or more (below the arm line)
     },
     upThreshold: 90,      // fallback only (used before the standing read settles)
     downThreshold: -60,   // FLOOR: hips down 1.6 torso always counts
@@ -912,7 +1058,7 @@ export const EXERCISE_LIBRARY = [
     direction: 'down_then_up',
     primaryJoint: 'Depth',
     unit: '',
-    depthMeter: { top: 100, target: 50 },
+    depthMeter: { top: 100, target: 62 },
     formCues: [
       'Phone in front or to the side — keep hips and shoulders in frame',
       'Hip crease below the top of the knee — that is the rep',
@@ -935,9 +1081,10 @@ export const EXERCISE_LIBRARY = [
     // reps on a front camera). A jump never moves the standing reference -
     // it isn't still - so landing depth is still measured from standing.
     makeMetric: makeHipDropMetric,
+    fixedTop: 100,          // the metric reads 100 standing by construction
     getAngle: () => null,
     // Shallower line than a strict squat: the point is the jump, not depth.
-    relativeDepth: { arm: 0.90, rep: 0.68, partial: 0.86 },  // a loaded dip of ~60% of a squat, then the jump
+    relativeDepth: { arm: 0.90, rep: 0.74, partial: 0.86 },  // was 0.68; scaled with Squat 0.50 -> 0.62 (real-video calibration 2026-10-21)
     upThreshold: 90,       // fallback only
     downThreshold: -60,    // floor
     partialThreshold: 86,
@@ -964,8 +1111,9 @@ export const EXERCISE_LIBRARY = [
     // 51 against a line of ~38 and never counted. The 130ms descent gate that
     // doc 15 fixed for Squat was also still live here; now 80 like Squat.
     makeMetric: makeHipDropMetric,
+    fixedTop: 100,          // the metric reads 100 standing by construction
     getAngle: () => null,
-    relativeDepth: { arm: 0.90, rep: 0.50, partial: 0.86 },  // same lines as Squat
+    relativeDepth: { arm: 0.84, rep: 0.62, partial: 0.80 },  // same lines as Squat (0.62 since 2026-10-21 real-video calibration)
     upThreshold: 90,     // fallback only
     downThreshold: -60,  // floor
     partialThreshold: 86,
@@ -974,7 +1122,7 @@ export const EXERCISE_LIBRARY = [
     minRepDurationMs: 80,  // see the note on Squat
     primaryJoint: 'Depth',
     unit: '',
-    depthMeter: { top: 100, target: 50 },
+    depthMeter: { top: 100, target: 62 },
     formCues: ['Wide stance', 'Toes pointed out 45°', 'Inner thigh emphasis'],
   },
   {
@@ -995,8 +1143,9 @@ export const EXERCISE_LIBRARY = [
     // to the ankles could see the rep. The hips dropping is visible either way.
     // The 130ms descent gate doc 15 fixed for Squat was also still live; 80 now.
     makeMetric: makeHipDropMetric,
+    fixedTop: 100,          // the metric reads 100 standing by construction
     getAngle: () => null,
-    relativeDepth: { arm: 0.90, rep: 0.50, partial: 0.86 },  // full lunge ~ hips down 0.8 torso
+    relativeDepth: { arm: 0.84, rep: 0.62, partial: 0.80 },  // was 0.50; follows Squat's real-video calibration 2026-10-21
     upThreshold: 90,   // fallback only
     downThreshold: -60,  // floor
     partialThreshold: 86,
@@ -1005,7 +1154,7 @@ export const EXERCISE_LIBRARY = [
     minRepDurationMs: 80,
     primaryJoint: 'Depth',
     unit: '',
-    depthMeter: { top: 100, target: 50 },
+    depthMeter: { top: 100, target: 62 },
     formCues: ['Front knee behind toes', 'Back knee near floor', 'Left = 1 rep, right = 1 rep', 'Upright torso'],
   },
   {
@@ -1023,8 +1172,9 @@ export const EXERCISE_LIBRARY = [
     // to the ankles could see the rep. The hips dropping is visible either way.
     // The 130ms descent gate doc 15 fixed for Squat was also still live; 80 now.
     makeMetric: makeHipDropMetric,
+    fixedTop: 100,          // the metric reads 100 standing by construction
     getAngle: () => null,
-    relativeDepth: { arm: 0.90, rep: 0.50, partial: 0.86 },  // full lunge ~ hips down 0.8 torso
+    relativeDepth: { arm: 0.84, rep: 0.62, partial: 0.80 },  // was 0.50; follows Squat's real-video calibration 2026-10-21
     upThreshold: 90,
     downThreshold: -60,
     partialThreshold: 86,
@@ -1033,7 +1183,7 @@ export const EXERCISE_LIBRARY = [
     minRepDurationMs: 80,
     primaryJoint: 'Depth',
     unit: '',
-    depthMeter: { top: 100, target: 50 },
+    depthMeter: { top: 100, target: 62 },
     formCues: ['Step backward', 'Control the descent', 'Left = 1 rep, right = 1 rep', 'Push through front heel'],
   },
   {
@@ -1052,8 +1202,9 @@ export const EXERCISE_LIBRARY = [
     // to the ankles could see the rep. The hips dropping is visible either way.
     // The 130ms descent gate doc 15 fixed for Squat was also still live; 80 now.
     makeMetric: makeHipDropMetric,
+    fixedTop: 100,          // the metric reads 100 standing by construction
     getAngle: () => null,
-    relativeDepth: { arm: 0.90, rep: 0.55, partial: 0.86 },  // full lunge ~ hips down 0.8 torso
+    relativeDepth: { arm: 0.84, rep: 0.64, partial: 0.80 },  // was 0.55; follows Squat's real-video calibration 2026-10-21
     upThreshold: 90,
     downThreshold: -60,
     partialThreshold: 86,
@@ -1857,6 +2008,8 @@ export class RepCounter {
     // line. See the descent-continuity note in update() — this is what replaced
     // the wall-clock descent gate that was eating honest brisk reps.
     this.transitFrames = 0;
+    this.lastTopAt = 0;         // last frame at the very top (>= 95% of it)
+    this.descentFrames = 0;     // frames seen between the very top and the depth line, this descent
     // Stateful metrics (hip drop learns where you stand) get one instance per
     // counter, so two exercises never share a standing reference.
     this.metric = typeof exerciseConfig.makeMetric === "function" ? exerciseConfig.makeMetric() : null;
@@ -1963,6 +2116,27 @@ export class RepCounter {
     }
   }
 
+  /** Top from your RECENT HIGHS (2026-10-21, JT push-up video). The learned
+   *  top settled while he was getting into position and sat at 51-55 while
+   *  his real tops between reps were 57-66, so the line demanded more than he
+   *  was doing. Now: the 90th percentile of the last topWindowMs of readings
+   *  (a few reps' worth of tops), and it may fall no faster than 10%/s, so a
+   *  long hold at the bottom can't drag it down to the bottom. */
+  _trackTopWindow(d, now) {
+    const W = this.config.topWindowMs;
+    const buf = (this.topWin = this.topWin || []);
+    // A reading far above the established top is a glitch, not a new top.
+    if (this.topEst != null && this.topEst > 1 && d > this.topEst * 1.6) return;
+    buf.push([now, d]);
+    while (buf.length > 3 && now - buf[0][0] > W) buf.shift();
+    const vals = buf.map((p) => p[1]).sort((a, b) => a - b);
+    const p90 = vals[Math.min(vals.length - 1, Math.floor(vals.length * 0.9))];
+    const dt = this.topWinT ? Math.max(0, (now - this.topWinT) / 1000) : 0;
+    this.topWinT = now;
+    const floor = this.topEst == null ? -Infinity : this.topEst * Math.pow(0.9, dt);
+    this.topEst = Math.max(p90, floor);
+  }
+
   /**
    * Feed in current landmarks, get back { count, angle, stage, repCounted }
    */
@@ -2022,7 +2196,13 @@ export class RepCounter {
     let downThreshold = this.config.downThreshold;
     let partialThreshold = this.config.partialThreshold;
     if (rel) {
-      this._trackTop(angle);
+      // 2026-10-21: metrics that already read 100 at the top (hip drop) say so
+      // with fixedTop. Learning a second top on top of the metric's own let one
+      // bad first second pin it high for the whole set (seen at real-phone
+      // noise: top 144, arm line 130, never re-armed, 2 of 8 squats).
+      if (ownMetric && typeof this.config.fixedTop === "number") this.topEst = this.config.fixedTop;
+      else if (ownMetric && this.config.topWindowMs) this._trackTopWindow(angle, now);
+      else this._trackTop(angle);
       const top = this.topEst;
       if (top && top > 1) {
         const f = this.effectiveFractions();
@@ -2030,6 +2210,24 @@ export class RepCounter {
         downThreshold = Math.max(top * f.rep, this.config.downThreshold ?? -Infinity);
         partialThreshold = top * f.partial;
       }
+    }
+
+    // 2026-10-21: the descent clock starts when you LEAVE THE TOP, not when you
+    // cross the arm line. With the squat lines recalibrated from JT's video
+    // (arm 0.84, rep 0.62) the arm->rep window is narrow, and at 15 fps a brisk
+    // squat put one frame in it: 67 ms, under the 80 ms teleport floor, so
+    // every rep was rejected. A real teleport still jumps from the top to depth
+    // in one frame and still fails.
+    const topNow = this.topEst && this.topEst > 1 ? this.topEst * 0.95 : upThreshold;
+    if (direction === 'down_then_up') {
+      if (angle >= topNow) { this.lastTopAt = now; this.descentFrames = 0; }
+      // 2026-10-21 (JT push-up video: 20 done, 4 counted). Proof that a descent
+      // was OBSERVED used to need a frame strictly between the arm and depth
+      // lines. Real push-ups at phone frame rates move ~15 points a frame and
+      // that window is ~8 points wide, so honest reps skipped it and were
+      // thrown out as teleports. Any frame between the very top and the depth
+      // line now counts; a true teleport (top -> depth in one frame) has none.
+      else if (angle > downThreshold) this.descentFrames++;
     }
 
     if (direction === 'down_then_up') {
@@ -2140,9 +2338,15 @@ export class RepCounter {
         // for a teleport to qualify.
         const DESCENT_MS_FLOOR = this.config.minRepDurationMs ?? 0;
         const descentMs = (this.reachedDepthAt || now) - (this.leftTopAt || now);
-        const observed = this.transitFrames >= (this.config.transitFramesRequired ?? 1);
+        // Second clock (2026-10-21), from the last frame at the very top. The
+        // whole descent is ~2x the arm->depth slice, so its floor is ~2x too:
+        // 80 -> 150 ms. A 100 ms bounce or a one-frame teleport fails both.
+        const topDescentMs = this.lastTopAt ? (this.reachedDepthAt || now) - this.lastTopAt : 0;
+        const observed = this.transitFrames >= (this.config.transitFramesRequired ?? 1) ||
+                         this.descentFrames >= (this.config.transitFramesRequired ?? 1);
         const notATeleport = !this.leftTopAt ||
-          (observed && descentMs >= DESCENT_MS_FLOOR);
+          (observed && (descentMs >= DESCENT_MS_FLOOR ||
+                        (DESCENT_MS_FLOOR > 0 && topDescentMs >= DESCENT_MS_FLOOR * 1.875)));
         if (notATeleport) {
           this.stage = 'down';
           this.deepest = null;
@@ -2206,6 +2410,9 @@ export class RepCounter {
     this.atDepthFrames = 0;
     this.reachedDepthAt = 0;
     this.transitFrames = 0;
+    this.lastTopAt = 0;
+    this.descentFrames = 0;
+    this.topWin = []; this.topWinT = 0;
     this.partialFracs = [];
     // Re-learn where you stand - the phone or the person may have moved.
     // assist / customRep are the person's settings and survive a reset.
