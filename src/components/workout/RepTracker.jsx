@@ -160,6 +160,10 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
   // counter's live numbers stamped on, so a clip shows what the counter saw.
   const recOverlayRef    = useRef(false);   // true while a canvas recording runs
   const lastUpdateRef    = useRef(null);    // last counter.update() result, for the stamp
+  // 2026-10-22: a dedicated, fixed-size canvas for recordings. iOS recorded the
+  // live canvas at the default 300x150 (squashed), because the live canvas is
+  // resized every frame. This one is sized once, before captureStream().
+  const recCanvasRef     = useRef(null);
   const recChunksRef     = useRef([]);
   const recAudioRef      = useRef(null);   // the mic track, if sound was on
   const recTimerRef      = useRef(null);
@@ -412,6 +416,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     if (recTimerRef.current) { clearInterval(recTimerRef.current); recTimerRef.current = null; }
     recorderRef.current = null;
     recOverlayRef.current = false;
+    recCanvasRef.current = null;
     setRecording(false);
   }, []);
 
@@ -437,9 +442,17 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     try {
       let canvasTrack = null;
       try {
-        const cs = canvasRef.current?.captureStream?.(30);
+        const live = canvasRef.current;
+        const cw = live?.width || 390, ch = live?.height || 700;
+        const k = Math.min(2, 1080 / Math.max(cw, 1));          // ~2x the screen, <= 1080 wide
+        const rc = document.createElement("canvas");
+        rc.width = Math.round(cw * k / 2) * 2;                    // even sizes for H.264
+        rc.height = Math.round(ch * k / 2) * 2;
+        recCanvasRef.current = rc;
+        const cs = rc.captureStream?.(30);
         canvasTrack = cs?.getVideoTracks?.()[0] || null;
-      } catch (_) { canvasTrack = null; }
+        if (!canvasTrack) recCanvasRef.current = null;
+      } catch (_) { canvasTrack = null; recCanvasRef.current = null; }
       const tracks = [canvasTrack || videoTrack.clone()];
       recOverlayRef.current = !!canvasTrack;
       if (recWithSound) {
@@ -460,6 +473,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
         try { tracks[0].stop(); } catch (_) {}
         tracks[0] = videoTrack.clone();
         recOverlayRef.current = false;
+        recCanvasRef.current = null;
         mixed = new MediaStream(tracks);
         rec = new MediaRecorder(mixed, mimeType ? { mimeType } : undefined);
       }
@@ -678,8 +692,14 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     }
     // Recording stamp: the counter's own numbers, burned into the clip. The
     // on-screen HUD is HTML over the canvas, so it never reaches the recording.
-    if (recOverlayRef.current) {
+    const rc = recCanvasRef.current;
+    if (recOverlayRef.current && rc) {
       try {
+        // Copy the live frame (camera + skeleton) to the fixed-size recording
+        // canvas, then stamp it there only - the live screen stays clean.
+        const rctx = rc.getContext("2d");
+        rctx.drawImage(canvas, 0, 0, rc.width, rc.height);
+        const ctx = rctx, sW = rc.width, sH = rc.height;
         const u = lastUpdateRef.current || {};
         const f = (v) => (typeof v === "number" && !Number.isNaN(v) ? Math.round(v) : "--");
         const lines = [
