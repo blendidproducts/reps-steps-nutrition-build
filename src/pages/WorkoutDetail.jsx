@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+// Weights + volume (2026-10-27)
+import { exerciseVolumeLbs, convert, fmtNum, getWeightUnit } from "@/lib/weights";
 import { WorkoutSession } from "@/entities/WorkoutSession";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -259,7 +261,21 @@ export default function WorkoutDetail() {
                             {formatTime(exercise.time_spent)}
                           </Badge>
                         )}
+                        {exerciseVolumeLbs(exercise) > 0 && (
+                          <Badge variant="secondary" className="bg-amber-600/20 text-amber-300 border-amber-500/30">
+                            {fmtNum(Math.round(convert(exerciseVolumeLbs(exercise), 'lb', getWeightUnit())))} {getWeightUnit()} volume
+                          </Badge>
+                        )}
                       </div>
+                      {exercise.sets?.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {exercise.sets.map((st, si) => (
+                            <span key={si} className="text-xs bg-gray-900 rounded px-2 py-1 text-gray-300">
+                              Set {si + 1}: <b className="text-white">{st.reps}</b>{st.weight > 0 ? <> × <b className="text-amber-300">{fmtNum(st.weight)} {st.unit}</b></> : " · BW"}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="text-right">
                       <span className="text-2xl font-bold text-brand-blue">#{index + 1}</span>

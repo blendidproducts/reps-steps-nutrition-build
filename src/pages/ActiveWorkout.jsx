@@ -19,6 +19,9 @@ import { matchExercise } from "@/lib/exerciseTracking";
 import { normName, findExerciseRecord } from "@/lib/exerciseNameMatch";
 import RestScreen from "@/components/workout/RestScreen";
 import { fullImg } from "@/lib/imgOpt";
+// Weights + volume (2026-10-27)
+import WeightInput from "@/components/workout/WeightInput";
+import { getWeightUnit, setWeightUnit, getLastWeight, rememberWeight, buildExercisesWithSets } from "@/lib/weights";
 import ActiveRecoveryScreen from "@/components/workout/ActiveRecoveryScreen";
 import {
   SupersetTransitionModal, AchievementPopup, VideoModal, ThreeDViewModal,
@@ -62,6 +65,9 @@ export default function ActiveWorkout() {
   const [elapsedTimer, setElapsedTimer] = useState(0);
   const [currentReps, setCurrentReps] = useState(0);
   const [repInput, setRepInput] = useState("");
+  // Added weight for the current set (0 = bodyweight). Each finished set is
+  // logged on its exercise as set_log [{reps, weight, unit}] for volume.
+  const [setWeight, setSetWeight] = useState({ weight: 0, unit: getWeightUnit() });
   const [showRepTracker, setShowRepTracker] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState(null);
   const [totalReps, setTotalReps] = useState(0);
@@ -219,7 +225,7 @@ export default function ActiveWorkout() {
     // currentSet was shared by the whole superset chain, so linking a superset
     // MID-workout made a solo set already done "steal" a round from the partner
     // (user saw only 2 of 3 rounds). Each exercise now tracks its own sets.
-    updatedExercises[currentExerciseIndex] = { ...updatedExercises[currentExerciseIndex], completed_sets: (updatedExercises[currentExerciseIndex].completed_sets || 0) + 1 };
+    updatedExercises[currentExerciseIndex] = { ...logSet(updatedExercises[currentExerciseIndex], currentReps), completed_sets: (updatedExercises[currentExerciseIndex].completed_sets || 0) + 1 };
     setWorkout({ ...workout, exercises: updatedExercises });
 
     if (currentExercise.superset_with_next && currentExerciseIndex < updatedExercises.length - 1) { setIsSupersetTransition(true); return; }
@@ -464,6 +470,27 @@ export default function ActiveWorkout() {
 
   const pauseWorkout = () => setIsPaused(!isPaused);
 
+  // Weight box default: this exercise's previous set → last weight ever used → blank.
+  const curExName = workout?.exercises?.[currentExerciseIndex]?.exercise_name;
+  useEffect(() => {
+    const ex = workout?.exercises?.[currentExerciseIndex];
+    if (!ex) return;
+    const prev = (ex.set_log || [])[(ex.set_log || []).length - 1];
+    setSetWeight(prev ? { weight: prev.weight || 0, unit: prev.unit || getWeightUnit() } : (getLastWeight(ex.exercise_name) || { weight: 0, unit: getWeightUnit() }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [curExName, currentExerciseIndex, currentSet]);
+
+  const changeSetWeight = (w, u) => {
+    setSetWeight({ weight: w, unit: u }); setWeightUnit(u);
+    const ex = workout?.exercises?.[currentExerciseIndex];
+    if (ex) rememberWeight(ex.exercise_name, w, u);
+  };
+  // Append the set just finished to its exercise's set_log (reps sets only).
+  const logSet = (ex, reps) => {
+    if (!ex || ex.metric === 'time' || !(reps > 0)) return ex;
+    return { ...ex, set_log: [...(ex.set_log || []), { reps, weight: setWeight.weight || 0, unit: setWeight.unit }] };
+  };
+
   const stopWorkout = async () => {
     localStorage.removeItem('activeWorkoutState');
     const ce = workout.exercises[currentExerciseIndex];
@@ -475,6 +502,14 @@ export default function ActiveWorkout() {
     if (gpsWatchId) { navigator.geolocation.clearWatch(gpsWatchId); setGpsWatchId(null); }
     if (voiceRecognition && isVoiceActive) { try { voiceRecognition.stop(); setIsVoiceActive(false); } catch(e){} }
     if (sessionStartTime) {
+      // The set in progress (or the final set when nextExercise called us with
+      // this render's state) isn't in set_log yet.
+      const exList = workout.exercises.map((ex, i) => (i === currentExerciseIndex && ce?.metric === 'reps' && currentReps > 0) ? logSet(ex, currentReps) : ex);
+      const { exercises: withSets, totalVolumeLbs } = buildExercisesWithSets(
+        exList.filter(ex => !ex.is_cardio_interval && ex.category !== 'warmup' && ex.metric !== 'time')
+          .flatMap(ex => (ex.set_log || []).map(st => ({ name: ex.exercise_name, reps: st.reps, unit: 'reps', weight: st.weight, weightUnit: st.unit })))
+      );
+      const setsByName = Object.fromEntries(withSets.map(e => [e.exercise_name, e]));
       const calcReps = workout.exercises.filter(ex => ex.metric === 'reps' && ex.category !== 'warmup').reduce((s, ex) => s + (ex.completed_reps || 0), 0);
       const finalSteps = combinedSteps;
       const walk = cardioIntervals.filter(c => c.type === 'walk'), jog = cardioIntervals.filter(c => c.type === 'jog'), sprint = cardioIntervals.filter(c => c.type === 'sprint');
@@ -482,7 +517,13 @@ export default function ActiveWorkout() {
       const cal = Math.round(mins * 5 + calcReps * 0.15 + walk.reduce((s,c) => s+c.time,0)/60*2 + jog.reduce((s,c) => s+c.time,0)/60*5 + sprint.reduce((s,c) => s+c.time,0)/60*10 + (workout.weight_added_lbs ? workout.weight_added_lbs * 0.02 * mins : 0));
       await base44.entities.WorkoutSession.create({
         workout_id: workout.id, start_time: sessionStartTime.toISOString(), end_time: new Date().toISOString(), duration: timer, total_reps: calcReps,
-        exercises_completed: workout.exercises.filter(ex => !ex.is_cardio_interval && ex.category !== 'warmup').map(ex => ({ exercise_name: ex.exercise_name, reps_completed: ex.metric === 'reps' ? (ex.completed_reps || 0) : 0, time_spent: ex.metric === 'time' ? (ex.completed_time || 0) : 0 })),
+        exercises_completed: workout.exercises.filter(ex => !ex.is_cardio_interval && ex.category !== 'warmup').map(ex => {
+          const row = { exercise_name: ex.exercise_name, reps_completed: ex.metric === 'reps' ? (ex.completed_reps || 0) : 0, time_spent: ex.metric === 'time' ? (ex.completed_time || 0) : 0 };
+          const ws = setsByName[ex.exercise_name];
+          if (ws) { row.sets = ws.sets; if (ws.volume_lbs) row.volume_lbs = ws.volume_lbs; delete setsByName[ex.exercise_name]; }
+          return row;
+        }),
+        total_volume_lbs: totalVolumeLbs,
         calories_burned: cal, weight_added_lbs: workout.weight_added_lbs || 0, cardio_intervals: cardioIntervals,
         cardio_analytics: {
           walk: { count: walk.length, total_time: walk.reduce((s,c) => s+c.time,0), avg_time: walk.length ? Math.round(walk.reduce((s,c) => s+c.time,0)/walk.length) : 0, total_steps: Math.round(walk.reduce((s,c) => s+(c.time/60)*110,0)), total_distance_miles: Math.round(walk.reduce((s,c) => s+(c.gps_distance||(c.time/3600)*3.5),0)*100)/100 },
@@ -669,6 +710,11 @@ export default function ActiveWorkout() {
                       <Input type="number" value={repInput} onChange={(e) => handleRepInput(e.target.value)} placeholder="Reps" className="w-24 bg-gray-800 border-gray-700 text-white text-center text-lg font-bold h-14" />
                       <Button size="lg" variant="outline" onClick={addRep} className="flex-1 h-14 bg-gray-800 border-gray-700 text-white text-base font-bold">+1</Button>
                     </div>
+                    {currentExercise.category !== 'warmup' && (
+                      <div className="mt-3 w-full">
+                        <WeightInput value={setWeight.weight} unit={setWeight.unit} onChange={changeSetWeight} label="Weight this set" />
+                      </div>
+                    )}
                     <div className="flex gap-2 mt-3 w-full">
                       <Button size="lg" variant="outline" onClick={() => { const n = Math.max(0,currentReps-5); const d = n-currentReps; setCurrentReps(n); setTotalReps(p => p+d); const ue = [...workout.exercises]; ue[currentExerciseIndex].completed_reps = Math.max(0,(ue[currentExerciseIndex].completed_reps||0)+d); setWorkout({...workout, exercises: ue}); }} className="flex-1 h-12 bg-gray-800 border-gray-700 text-base font-bold">-5</Button>
                       <Button size="lg" variant="outline" onClick={() => { const n = currentReps+5; setCurrentReps(n); setTotalReps(p => p+5); const ue = [...workout.exercises]; ue[currentExerciseIndex].completed_reps = (ue[currentExerciseIndex].completed_reps||0)+5; setWorkout({...workout, exercises: ue}); }} className="flex-1 h-12 bg-gray-800 border-gray-700 text-base font-bold">+5</Button>

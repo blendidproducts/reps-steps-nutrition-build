@@ -12,6 +12,10 @@
  *
  * A custom movement has no external standard: it is counted against your own
  * demo and is never offered in a fitness test or a leaderboard.
+ *
+ * Weights (2026-10-27): Start opens a weight box (blank = bodyweight, last
+ * weight remembered per movement). A finished set is saved as a WorkoutSession
+ * with its weight, so it shows in History with its volume (weight x reps).
  */
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -23,6 +27,9 @@ import {
   loadCustomMovements, saveCustomMovement, deleteCustomMovement,
 } from "@/lib/movementTemplates";
 import { ScanLine, Play, Trash2, ArrowLeft, Circle, Square, RotateCcw, Check, AlertTriangle, X } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import WeightInput, { weightLabel } from "@/components/workout/WeightInput";
+import { getWeightUnit, setWeightUnit, getLastWeight, rememberWeight, buildExercisesWithSets, fmtNum } from "@/lib/weights";
 
 const MEDIAPIPE_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
 const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task";
@@ -196,6 +203,42 @@ export default function MovementTrainer() {
   const [name, setName] = useState("");
   const [active, setActive] = useState(null);         // movement being counted
   const [lastCount, setLastCount] = useState(null);
+  const [armed, setArmed] = useState(null);           // id whose Start was tapped (weight box open)
+  const [weight, setWeight] = useState({ weight: 0, unit: getWeightUnit() });
+  const startedAtRef = useRef(0);
+
+  const arm = (m) => {
+    setLastCount(null);
+    setArmed(m.id);
+    setWeight(getLastWeight(m.name) || { weight: 0, unit: getWeightUnit() });
+  };
+  const changeWeight = (w, u) => {
+    const next = { weight: w, unit: u };
+    setWeight(next); setWeightUnit(u);
+    const m = saved.find((x) => x.id === armed);
+    if (m) rememberWeight(m.name, w, u);
+  };
+
+  // Save the set to History (non-fatal if it fails or the user is offline).
+  const saveSet = async (name, n, w) => {
+    if (!(n > 0)) return;
+    try {
+      const { exercises, totalVolumeLbs } = buildExercisesWithSets([
+        { name, reps: n, unit: "reps", weight: w.weight || 0, weightUnit: w.unit },
+      ]);
+      const dur = Math.max(1, Math.round((Date.now() - (startedAtRef.current || Date.now())) / 1000));
+      await base44.entities.WorkoutSession.create({
+        start_time: new Date(Date.now() - dur * 1000).toISOString(),
+        end_time: new Date().toISOString(),
+        duration: dur,
+        total_reps: n,
+        calories_burned: Math.round((dur / 60) * 6),
+        exercises_completed: exercises,
+        total_volume_lbs: totalVolumeLbs,
+        notes: "Movement Trainer",
+      });
+    } catch (_) { /* the on-screen count is still shown */ }
+  };
 
   const onRecorded = useCallback((r) => { setResult(r); setName(""); setView("review"); }, []);
 
@@ -221,7 +264,12 @@ export default function MovementTrainer() {
         customConfig={makeCustomExerciseConfig(active.template, { id: active.id, name: active.name })}
         targetReps={0}
         defaultFacingMode="user"
-        onComplete={(n) => { releaseSharedCamera(); setLastCount({ name: active.name, n }); setActive(null); setView("list"); }}
+        onComplete={(n) => {
+          releaseSharedCamera();
+          setLastCount({ name: active.name, n, weight: weight.weight, unit: weight.unit });
+          saveSet(active.name, n, weight);
+          setActive(null); setArmed(null); setView("list");
+        }}
         onClose={() => { releaseSharedCamera(); setActive(null); setView("list"); }}
       />
     );
@@ -283,6 +331,10 @@ export default function MovementTrainer() {
         {lastCount && view === "list" && (
           <div className="rounded-xl border border-green-500/40 bg-green-500/10 px-4 py-3 mb-4 text-sm">
             <span className="font-bold text-green-300">{lastCount.n}</span> reps of {lastCount.name}
+            {lastCount.weight > 0 && (
+              <> @ {weightLabel(lastCount.weight, lastCount.unit)} = <span className="font-bold text-amber-300">{fmtNum(lastCount.weight * lastCount.n)} {lastCount.unit}</span> volume</>
+            )}
+            {lastCount.n > 0 && <span className="block text-xs text-gray-400 mt-0.5">Saved to History</span>}
           </div>
         )}
 
@@ -300,7 +352,8 @@ export default function MovementTrainer() {
         ) : (
           <ul className="space-y-2">
             {saved.map((m) => (
-              <li key={m.id} className="rounded-xl bg-[#0d1524] border border-gray-800 p-3 flex items-center gap-3">
+              <li key={m.id} className="rounded-xl bg-[#0d1524] border border-gray-800 p-3">
+                <div className="flex items-center gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="font-bold truncate">{m.name}</p>
                   <p className="text-xs text-gray-400 truncate">{m.template.describe} · {m.template.side === "both" ? "both sides" : `${m.template.side} side`}</p>
@@ -309,10 +362,20 @@ export default function MovementTrainer() {
                   className="w-11 h-11 rounded-lg border border-gray-700 flex items-center justify-center text-gray-400 active:text-red-400">
                   <Trash2 className="w-4 h-4" />
                 </button>
-                <button onClick={() => { setLastCount(null); setActive(m); setView("count"); }}
+                <button onClick={() => (armed === m.id ? setArmed(null) : arm(m))}
                   className="min-h-[44px] px-4 rounded-lg bg-[#00a9ff] text-white font-black flex items-center gap-1.5">
                   <Play className="w-4 h-4 fill-white" /> Start
                 </button>
+                </div>
+                {armed === m.id && (
+                  <div className="mt-3 pt-3 border-t border-gray-800">
+                    <WeightInput value={weight.weight} unit={weight.unit} onChange={changeWeight} />
+                    <button onClick={() => { startedAtRef.current = Date.now(); setActive(m); setView("count"); }}
+                      className="mt-2 w-full min-h-[48px] rounded-xl bg-green-600 text-white font-black flex items-center justify-center gap-1.5">
+                      <Play className="w-4 h-4 fill-white" /> Go{weight.weight > 0 ? ` — ${weightLabel(weight.weight, weight.unit)}` : " — bodyweight"}
+                    </button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

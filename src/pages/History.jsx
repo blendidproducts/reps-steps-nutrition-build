@@ -15,6 +15,9 @@ import MobileDrawerSelect from "@/components/MobileDrawerSelect";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import PullToRefresh from "@/components/PullToRefresh";
+// Weights + volume (2026-10-27)
+import LiftingVolume from "@/components/workout/LiftingVolume";
+import { sessionVolumeLbs, convert, fmtNum, getWeightUnit } from "@/lib/weights";
 
 export default function History() {
   const [sessions, setSessions] = useState([]);
@@ -407,6 +410,9 @@ export default function History() {
         </Card>
 
 
+        {/* Lifting volume — only renders once a weighted set exists */}
+        <LiftingVolume sessions={sessions} />
+
         {/* Workout Sessions */}
         <div className="space-y-4">
           <h2 className="text-2xl font-bold text-white">Recent Workouts</h2>
@@ -454,6 +460,12 @@ export default function History() {
                             <TrendingUp className="w-4 h-4 text-red-400" />
                             <span className="text-sm">{Math.round(session.calories_burned || 0)} cal</span>
                           </div>
+                          {sessionVolumeLbs(session) > 0 && (
+                             <div className="flex items-center gap-2">
+                                <span className="font-bold text-xs text-amber-400">VOL:</span>
+                                <span className="text-sm">{fmtNum(Math.round(convert(sessionVolumeLbs(session), 'lb', getWeightUnit())))} {getWeightUnit()}</span>
+                             </div>
+                          )}
                           {session.weight_added_lbs > 0 && (
                              <div className="flex items-center gap-2">
                                 <span className="font-bold text-xs text-gray-400">VEST:</span>

@@ -33,9 +33,29 @@
           },
           "time_spent": {
             "type": "number"
+          },
+          "sets": {
+            "type": "array",
+            "description": "Per-set log: counted reps and added weight (0 = bodyweight)",
+            "items": {
+              "type": "object",
+              "properties": {
+                "reps": { "type": "number" },
+                "weight": { "type": "number" },
+                "unit": { "type": "string", "enum": ["lb", "kg"] }
+              }
+            }
+          },
+          "volume_lbs": {
+            "type": "number",
+            "description": "Sum of weight x reps for this exercise, in lbs"
           }
         }
       }
+    },
+    "total_volume_lbs": {
+      "type": "number",
+      "description": "Training volume for the session: sum of weight x counted reps, in lbs (bodyweight sets add 0)"
     },
     "total_reps": {
       "type": "number",

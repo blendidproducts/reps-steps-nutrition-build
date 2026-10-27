@@ -26,6 +26,9 @@ import { matchExercise } from "@/lib/exerciseTracking";
 import StepTracker from "@/components/StepTracker";
 import BuildStamp from "@/components/BuildStamp";
 import { thumbImg, mediumImg } from "@/lib/imgOpt";
+// Weights + volume (2026-10-27): per-set added weight, volume = weight x counted reps.
+import WeightInput, { weightLabel } from "@/components/workout/WeightInput";
+import { getWeightUnit, setWeightUnit, getLastWeight, rememberWeight, buildExercisesWithSets, setVolume, toLbs, convert, fmtNum, parseWeight } from "@/lib/weights";
 import {
   Brain, Timer, Zap, ChevronRight, ChevronLeft,
   Trophy, RotateCcw, X, Play, Clock, Shuffle,
@@ -120,7 +123,7 @@ function formatTime(s) {
 }
 
 // ── Exercise Preview Card — shown before each exercise starts ─────────────────
-function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl, onActiveRecovery }) {
+function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl, onActiveRecovery, weight = 0, weightUnit = "lb", onWeightChange }) {
   // Countdown only runs AFTER user presses START NOW — never auto-launches
   const [started, setStarted] = useState(false);
   const [count,   setCount]   = useState(3);
@@ -196,6 +199,17 @@ function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl, o
               {count > 0 ? count : "GO!"}
             </motion.div>
           </AnimatePresence>
+        )}
+
+        {/* Added weight for this set. Prefilled with the last weight used for
+            this exercise; blank = bodyweight. Hidden once the countdown runs. */}
+        {onWeightChange && !started && (
+          <div className="w-full max-w-xs z-10 bg-[#111]/95 border border-amber-500/30 rounded-2xl p-3">
+            <WeightInput value={weight} unit={weightUnit} onChange={onWeightChange} />
+          </div>
+        )}
+        {onWeightChange && started && weight > 0 && (
+          <div className="z-10 text-amber-300 text-sm font-bold">{weightLabel(weight, weightUnit)}</div>
         )}
 
         {/* Exercise image */}
@@ -829,8 +843,14 @@ function sumByUnit(scores) {
 }
 
 // ── Completion / Report screen ────────────────────────────────────────────────
-function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exerciseCount, onRestart, onExit, onViewAchievements, onAdjustReps }) {
+function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exerciseCount, onRestart, onExit, onViewAchievements, onAdjustReps, onAdjustWeight }) {
   const totalReps = sumReps(scores);
+  // Volume (weight x counted reps), shown in the person's chosen unit. Sets
+  // logged in the other unit are converted; bodyweight sets add nothing.
+  const dispUnit = getWeightUnit();
+  const volumeOf = (s) => convert(setVolume({ reps: s.reps, weight: s.weight, scoreUnit: s.unit ?? 'reps' }), s.weightUnit === 'kg' ? 'kg' : 'lb', dispUnit);
+  const totalVolume = (scores || []).reduce((a, s) => a + volumeOf(s), 0);
+  const [editingWeight, setEditingWeight] = useState(null); // score index being edited
   const unitTotals = sumByUnit(scores);   // e.g. { ft: 40 } from bear crawls
   const completedSets = totalSets;
   // Estimate calories: ~8 cal/min HIIT
@@ -841,7 +861,7 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
   const byExercise = {};
   scores.forEach((s, i) => {
     if (!byExercise[s.name]) byExercise[s.name] = [];
-    byExercise[s.name].push({ reps: s.reps, idx: i, unit: s.unit ?? 'reps' });
+    byExercise[s.name].push({ reps: s.reps, idx: i, unit: s.unit ?? 'reps', weight: s.weight || 0, weightUnit: s.weightUnit === 'kg' ? 'kg' : 'lb' });
   });
 
   // Round 27: share the session as an image. Built from the numbers already on
@@ -861,10 +881,12 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
     kcal: calEstimate,
     exerciseCount,
     setCount: completedSets,
-    exercises: Object.entries(byExercise).map(([name, repsPerSet]) => ({
+    // Sets are objects since Round 28 ({reps, idx, unit, ...}); the card wants
+    // plain rep counts, so map them (it used to print "[object Object]").
+    exercises: Object.entries(byExercise).map(([name, sets]) => ({
       name,
-      total: repsPerSet.reduce((a, b) => a + b, 0),
-      sets: repsPerSet,
+      total: sets.reduce((a, s) => a + (s.reps || 0), 0),
+      sets: sets.map((s) => s.reps || 0),
     })),
   });
 
@@ -926,6 +948,12 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
               <p className="text-gray-500 text-xs mt-0.5">Crawled</p>
             </div>
           )}
+          {totalVolume > 0 && (
+            <div className="bg-[#111] border border-amber-500/30 rounded-xl p-4 text-center col-span-2">
+              <p className="text-3xl font-black text-amber-400">{fmtNum(Math.round(totalVolume))} {dispUnit}</p>
+              <p className="text-gray-500 text-xs mt-0.5">Total Volume (weight × reps)</p>
+            </div>
+          )}
         </div>
 
         {/* Per-exercise breakdown */}
@@ -943,6 +971,7 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
               const ex = ALL_EXERCISES.find(e => e.name === name);
               const total = sets.reduce((a, s) => a + s.reps, 0);
               const u = sets[0]?.unit === 'ft' ? 'ft' : 'reps';
+              const exVol = sets.reduce((a, s) => a + volumeOf(s), 0);
               return (
                 <div key={i} className="px-4 py-3">
                   <div className="flex items-center justify-between mb-1">
@@ -950,7 +979,10 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
                       <span className="text-base">{ex?.emoji || "💪"}</span>
                       <span className="text-white text-sm font-medium">{name}</span>
                     </div>
-                    <span className="text-blue-400 font-bold text-sm">{total} {u}</span>
+                    <span className="text-right">
+                      <span className="text-blue-400 font-bold text-sm">{total} {u}</span>
+                      {exVol > 0 && <span className="block text-amber-400 text-[11px] font-bold">{fmtNum(Math.round(exVol))} {dispUnit} vol</span>}
+                    </span>
                   </div>
                   {/* Round 28: every set is correctable. The camera misses shallow
                       reps and double-counts on a wobbly tripod - this is the fix
@@ -962,6 +994,15 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
                         <span className="text-[10px] text-gray-400">Set {si + 1}</span>
                         <span className="text-[11px] text-white font-bold tabular-nums min-w-[1.6em] text-center">{s.reps}</span>
                         <span className="text-[9px] text-gray-500">{u}</span>
+                        {u === 'reps' && onAdjustWeight && (
+                          <button
+                            onClick={() => setEditingWeight(editingWeight === s.idx ? null : s.idx)}
+                            aria-label={`Weight for ${name} set ${si + 1}: ${weightLabel(s.weight, s.weightUnit)}. Tap to change.`}
+                            className={`text-[10px] font-bold px-1.5 rounded ${s.weight > 0 ? "text-amber-300 bg-amber-500/15" : "text-gray-500 bg-black/30"}`}
+                            style={{ minHeight: 24 }}>
+                            @{weightLabel(s.weight, s.weightUnit)}
+                          </button>
+                        )}
                         <button
                           onClick={() => onAdjustReps(s.idx, -1)}
                           aria-label={`Remove one rep from ${name} set ${si + 1}`}
@@ -979,6 +1020,17 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
                       </div>
                     ))}
                   </div>
+                  {sets.some(s => s.idx === editingWeight) && (() => {
+                    const s = sets.find(x => x.idx === editingWeight);
+                    return (
+                      <div className="mt-2">
+                        <WeightInput compact value={s.weight} unit={s.weightUnit}
+                          onChange={(w, wu) => onAdjustWeight(s.idx, w, wu)} />
+                        <button onClick={() => setEditingWeight(null)}
+                          className="mt-1 text-[11px] text-gray-400 underline">Done</button>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })}
@@ -992,6 +1044,9 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
             <div className="flex justify-between"><span>Exercises completed</span><span className="text-white font-semibold">{exerciseCount}</span></div>
             <div className="flex justify-between"><span>Sets completed</span><span className="text-white font-semibold">{completedSets}</span></div>
             <div className="flex justify-between"><span>Total reps</span><span className="text-white font-semibold">{totalReps}</span></div>
+            {totalVolume > 0 && (
+              <div className="flex justify-between"><span>Total volume</span><span className="text-amber-400 font-semibold">{fmtNum(Math.round(totalVolume))} {dispUnit}</span></div>
+            )}
             <div className="flex justify-between"><span>Steps during rest</span><span className="text-white font-semibold">{totalSteps}</span></div>
             <div className="flex justify-between"><span>Total time</span><span className="text-white font-semibold">{formatTime(elapsedSecs)}</span></div>
             <div className="flex justify-between"><span>Est. calories burned</span><span className="text-orange-400 font-semibold">~{calEstimate} kcal</span></div>
@@ -1367,7 +1422,11 @@ function ARTPWorkoutInner() {
   const [currentSet,     setCurrentSet]     = useState(1);
   const [countdownSecs,  setCountdownSecs]  = useState(3);
   const [timerSecs,      setTimerSecs]      = useState(45);
-  const [scores,         setScores]         = useState([]); // { name, reps, set, isSuperset }
+  const [scores,         setScores]         = useState([]); // { name, reps, set, isSuperset, unit, weight, weightUnit }
+  // Added weight for the set about to be done (0 = bodyweight). The ref is what
+  // finishExercise reads, so a timer expiry can never record a stale weight.
+  const [setWeight,      setSetWeight]      = useState({ weight: 0, unit: getWeightUnit() });
+  const setWeightRef = useRef({ weight: 0, unit: getWeightUnit() });
   const [totalSteps,     setTotalSteps]     = useState(0);
   const [elapsedSecs,    setElapsedSecs]    = useState(0);
   const [showExitSheet,  setShowExitSheet]  = useState(false);
@@ -1548,6 +1607,21 @@ function ARTPWorkoutInner() {
   // corrections can be written back. Null until the session actually saves.
   const savedSessionIdRef = useRef(null);
   const resaveTimerRef = useRef(null);
+  const pendingResaveRef = useRef(null);
+
+  const writeCorrections = async (snapshot) => {
+    if (!savedSessionIdRef.current) return;
+    try {
+      const { exercises, totalVolumeLbs } = buildExercisesWithSets(snapshot);
+      await base44.entities.WorkoutSession.update(savedSessionIdRef.current, {
+        total_reps: sumReps(snapshot),
+        exercises_completed: exercises,
+        total_volume_lbs: totalVolumeLbs,
+      });
+    } catch (_) {
+      // Non-fatal: the on-screen report is still correct for this session.
+    }
+  };
 
   // ── Save ARTP session to backend so History & Achievements track it ──────────
   // NOTE: declared BEFORE finishExercise so it is initialised when finishExercise's
@@ -1558,13 +1632,8 @@ function ARTPWorkoutInner() {
       // History, streaks and achievements.
       const totalReps = sumReps(finalScores);
       const calEstimate = Math.round((finalElapsed / 60) * 8);
-      const exercisesCompleted = Object.entries(
-        finalScores.reduce((acc, s) => {
-          if (!acc[s.name]) acc[s.name] = 0;
-          acc[s.name] += s.reps || 0;
-          return acc;
-        }, {})
-      ).map(([name, reps]) => ({ exercise_name: name, reps_completed: reps, time_spent: 0 }));
+      // Per-set reps + weight, and volume in lbs (weights.js).
+      const { exercises: exercisesCompleted, totalVolumeLbs } = buildExercisesWithSets(finalScores);
 
       // Round 28: keep the created record's id so rep corrections made on the
       // completion screen can be written back instead of being display-only.
@@ -1575,6 +1644,7 @@ function ARTPWorkoutInner() {
         total_reps: totalReps,
         calories_burned: calEstimate,
         exercises_completed: exercisesCompleted,
+        total_volume_lbs: totalVolumeLbs,
         cardio_analytics: {
           total_steps: finalSteps,
           total_distance_miles: Math.round((finalSteps / 2100) * 100) / 100,
@@ -1583,7 +1653,15 @@ function ARTPWorkoutInner() {
           sprint: { count: 0, total_time: 0, total_steps: 0, longest_sprint: 0, shortest_sprint: 0 },
         },
       });
-      if (created && created.id) savedSessionIdRef.current = created.id;
+      if (created && created.id) {
+        savedSessionIdRef.current = created.id;
+        // A correction made while the create was in flight.
+        if (pendingResaveRef.current) {
+          const snap = pendingResaveRef.current;
+          pendingResaveRef.current = null;
+          writeCorrections(snap);
+        }
+      }
 
       // Update streak
       const { updateStreak } = await import('@/components/services/streakManager');
@@ -1597,7 +1675,8 @@ function ARTPWorkoutInner() {
   // ── Advance / finish helpers ─────────────────────────────────────
   const finishExercise = useCallback((reps) => {
     clearInterval(timerRef.current);
-    const newScore = { name: currentEx.name, reps: reps || 0, set: currentSet, isSuperset: supersets.has(currentEx.name), unit: unitFor(currentEx.name) };
+    const w = unitFor(currentEx.name) === 'reps' ? setWeightRef.current : { weight: 0, unit: setWeightRef.current.unit };
+    const newScore = { name: currentEx.name, reps: reps || 0, set: currentSet, isSuperset: supersets.has(currentEx.name), unit: unitFor(currentEx.name), weight: w.weight || 0, weightUnit: w.unit };
     setScores(prev => {
       const updated = [...prev, newScore];
       if (isLastEx && currentSet >= totalSets) {
@@ -1770,6 +1849,15 @@ function ARTPWorkoutInner() {
    * save only fires on the final set of the final exercise), so those need no
    * write-back at all — only the completion-screen path does.
    */
+  // Debounced write-back of corrections (reps or weight). If the session row
+  // doesn't exist yet (create still in flight), the latest scores are parked
+  // and saveArtpSession writes them as soon as it has the id.
+  const scheduleResave = useCallback((snapshot) => {
+    if (!savedSessionIdRef.current) { pendingResaveRef.current = snapshot; return; }
+    clearTimeout(resaveTimerRef.current);
+    resaveTimerRef.current = setTimeout(() => { writeCorrections(snapshot); }, 900);
+  }, []);
+
   const adjustReps = useCallback((scoreIndex, delta) => {
     setScores(prev => {
       if (scoreIndex < 0 || scoreIndex >= prev.length) return prev;
@@ -1779,34 +1867,51 @@ function ARTPWorkoutInner() {
       if (reps === cur.reps) return prev;       // already at 0, nothing changed
       next[scoreIndex] = { ...cur, reps };
 
-      // Debounced write-back. Only meaningful once the row exists.
-      if (savedSessionIdRef.current) {
-        clearTimeout(resaveTimerRef.current);
-        const snapshot = next;
-        resaveTimerRef.current = setTimeout(async () => {
-          try {
-            const totalReps = sumReps(snapshot);
-            const exercisesCompleted = Object.entries(
-              snapshot.reduce((acc, s) => {
-                if (!acc[s.name]) acc[s.name] = 0;
-                acc[s.name] += s.reps || 0;
-                return acc;
-              }, {})
-            ).map(([name, r]) => ({ exercise_name: name, reps_completed: r, time_spent: 0 }));
-            await base44.entities.WorkoutSession.update(savedSessionIdRef.current, {
-              total_reps: totalReps,
-              exercises_completed: exercisesCompleted,
-            });
-          } catch (_) {
-            // Non-fatal: the on-screen report is still correct for this session.
-          }
-        }, 900);
-      }
+      scheduleResave(next);
       return next;
     });
-  }, []);
+  }, [scheduleResave]);
+
+  // Weights: change the added weight of one finished set (completion report).
+  const adjustWeight = useCallback((scoreIndex, weight, unit) => {
+    setWeightUnit(unit);
+    setScores(prev => {
+      if (scoreIndex < 0 || scoreIndex >= prev.length) return prev;
+      const cur = prev[scoreIndex];
+      const w = parseWeight(weight);
+      if (w === (cur.weight || 0) && unit === cur.weightUnit) return prev;
+      const next = [...prev];
+      next[scoreIndex] = { ...cur, weight: w, weightUnit: unit };
+      rememberWeight(cur.name, w, unit);
+      scheduleResave(next);
+      return next;
+    });
+  }, [scheduleResave]);
 
   useEffect(() => () => clearTimeout(resaveTimerRef.current), []);
+
+  // ── Weights: what the preview card's weight box starts at ────────────
+  // Same exercise earlier in THIS workout → that weight (set 2 starts where
+  // set 1 was). Otherwise the last weight ever used for it. Otherwise blank.
+  const changeSetWeight = useCallback((weight, unit) => {
+    const w = { weight: parseWeight(weight), unit: unit === 'kg' ? 'kg' : 'lb' };
+    setWeightRef.current = w;
+    setSetWeight(w);
+    setWeightUnit(w.unit);
+    if (currentEx) rememberWeight(currentEx.name, w.weight, w.unit);
+  }, [currentEx]);
+
+  useEffect(() => {
+    if (phase !== "preview" || !currentEx) return;
+    let w = null;
+    for (let i = scores.length - 1; i >= 0; i--) {
+      if (scores[i].name === currentEx.name && scores[i].weightUnit) { w = { weight: scores[i].weight || 0, unit: scores[i].weightUnit }; break; }
+    }
+    if (!w) { const last = getLastWeight(currentEx.name); w = last || { weight: 0, unit: getWeightUnit() }; }
+    setWeightRef.current = w;
+    setSetWeight(w);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, currentEx?.name, currentSet]);
 
   const handleEndWorkout = () => { removePauseReason("manual"); setShowExitSheet(true); };
 
@@ -1816,7 +1921,8 @@ function ARTPWorkoutInner() {
     setShowExitSheet(false);
     setScores(prev => {
       const extra = (currentEx && pendingReps.current > 0)
-        ? [{ name: currentEx.name, reps: pendingReps.current, set: currentSet, isSuperset: supersets.has(currentEx.name), unit: unitFor(currentEx.name) }]
+        ? [{ name: currentEx.name, reps: pendingReps.current, set: currentSet, isSuperset: supersets.has(currentEx.name), unit: unitFor(currentEx.name),
+             weight: unitFor(currentEx.name) === 'reps' ? (setWeightRef.current.weight || 0) : 0, weightUnit: setWeightRef.current.unit }]
         : [];
       const finalScores = [...prev, ...extra];
       // Save to backend (non-blocking)
@@ -2330,6 +2436,9 @@ function ARTPWorkoutInner() {
             imageUrl={exImageMapRef.current[currentEx?.name?.toLowerCase()]}
             onStart={() => { setPhase("working"); }}
             onActiveRecovery={() => { addPauseReason("recovery"); speak("Active recovery mode", 1.05, 1.05); }}
+            weight={setWeight.weight}
+            weightUnit={setWeight.unit}
+            onWeightChange={currentEx && unitFor(currentEx.name) === 'reps' ? changeSetWeight : undefined}
           />
           <AnimatePresence>
             {showMidRest && (
@@ -2383,6 +2492,7 @@ function ARTPWorkoutInner() {
           onExit={() => navigate(createPageUrl("PresetPrograms"))}
           onViewAchievements={() => navigate(createPageUrl("Achievements"))}
           onAdjustReps={adjustReps}
+          onAdjustWeight={adjustWeight}
         />,
         document.body
       )}
