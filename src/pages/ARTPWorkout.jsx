@@ -22,6 +22,8 @@ import { User } from "@/entities/User";
 import { checkIsPro } from "@/lib/proCheck";
 import { motion, AnimatePresence } from "framer-motion";
 import RepTracker, { releaseSharedCamera } from "@/components/workout/RepTracker";
+// Auto Track (2026-10-29): live camera on the get-ready card, hands-free start.
+import { AutoTrackCamera, ClipTray, getAutoTrack, setAutoTrack as saveAutoTrack } from "@/components/workout/AutoTrack";
 import { matchExercise } from "@/lib/exerciseTracking";
 import StepTracker from "@/components/StepTracker";
 import BuildStamp from "@/components/BuildStamp";
@@ -123,7 +125,10 @@ function formatTime(s) {
 }
 
 // ── Exercise Preview Card — shown before each exercise starts ─────────────────
-function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl, onActiveRecovery, weight = 0, weightUnit = "lb", onWeightChange }) {
+function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl, onActiveRecovery, weight = 0, weightUnit = "lb", onWeightChange, autoTrack = false, onToggleAutoTrack, autoArmed = true }) {
+  // Auto Track only applies to moves the camera can count.
+  const camTrackable = (() => { try { return matchExercise(exercise?.name)?.trackable !== false; } catch (_) { return false; } })();
+  const showAutoCam = autoTrack && camTrackable;
   // Countdown only runs AFTER user presses START NOW — never auto-launches
   const [started, setStarted] = useState(false);
   const [count,   setCount]   = useState(3);
@@ -201,6 +206,24 @@ function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl, o
           </AnimatePresence>
         )}
 
+        {/* Auto Track switch — right under START so it can be flipped mid-workout */}
+        {onToggleAutoTrack && camTrackable && !started && (
+          <button onClick={onToggleAutoTrack}
+            className={`z-10 w-full max-w-xs flex items-center justify-between rounded-xl border px-3 py-2 ${autoTrack ? "border-green-500/50 bg-green-500/10" : "border-gray-700 bg-[#111]/95"}`}
+            style={{ minHeight: 44 }}>
+            <span className="flex items-center gap-2 text-xs font-bold text-white">
+              <Camera className={`w-4 h-4 ${autoTrack ? "text-green-400" : "text-gray-500"}`} />
+              Auto Track <span className="text-gray-400 font-medium">{autoTrack ? "· starts when you're in frame" : "· off"}</span>
+            </span>
+            <span className={`w-10 h-6 rounded-full p-0.5 transition-colors ${autoTrack ? "bg-green-500" : "bg-gray-700"}`}>
+              <span className={`block w-5 h-5 rounded-full bg-white transition-transform ${autoTrack ? "translate-x-4" : ""}`} />
+            </span>
+          </button>
+        )}
+
+        {/* Live camera: get into position; the countdown starts on its own. */}
+        {showAutoCam && !started && <AutoTrackCamera onReady={handleStart} armed={autoArmed} />}
+
         {/* Added weight for this set. Prefilled with the last weight used for
             this exercise; blank = bodyweight. Hidden once the countdown runs. */}
         {onWeightChange && !started && (
@@ -212,8 +235,8 @@ function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl, o
           <div className="z-10 text-amber-300 text-sm font-bold">{weightLabel(weight, weightUnit)}</div>
         )}
 
-        {/* Exercise image */}
-        {imageUrl && (
+        {/* Exercise image (the live camera takes its place under Auto Track) */}
+        {imageUrl && !(showAutoCam && !started) && (
           <div className="w-full max-w-xs rounded-2xl overflow-hidden border border-gray-700 z-10"
             style={{ maxHeight: 180 }}>
             <img src={mediumImg(imageUrl)} alt={exercise.name} decoding="async" className="w-full h-full object-cover" />
@@ -231,7 +254,7 @@ function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl, o
           {!started && (
             <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-xl px-3 py-2">
               <Target className="w-4 h-4 text-green-400 flex-shrink-0" />
-              <p className="text-green-300 text-xs font-medium">Get into position, then press START NOW</p>
+              <p className="text-green-300 text-xs font-medium">{showAutoCam ? "Get into position — it starts by itself, or press START NOW" : "Get into position, then press START NOW"}</p>
             </div>
           )}
         </div>
@@ -243,6 +266,9 @@ function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl, o
             <Footprints className="w-4 h-4" /> ACTIVE RECOVERY — walk · jog · sprint
           </button>
         )}
+
+        {/* Recordings from earlier sets, kept until saved */}
+        {!started && <ClipTray />}
       </div>
     </div>
   );
@@ -922,6 +948,8 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
           <p className="text-gray-400 text-sm">{exerciseCount} exercises · {completedSets} set{completedSets !== 1 ? "s" : ""} · {formatTime(elapsedSecs)}</p>
         </div>
 
+        <div className="flex justify-center"><ClipTray /></div>
+
         {/* Stat grid */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-[#111] border border-gray-800 rounded-xl p-4 text-center">
@@ -1449,6 +1477,10 @@ function ARTPWorkoutInner() {
   const [targetRepsPerEx, setTargetRepsPerEx] = useState(12);
   const [repGoalPerEx,   setRepGoalPerEx]   = useState(20); // used in "goal" mode
   const [warmupEnabled,  setWarmupEnabled]  = useState(() => localStorage.getItem("artp_warmup") === "1");
+  const [autoTrack,      setAutoTrackState] = useState(() => getAutoTrack());
+  const toggleAutoTrack = useCallback(() => {
+    setAutoTrackState(v => { const nv = !v; saveAutoTrack(nv); return nv; });
+  }, []);
 
   const timerRef      = useRef(null);
   const elapsedRef    = useRef(null);
@@ -2155,6 +2187,22 @@ function ARTPWorkoutInner() {
           </div>
         </button>
 
+        {/* Auto Track toggle (2026-10-29) */}
+        <button
+          onClick={toggleAutoTrack}
+          className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 transition-all active:scale-[0.99] ${autoTrack ? "border-green-400/60 bg-green-500/10" : "border-gray-700 bg-[#111]"}`}>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${autoTrack ? "bg-green-500/20" : "bg-gray-800"}`}>
+            <Camera className={`w-5 h-5 ${autoTrack ? "text-green-400" : "text-gray-600"}`} />
+          </div>
+          <div className="flex-1 min-w-0 text-left">
+            <p className="text-white font-bold text-sm">Auto Track</p>
+            <p className="text-gray-500 text-[11px]">Camera opens on every exercise and starts when you're in frame — no taps</p>
+          </div>
+          <div className={`w-12 h-7 rounded-full p-1 transition-colors flex-shrink-0 ${autoTrack ? "bg-green-500" : "bg-gray-700"}`}>
+            <div className={`w-5 h-5 rounded-full bg-white transition-transform ${autoTrack ? "translate-x-5" : "translate-x-0"}`} />
+          </div>
+        </button>
+
         {/* Superset info */}
         <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
           <LinkIcon className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
@@ -2439,6 +2487,9 @@ function ARTPWorkoutInner() {
             weight={setWeight.weight}
             weightUnit={setWeight.unit}
             onWeightChange={currentEx && unitFor(currentEx.name) === 'reps' ? changeSetWeight : undefined}
+            autoTrack={autoTrack}
+            onToggleAutoTrack={toggleAutoTrack}
+            autoArmed={!showMidRest}
           />
           <AnimatePresence>
             {showMidRest && (

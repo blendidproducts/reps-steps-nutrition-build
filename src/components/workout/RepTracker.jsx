@@ -34,8 +34,6 @@ import {
 } from "lucide-react";
 
 // ─── MediaPipe CDN ────────────────────────────────────────────────────────────
-const MEDIAPIPE_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
-const MODEL_URL     = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task";
 
 const CONNECTIONS = [
   [11,12],[11,13],[13,15],[12,14],[14,16],
@@ -44,69 +42,14 @@ const CONNECTIONS = [
   [27,29],[28,30],[29,31],[30,32],[27,31],[28,32],
 ];
 
-// ── Shared camera stream (Round 15) ───────────────────────────────────────────
-// Re-requesting getUserMedia for every exercise made iOS prompt for camera
-// permission each time. Keep ONE stream alive across the whole workout; the
-// workout page passes keepCameraAlive and calls releaseSharedCamera() at the end.
-let sharedStream = null;
-let sharedFacing = null;
-// Set by the mounted tracker so the module can report a stream dying from
-// OUTSIDE React — the 'ended' event fires on the track, not on a component.
-let onCameraLost = null;
-export function setCameraLostHandler(fn) { onCameraLost = fn; }
-
-export function releaseSharedCamera() {
-  try { sharedStream?.getTracks().forEach((t) => t.stop()); } catch (_) {}
-  sharedStream = null;
-  sharedFacing = null;
-}
-
-/** Is the shared stream actually usable right now? */
-export function cameraIsLive() {
-  return !!sharedStream?.getVideoTracks?.().some(
-    (t) => t.readyState === "live" && !t.muted
-  );
-}
-
-async function acquireCamera(mode) {
-  const live = cameraIsLive();
-  if (sharedStream && live && sharedFacing === mode) return sharedStream;
-  try { sharedStream?.getTracks().forEach((t) => t.stop()); } catch (_) {}
-  sharedStream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } },
-    audio: false,   // the microphone is requested ONLY when recording with sound
-  });
-  sharedFacing = mode;
-
-  // ── 2026-10-07: watch the track ─────────────────────────────────────────
-  // JT's report: "the camera is not able to record video". On iOS Safari a
-  // camera track is taken away by the system for ordinary reasons — the page
-  // is backgrounded, another app or an incoming call claims the camera, or iOS
-  // reclaims it on a long session. The track goes to readyState 'ended' (or
-  // 'muted'), but <video> keeps its last frame and video.readyState stays >= 2,
-  // so the detection loop carried on forever against a FROZEN image. No error,
-  // no recovery, reps silently stop counting.
-  //
-  // One shared stream held for a whole workout — which is right, it stops iOS
-  // re-prompting per exercise — makes this far more likely, because the window
-  // for the system to take it is the entire session rather than one set.
-  for (const t of sharedStream.getVideoTracks()) {
-    t.addEventListener("ended", () => onCameraLost?.("ended"));
-    // 2026-10-14: iOS mutes the track for TRANSIENT reasons too — the system
-    // "Camera in use" banner in JT's screenshots, Control Center, a
-    // notification — and unmutes it a moment later. Treating every mute as a
-    // dead camera put up "Camera stopped" mid-set for nothing. Only a mute
-    // that is still in place after 2.5s is a loss.
-    let muteTimer = null;
-    t.addEventListener("mute", () => {
-      clearTimeout(muteTimer);
-      muteTimer = setTimeout(() => { if (t.muted) onCameraLost?.("muted"); }, 2500);
-    });
-    t.addEventListener("unmute", () => clearTimeout(muteTimer));
-  }
-  return sharedStream;
-}
-
+// Shared camera, pose model and leftover clips live in trackingSession.js so
+// they survive this component unmounting at the end of every set.
+import {
+  MEDIAPIPE_CDN, MODEL_URL, acquireCamera, cameraIsLive, setCameraLostHandler,
+  releaseSharedCamera, stopSharedStream, getSharedLandmarker, nextVideoTs,
+  preferredFacing, rememberFacing, addPendingClip,
+} from "./trackingSession";
+export { releaseSharedCamera, cameraIsLive, setCameraLostHandler };
 // ─── Depth requirement levels (2026-10-14) ────────────────────────────────────
 // Fraction of the standard descent required. Scales the distance below
 // standing, so "Assisted" means half as far down on every exercise.
@@ -146,7 +89,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
   const [currentAngle,   setCurrentAngle]   = useState(0);
   const [showSkeleton,   setShowSkeleton]   = useState(true);
   const [facingMode,     setFacingMode]     = useState(() => {
-    try { return sharedFacing || localStorage.getItem("rns_cam_facing") || defaultFacingMode; } catch (_) { return defaultFacingMode; }
+    return preferredFacing(defaultFacingMode);
   });
   const [repFlash,       setRepFlash]       = useState(false);
   // ── Camera health (2026-10-07) ────────────────────────────────
@@ -297,35 +240,25 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
       try {
         setIsLoading(true);
         setLoadError(null);
-        const { FilesetResolver, PoseLandmarker } =
-          await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm");
-        if (cancelled) return;
-        const vision = await FilesetResolver.forVisionTasks(MEDIAPIPE_CDN);
-
-        // Try GPU first (faster), fall back to CPU if GPU delegate fails on this device
-        let landmarker;
-        try {
-          landmarker = await PoseLandmarker.createFromOptions(vision, {
-            baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
-            runningMode: "VIDEO",
-            numPoses: 2,
-          });
-        } catch (_gpuErr) {
-          landmarker = await PoseLandmarker.createFromOptions(vision, {
-            baseOptions: { modelAssetPath: MODEL_URL, delegate: "CPU" },
-            runningMode: "VIDEO",
-            numPoses: 2,
-          });
-        }
-
-        if (cancelled) { landmarker.close(); return; }
+        // 2026-10-29: ONE model for the whole workout (trackingSession.js).
+        // It used to be built and closed every set: seconds of loading per set
+        // (a timed set burned while it loaded) and a new GPU context each time.
+        // The camera opens in parallel with the model instead of after it.
+        const [landmarker] = await Promise.all([getSharedLandmarker(), acquireCamera(facingMode)]);
+        if (cancelled) return;   // shared — never closed here
         landmarkerRef.current = landmarker;
         await startCamera(facingMode);
         setIsLoading(false);
       } catch (err) {
         if (!cancelled) {
           console.error("RepTracker init error:", err);
-          setLoadError(err?.message || "Failed to load body tracking.");
+          setLoadError(
+            err?.name === "NotAllowedError"
+              ? "Camera permission is off for this site. iPhone: Settings → Safari → Camera → Allow, then reopen the workout."
+              : err?.name === "NotReadableError"
+                ? "Another app is using the camera. Close it and tap Try again."
+                : (err?.message || "Failed to load body tracking.")
+          );
           setIsLoading(false);
         }
       }
@@ -357,10 +290,29 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     }
   }, []);
 
+  // ── 2026-10-29: attach the camera once the <video> actually exists ──────────
+  // ROOT CAUSE of "camera doesn't come on until I tap FRONT/REAR": init() runs
+  // startCamera() while the loading screen is up, and the <video> element is
+  // only rendered AFTER loading (see "Main tracker" below). videoRef was null,
+  // so the stream was opened but never attached and the detection loop never
+  // started — a black screen and 0 reps until the flip button (or a camera
+  // recovery) called startCamera() again with the element present. Every set
+  // mounts a new tracker, so it happened on every exercise.
+  useEffect(() => {
+    if (isLoading || loadError || isManualMode) return;
+    const v = videoRef.current;
+    const st = streamRef.current;
+    if (!v || !st || v.srcObject === st) return;
+    v.srcObject = st;
+    const go = () => { v.play().catch(() => {}); cancelAnimationFrame(animFrameRef.current); scheduleDetection(); };
+    if (v.readyState >= 1) go(); else v.onloadedmetadata = go;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, loadError, isManualMode]);
+
   const flipCamera = useCallback(async () => {
     const next = facingMode === "user" ? "environment" : "user";
     setFacingMode(next);
-    try { localStorage.setItem("rns_cam_facing", next); } catch (_) {}
+    rememberFacing(next);
     await startCamera(next);
   }, [facingMode, startCamera]);
 
@@ -368,7 +320,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
   const recoverCamera = useCallback(async () => {
     setReacquiring(true);
     try {
-      releaseSharedCamera();                 // drop the dead one first
+      stopSharedStream();                    // drop the dead one first (model stays)
       lastFrameTime.current = { t: 0, at: 0 };
       await startCamera(facingModeRef.current);
       setCameraLost(null);
@@ -485,15 +437,20 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
         const blob = new Blob(recChunksRef.current, { type });
         recChunksRef.current = [];
         try { mixed.getTracks().forEach((t) => t.stop()); } catch (_) {}
-        if (!blob.size) { setRecError("Nothing was recorded."); return; }
+        if (!blob.size) { if (mountedRef.current) setRecError("Nothing was recorded."); return; }
         const ext = type.includes("mp4") ? "mp4" : "webm";
         const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-        setRecReady({
+        const clip = {
           url: URL.createObjectURL(blob),
           blob,
           name: `repsandsteps-${(exerciseName || "workout").toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${stamp}.${ext}`,
           size: blob.size,
-        });
+        };
+        // 2026-10-29: when a set ends on its own (timer, goal, DONE) the tracker
+        // unmounts and onstop fires AFTER that — the clip used to be dropped
+        // right here. It now goes to the clip tray the workout screen shows.
+        if (mountedRef.current) setRecReady(clip);
+        else addPendingClip(clip);
       };
       rec.start(1000);           // 1s chunks, so a crash still leaves something
       recorderRef.current = rec;
@@ -537,12 +494,14 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
   // Recording must never outlive the tracker, or the mic stays open.
   const recReadyRef = useRef(null);
   useEffect(() => { recReadyRef.current = recReady; }, [recReady]);
+  const mountedRef = useRef(true);
   useEffect(() => () => {
+    mountedRef.current = false;   // set first: onstop below must see it
     try { recorderRef.current?.state === "recording" && recorderRef.current.stop(); } catch (_) {}
     try { recAudioRef.current?.getTracks().forEach((t) => t.stop()); } catch (_) {}
     if (recTimerRef.current) clearInterval(recTimerRef.current);
-    const url = recReadyRef.current?.url;
-    if (url) { try { URL.revokeObjectURL(url); } catch (_) {} }
+    // An unsaved clip is handed to the tray instead of being revoked.
+    if (recReadyRef.current) addPendingClip(recReadyRef.current);
   }, []);
 
   // A camera that dies mid-recording ends the recording too — the file is kept.
@@ -550,9 +509,11 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
 
   const cleanup = useCallback(() => {
     cancelAnimationFrame(animFrameRef.current);
-    if (!keepCameraAlive) releaseSharedCamera(); // keep stream alive between exercises during a workout
+    // keepCameraAlive: a workout — camera AND model stay up between sets.
+    // Otherwise this tracker was the only user, so free both.
+    if (!keepCameraAlive) releaseSharedCamera();
     streamRef.current = null;
-    if (landmarkerRef.current) { try { landmarkerRef.current.close(); } catch (_) {} landmarkerRef.current = null; }
+    landmarkerRef.current = null;
   }, [keepCameraAlive]);
 
   // ── Detection loop ─────────────────────────────────────────────
@@ -582,7 +543,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     if (fm === "user") { ctx.translate(dX + dW, dY); ctx.scale(-1, 1); ctx.drawImage(video, 0, 0, dW, dH); }
     else               { ctx.drawImage(video, dX, dY, dW, dH); }
     ctx.restore();
-    const ts = performance.now();
+    const ts = nextVideoTs();   // shared model: timestamps must rise across mounts
     if (ts !== lastVideoTime.current) {
       lastVideoTime.current = ts;
       try {

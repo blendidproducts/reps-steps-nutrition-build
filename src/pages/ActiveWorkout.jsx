@@ -14,7 +14,9 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import StepTracker from "@/components/StepTracker";
-import RepTracker from "@/components/workout/RepTracker";
+import RepTracker, { releaseSharedCamera } from "@/components/workout/RepTracker";
+// Auto Track (2026-10-29): open the camera tracker by itself on every set.
+import { getAutoTrack, setAutoTrack as saveAutoTrack, ClipTray } from "@/components/workout/AutoTrack";
 import { matchExercise } from "@/lib/exerciseTracking";
 import { normName, findExerciseRecord } from "@/lib/exerciseNameMatch";
 import RestScreen from "@/components/workout/RestScreen";
@@ -470,6 +472,36 @@ export default function ActiveWorkout() {
 
   const pauseWorkout = () => setIsPaused(!isPaused);
 
+  // ── Auto Track ─────────────────────────────────────────────────────────────
+  // On: every set of a camera-trackable exercise opens the tracker by itself
+  // (no green button), the camera stays open between sets (no re-prompt, no
+  // re-load), and DONE in the tracker logs the reps and moves on to the rest.
+  // Closing the tracker with X turns it off for that set only.
+  const [autoTrack, setAutoTrackState] = useState(() => getAutoTrack());
+  const toggleAutoTrack = () => setAutoTrackState(v => { const nv = !v; saveAutoTrack(nv); if (!nv) releaseSharedCamera(); return nv; });
+  const autoDismissedRef = useRef(null);
+  const [autoNextPending, setAutoNextPending] = useState(false);
+  const setKey = `${currentExerciseIndex}-${currentSet}`;
+  useEffect(() => {
+    if (!autoTrack || !isActive || isResting || isSupersetTransition || showRepTracker) return;
+    if (autoDismissedRef.current === setKey) return;
+    const ex = workout?.exercises?.[currentExerciseIndex];
+    if (!ex || ex.metric === 'time' || ex.category === 'warmup') return;
+    let cfg = null;
+    try { cfg = matchExercise(ex.exercise_name); } catch (_) {}
+    if (!cfg || cfg.trackable === false) return;
+    setShowRepTracker(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoTrack, isActive, isResting, isSupersetTransition, showRepTracker, setKey]);
+  useEffect(() => {
+    if (!autoNextPending) return;
+    setAutoNextPending(false);
+    nextExercise();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoNextPending]);
+  // Camera off when the page goes away.
+  useEffect(() => () => releaseSharedCamera(), []);
+
   // Weight box default: this exercise's previous set → last weight ever used → blank.
   const curExName = workout?.exercises?.[currentExerciseIndex]?.exercise_name;
   useEffect(() => {
@@ -534,6 +566,7 @@ export default function ActiveWorkout() {
       });
     }
     setIsActive(false); localStorage.removeItem('activeWorkoutState');
+    releaseSharedCamera();
     setTimeout(() => navigate(createPageUrl("WorkoutComplete")), 100);
   };
 
@@ -606,6 +639,9 @@ export default function ActiveWorkout() {
   const handleAiTrackerComplete = (reps) => {
     if (typeof reps === 'number' && reps >= 0) setQuickReps(reps);
     setShowRepTracker(false);
+    // Auto Track: move on once the reps are in state (effect below the hooks
+    // can't live here, after the early returns — see autoNextPending).
+    if (autoTrack) { autoDismissedRef.current = setKey; setAutoNextPending(true); }
   };
   const totalSets = workout.exercises.reduce((s,ex) => s + (ex.sets||1), 0);
   const completedSets = workout.exercises.slice(0, currentExerciseIndex).reduce((s,ex) => s + (ex.sets||1), 0) + (currentSet - 1);
@@ -674,14 +710,21 @@ export default function ActiveWorkout() {
                 <Button onClick={() => setShow3DView(true)} size="sm" className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1 px-3 py-1 h-8"><Box className="w-3 h-3" /><span className="text-xs font-bold">3D</span></Button>
               </div>
               {isAiTrackable && (
-                <div className="flex justify-center mb-2">
-                  <Button onClick={() => setShowRepTracker(true)} size="sm" className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-1.5 px-4 py-1 h-8">
+                <div className="flex justify-center items-center gap-2 mb-2">
+                  <Button onClick={() => { autoDismissedRef.current = null; setShowRepTracker(true); }} size="sm" className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-1.5 px-4 py-1 h-8">
                     <Camera className="w-3.5 h-3.5" />
                     <span className="text-xs font-bold">AI REP TRACKING</span>
                     {aiIsExperimental && <span className="text-[9px] bg-yellow-400/90 text-black rounded px-1 py-0.5 font-black ml-0.5">BETA</span>}
                   </Button>
+                  {/* Auto Track: open the tracker by itself on every set */}
+                  <button onClick={toggleAutoTrack} aria-pressed={autoTrack}
+                    className={`h-8 px-2.5 rounded-md border text-[11px] font-black flex items-center gap-1.5 ${autoTrack ? "border-green-400 bg-green-500/20 text-green-300" : "border-gray-600 bg-gray-800 text-gray-400"}`}>
+                    <span className={`w-2 h-2 rounded-full ${autoTrack ? "bg-green-400" : "bg-gray-500"}`} />
+                    AUTO {autoTrack ? "ON" : "OFF"}
+                  </button>
                 </div>
               )}
+              <div className="flex justify-center"><ClipTray className="mb-2" /></div>
               <div className="mb-2">
                 <Badge variant="outline" className="border-brand-blue/50 text-brand-blue text-[10px] sm:text-xs leading-tight">
                   {currentSet < (currentExercise.sets || 1) ? `Set ${currentSet} of ${currentExercise.sets || 1} → Next: Set ${currentSet + 1}` : currentExerciseIndex < workout.exercises.length - 1 ? `Set ${currentSet} completed → Next: ${workout.exercises[currentExerciseIndex + 1]?.exercise_name}` : `Final Set ${currentSet} - Last Exercise!`}
@@ -807,8 +850,9 @@ export default function ActiveWorkout() {
           exerciseEmoji={aiConfig?.emoji || ""}
           setLabel={`Set ${currentSet} of ${currentExercise.sets || 1}`}
           defaultFacingMode="user"
+          keepCameraAlive={autoTrack}
           onComplete={handleAiTrackerComplete}
-          onClose={() => setShowRepTracker(false)}
+          onClose={() => { autoDismissedRef.current = setKey; setShowRepTracker(false); }}
         />
       )}
     </div>

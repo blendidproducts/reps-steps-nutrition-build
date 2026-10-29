@@ -29,6 +29,7 @@ import {
 import { ScanLine, Play, Trash2, ArrowLeft, Circle, Square, RotateCcw, Check, AlertTriangle, X } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import WeightInput, { weightLabel } from "@/components/workout/WeightInput";
+import { ClipTray } from "@/components/workout/AutoTrack";
 import { getWeightUnit, setWeightUnit, getLastWeight, rememberWeight, buildExercisesWithSets, fmtNum } from "@/lib/weights";
 
 const MEDIAPIPE_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
@@ -327,6 +328,8 @@ export default function MovementTrainer() {
             )}
           </div>
         )}
+
+        {view === "list" && <div className="mb-4 flex justify-center"><ClipTray /></div>}
 
         {lastCount && view === "list" && (
           <div className="rounded-xl border border-green-500/40 bg-green-500/10 px-4 py-3 mb-4 text-sm">
