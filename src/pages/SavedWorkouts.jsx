@@ -12,10 +12,52 @@ import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Play, Trash2, CalendarPlus, CalendarDays, Camera, Dumbbell, Pencil, Check, X, Plus } from "lucide-react";
+import { Play, Trash2, CalendarPlus, CalendarDays, Camera, Dumbbell, Pencil, Check, X, Plus, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import SaveWorkoutPanel from "@/components/workout/SaveWorkoutPanel";
 import { startSavedWorkout } from "@/lib/savedWorkouts";
+import { fmtNum, getWeightUnit, convert } from "@/lib/weights";
+
+// ── Exercise history from logged sessions (2026-10-29) ────────────────────────
+// JT: "see the complete workout, not just +5 … show the last completed totals
+// for each exercise, or the cumulative total". Built from WorkoutSession rows,
+// matched by exercise name (case-insensitive), newest session first.
+const key = (n) => String(n || "").trim().toLowerCase();
+function buildHistory(sessions) {
+  const map = new Map();
+  for (const s of sessions || []) {
+    const when = s.start_time || s.created_date;
+    for (const ex of s.exercises_completed || []) {
+      const k = key(ex.exercise_name);
+      if (!k) continue;
+      const reps = Number(ex.reps_completed) || 0;
+      const secs = Number(ex.time_spent) || 0;
+      if (!reps && !secs) continue;
+      let h = map.get(k);
+      if (!h) {
+        // First hit = most recent session (list is newest first).
+        h = { last: { reps, secs, sets: ex.sets || null, date: when }, totalReps: 0, totalSecs: 0, times: 0 };
+        map.set(k, h);
+      }
+      h.totalReps += reps;
+      h.totalSecs += secs;
+      h.times += 1;
+    }
+  }
+  return map;
+}
+const fmtSecs = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+const fmtDate = (d) => { try { return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" }); } catch (_) { return ""; } };
+function lastLabel(h) {
+  if (!h) return null;
+  const l = h.last;
+  if (l.sets?.length) {
+    const u = getWeightUnit();
+    const parts = l.sets.map((st) => st.weight > 0 ? `${st.reps}×${fmtNum(convert(st.weight, st.unit === "kg" ? "kg" : "lb", u))}` : `${st.reps}`);
+    return parts.join(" · ") + (l.sets.some((st) => st.weight > 0) ? ` ${u}` : "");
+  }
+  return l.reps ? `${l.reps} reps` : fmtSecs(l.secs);
+}
 
 export default function SavedWorkouts() {
   const navigate = useNavigate();
@@ -26,8 +68,16 @@ export default function SavedWorkouts() {
   const [editing, setEditing] = useState(null);
   const [editName, setEditName] = useState("");
   const [starting, setStarting] = useState(null);
+  const [expanded, setExpanded] = useState(() => new Set());
+  const [history, setHistory] = useState(() => new Map());
 
-  useEffect(() => { loadWorkouts(); }, []);
+  useEffect(() => { loadWorkouts(); loadHistory(); }, []);
+
+  const loadHistory = async () => {
+    try { setHistory(buildHistory(await base44.entities.WorkoutSession.list("-created_date", 300))); }
+    catch (_) { /* totals just stay blank */ }
+  };
+  const toggle = (id) => setExpanded((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const loadWorkouts = async () => {
     setIsLoading(true);
@@ -116,14 +166,72 @@ export default function SavedWorkouts() {
                       <p className="text-xs text-gray-400 mt-0.5">
                         {isArtp ? "AiRTP camera workout" : "Guided workout"} · {ex.length} exercise{ex.length !== 1 ? "s" : ""}{sets ? ` · ${sets} set${sets !== 1 ? "s" : ""}` : ""}
                       </p>
-                      <div className="flex gap-1 flex-wrap mt-2">
-                        {ex.slice(0, 5).map((e, i) => (
-                          <span key={i} className="text-[11px] bg-gray-800 px-2 py-0.5 rounded text-gray-300">{e.exercise_name}</span>
-                        ))}
-                        {ex.length > 5 && <span className="text-[11px] bg-gray-800 px-2 py-0.5 rounded text-gray-400">+{ex.length - 5}</span>}
-                      </div>
+                      {!expanded.has(w.id) && (
+                        <div className="flex gap-1 flex-wrap mt-2">
+                          {ex.slice(0, 5).map((e, i) => (
+                            <span key={i} className="text-[11px] bg-gray-800 px-2 py-0.5 rounded text-gray-300">{e.exercise_name}</span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  {/* Full workout, as a dropdown: every exercise with its plan,
+                      the last time you did it, and your all-time total. */}
+                  <button onClick={() => toggle(w.id)} aria-expanded={expanded.has(w.id)}
+                    className="mt-2 w-full flex items-center justify-between rounded-lg bg-black/30 border border-gray-800 px-3 text-xs font-bold text-gray-300"
+                    style={{ minHeight: 40 }}>
+                    <span>{expanded.has(w.id) ? "Hide workout" : `Show full workout · ${ex.length} exercise${ex.length !== 1 ? "s" : ""}`}</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${expanded.has(w.id) ? "rotate-180" : ""}`} />
+                  </button>
+                  {expanded.has(w.id) && (() => {
+                    const rows = ex.map((e) => ({ e, h: history.get(key(e.exercise_name)) }));
+                    const lastTotal = rows.reduce((a, r) => a + (r.h?.last.reps || 0), 0);
+                    const allTotal = rows.reduce((a, r) => a + (r.h?.totalReps || 0), 0);
+                    return (
+                      <div className="mt-2 rounded-lg border border-gray-800 overflow-hidden">
+                        <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 px-3 py-1.5 bg-black/40 text-[10px] uppercase tracking-wide text-gray-500">
+                          <span>Exercise · plan</span><span className="text-right">Last time</span><span className="text-right">All-time</span>
+                        </div>
+                        <ol className="divide-y divide-gray-800">
+                          {rows.map(({ e, h }, i) => {
+                            const plan = [
+                              e.sets ? `${e.sets} set${e.sets !== 1 ? "s" : ""}` : null,
+                              e.target_reps ? `${e.target_reps} reps` : e.target_time ? fmtSecs(e.target_time) : null,
+                            ].filter(Boolean).join(" × ");
+                            return (
+                              <li key={i} className="grid grid-cols-[1fr_auto_auto] gap-x-3 px-3 py-2 items-center">
+                                <span className="min-w-0">
+                                  <span className="block text-sm text-white truncate"><span className="text-gray-500 mr-1.5">{i + 1}</span>{e.exercise_name}{e.superset_with_next ? <span className="text-purple-300 text-[10px] ml-1">🔗</span> : null}</span>
+                                  {plan && <span className="block text-[11px] text-gray-500">{plan}</span>}
+                                </span>
+                                <span className="text-right">
+                                  {h ? <>
+                                    <span className="block text-xs font-bold text-white tabular-nums">{lastLabel(h)}</span>
+                                    <span className="block text-[10px] text-gray-500">{fmtDate(h.last.date)}</span>
+                                  </> : <span className="text-[11px] text-gray-600">—</span>}
+                                </span>
+                                <span className="text-right">
+                                  {h ? <>
+                                    <span className="block text-xs font-bold text-[#00a9ff] tabular-nums">{h.totalReps ? `${fmtNum(h.totalReps)} reps` : fmtSecs(h.totalSecs)}</span>
+                                    <span className="block text-[10px] text-gray-500">{h.times}×</span>
+                                  </> : <span className="text-[11px] text-gray-600">—</span>}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ol>
+                        <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 px-3 py-2 bg-black/40 text-xs font-black">
+                          <span className="text-gray-300">Total reps</span>
+                          <span className="text-right text-white tabular-nums">{lastTotal ? fmtNum(lastTotal) : "—"}</span>
+                          <span className="text-right text-[#00a9ff] tabular-nums">{allTotal ? fmtNum(allTotal) : "—"}</span>
+                        </div>
+                        <p className="px-3 pb-2 bg-black/40 text-[10px] text-gray-500">
+                          From your History: the most recent session with each exercise, and every rep you've logged of it (any workout).
+                        </p>
+                      </div>
+                    );
+                  })()}
 
                   <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 mt-3">
                     <button onClick={() => start(w)} disabled={starting === w.id}
