@@ -345,11 +345,14 @@ export const BATTERIES = {
     disclaimer:
       "Minimums from MILPERSMAN 1220-410. The PST has no age bands and no sex norming — one " +
       "standard per pipeline. These are the MINIMUMS to receive a contract and stay eligible, " +
-      "not competitive scores: clearing them is the floor, not the bar. The rest periods below " +
-      "are part of the test, and the whole thing is run as a single event.",
+      "not competitive scores: MILPERSMAN tells candidates to \"strive to achieve significantly " +
+      "more\", and Navy recruiting says top performers typically score 50% above the minimums. " +
+      "Swim and run minimums are CUTOFF TIMES — finish at or under them. The rest periods are part " +
+      "of the test, and it is run as one continuous event. There is no underwater or breath-hold " +
+      "event in the PST.",
     events: [
       { key: "swim500", name: "500-Yard Swim", how: "entry", entryKind: "time",
-        unit: "secs", cue: "Side stroke or breaststroke. Enter your time.",
+        unit: "secs", cue: "500 yards for time — a cutoff, so faster is better. Sidestroke or breaststroke (rescue swimmers may also use freestyle). Enter your time.",
         equipment: "Pool", restAfter: 600 },
       { key: "pushups", name: "Push-ups", exercise: "Push-Up", how: "reps", seconds: 120,
         unit: "reps", cue: "Maximum in 2 minutes. Full lockout at the top.", restAfter: 120 },
@@ -362,7 +365,7 @@ export const BATTERIES = {
         unit: "reps", cue: "Maximum, no time limit. Dead hang. Enter your total.",
         equipment: "Pull-up bar", restAfter: 600 },
       { key: "run15", name: "1.5-Mile Run", how: "run", distanceLabel: "1.5 miles",
-        unit: "secs", cue: "Run your measured 1.5-mile route. Tap STOP when you finish.", restAfter: 0 },
+        unit: "secs", cue: "1.5 miles for time — a cutoff, so faster is better. Tap STOP when you finish.", restAfter: 0 },
     ],
   },
 
@@ -550,6 +553,86 @@ export const BATTERIES = {
       { key: "ruck13", name: "13-Mile Ruck", how: "entry", entryKind: "time", ruck: true,
         unit: "secs", cue: "45 lb, excluding MRE and water. Gate is 3:15:00.",
         equipment: "45-lb ruck", restAfter: 0 },
+    ],
+  },
+
+  // ── U.S. COAST GUARD (2026-10-29) ──────────────────────────────────────────
+  // Published pass/fail minimums, so they use the gate scorer; the numbers and
+  // sources live in publicSafetyStandards.js (uscg_*). Shown under MILITARY.
+  uscg_member: {
+    key: "uscg_member",
+    name: "Coast Guard — New Member Standard",
+    group: "military",
+    branch: "coastguard",
+    blurb: "What every new Coast Guard member, officer or enlisted, is expected to perform: push-ups, plank, 1.5-mile run.",
+    icon: "shield",
+    accent: "#f97316",
+    scoring: "gate",
+    needsProfile: true,
+    disclaimer:
+      "Standards from GoCoastGuard.com \"Eligibility Requirements\", read 2026-10-29: 29/15 push-ups " +
+      "in one minute (men/women), forearm plank 1:18/1:09, 1.5-mile run 12:29/15:05. Set by sex — " +
+      "your age doesn't change the number. Boot camp and OCS include swim training; the Coast Guard " +
+      "doesn't publish a swim number for new members. Rest periods aren't published; 5 minutes is used here.",
+    events: [
+      { key: "pushups1", name: "Push-ups", exercise: "Push-Up", how: "reps", seconds: 60,
+        unit: "reps", cue: "1 minute. As many as you can with full lockout.", restAfter: 300 },
+      { key: "plank", name: "Forearm Plank", exercise: "Plank", how: "hold",
+        unit: "secs", cue: "Forearms and toes, body straight. Hold as long as you can.", restAfter: 300 },
+      { key: "run15", name: "1.5-Mile Run", how: "run", distanceLabel: "1.5 miles",
+        unit: "secs", cue: "Run your measured 1.5-mile route. Tap STOP when you finish.", restAfter: 0 },
+    ],
+  },
+
+  uscg_boatcrew: {
+    key: "uscg_boatcrew",
+    name: "Coast Guard — Boat Crew (Run)",
+    group: "military",
+    branch: "coastguard",
+    blurb: "The Boat Crew Manual fitness test: push-ups and sit-ups in one minute each, then a 1.5-mile run. By age and sex.",
+    icon: "shield",
+    accent: "#f97316",
+    scoring: "gate",
+    needsProfile: true,
+    profileBands: "uscg",
+    disclaimer:
+      "Standards from the Coast Guard Boat Crew Manual, Table 4-5 \"Physical Fitness Standards\" " +
+      "(dcms.uscg.mil), read 2026-10-29. Push-ups and sit-ups must each be done within one minute; " +
+      "events in sequence with no more than 30 minutes between them; fail one and the whole test is " +
+      "retaken. The manual allows a 12-minute swim instead of the run — that's the Swim version.",
+    events: [
+      { key: "pushups1", name: "Push-ups", exercise: "Push-Up", how: "reps", seconds: 60,
+        unit: "reps", cue: "1 minute. Full lockout at the top.", restAfter: 300 },
+      { key: "situps1", name: "Sit-ups", how: "manual", seconds: 60,
+        unit: "reps", cue: "1 minute. Tap for each rep — the camera can't count sit-ups.", restAfter: 300 },
+      { key: "run15", name: "1.5-Mile Run", how: "run", distanceLabel: "1.5 miles",
+        unit: "secs", cue: "Run or walk your measured 1.5 miles. Tap STOP when you finish.", restAfter: 0 },
+    ],
+  },
+
+  uscg_boatcrew_swim: {
+    key: "uscg_boatcrew_swim",
+    name: "Coast Guard — Boat Crew (Swim)",
+    group: "military",
+    branch: "coastguard",
+    blurb: "Same Boat Crew test with the manual's swim option: the distance you cover in 12 minutes instead of the run.",
+    icon: "shield",
+    accent: "#f97316",
+    scoring: "gate",
+    needsProfile: true,
+    profileBands: "uscg",
+    disclaimer:
+      "Boat Crew Manual Table 4-5 (dcms.uscg.mil), read 2026-10-29. The 12-minute swim chart is based on " +
+      "Dr. Kenneth Cooper's research, per the table's own note. Swim continuously for 12 minutes and enter " +
+      "the yards covered.",
+    events: [
+      { key: "pushups1", name: "Push-ups", exercise: "Push-Up", how: "reps", seconds: 60,
+        unit: "reps", cue: "1 minute. Full lockout at the top.", restAfter: 300 },
+      { key: "situps1", name: "Sit-ups", how: "manual", seconds: 60,
+        unit: "reps", cue: "1 minute. Tap for each rep — the camera can't count sit-ups.", restAfter: 300 },
+      { key: "swim12", name: "12-Minute Swim", how: "entry", entryKind: "yards", fixedSeconds: 720,
+        unit: "yd", cue: "Swim for 12 minutes, any stroke. Enter the yards you covered.",
+        equipment: "Pool", restAfter: 0 },
     ],
   },
 
@@ -765,8 +848,10 @@ export const BATTERIES = {
     // long you can keep going, not how much you can move. A lifter will notice.
     disclaimer: "Bodyweight only, so this measures strength ENDURANCE rather than maximal strength.",
     events: [
-      { key: "pushups", name: "Push-ups to failure", exercise: "Push-Up", how: "reps",
-        unit: "reps", cue: "No time limit. Go until you cannot complete another rep.", restAfter: 120 },
+      // Was "Push-ups to failure" — JT found "to failure" unclear. Same event:
+      // no clock, keep going until you can't do another rep with good form.
+      { key: "pushups", name: "Max Push-ups (one set)", exercise: "Push-Up", how: "reps",
+        unit: "reps", cue: "One set, no time limit. Keep going until you can't do another full rep — stopping to rest on the floor ends the set.", restAfter: 120 },
       { key: "squats", name: "Air Squats", exercise: "Squat", how: "reps", seconds: 120,
         unit: "reps", cue: "2 minutes, full depth.", restAfter: 120 },
       { key: "lunges", name: "Reverse Lunges", exercise: "Reverse Lunge", how: "reps", seconds: 90,
@@ -923,8 +1008,42 @@ export const MILITARY_BRANCHES = [
   { key: "army",     label: "ARMY",            sub: "Army Fitness Test",            accent: "#84cc16" },
   { key: "airforce", label: "AIR FORCE",       sub: "Physical Fitness Readiness Assessment", accent: "#60a5fa" },
   { key: "marines",  label: "MARINE CORPS",    sub: "Physical Fitness Test",        accent: "#dc2626" },
+  { key: "coastguard", label: "COAST GUARD",   sub: "New member · Boat Crew",       accent: "#f97316" },
   { key: "specops",  label: "SPECIAL OPERATIONS", sub: "Selection and qualification", accent: "#f59e0b" },
 ];
+
+/**
+ * What an event asks you to do, in a few words (2026-10-29).
+ * Replaces the old fallback that labelled every untimed event "to failure" —
+ * so a 500-yard swim, a 3-rep-max deadlift and a ruck all read "to failure".
+ */
+export function eventFormatLabel(e) {
+  if (!e) return "";
+  if (e.fixedSeconds) {
+    return e.entryKind === "yards" ? "distance in " + Math.round(e.fixedSeconds / 60) + " min"
+      : "for " + Math.floor(e.fixedSeconds / 60) + ":" + String(e.fixedSeconds % 60).padStart(2, "0");
+  }
+  if (e.seconds) {
+    const t = e.seconds >= 60 && e.seconds % 60 === 0 ? (e.seconds / 60) + " min" : e.seconds + " s";
+    return "most reps in " + t;
+  }
+  if (e.how === "hold") return "longest hold";
+  if (e.how === "run") return "for time · " + (e.distanceLabel || "distance");
+  if (e.how === "steps") return "steps";
+  if (e.how === "entry") {
+    switch (e.entryKind) {
+      case "time": case "seconds": return "for time";
+      case "weight": return "heaviest weight";
+      case "reps": return "most reps, no time limit";
+      case "distance": case "meters": return "farthest distance";
+      case "yards": return "distance";
+      case "points": return "score";
+      default: return "enter result";
+    }
+  }
+  if (e.how === "reps" || e.how === "manual") return "most reps, no time limit";
+  return "";
+}
 
 // Branch keys are unique across groups (military and public safety), so the
 // branch alone identifies its tests.

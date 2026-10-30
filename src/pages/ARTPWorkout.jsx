@@ -30,6 +30,9 @@ import BuildStamp from "@/components/BuildStamp";
 import { thumbImg, mediumImg } from "@/lib/imgOpt";
 // Weights + volume (2026-10-27): per-set added weight, volume = weight x counted reps.
 import WeightInput, { weightLabel } from "@/components/workout/WeightInput";
+// Saved workouts (2026-10-29): Base44 SavedWorkout, shown in My Workouts / My Programs.
+import SaveWorkoutPanel from "@/components/workout/SaveWorkoutPanel";
+import { saveWorkoutTemplate } from "@/lib/savedWorkouts";
 import { getWeightUnit, setWeightUnit, getLastWeight, rememberWeight, buildExercisesWithSets, setVolume, toLbs, convert, fmtNum, parseWeight } from "@/lib/weights";
 import {
   Brain, Timer, Zap, ChevronRight, ChevronLeft,
@@ -869,7 +872,7 @@ function sumByUnit(scores) {
 }
 
 // ── Completion / Report screen ────────────────────────────────────────────────
-function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exerciseCount, onRestart, onExit, onViewAchievements, onAdjustReps, onAdjustWeight }) {
+function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exerciseCount, onRestart, onExit, onViewAchievements, onAdjustReps, onAdjustWeight, getSaveTemplate, saveName }) {
   const totalReps = sumReps(scores);
   // Volume (weight x counted reps), shown in the person's chosen unit. Sets
   // logged in the other unit are converted; bodyweight sets add nothing.
@@ -1080,6 +1083,9 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
             <div className="flex justify-between"><span>Est. calories burned</span><span className="text-orange-400 font-semibold">~{calEstimate} kcal</span></div>
           </div>
         </div>
+
+        {/* Save as a reusable workout → My Workouts, optionally onto a program day */}
+        {getSaveTemplate && <SaveWorkoutPanel defaultName={saveName} getTemplate={getSaveTemplate} />}
 
         {/* Card shape picker - sits directly above the button it affects, so the
             choice reads as part of sharing rather than a stray setting. */}
@@ -1584,6 +1590,20 @@ function ARTPWorkoutInner() {
     return () => clearInterval(elapsedRef.current);
   }, [phase, isPaused]);
 
+  // What gets saved as a reusable workout: the exercise list plus the AiRTP
+  // settings, so "Start" brings back the same session.
+  const buildArtpTemplate = () => ({
+    source: "artp",
+    exercises: ALL_EXERCISES.filter(e => selected.has(e.name)).map(e => ({
+      exercise_name: e.name,
+      sets: totalSets,
+      target_reps: mode === "goal" ? repGoalPerEx : mode === "time" ? targetRepsPerEx : 0,
+      target_time: mode === "time" ? timePerEx : 0,
+      superset_with_next: supersets.has(e.name),
+    })),
+    artpSettings: { ...(mode ? { mode } : {}), totalSets, timePerEx, repGoalPerEx, targetRepsPerEx },
+  });
+
   const saveProgram = (name) => {
     const nm = name?.trim() || "My ARTP";
     localStorage.setItem(SAVE_KEY, JSON.stringify({ selectedNames: [...selected], supersetNames: [...supersets] }));
@@ -1591,7 +1611,42 @@ function ARTPWorkoutInner() {
     setSavedName(nm);
     setShowSaveInput(false);
     setSaveNameInput("");
+    // 2026-10-29: also a real SavedWorkout, so it's in My Workouts on every
+    // device and can go on a day in My Programs. (The local slot stays as the
+    // quick "Reload" on this screen.)
+    saveWorkoutTemplate({ name: nm, ...buildArtpTemplate() })
+      .then(() => toast.success(`Saved "${nm}" — find it in My Workouts`))
+      .catch(() => toast.error("Saved on this phone only — couldn't reach your account"));
   };
+
+  // ── Start a saved AiRTP workout: /ARTPWorkout?saved=<id> ────────────────
+  useEffect(() => {
+    let id = null;
+    try { id = new URLSearchParams(window.location.search).get("saved"); } catch (_) {}
+    if (!id) return;
+    (async () => {
+      try {
+        const rows = await base44.entities.SavedWorkout.filter({ id });
+        const w = rows?.[0];
+        if (!w) { toast.error("That saved workout wasn't found"); return; }
+        const names = (w.exercises || []).map(e => e.exercise_name).filter(n => ALL_EXERCISES.some(a => a.name === n));
+        if (!names.length) { toast.error("None of that workout's exercises are camera-trackable"); return; }
+        setSelected(new Set(names));
+        setSupersets(new Set((w.exercises || []).filter(e => e.superset_with_next).map(e => e.exercise_name)));
+        const st = w.artp_settings || {};
+        if (st.totalSets || w.exercises?.[0]?.sets) setTotalSets(st.totalSets || w.exercises[0].sets);
+        if (st.timePerEx) setTimePerEx(st.timePerEx);
+        if (st.repGoalPerEx) setRepGoalPerEx(st.repGoalPerEx);
+        if (st.targetRepsPerEx) setTargetRepsPerEx(st.targetRepsPerEx);
+        if (st.mode) setMode(st.mode);
+        setSavedName(w.name);
+        toast.success(`Loaded "${w.name}" — press START`);
+      } catch (_) {
+        toast.error("Couldn't load that saved workout");
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Restore exercise selection from the last saved snapshot
   const reloadSaved = () => {
@@ -2544,6 +2599,8 @@ function ARTPWorkoutInner() {
           onViewAchievements={() => navigate(createPageUrl("Achievements"))}
           onAdjustReps={adjustReps}
           onAdjustWeight={adjustWeight}
+          getSaveTemplate={buildArtpTemplate}
+          saveName={savedName || `AiRTP ${new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" })}`}
         />,
         document.body
       )}

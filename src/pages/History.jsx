@@ -18,6 +18,10 @@ import PullToRefresh from "@/components/PullToRefresh";
 // Weights + volume (2026-10-27)
 import LiftingVolume from "@/components/workout/LiftingVolume";
 import { sessionVolumeLbs, convert, fmtNum, getWeightUnit } from "@/lib/weights";
+// Saved workouts (2026-10-29): save any logged session as a reusable workout.
+import SaveWorkoutPanel from "@/components/workout/SaveWorkoutPanel";
+import { exercisesFromSession, isArtpSession } from "@/lib/savedWorkouts";
+import { BookmarkPlus, CalendarDays } from "lucide-react";
 
 export default function History() {
   const [sessions, setSessions] = useState([]);
@@ -32,6 +36,7 @@ export default function History() {
   const [chartData, setChartData] = useState([]);
   const [allExercises, setAllExercises] = useState([]);
   const [selectedExercise, setSelectedExercise] = useState('');
+  const [savingId, setSavingId] = useState(null);   // session whose Save panel is open
 
   useEffect(() => {
     loadHistory();
@@ -415,7 +420,15 @@ export default function History() {
 
         {/* Workout Sessions */}
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-white">Recent Workouts</h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-2xl font-bold text-white mr-auto">Recent Workouts</h2>
+            <Button variant="secondary" size="sm" onClick={() => { window.location.href = createPageUrl("SavedWorkouts"); }} className="gap-1.5 bg-blue-500/15 text-blue-300 border-0">
+              <BookmarkPlus className="w-4 h-4" /> My Workouts
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => { window.location.href = createPageUrl("Programs"); }} className="gap-1.5 bg-indigo-500/15 text-indigo-300 border-0">
+              <CalendarDays className="w-4 h-4" /> My Programs
+            </Button>
+          </div>
           
           {isLoading ? (
             <div className="text-center py-8 text-gray-400">Loading history...</div>
@@ -492,6 +505,9 @@ export default function History() {
                       </div>
                       
                       <div className="flex flex-col gap-1 ml-2">
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setSavingId(savingId === session.id ? null : session.id); }} aria-label="Save as a reusable workout" className={`h-8 w-8 ${savingId === session.id ? "text-blue-300" : "text-gray-400 hover:text-blue-300"}`}>
+                          <BookmarkPlus className="w-4 h-4" aria-hidden="true" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); copyWorkoutDetails(session); }} aria-label="Copy workout details as text" className="text-gray-400 hover:text-brand-blue h-8 w-8">
                           <Copy className="w-4 h-4" aria-hidden="true" />
                         </Button>
@@ -503,6 +519,13 @@ export default function History() {
                         </Button>
                       </div>
                     </div>
+                    {savingId === session.id && (
+                      <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+                        <SaveWorkoutPanel compact
+                          defaultName={`${isArtpSession(session) ? "AiRTP" : "Workout"} ${format(new Date(session.start_time), 'MMM d')}`}
+                          getTemplate={() => ({ source: isArtpSession(session) ? "artp" : "history", exercises: exercisesFromSession(session) })} />
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}

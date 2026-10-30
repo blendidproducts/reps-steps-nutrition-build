@@ -7,7 +7,8 @@ import { base44 } from "@/api/base44Client";
 import { ProgramEnrollment } from "@/entities/ProgramEnrollment";
 import { Achievement } from "@/entities/Achievement";
 import { Trophy, Target, Clock, TrendingUp, Share2, Home, RotateCcw, Trash2, Footprints } from "lucide-react";
-import AddToProgramSection from "@/components/workout/AddToProgramSection";
+// 2026-10-29: name it, save it to My Workouts, optionally put it on a program day.
+import SaveWorkoutPanel from "@/components/workout/SaveWorkoutPanel";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { AchievementManager } from '@/components/services/achievementManager';
@@ -19,6 +20,7 @@ export default function WorkoutComplete() {
   const [workoutStats, setWorkoutStats] = useState(null);
   const [newAchievements, setNewAchievements] = useState([]);
   const [programInfo, setProgramInfo] = useState(null);
+  const [lastWorkout, setLastWorkout] = useState(null);
   const [currentAchievementPopup, setCurrentAchievementPopup] = useState(null);
 
   useEffect(() => {
@@ -52,6 +54,7 @@ export default function WorkoutComplete() {
 
         // CRITICAL FIX: Check if this was part of a program and advance to next day
         const workouts = await base44.entities.Workout.filter({ id: session.workout_id });
+        if (workouts[0]) setLastWorkout(workouts[0]);
         console.log('[PROGRAM] Checking workout for program:', workouts);
         console.log('[PROGRAM] Full workout data:', workouts[0]);
         
@@ -541,7 +544,19 @@ export default function WorkoutComplete() {
                 View Full History
               </Button>
 
-              <AddToProgramSection />
+              {lastWorkout && (
+                <div className="text-left">
+                  <SaveWorkoutPanel
+                    defaultName={lastWorkout.name || "My Workout"}
+                    getTemplate={() => ({
+                      source: "program",
+                      difficulty: lastWorkout.difficulty,
+                      // Warm-ups are added fresh every time a workout starts.
+                      exercises: (lastWorkout.exercises || []).filter(ex => ex.category !== "warmup" && !ex.is_cardio_interval),
+                    })}
+                  />
+                </div>
+              )}
 
               <Button
                 variant="outline"

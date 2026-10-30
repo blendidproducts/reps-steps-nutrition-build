@@ -57,6 +57,51 @@ export const PA_MPOETC = {
 //                   15:52=952 16:38=998 17:22=1042 18:59=1139 21:20=1280
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   U.S. COAST GUARD (added 2026-10-29)
+   Military, but scored here: both are published pass/fail minimums, which is
+   exactly what the gate scorer does. They render under MILITARY → COAST GUARD.
+
+   1) New member standard — GoCoastGuard.com "Eligibility Requirements", read
+      2026-10-29: "All new Coast Guard members (officer and enlisted) are
+      expected to perform" push-ups in one minute 29 M / 15 F, timed forearm
+      plank 1:18 M / 1:09 F, timed 1.5-mile run 12:29 M / 15:05 F. By sex, no
+      age bands. Swim training happens at boot camp/OCS; no number published.
+
+   2) Boat Crew fitness test — Boat Crew Manual, Part 4 Ch. 3 Sec. D, Table 4-5
+      "Physical Fitness Standards" (dcms.uscg.mil Boat_Crew_Fitness_Test.pdf),
+      read 2026-10-29. Push-ups and sit-ups in one minute each, then EITHER a
+      1.5-mile run/walk OR a 12-minute swim (the swim chart is from Cooper).
+      Events in sequence, no more than 30 minutes apart; fail one, retake all.
+   ═══════════════════════════════════════════════════════════════════════════ */
+export const USCG_BANDS = ["<30", "30-39", "40-49", "50-59", "60+"];
+export function uscgBand(age) {
+  const a = Number(age);
+  if (!Number.isFinite(a) || a < 17) return null;
+  if (a < 30) return "<30";
+  if (a <= 39) return "30-39";
+  if (a <= 49) return "40-49";
+  if (a <= 59) return "50-59";
+  return "60+";
+}
+// run15 in seconds; swim12 in yards covered in 12 minutes.
+export const USCG_BOAT = {
+  male: {
+    pushups1: { "<30": 29,  "30-39": 24,  "40-49": 18,  "50-59": 13,  "60+": 10 },
+    situps1:  { "<30": 38,  "30-39": 35,  "40-49": 29,  "50-59": 25,  "60+": 22 },
+    run15:    { "<30": 771, "30-39": 816, "40-49": 869, "50-59": 926, "60+": 1003 },
+    swim12:   { "<30": 500, "30-39": 450, "40-49": 400, "50-59": 350, "60+": 300 },
+  },
+  female: {
+    pushups1: { "<30": 15,  "30-39": 11,  "40-49": 9,   "50-59": 9,    "60+": 9 },
+    situps1:  { "<30": 32,  "30-39": 25,  "40-49": 20,  "50-59": 16,   "60+": 15 },
+    run15:    { "<30": 926, "30-39": 957, "40-49": 1018, "50-59": 1075, "60+": 1124 },
+    swim12:   { "<30": 400, "30-39": 350, "40-49": 300, "50-59": 250,  "60+": 200 },
+  },
+};
+// run15: 12:51=771 13:36=816 14:29=869 15:26=926 16:43=1003 /
+//        15:26=926 15:57=957 16:58=1018 17:55=1075 18:44=1124
+
+/* ═══════════════════════════════════════════════════════════════════════════
    The gate definitions, per test.
      dir "higher"   value must be >= min
      dir "lower"    value must be <= max
@@ -66,9 +111,48 @@ export const PA_MPOETC = {
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 
 export const PUBLIC_SAFETY = {
+  uscg_member: {
+    passMark: true,
+    cardTitle: "Coast Guard new-member standard",
+    passNote: "What every new Coast Guard member — officer or enlisted — is expected to perform. Set by sex, no age bands.",
+    gates: {
+      pushups1: { dir: "higher", unit: "reps", bySex: { male: 29, female: 15 } },
+      plank:    { dir: "higher", unit: "secs", bySex: { male: 78, female: 69 } },
+      run15:    { dir: "lower",  unit: "secs", bySex: { male: 749, female: 905 } },
+    },
+  },
+
+  uscg_boatcrew: {
+    passMark: true,
+    banded: "uscg",
+    cardTitle: "Coast Guard Boat Crew standard",
+    passNote: "Table 4-5 of the Boat Crew Manual, by age and sex. Fail any section and the whole test is retaken.",
+    gates: {
+      pushups1: { dir: "higher", unit: "reps" },
+      situps1:  { dir: "higher", unit: "reps" },
+      run15:    { dir: "lower",  unit: "secs" },
+    },
+  },
+
+  // Same test with the manual's other endurance option: a 12-minute swim
+  // (distance covered) instead of the 1.5-mile run. Kept as its own battery
+  // because the app runs events in order and has no "skip one" — you pick
+  // which version you're doing up front, as you would on the day.
+  uscg_boatcrew_swim: {
+    passMark: true,
+    banded: "uscg",
+    cardTitle: "Coast Guard Boat Crew standard (swim option)",
+    passNote: "Table 4-5 of the Boat Crew Manual, by age and sex, with the 12-minute swim as the endurance event.",
+    gates: {
+      pushups1: { dir: "higher", unit: "reps" },
+      situps1:  { dir: "higher", unit: "reps" },
+      swim12:   { dir: "higher", unit: "yards" },
+    },
+  },
+
   police_pa: {
     passMark: true,
-    banded: true,
+    banded: "pa",
     cardTitle: "Pennsylvania academy standard",
     passNote: "The 30th percentile in every event is the entry standard. Academies hold you to it throughout training too.",
     gates: {
@@ -187,19 +271,32 @@ export const PUBLIC_SAFETY_PENDING = [
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /** The gate for one event, resolved for this person where the test is banded. */
+function gateText(g, v) {
+  if (g.dir === "lower") return g.unit === "sec10" ? `${v} seconds` : fmt(v);
+  if (g.unit === "secs") return `${fmt(v)} hold`;
+  if (g.unit === "yards") return `${v} yd in 12 min`;
+  return `${v} in 1 minute`;
+}
+
 function resolveGate(testKey, eventKey, { sex, age } = {}) {
   const t = PUBLIC_SAFETY[testKey];
   const g = t?.gates?.[eventKey];
   if (!g) return null;
-  if (!t.banded) return g;
-  const band = paBand(age);
-  const row = PA_MPOETC[sex]?.[eventKey];
-  const v = band && row ? row[band] : null;
+  let v = null, band;
+  if (g.bySex) {
+    v = g.bySex[sex] ?? null;
+  } else if (t.banded === "uscg") {
+    band = uscgBand(age);
+    v = band ? USCG_BOAT[sex]?.[eventKey]?.[band] ?? null : null;
+  } else if (t.banded) {
+    band = paBand(age);
+    const row = PA_MPOETC[sex]?.[eventKey];
+    v = band && row ? row[band] : null;
+  } else {
+    return g;
+  }
   if (v == null) return { ...g, unresolved: true };
-  const gate = g.dir === "lower"
-    ? (g.unit === "sec10" ? `${v} seconds` : fmt(v))
-    : `${v} in 1 minute`;
-  return { ...g, [g.dir === "lower" ? "max" : "min"]: v, gate, band };
+  return { ...g, [g.dir === "lower" ? "max" : "min"]: v, gate: gateText(g, v), band };
 }
 
 export function scorePublicSafetyEvent(testKey, eventKey, value, who) {
@@ -235,7 +332,15 @@ export function scorePublicSafetyEvent(testKey, eventKey, value, who) {
  */
 export function scorePublicSafetyTest(testKey, events, who = {}) {
   const t = PUBLIC_SAFETY[testKey];
-  const scored = (events || []).map((e) => ({ key: e.key, result: scorePublicSafetyEvent(testKey, e.key, e.value, who) }));
+  let scored = (events || []).map((e) => ({ key: e.key, result: scorePublicSafetyEvent(testKey, e.key, e.value, who) }));
+  // "Either/or" events (Boat Crew: run OR swim): the one you did is judged;
+  // the unrecorded alternative drops out instead of counting as missing.
+  for (const group of t?.either || []) {
+    const inGroup = scored.filter((s) => group.includes(s.key) && s.result);
+    const done = inGroup.filter((s) => s.result.pass !== null);
+    const drop = new Set((done.length ? inGroup.filter((s) => s.result.pass === null) : inGroup.slice(1)).map((s) => s.key));
+    scored = scored.filter((s) => !drop.has(s.key));
+  }
   const judged = scored.filter((s) => s.result);
   const unresolved = judged.some((s) => s.result.unresolved);
   const total = judged.length;

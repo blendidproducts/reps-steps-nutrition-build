@@ -238,6 +238,25 @@ export const PST_MINIMUMS = {
 };
 
 /**
+ * Above the minimum (2026-10-29). JT: "how is 50 push-ups the minimum?" —
+ * it is (MILPERSMAN), and it is the floor. What sits above it, from official
+ * Navy sources only:
+ *  - navy.com "Physical Screening Test" page, read 2026-10-29: "Top performers
+ *    typically score 50% above minimum standards." Shown for rep events only —
+ *    "50% above" a cutoff time has no single meaning, so no time is invented.
+ *  - Aviation Rescue Swimmer (AIRR) Elevated PST (EPST), navy.com AIRR career
+ *    page, read 2026-10-29. Meeting it at the 14-day shipping PST can qualify
+ *    for the Enlisted Bonus for Shipping. The only pipeline with a published
+ *    higher tier.
+ */
+export const PST_TOP_FACTOR = 1.5;
+export const PST_TOP_SOURCE = "navy.com: \"Top performers typically score 50% above minimum standards.\"";
+export const PST_ELEVATED = {
+  airr: { swim500: t(9, 0), pushups: 65, curlups: 65, pullups: 10, run15: t(10, 15) },
+};
+export const PST_ELEVATED_SOURCE = "navy.com Aviation Rescue Swimmer page — Elevated PST (EPST), for the Enlisted Bonus for Shipping.";
+
+/**
  * EOD's cardio rule is not "beat each minimum". MILPERSMAN sets a COMBINED
  * ceiling: the 500-yard swim and the 1.5-mile run must total under 21:00, and
  * neither one on its own may exceed 12:30. So an EOD candidate can swim slower

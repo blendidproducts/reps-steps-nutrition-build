@@ -25,10 +25,11 @@ import {
   BATTERIES, BATTERY_LIST, batteryMinutes, scorePrtTest, lineScore, tierFor,
   compareToPrevious, ageBand, TEST_GROUPS, batteriesInGroup,
   CUSTOM_EVENT_POOL, buildCustomBattery,
-  MILITARY_BRANCHES, batteriesInBranch,
+  MILITARY_BRANCHES, batteriesInBranch, eventFormatLabel,
 } from "@/lib/fitnessTests";
 import {
   PENDING, scoreAftTest, aftBand, scorePstTest, PST_PROGRAMS, PST_MINIMUMS,
+  PST_TOP_FACTOR, PST_TOP_SOURCE, PST_ELEVATED, PST_ELEVATED_SOURCE,
   scoreOftTest, OFT_CARDIO_OPTIONS, OFT_COMPOSITE_MIN, OFT_COMPOSITE_MAX,
 } from "@/lib/militaryStandards";
 import { scorePfraTest, pfraBand, PFRA_TOTAL_MAX } from "@/lib/airForceStandards";
@@ -71,6 +72,7 @@ const fmtValue = (v, unit) =>
   : unit === "in" ? `${v}"`
   : unit === "pts" ? `${v} pts`
   : unit === "m" ? `${v} m`
+  : unit === "yd" ? `${v} yd`
   : `${v}`;
 const isTimeUnit = (unit) => unit === "secs" || unit === "sec10";
 
@@ -530,24 +532,52 @@ export default function FitnessTest() {
                   </button>
                 ))}
               </div>
-              <div className="pt-1 space-y-1 border-t border-white/10">
+              <div className="pt-1 space-y-1.5 border-t border-white/10">
                 <p className="text-[10px] text-gray-500 uppercase tracking-wide pt-2">
-                  Minimums for {PST_PROGRAMS.find((p) => p.key === pstProgram)?.label}
+                  {PST_PROGRAMS.find((p) => p.key === pstProgram)?.label} standards
                 </p>
-                <div className="grid grid-cols-5 gap-1 text-center">
-                  {[
-                    ["Swim", fmtSecs(PST_MINIMUMS[pstProgram].swim500)],
-                    ["Push", PST_MINIMUMS[pstProgram].pushups],
-                    ["Curl", PST_MINIMUMS[pstProgram].curlups],
-                    ["Pull", PST_MINIMUMS[pstProgram].pullups],
-                    ["Run", fmtSecs(PST_MINIMUMS[pstProgram].run15)],
-                  ].map(([l, v]) => (
-                    <div key={l}>
-                      <p className="text-[9px] text-gray-600 uppercase">{l}</p>
-                      <p className="text-xs font-bold tabular-nums text-gray-300">{v}</p>
+                {/* 2026-10-29: the minimum is the floor, not the target. Rows:
+                    official minimum → Navy's "top performers ~50% above" (reps
+                    only) → the AIRR Elevated PST where one is published. */}
+                {(() => {
+                  const m = PST_MINIMUMS[pstProgram];
+                  const el = PST_ELEVATED[pstProgram];
+                  const top = (n) => Math.ceil(n * PST_TOP_FACTOR);
+                  const rows = [
+                    ["Minimum", "to qualify", [fmtSecs(m.swim500), m.pushups, m.curlups, m.pullups, fmtSecs(m.run15)], "text-gray-300"],
+                    ["Top ~50%", "above min.", ["—", top(m.pushups), top(m.curlups), top(m.pullups), "—"], "text-[#f59e0b]"],
+                  ];
+                  if (el) rows.push(["Elevated", "EPST bonus", [fmtSecs(el.swim500), el.pushups, el.curlups, el.pullups, fmtSecs(el.run15)], "text-green-400"]);
+                  return (
+                    <div className="grid grid-cols-[64px_repeat(5,1fr)] gap-x-1 gap-y-1 text-center items-center">
+                      <span />
+                      {["Swim", "Push", "Curl", "Pull", "Run"].map((l) => (
+                        <span key={l} className="text-[9px] text-gray-600 uppercase">{l}</span>
+                      ))}
+                      <span />
+                      {["500 yd ≤", "2 min", "2 min", "max", "1.5 mi ≤"].map((l, k) => (
+                        <span key={k} className="text-[8px] text-gray-600 leading-none">{l}</span>
+                      ))}
+                      {rows.map(([lab, sub, vals, cls]) => (
+                        <React.Fragment key={lab}>
+                          <span className="text-left leading-none">
+                            <span className={`block text-[10px] font-bold ${cls}`}>{lab}</span>
+                            <span className="block text-[8px] text-gray-600">{sub}</span>
+                          </span>
+                          {vals.map((v, k) => (
+                            <span key={k} className={`text-xs font-bold tabular-nums ${cls}`}>{v}</span>
+                          ))}
+                        </React.Fragment>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
+                <p className="text-[10px] text-gray-500 leading-snug pt-1">
+                  Swim and run are <b className="text-gray-300">cutoff times</b>: finish at or under them.
+                  Push-ups and curl-ups are the most you can do in 2 minutes; pull-ups are max reps.
+                  The minimum gets you a contract — {PST_TOP_SOURCE}
+                  {PST_ELEVATED[pstProgram] ? ` ${PST_ELEVATED_SOURCE}` : ""}
+                </p>
                 {pstProgram === "eod" && (
                   <p className="text-[10px] text-amber-300/90 leading-snug pt-1">
                     EOD is scored on the combined swim + run: under 21:00 total, with neither
@@ -794,9 +824,7 @@ function BatteryCard({ b, selected, onSelect }) {
               <span className="w-4 text-gray-600 font-bold">{i + 1}</span>
               <span className="text-gray-300 flex-1">{e.name}</span>
               <span className="text-gray-500">
-                {e.fixedSeconds ? fmtSecs(e.fixedSeconds)
-                  : e.seconds ? fmtSecs(e.seconds)
-                  : e.how === "hold" ? "max hold" : "to failure"}
+                {eventFormatLabel(e)}
               </span>
             </div>
           ))}
@@ -851,9 +879,7 @@ function CustomPicker({ selectedKeys, active, onToggle }) {
               <span className="leading-tight">
                 {e.name}
                 <span className="block text-[10px] text-gray-500">
-                  {e.fixedSeconds ? fmtSecs(e.fixedSeconds)
-                    : e.seconds ? fmtSecs(e.seconds)
-                    : e.how === "hold" ? "max hold" : "to failure"}
+                  {eventFormatLabel(e)}
                 </span>
               </span>
             </button>
@@ -1004,6 +1030,7 @@ function EventRunner({ event, index, total, accent, onDone, onAbort }) {
       // MARSOC: a PFT total you already hold, and a distance covered underwater.
       points:   { label: "POINTS",  step: "1",   mode: "numeric" },
       meters:   { label: "METRES",  step: "1",   mode: "numeric" },
+      yards:    { label: "YARDS",   step: "25",  mode: "numeric" },
     };
     const single = SINGLE[event.entryKind] || SINGLE.weight;
     const value = isTime

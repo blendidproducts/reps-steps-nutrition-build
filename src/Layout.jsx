@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useNavigationManager, resolveTabForPath, TAB_ROOTS, pushTabPath } from "@/lib/NavigationManager";
 import { createPageUrl } from "@/utils";
 import rnsLogo from "@/assets/RnS_LOGO.png";
-import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box, Users, Clock, Brain, Watch, ShoppingBag, ListTodo, FileText, ClipboardCheck, ScanLine } from "lucide-react";
+import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box, Users, Clock, Brain, Watch, ShoppingBag, ListTodo, FileText, ClipboardCheck, ScanLine, CalendarDays } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { base44 } from "@/api/base44Client";
 import { loadProgram, isRestPlan, completeRestDay, createProgramDayWorkout } from "@/lib/programDay";
@@ -26,6 +26,7 @@ import {
   SidebarFooter,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 
@@ -37,7 +38,8 @@ const navigationItems = [
   { title: "Exercises", url: createPageUrl("Exercises"), icon: Dumbbell },
   { title: "Stretches", url: createPageUrl("Stretches"), icon: Timer },
   { title: "Nutrition", url: createPageUrl("Nutrition"), icon: Apple },
-  { title: "Saved Workouts", url: createPageUrl("SavedWorkouts"), icon: BookmarkPlus },
+  { title: "My Workouts", url: createPageUrl("SavedWorkouts"), icon: BookmarkPlus },
+  { title: "My Programs", url: createPageUrl("Programs"), icon: CalendarDays },
   { title: "Preset Programs", url: createPageUrl("PresetPrograms"), icon: Calendar },
   { title: "Program Guides", url: createPageUrl("Guides"), icon: FileText },
   { title: "History", url: createPageUrl("History"), icon: History },
@@ -54,6 +56,23 @@ const navigationItems = [
   { title: "Help", url: createPageUrl("Help"), icon: HelpCircle },
   { title: "Settings", url: createPageUrl("Settings"), icon: Settings },
 ];
+
+// 2026-10-29 (JT): "the side bar needs to auto collapse" after an item is
+// clicked, on mobile AND desktop. Lives inside SidebarProvider (useSidebar
+// needs the context). Any route change closes the mobile drawer and folds the
+// desktop sidebar back to its icon rail.
+function SidebarAutoCollapse() {
+  const location = useLocation();
+  const { isMobile, setOpen, setOpenMobile } = useSidebar();
+  const first = React.useRef(true);
+  React.useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    setOpenMobile(false);
+    if (!isMobile) setOpen(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+  return null;
+}
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -261,7 +280,8 @@ export default function Layout({ children, currentPageName }) {
     (location.pathname.includes('ARTPWorkout') && artpImmersive);
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
+      <SidebarAutoCollapse />
       <style>
         {`
           /* Height of the mobile tab bar (BottomNav): 56px min-height + 12px of
@@ -374,11 +394,14 @@ export default function Layout({ children, currentPageName }) {
         {/* Global background-sync indicator */}
         <SyncIndicator />
         
-        <Sidebar className="border-r border-[#0a0e1a] bg-[#0a0e1a] hidden md:flex">
-          <SidebarHeader className="p-4 border-b border-gray-800/50">
-            <div className="flex items-center gap-3">
-              <img src={logoUrl} alt="RepsAndSteps Logo" className="w-9 h-9" />
-              <img src={bannerUrl} alt="RepsAndSteps" className="h-4" />
+        {/* collapsible="icon": on desktop it rests as a 48px icon rail and the
+            ☰ at the top expands it; picking a page folds it back. */}
+        <Sidebar collapsible="icon" className="border-r border-[#0a0e1a] bg-[#0a0e1a] hidden md:flex">
+          <SidebarHeader className="p-4 border-b border-gray-800/50 group-data-[collapsible=icon]:p-2">
+            <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+              <SidebarTrigger aria-label="Expand or collapse menu" className="hidden md:inline-flex text-gray-300 hover:text-white hover:bg-gray-800/60 h-8 w-8 flex-shrink-0" />
+              <img src={logoUrl} alt="RepsAndSteps Logo" className="w-9 h-9 group-data-[collapsible=icon]:hidden" />
+              <img src={bannerUrl} alt="RepsAndSteps" className="h-4 group-data-[collapsible=icon]:hidden" />
             </div>
           </SidebarHeader>
           
@@ -390,6 +413,7 @@ export default function Layout({ children, currentPageName }) {
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton 
                         asChild 
+                        tooltip={item.title}
                         className={`hover:bg-gray-800/50 transition-all duration-200 rounded-none mb-0 border-0 ${
                           location.pathname === item.url ? 'bg-[#0066cc] text-white' : 'text-gray-300'
                         }`}
@@ -398,10 +422,10 @@ export default function Layout({ children, currentPageName }) {
                           to={item.url}
                           aria-label={item.title}
                           aria-current={location.pathname === item.url ? "page" : undefined}
-                          className="flex items-center gap-3 px-5 py-3"
+                          className="flex items-center gap-3 px-5 py-3 group-data-[collapsible=icon]:justify-center"
                         >
-                          <item.icon className="w-4 h-4" aria-hidden="true" />
-                          <span className="font-normal text-sm">{item.title}</span>
+                          <item.icon className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                          <span className="font-normal text-sm group-data-[collapsible=icon]:hidden">{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -410,7 +434,7 @@ export default function Layout({ children, currentPageName }) {
               </SidebarGroupContent>
             </SidebarGroup>
 
-            <div className="px-3 mt-4">
+            <div className="px-3 mt-4 group-data-[collapsible=icon]:hidden">
               <Link to={createPageUrl("Pricing")}>
                 <Button className="w-full bg-[#0066cc] hover:bg-[#0052a3] text-white font-semibold py-2 rounded-md">
                   <Star className="w-4 h-4 mr-2" />
@@ -420,7 +444,7 @@ export default function Layout({ children, currentPageName }) {
             </div>
           </SidebarContent>
 
-          <SidebarFooter className="border-t border-gray-800/50 p-4">
+          <SidebarFooter className="border-t border-gray-800/50 p-4 group-data-[collapsible=icon]:hidden">
             <div className="text-center text-xs text-gray-500">
               Push your limits 💪
             </div>

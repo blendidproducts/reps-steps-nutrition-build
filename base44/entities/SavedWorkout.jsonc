@@ -63,6 +63,22 @@
       },
       "description": "Tags like 'upper body', 'full body', etc."
     },
+    "source": {
+      "type": "string",
+      "enum": ["artp", "program", "history", "custom"],
+      "description": "Where it was saved from. 'artp' restarts in AiRTP (camera) with artp_settings"
+    },
+    "artp_settings": {
+      "type": "object",
+      "description": "AiRTP session settings to restore on Start",
+      "properties": {
+        "mode": { "type": "string" },
+        "totalSets": { "type": "number" },
+        "timePerEx": { "type": "number" },
+        "repGoalPerEx": { "type": "number" },
+        "targetRepsPerEx": { "type": "number" }
+      }
+    },
     "is_public": {
       "type": "boolean",
       "default": false,

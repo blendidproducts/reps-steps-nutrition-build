@@ -1,212 +1,158 @@
+/**
+ * My Workouts (SavedWorkouts) — rebuilt 2026-10-29.
+ *
+ * Every workout saved from AiRTP, Workout Complete or History lands here.
+ *   Start          AiRTP ones reopen AiRTP with the same exercises + settings;
+ *                  the rest start as a normal guided workout.
+ *   Add to program put it on a day of a weekly program (My Programs).
+ *   Rename / Delete (delete asks twice on the card — no window.confirm, which
+ *                  the app shell blocks).
+ */
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Plus, Play, Share2, Trash2, Clock, Target, Zap } from "lucide-react";
-import { motion } from "framer-motion";
+import { Play, Trash2, CalendarPlus, CalendarDays, Camera, Dumbbell, Pencil, Check, X, Plus } from "lucide-react";
 import { toast } from "sonner";
+import SaveWorkoutPanel from "@/components/workout/SaveWorkoutPanel";
+import { startSavedWorkout } from "@/lib/savedWorkouts";
 
 export default function SavedWorkouts() {
   const navigate = useNavigate();
   const [workouts, setWorkouts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [openAdd, setOpenAdd] = useState(null);
+  const [confirmDel, setConfirmDel] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [starting, setStarting] = useState(null);
 
-  useEffect(() => {
-    loadWorkouts();
-  }, []);
+  useEffect(() => { loadWorkouts(); }, []);
 
   const loadWorkouts = async () => {
     setIsLoading(true);
-    const data = await base44.entities.SavedWorkout.list('-created_date');
-    setWorkouts(data);
+    try { setWorkouts(await base44.entities.SavedWorkout.list("-created_date")); }
+    catch (_) { setWorkouts([]); }
     setIsLoading(false);
   };
 
-  const shareWorkout = async (workout) => {
-    const exerciseList = workout.exercises.map(ex => ex.exercise_name).join(', ');
-    const text = `Check out my ${workout.name} workout on Reps & Steps! Exercises: ${exerciseList} 💪 #RepsAndSteps #Workout`;
-    
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: workout.name,
-          text: text,
-          url: window.location.href
-        });
-      } else {
-        await navigator.clipboard.writeText(text);
-        toast.success('Workout details copied to clipboard!');
-      }
-    } catch (error) {
-      await navigator.clipboard.writeText(text);
-      toast.info('Workout details copied to clipboard!');
-    }
+  const del = async (w) => {
+    if (confirmDel !== w.id) { setConfirmDel(w.id); setTimeout(() => setConfirmDel((c) => (c === w.id ? null : c)), 4000); return; }
+    await base44.entities.SavedWorkout.delete(w.id);
+    toast.success("Workout deleted");
+    setConfirmDel(null);
+    loadWorkouts();
   };
 
-  const deleteWorkout = async (id) => {
-    if (confirm('Are you sure you want to delete this workout?')) {
-      await base44.entities.SavedWorkout.delete(id);
-      toast.success('Workout deleted!');
-      loadWorkouts();
-    }
+  const saveName = async (w) => {
+    const nm = editName.trim();
+    if (!nm) return;
+    await base44.entities.SavedWorkout.update(w.id, { name: nm });
+    setEditing(null);
+    loadWorkouts();
   };
 
-  const startWorkout = (workout) => {
-    const exerciseIds = workout.exercises.map(ex => ex.exercise_id).join(',');
-    navigate(`${createPageUrl("WorkoutBuilder")}?exercises=${exerciseIds}&savedWorkout=${workout.id}`);
-  };
-
-  const workoutTypeIcons = {
-    rep_based: Target,
-    time_based: Clock,
-    random: Zap
+  const start = async (w) => {
+    if (starting) return;
+    setStarting(w.id);
+    try { await startSavedWorkout(w, navigate); }
+    catch (_) { toast.error("Couldn't start that workout"); setStarting(null); }
   };
 
   return (
-    <div style={{ backgroundColor: '#020817', minHeight: '100vh', color: '#f9fafb' }}>
-      <div className="gradient-bg text-white py-8">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Saved Workouts</h1>
-              <p className="text-lg text-white/90">
-                Your custom workout templates, ready to use anytime
-              </p>
-            </div>
-            <Button
-              onClick={() => navigate(createPageUrl("Exercises"))}
-              className="bg-white/20 border-white/30 text-white hover:bg-white/30"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Create New
-            </Button>
+    <div style={{ backgroundColor: "#020817", minHeight: "100vh", color: "#f9fafb" }} className="pb-28">
+      <div className="gradient-bg text-white py-7">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <h1 className="text-3xl font-bold mb-1">My Workouts</h1>
+          <p className="text-white/90">Workouts you've saved — start one, or put it on a day in a program.</p>
+          <div className="flex gap-2 mt-4 flex-wrap">
+            <button onClick={() => navigate(createPageUrl("Programs"))}
+              className="px-4 rounded-xl bg-white/20 text-white font-bold text-sm flex items-center gap-2" style={{ minHeight: 44 }}>
+              <CalendarDays className="w-4 h-4" /> My Programs
+            </button>
+            <button onClick={() => navigate(createPageUrl("ARTPWorkout"))}
+              className="px-4 rounded-xl bg-white/10 text-white font-bold text-sm flex items-center gap-2" style={{ minHeight: 44 }}>
+              <Plus className="w-4 h-4" /> New AiRTP workout
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-4 py-5 max-w-3xl">
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array(6).fill(0).map((_, i) => (
-              <Card key={i} className="bg-card border-border animate-pulse">
-                <CardContent className="p-6">
-                  <div className="h-6 bg-gray-700 rounded mb-4 w-3/4"></div>
-                  <div className="h-4 bg-gray-700 rounded mb-2"></div>
-                  <div className="h-4 bg-gray-700 rounded w-1/2"></div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : workouts.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {workouts.map((workout) => {
-              const TypeIcon = workoutTypeIcons[workout.workout_type] || Target;
-              return (
-                <motion.div
-                  key={workout.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  whileHover={{ y: -5 }}
-                >
-                  <Card className="h-full bg-card border-border hover:border-brand-blue/50 transition-all">
-                    <CardHeader>
-                      <div className="flex items-start justify-between mb-2">
-                        <TypeIcon className="w-6 h-6 text-brand-blue" />
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => shareWorkout(workout)}
-                            className="text-gray-400 hover:text-brand-blue h-8 w-8"
-                          >
-                            <Share2 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deleteWorkout(workout.id)}
-                            className="text-gray-400 hover:text-red-400 h-8 w-8"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <CardTitle className="text-xl">{workout.name}</CardTitle>
-                      {workout.description && (
-                        <p className="text-sm text-gray-400">{workout.description}</p>
-                      )}
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex gap-2 flex-wrap">
-                          <Badge variant="outline" className="border-brand-blue/50 text-brand-blue capitalize">
-                            {workout.workout_type ? workout.workout_type.replace('_', ' ') : 'Custom'}
-                          </Badge>
-                          {workout.difficulty && (
-                            <Badge variant="outline" className="border-gray-500/50 text-gray-300 capitalize">
-                              {workout.difficulty}
-                            </Badge>
-                          )}
-                          {workout.estimated_duration && (
-                            <Badge variant="outline" className="border-purple-500/50 text-purple-300">
-                              ~{workout.estimated_duration} min
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        <div>
-                          <p className="text-sm text-gray-400 mb-2">
-                            {workout.exercises.length} exercises
-                          </p>
-                          <div className="flex gap-1 flex-wrap">
-                            {workout.exercises.slice(0, 3).map((ex, idx) => (
-                              <span key={idx} className="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300">
-                                {ex.exercise_name}
-                              </span>
-                            ))}
-                            {workout.exercises.length > 3 && (
-                              <span className="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300">
-                                +{workout.exercises.length - 3} more
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter>
-                      <Button
-                        onClick={() => startWorkout(workout)}
-                        className="w-full gradient-bg text-white hover:opacity-90"
-                      >
-                        <Play className="w-4 h-4 mr-2" />
-                        Start Workout
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </motion.div>
-              );
-            })}
+          <p className="text-gray-400 text-center py-10">Loading…</p>
+        ) : workouts.length === 0 ? (
+          <div className="rounded-2xl border border-gray-800 bg-[#0d1524] p-8 text-center">
+            <Dumbbell className="w-12 h-12 mx-auto mb-3 text-gray-600" />
+            <h3 className="text-lg font-semibold mb-1">Nothing saved yet</h3>
+            <p className="text-gray-400 text-sm">
+              Finish a workout and tap <b className="text-white">Save this workout</b> on the summary screen,
+              or save one from History.
+            </p>
           </div>
         ) : (
-          <Card className="bg-card border-border">
-            <CardContent className="p-12 text-center">
-              <Target className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-              <h3 className="text-xl font-semibold mb-2">No Saved Workouts Yet</h3>
-              <p className="text-gray-400 mb-6">
-                Create your first custom workout and save it for later
-              </p>
-              <Button
-                onClick={() => navigate(createPageUrl("Exercises"))}
-                className="gradient-bg text-white hover:opacity-90"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                Create Your First Workout
-              </Button>
-            </CardContent>
-          </Card>
+          <ul className="space-y-3">
+            {workouts.map((w) => {
+              const isArtp = w.source === "artp";
+              const ex = w.exercises || [];
+              const sets = ex[0]?.sets;
+              return (
+                <li key={w.id} className="rounded-2xl border border-gray-800 bg-[#0d1524] p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isArtp ? "bg-green-500/15" : "bg-blue-500/15"}`}>
+                      {isArtp ? <Camera className="w-5 h-5 text-green-400" /> : <Dumbbell className="w-5 h-5 text-blue-400" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {editing === w.id ? (
+                        <div className="flex gap-1.5">
+                          <input value={editName} onChange={(e) => setEditName(e.target.value)} autoFocus maxLength={60}
+                            className="flex-1 min-w-0 rounded-lg bg-black/40 border border-gray-700 px-2 text-white text-sm" style={{ minHeight: 40 }} />
+                          <button onClick={() => saveName(w)} aria-label="Save name" className="w-10 rounded-lg bg-blue-600 flex items-center justify-center"><Check className="w-4 h-4" /></button>
+                          <button onClick={() => setEditing(null)} aria-label="Cancel" className="w-10 rounded-lg border border-gray-700 flex items-center justify-center"><X className="w-4 h-4" /></button>
+                        </div>
+                      ) : (
+                        <p className="font-bold text-base truncate">{w.name}</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {isArtp ? "AiRTP camera workout" : "Guided workout"} · {ex.length} exercise{ex.length !== 1 ? "s" : ""}{sets ? ` · ${sets} set${sets !== 1 ? "s" : ""}` : ""}
+                      </p>
+                      <div className="flex gap-1 flex-wrap mt-2">
+                        {ex.slice(0, 5).map((e, i) => (
+                          <span key={i} className="text-[11px] bg-gray-800 px-2 py-0.5 rounded text-gray-300">{e.exercise_name}</span>
+                        ))}
+                        {ex.length > 5 && <span className="text-[11px] bg-gray-800 px-2 py-0.5 rounded text-gray-400">+{ex.length - 5}</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 mt-3">
+                    <button onClick={() => start(w)} disabled={starting === w.id}
+                      className="rounded-xl gradient-bg text-white font-black text-sm flex items-center justify-center gap-1.5 disabled:opacity-60" style={{ minHeight: 44 }}>
+                      <Play className="w-4 h-4 fill-white" /> {starting === w.id ? "Starting…" : "Start"}
+                    </button>
+                    <button onClick={() => setOpenAdd(openAdd === w.id ? null : w.id)} aria-label="Add to a program day"
+                      className={`px-3 rounded-xl border text-xs font-bold flex items-center gap-1 ${openAdd === w.id ? "border-indigo-400 bg-indigo-500/20 text-indigo-200" : "border-gray-700 text-gray-300"}`} style={{ minHeight: 44 }}>
+                      <CalendarPlus className="w-4 h-4" /> <span className="hidden sm:inline">Program</span>
+                    </button>
+                    <button onClick={() => { setEditing(w.id); setEditName(w.name); }} aria-label="Rename"
+                      className="w-11 rounded-xl border border-gray-700 text-gray-400 flex items-center justify-center" style={{ minHeight: 44 }}>
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => del(w)} aria-label={confirmDel === w.id ? "Tap again to delete" : "Delete"}
+                      className={`rounded-xl border flex items-center justify-center gap-1 text-xs font-bold ${confirmDel === w.id ? "px-3 border-red-500 bg-red-500/20 text-red-300" : "w-11 border-gray-700 text-gray-400"}`} style={{ minHeight: 44 }}>
+                      <Trash2 className="w-4 h-4" />{confirmDel === w.id && "Delete?"}
+                    </button>
+                  </div>
+
+                  {openAdd === w.id && (
+                    <div className="mt-3">
+                      <SaveWorkoutPanel saved={w} compact onDone={() => {}} />
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
     </div>

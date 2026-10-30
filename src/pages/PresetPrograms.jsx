@@ -309,6 +309,25 @@ export default function PresetPrograms() {
           </button>
         </div>
 
+        {/* 2026-10-29: your own workouts + weekly programs, one tap from the
+            Programs tab (they were only reachable from deep links before). */}
+        {activeTab === 'workout' && (
+          <div className="grid grid-cols-2 gap-3 mb-8">
+            <button onClick={() => navigate(createPageUrl("Programs"))}
+              className="rounded-2xl border border-[#00a9ff]/40 bg-[#00a9ff]/10 p-4 text-left active:scale-[0.99]">
+              <Calendar className="w-5 h-5 text-[#00a9ff] mb-1.5" />
+              <p className="font-black text-white">My Programs</p>
+              <p className="text-xs text-gray-400">Your weekly schedule · start today's</p>
+            </button>
+            <button onClick={() => navigate(createPageUrl("SavedWorkouts"))}
+              className="rounded-2xl border border-green-500/40 bg-green-500/10 p-4 text-left active:scale-[0.99]">
+              <Play className="w-5 h-5 text-green-400 mb-1.5" />
+              <p className="font-black text-white">My Workouts</p>
+              <p className="text-xs text-gray-400">Saved workouts · run one again</p>
+            </button>
+          </div>
+        )}
+
         {/* Active Workout Program */}
         {activeTab === 'workout' && activeProgram && activeProgramDetails && (
           <motion.div
