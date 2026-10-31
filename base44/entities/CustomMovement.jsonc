@@ -1,0 +1,40 @@
+{
+  "name": "CustomMovement",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "What the person called the movement"
+    },
+    "template_json": {
+      "type": "string",
+      "description": "The learned movement template (lib/movementTemplates.js learnMovement output), as JSON text"
+    },
+    "describe": {
+      "type": "string",
+      "description": "Human-readable joints tracked, e.g. 'right elbow'"
+    },
+    "local_id": {
+      "type": "string",
+      "description": "The id it had in this device's local list before it was uploaded"
+    }
+  },
+  "required": [
+    "name",
+    "template_json"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

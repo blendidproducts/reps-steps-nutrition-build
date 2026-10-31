@@ -35,6 +35,13 @@
           "superset_with_next": {
             "type": "boolean",
             "default": false
+          },
+          "custom": {
+            "type": "boolean",
+            "description": "A Movement Trainer recording (matched by name), not a library exercise"
+          },
+          "custom_movement_id": {
+            "type": "string"
           }
         }
       }

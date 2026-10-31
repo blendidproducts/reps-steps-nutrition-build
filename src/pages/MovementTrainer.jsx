@@ -23,10 +23,14 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import RepTracker, { releaseSharedCamera } from "@/components/workout/RepTracker";
 import {
-  MovementRecorder, makeCustomExerciseConfig,
-  loadCustomMovements, saveCustomMovement, deleteCustomMovement,
+  MovementRecorder, makeCustomExerciseConfig, loadCustomMovements,
 } from "@/lib/movementTemplates";
-import { ScanLine, Play, Trash2, ArrowLeft, Circle, Square, RotateCcw, Check, AlertTriangle, X } from "lucide-react";
+// 2026-10-30: recordings are saved to the account (CustomMovement), not just
+// this browser; the local list is the offline cache. See lib/customMovements.js.
+import { syncCustomMovements, createCustomMovement, removeCustomMovement } from "@/lib/customMovements";
+import AddMovementToWorkout from "@/components/workout/AddMovementToWorkout";
+import { toast } from "sonner";
+import { ScanLine, Play, Trash2, ArrowLeft, Circle, Square, RotateCcw, Check, AlertTriangle, X, Cloud, CloudOff, ListPlus } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import WeightInput, { weightLabel } from "@/components/workout/WeightInput";
 import { ClipTray } from "@/components/workout/AutoTrack";
@@ -207,6 +211,39 @@ export default function MovementTrainer() {
   const [armed, setArmed] = useState(null);           // id whose Start was tapped (weight box open)
   const [weight, setWeight] = useState({ weight: 0, unit: getWeightUnit() });
   const startedAtRef = useRef(0);
+  const [cloud, setCloud] = useState("syncing");     // syncing | synced | local
+  const [confirmDel, setConfirmDel] = useState(null);
+  const [adding, setAdding] = useState(null);        // movement id whose "Add to workout" is open
+  const [totals, setTotals] = useState({});          // name(lower) -> { last, lastDate, all, times }
+
+  // Account sync on open: pulls recordings from other devices and uploads any
+  // that only exist on this one (everything recorded before 2026-10-30).
+  useEffect(() => {
+    let live = true;
+    syncCustomMovements().then(({ list, synced }) => {
+      if (!live) return;
+      setSaved(list);
+      setCloud(synced ? "synced" : "local");
+    });
+    return () => { live = false; };
+  }, []);
+
+  // Last-time and all-time reps per movement, from History.
+  const loadTotals = useCallback(async () => {
+    try {
+      const rows = await base44.entities.WorkoutSession.list("-created_date", 300);
+      const t = {};
+      for (const s of rows || []) for (const ex of s.exercises_completed || []) {
+        const k = String(ex.exercise_name || "").trim().toLowerCase();
+        const r = Number(ex.reps_completed) || 0;
+        if (!k || !r) continue;
+        if (!t[k]) t[k] = { last: r, lastDate: s.start_time || s.created_date, all: 0, times: 0 };
+        t[k].all += r; t[k].times += 1;
+      }
+      setTotals(t);
+    } catch (_) { /* totals just stay hidden */ }
+  }, []);
+  useEffect(() => { loadTotals(); }, [loadTotals]);
 
   const arm = (m) => {
     setLastCount(null);
@@ -243,17 +280,33 @@ export default function MovementTrainer() {
 
   const onRecorded = useCallback((r) => { setResult(r); setName(""); setView("review"); }, []);
 
-  const save = () => {
-    const item = saveCustomMovement({ name: name || "My movement", template: result.template });
-    if (!item) { alert("Couldn't save on this device — storage is full or blocked."); return; }
-    setSaved(loadCustomMovements());
+  const [savingMv, setSavingMv] = useState(false);
+  const save = async () => {
+    if (savingMv) return;
+    const nm = (name || "My movement").trim();
+    if (saved.some((m) => m.name.trim().toLowerCase() === nm.toLowerCase())) {
+      toast.error(`You already have "${nm}" — pick another name`);
+      return;
+    }
+    setSavingMv(true);
+    const { list, synced } = await createCustomMovement({ name: nm, template: result.template });
+    setSavingMv(false);
+    setSaved(list);
+    if (synced) { setCloud("synced"); toast.success(`"${nm}" saved to your account`); }
+    else toast("Saved on this phone — it uploads next time you're online");
     setResult(null);
     setView("list");
   };
 
-  const remove = (m) => {
-    if (!window.confirm(`Delete "${m.name}"?`)) return;
-    setSaved(deleteCustomMovement(m.id));
+  // Two taps to delete (window.confirm is blocked inside the app shell).
+  const remove = async (m) => {
+    if (confirmDel !== m.id) {
+      setConfirmDel(m.id);
+      setTimeout(() => setConfirmDel((c) => (c === m.id ? null : c)), 4000);
+      return;
+    }
+    setConfirmDel(null);
+    setSaved(await removeCustomMovement(m));
   };
 
   if (view === "record") return <RecordScreen onDone={onRecorded} onCancel={() => setView("list")} />;
@@ -268,7 +321,7 @@ export default function MovementTrainer() {
         onComplete={(n) => {
           releaseSharedCamera();
           setLastCount({ name: active.name, n, weight: weight.weight, unit: weight.unit });
-          saveSet(active.name, n, weight);
+          saveSet(active.name, n, weight).then(loadTotals);
           setActive(null); setArmed(null); setView("list");
         }}
         onClose={() => { releaseSharedCamera(); setActive(null); setView("list"); }}
@@ -349,7 +402,12 @@ export default function MovementTrainer() {
           </button>
         )}
 
-        <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Your movements</h2>
+        <div className="flex items-center mb-2">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">Your movements</h2>
+          <span className={`ml-auto text-[10px] flex items-center gap-1 ${cloud === "local" ? "text-amber-300" : "text-gray-500"}`}>
+            {cloud === "syncing" ? "Syncing…" : cloud === "synced" ? <><Cloud className="w-3 h-3" /> Saved to your account</> : <><CloudOff className="w-3 h-3" /> Offline — on this phone</>}
+          </span>
+        </div>
         {saved.length === 0 ? (
           <p className="text-sm text-gray-500 py-6 text-center">Nothing saved yet.</p>
         ) : (
@@ -358,18 +416,37 @@ export default function MovementTrainer() {
               <li key={m.id} className="rounded-xl bg-[#0d1524] border border-gray-800 p-3">
                 <div className="flex items-center gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold truncate">{m.name}</p>
+                  <p className="font-bold leading-tight break-words">{m.name}</p>
                   <p className="text-xs text-gray-400 truncate">{m.template.describe} · {m.template.side === "both" ? "both sides" : `${m.template.side} side`}</p>
+                  {(() => {
+                    const t = totals[m.name.trim().toLowerCase()];
+                    return t ? (
+                      <p className="text-[11px] text-gray-500 mt-0.5">
+                        Last: <b className="text-white">{t.last}</b>{t.lastDate ? ` (${new Date(t.lastDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })})` : ""}
+                        {" · "}All-time: <b className="text-[#00a9ff]">{t.all}</b> in {t.times} set{t.times !== 1 ? "s" : ""}
+                      </p>
+                    ) : null;
+                  })()}
+                  {!m.remote_id && cloud !== "syncing" && (
+                    <p className="text-[10px] text-amber-300 mt-0.5 flex items-center gap-1"><CloudOff className="w-3 h-3" /> This phone only — uploads when online</p>
+                  )}
                 </div>
-                <button onClick={() => remove(m)} aria-label={`Delete ${m.name}`}
-                  className="w-11 h-11 rounded-lg border border-gray-700 flex items-center justify-center text-gray-400 active:text-red-400">
-                  <Trash2 className="w-4 h-4" />
+                <button onClick={() => remove(m)} aria-label={confirmDel === m.id ? `Tap again to delete ${m.name}` : `Delete ${m.name}`}
+                  className={`h-11 rounded-lg border flex items-center justify-center gap-1 text-xs font-bold ${confirmDel === m.id ? "px-2 border-red-500 bg-red-500/20 text-red-300" : "w-11 border-gray-700 text-gray-400"}`}>
+                  <Trash2 className="w-4 h-4" />{confirmDel === m.id && "Delete?"}
+                </button>
+                <button onClick={() => setAdding(adding === m.id ? null : m.id)} aria-label={`Add ${m.name} to a workout`}
+                  className={`w-11 h-11 rounded-lg border flex items-center justify-center ${adding === m.id ? "border-purple-400 bg-purple-500/20 text-purple-200" : "border-gray-700 text-gray-300"}`}>
+                  <ListPlus className="w-4 h-4" />
                 </button>
                 <button onClick={() => (armed === m.id ? setArmed(null) : arm(m))}
                   className="min-h-[44px] px-4 rounded-lg bg-[#00a9ff] text-white font-black flex items-center gap-1.5">
                   <Play className="w-4 h-4 fill-white" /> Start
                 </button>
                 </div>
+                {adding === m.id && (
+                  <div className="mt-3"><AddMovementToWorkout movement={m} /></div>
+                )}
                 {armed === m.id && (
                   <div className="mt-3 pt-3 border-t border-gray-800">
                     <WeightInput value={weight.weight} unit={weight.unit} onChange={changeWeight} />

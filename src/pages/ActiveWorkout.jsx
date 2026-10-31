@@ -17,6 +17,9 @@ import StepTracker from "@/components/StepTracker";
 import RepTracker, { releaseSharedCamera } from "@/components/workout/RepTracker";
 // Auto Track (2026-10-29): open the camera tracker by itself on every set.
 import { getAutoTrack, setAutoTrack as saveAutoTrack, ClipTray } from "@/components/workout/AutoTrack";
+// Movement Trainer recordings in workouts (2026-10-30). Checked BEFORE the
+// library: matchExercise() falls back to Push-Up for a name it doesn't know.
+import { customConfigFor, syncCustomMovements } from "@/lib/customMovements";
 import { matchExercise } from "@/lib/exerciseTracking";
 import { normName, findExerciseRecord } from "@/lib/exerciseNameMatch";
 import RestScreen from "@/components/workout/RestScreen";
@@ -478,6 +481,10 @@ export default function ActiveWorkout() {
   // re-load), and DONE in the tracker logs the reps and moves on to the rest.
   // Closing the tracker with X turns it off for that set only.
   const [autoTrack, setAutoTrackState] = useState(() => getAutoTrack());
+  // Pull recorded movements onto this device (a new phone has an empty cache),
+  // then re-render so their AI button / auto track appear.
+  const [, setMovementsReady] = useState(0);
+  useEffect(() => { syncCustomMovements().then(() => setMovementsReady((n) => n + 1)).catch(() => {}); }, []);
   const toggleAutoTrack = () => setAutoTrackState(v => { const nv = !v; saveAutoTrack(nv); if (!nv) releaseSharedCamera(); return nv; });
   const autoDismissedRef = useRef(null);
   const [autoNextPending, setAutoNextPending] = useState(false);
@@ -488,7 +495,7 @@ export default function ActiveWorkout() {
     const ex = workout?.exercises?.[currentExerciseIndex];
     if (!ex || ex.metric === 'time' || ex.category === 'warmup') return;
     let cfg = null;
-    try { cfg = matchExercise(ex.exercise_name); } catch (_) {}
+    try { cfg = customConfigFor(ex.exercise_name) || matchExercise(ex.exercise_name); } catch (_) {}
     if (!cfg || cfg.trackable === false) return;
     setShowRepTracker(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -632,7 +639,8 @@ export default function ActiveWorkout() {
   const isTimeBased = currentExercise.metric === 'time';
 
   // ── AI body-tracking availability for the current exercise ──────────────────
-  const aiConfig = matchExercise(currentExercise?.exercise_name);
+  const customAiConfig = customConfigFor(currentExercise?.exercise_name);
+  const aiConfig = customAiConfig || matchExercise(currentExercise?.exercise_name);
   const isAiTrackable = !isTimeBased && aiConfig && aiConfig.trackable !== false;
   const aiIsExperimental = aiConfig?.trackable === 'experimental';
   // When the camera tracker finishes, record its rep count like a manual entry.
@@ -715,6 +723,7 @@ export default function ActiveWorkout() {
                     <Camera className="w-3.5 h-3.5" />
                     <span className="text-xs font-bold">AI REP TRACKING</span>
                     {aiIsExperimental && <span className="text-[9px] bg-yellow-400/90 text-black rounded px-1 py-0.5 font-black ml-0.5">BETA</span>}
+                    {customAiConfig && <span className="text-[9px] bg-purple-400/90 text-black rounded px-1 py-0.5 font-black ml-0.5">YOUR RECORDING</span>}
                   </Button>
                   {/* Auto Track: open the tracker by itself on every set */}
                   <button onClick={toggleAutoTrack} aria-pressed={autoTrack}
@@ -846,6 +855,7 @@ export default function ActiveWorkout() {
       {showRepTracker && (
         <RepTracker
           exerciseName={currentExercise.exercise_name}
+          customConfig={customAiConfig}
           targetReps={currentExercise.target_reps || 0}
           exerciseEmoji={aiConfig?.emoji || ""}
           setLabel={`Set ${currentSet} of ${currentExercise.sets || 1}`}

@@ -15,6 +15,7 @@
  */
 import { base44 } from "@/api/base44Client";
 import { createPageUrl } from "@/utils";
+import { findCustomMovement } from "@/lib/customMovements";
 
 export const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 export const DAY_SHORT = { monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu", friday: "Fri", saturday: "Sat", sunday: "Sun" };
@@ -34,7 +35,15 @@ function cleanExercises(list) {
       target_time: Math.max(0, Math.round(Number(ex.target_time) || 0)),
       sets: Math.max(1, Math.round(Number(ex.sets) || 1)),
       superset_with_next: !!ex.superset_with_next,
+      // Movement Trainer recordings (2026-10-30): flagged so they're counted
+      // with the person's own template, never the library.
+      ...(ex.custom ? { custom: true, custom_movement_id: ex.custom_movement_id || undefined } : {}),
     }));
+}
+
+/** Is this saved-workout exercise one of the person's recorded movements? */
+export function isCustomExercise(ex) {
+  return !!(ex?.custom || findCustomMovement(ex?.exercise_name));
 }
 
 /** Create a SavedWorkout. Returns the created record. */
@@ -81,7 +90,11 @@ export function isArtpSession(session) {
  */
 export async function startSavedWorkout(saved, navigate) {
   if (!saved) return;
-  if (saved.source === "artp") {
+  // AiRTP only knows its built-in exercise list. A workout that includes a
+  // recorded movement runs as a guided workout instead, where the camera
+  // tracker counts it against the recording (and AUTO track still works).
+  const hasCustom = (saved.exercises || []).some(isCustomExercise);
+  if (saved.source === "artp" && !hasCustom) {
     navigate(`${createPageUrl("ARTPWorkout")}?saved=${encodeURIComponent(saved.id)}`);
     return;
   }
@@ -90,7 +103,8 @@ export async function startSavedWorkout(saved, navigate) {
   const byId = (id) => id && library.find((e) => e.id === id);
   const byName = (n) => library.find((e) => (e.name || "").toLowerCase() === (n || "").toLowerCase());
   const exercises = (saved.exercises || []).map((ex) => {
-    const db = byId(ex.exercise_id) || byName(ex.exercise_name);
+    const custom = isCustomExercise(ex);
+    const db = custom ? null : (byId(ex.exercise_id) || byName(ex.exercise_name));
     const timed = ex.target_time > 0 && !ex.target_reps;
     return {
       exercise_id: db?.id || "custom",
@@ -105,6 +119,7 @@ export async function startSavedWorkout(saved, navigate) {
       category: db?.category || "full_body",
       image_url: db?.image_url,
       instructions: db?.instructions,
+      ...(custom ? { custom: true, custom_movement_id: ex.custom_movement_id || undefined, category: "Custom" } : {}),
     };
   });
   const workout = await base44.entities.Workout.create({
@@ -131,4 +146,30 @@ export async function createProgramWithDay(name, day, savedId) {
     start_date: new Date().toISOString().split("T")[0],
     is_active: false,
   });
+}
+
+/**
+ * Add a recorded movement to a saved workout (existing one, or a new one when
+ * `workout` is null). Returns the saved record.
+ */
+export async function addMovementToSavedWorkout({ movement, workout = null, newName, sets = 3, reps = 10 }) {
+  const entry = {
+    exercise_name: movement.name,
+    sets: Math.max(1, Math.round(sets) || 1),
+    target_reps: Math.max(0, Math.round(reps) || 0),
+    target_time: 0,
+    superset_with_next: false,
+    custom: true,
+    custom_movement_id: movement.remote_id || movement.id,
+  };
+  if (workout) {
+    const exercises = [...cleanExercises(workout.exercises), entry];
+    await base44.entities.SavedWorkout.update(workout.id, {
+      exercises,
+      // A recorded movement can't run inside AiRTP's built-in list.
+      ...(workout.source === "artp" ? { source: "program" } : {}),
+    });
+    return { ...workout, exercises, source: workout.source === "artp" ? "program" : workout.source };
+  }
+  return saveWorkoutTemplate({ name: newName || movement.name, exercises: [entry], source: "program" });
 }

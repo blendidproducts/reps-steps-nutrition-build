@@ -15,7 +15,8 @@ import { createPageUrl } from "@/utils";
 import { Play, Trash2, CalendarPlus, CalendarDays, Camera, Dumbbell, Pencil, Check, X, Plus, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import SaveWorkoutPanel from "@/components/workout/SaveWorkoutPanel";
-import { startSavedWorkout } from "@/lib/savedWorkouts";
+import { startSavedWorkout, isCustomExercise } from "@/lib/savedWorkouts";
+import { syncCustomMovements } from "@/lib/customMovements";
 import { fmtNum, getWeightUnit, convert } from "@/lib/weights";
 
 // ── Exercise history from logged sessions (2026-10-29) ────────────────────────
@@ -71,7 +72,9 @@ export default function SavedWorkouts() {
   const [expanded, setExpanded] = useState(() => new Set());
   const [history, setHistory] = useState(() => new Map());
 
-  useEffect(() => { loadWorkouts(); loadHistory(); }, []);
+  // Recorded movements are matched by name; sync them so a new device knows them.
+  const [, setMvReady] = useState(0);
+  useEffect(() => { loadWorkouts(); loadHistory(); syncCustomMovements().then(() => setMvReady((n) => n + 1)).catch(() => {}); }, []);
 
   const loadHistory = async () => {
     try { setHistory(buildHistory(await base44.entities.WorkoutSession.list("-created_date", 300))); }
@@ -202,7 +205,7 @@ export default function SavedWorkouts() {
                             return (
                               <li key={i} className="grid grid-cols-[1fr_auto_auto] gap-x-3 px-3 py-2 items-center">
                                 <span className="min-w-0">
-                                  <span className="block text-sm text-white truncate"><span className="text-gray-500 mr-1.5">{i + 1}</span>{e.exercise_name}{e.superset_with_next ? <span className="text-purple-300 text-[10px] ml-1">🔗</span> : null}</span>
+                                  <span className="block text-sm text-white truncate"><span className="text-gray-500 mr-1.5">{i + 1}</span>{e.exercise_name}{e.superset_with_next ? <span className="text-purple-300 text-[10px] ml-1">🔗</span> : null}{isCustomExercise(e) ? <span className="ml-1.5 text-[9px] font-black bg-purple-500/25 text-purple-200 rounded px-1 py-0.5 align-middle">RECORDED</span> : null}</span>
                                   {plan && <span className="block text-[11px] text-gray-500">{plan}</span>}
                                 </span>
                                 <span className="text-right">
