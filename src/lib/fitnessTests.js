@@ -130,9 +130,14 @@ export function scorePrtEvent(eventKey, value, sex, age) {
 
   // 45 points is the passing floor, 100 the ceiling. Below the minimum the
   // score falls away toward 0 at roughly the same rate it climbs above it.
+  // Reps and holds below the minimum scale from 0 (nothing done) up to 45
+  // (2026-11-04: 0 push-ups used to score 17 points). The run keeps the
+  // taper, since there is no "zero" time.
   const points = frac >= 0
     ? Math.min(100, Math.round(45 + frac * 55))
-    : Math.max(0, Math.round(45 + frac * 45));
+    : lowerIsBetter
+      ? Math.max(0, Math.round(45 + frac * 45))
+      : Math.max(0, Math.round(45 * Math.max(0, v) / min));
 
   return { points, category: categoryFor(points), min, max, band };
 }
@@ -245,9 +250,23 @@ export const BATTERIES = {
         unit: "reps", cue: "2 minutes. Chest to the deck, hands off the ground, then press.",
         note: "The camera counts the press. It can't see the hand release, so keep yourself honest.",
         restAfter: 120 },
+      // 2026-11-04 (JT: "I don't understand what the instructions are here"):
+      // the full procedure, segment by segment, from goarmy.com "Sprint-Drag-
+      // Carry (SDC)" (AFT Event 3) and army.mil "Sprint Drag Carry", read
+      // 2026-11-04. `segments` drives a lap stopwatch on the entry screen.
       { key: "sdc", name: "Sprint-Drag-Carry", how: "entry", entryKind: "time",
-        unit: "secs", cue: "Five 50m shuttles: sprint, drag, lateral, carry, sprint. Enter your time.",
-        equipment: "90-lb sled + two 40-lb kettlebells + 25m lane", restAfter: 120 },
+        unit: "secs",
+        cue: "Five 50-meter shuttles on a 25-meter lane, for time: sprint, sled drag, lateral, kettlebell carry, sprint — 250 m in all. Start lying prone, head behind the start line.",
+        equipment: "90-lb sled with strap handles · two 40-lb kettlebells · a 25-meter lane with a start line and a turn line",
+        segments: [
+          { name: "Sprint", how: "On GO, stand up from the prone position and sprint 25 m. Touch the turn line with a hand AND a foot, sprint back." },
+          { name: "Drag", how: "Grab both strap handles of the 90-lb sled and pull it backward until the WHOLE sled crosses the 25-m line. Turn and pull it back until the whole sled crosses the start line." },
+          { name: "Lateral", how: "Move sideways 25 m — face the same way, don't cross your feet. Touch the turn line with a hand and a foot, then move laterally back, leading with the other foot." },
+          { name: "Carry", how: "Pick up the two 40-lb kettlebells, run 25 m, step on or over the turn line with one foot, run back. Drop one and you restart from where it fell. Set them down — don't throw them." },
+          { name: "Sprint", how: "Sprint 25 m, touch the turn line with a hand and a foot, sprint back. Time stops as you cross the start line." },
+        ],
+        rules: "Miss a line touch and you're called back to touch it. Scored 0–100 by sex and age; 60 points is the minimum.",
+        restAfter: 120 },
       { key: "plank", name: "Plank", exercise: "Plank", how: "hold",
         unit: "secs", cue: "Hold. Tap STOP the moment your hips drop or rise.", restAfter: 120 },
       { key: "run2", name: "Two-Mile Run", how: "run", distanceLabel: "2 miles",
@@ -569,6 +588,7 @@ export const BATTERIES = {
     accent: "#f97316",
     scoring: "gate",
     needsProfile: true,
+    ageOptional: true,       // the published standard is set by sex only
     disclaimer:
       "Standards from GoCoastGuard.com \"Eligibility Requirements\", read 2026-10-29: 29/15 push-ups " +
       "in one minute (men/women), forearm plank 1:18/1:09, 1.5-mile run 12:29/15:05. Set by sex — " +

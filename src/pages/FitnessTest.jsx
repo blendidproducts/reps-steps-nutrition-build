@@ -47,7 +47,7 @@ import {
 } from "lucide-react";
 import {
   PUBLIC_SAFETY, PUBLIC_SAFETY_BRANCHES, PUBLIC_SAFETY_PENDING,
-  scorePublicSafetyTest, paBand,
+  scorePublicSafetyTest, paBand, uscgBand,
 } from "@/lib/publicSafetyStandards";
 
 const ICONS = {
@@ -76,13 +76,86 @@ const fmtValue = (v, unit) =>
   : `${v}`;
 const isTimeUnit = (unit) => unit === "secs" || unit === "sec10";
 
+/**
+ * Is the age/sex on file enough to SCORE this battery? (2026-11-04)
+ * JT ran the Navy PRT with no age/sex and got no score at all. Every service
+ * table is set by sex and age group, so a scored battery now asks for them
+ * before it starts (and the results screen can still score a past test).
+ */
+function bandFor(battery, age) {
+  if (!battery) return null;
+  const f = battery.profileBands === "pa" ? paBand
+    : battery.profileBands === "uscg" ? uscgBand
+    : battery.scoring === "aft" ? aftBand
+    : battery.scoring === "pfra" ? pfraBand
+    : battery.scoring === "usmc" ? usmcBand
+    : ageBand;
+  return age ? f(age) : null;
+}
+function profileReady(battery, sex, age) {
+  if (!battery?.needsProfile) return true;
+  if (sex !== "male" && sex !== "female") return false;
+  if (battery.ageOptional) return true;
+  return !!bandFor(battery, age);
+}
+
+/**
+ * Readiness score for tests that publish only pass/fail minimums (Navy PST,
+ * Coast Guard, police, federal, fire, lifeguard, MARSOC gates). 2026-11-04 —
+ * JT wants "pass, fail and a score" on every test. These services publish no
+ * points, so the app does NOT invent a points table: this is a plain,
+ * labelled calculation — how far past (or short of) each published standard
+ * you were, as a percentage, averaged. 100 = exactly on every standard.
+ *   reps / distance / hold (more is better):  your value ÷ standard
+ *   times (less is better):                   standard ÷ your time
+ * Each event is capped at 150 so one huge event can't hide a failed one.
+ */
+function readinessScore(scored, events) {
+  const parts = [];
+  for (const s of scored || []) {
+    const r = s.result;
+    const v = Number(events.find((e) => e.key === s.key)?.value) || 0;
+    if (!r || r.minimum == null || !(r.minimum > 0) || !(v > 0)) continue;
+    const ratio = r.lowerIsBetter ? r.minimum / v : v / r.minimum;
+    parts.push(Math.min(1.5, ratio));
+  }
+  if (!parts.length) return null;
+  return Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 100);
+}
+
+function ReadinessLine({ value }) {
+  if (value == null) return null;
+  return (
+    <div className="mt-3 pt-3 border-t border-white/10">
+      <p className="text-[10px] uppercase tracking-widest text-gray-500">Readiness score</p>
+      <p className="text-4xl font-black tabular-nums" style={{ color: value >= 100 ? "#4ade80" : "#f59e0b" }}>{value}</p>
+      <p className="text-[10px] text-gray-500 leading-snug max-w-xs mx-auto">
+        % of the published standard, averaged across events — 100 means exactly on every
+        standard. An app calculation, not an official score (this test publishes pass/fail only).
+      </p>
+    </div>
+  );
+}
+
+/** Short spoken cue for the test clock (3-2-1, Go, 10 seconds, Time). */
+function sayNow(text) {
+  try {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.1;
+    window.speechSynthesis.speak(u);
+  } catch (_) { /* no voice on this device */ }
+}
+
 /* ── local history ─────────────────────────────────────────────────────────── */
 function loadHistory() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY) || "[]"); } catch { return []; }
 }
 function saveLocal(record) {
   try {
-    const all = [record, ...loadHistory()].slice(0, 50);
+    // Replace by id, so scoring a past test (adding age/sex later) updates it.
+    const all = [record, ...loadHistory().filter((r) => r.id !== record.id)].slice(0, 50);
     localStorage.setItem(STORE_KEY, JSON.stringify(all));
   } catch { /* storage full or blocked — the on-screen result is still correct */ }
 }
@@ -193,11 +266,14 @@ export default function FitnessTest() {
     if (TEST_GROUPS.some((g) => g.key === groupParam)) setOpenGroup(groupParam);
   }, [groupParam]);
 
+  const metasRef = useRef({});
   /** Record an event's result and move on (or finish). */
-  const finishEvent = useCallback((value) => {
+  const finishEvent = useCallback((value, meta) => {
     const key = battery.events[eventIndex].key;
     const next = { ...values, [key]: value };
     setValues(next);
+    // How a run was measured (mode, steps, GPS, laps) rides along with it.
+    if (meta) metasRef.current = { ...metasRef.current, [key]: meta };
     const rest = battery.events[eventIndex].restAfter || 0;
     if (eventIndex + 1 >= battery.events.length) {
       finishTest(next);
@@ -210,7 +286,9 @@ export default function FitnessTest() {
   function finishTest(finalValues) {
     const events = battery.events.map((e) => ({
       key: e.key, name: e.name, unit: e.unit, value: finalValues[e.key] ?? 0,
+      ...(metasRef.current[e.key] ? { meta: metasRef.current[e.key] } : {}),
     }));
+    metasRef.current = {};
     const record = {
       id: `local-${Date.now()}`,
       battery: battery.key,
@@ -659,11 +737,7 @@ export default function FitnessTest() {
                   placeholder="e.g. 34"
                   className="w-full min-h-[44px] bg-[#0a0a0a] border border-gray-700 rounded-xl px-3 text-white text-sm"
                 />
-                {profile.age && !(battery.profileBands === "pa" ? paBand(profile.age)
-                                  : battery.scoring === "aft" ? aftBand(profile.age)
-                                  : battery.scoring === "pfra" ? pfraBand(profile.age)
-                                  : battery.scoring === "usmc" ? usmcBand(profile.age)
-                                  : ageBand(profile.age)) && (
+                {profile.age && !battery.ageOptional && !bandFor(battery, profile.age) && (
                   <p className="text-[10px] text-amber-400 mt-1">
                     {battery.profileBands === "pa"
                       ? "The published table starts at 18 — the test will run but won't be scored."
@@ -680,11 +754,23 @@ export default function FitnessTest() {
         {battery && createPortal(
           <div className="fixed left-0 right-0 px-4 pb-3 pt-3 bg-gradient-to-t from-[#020817] via-[#020817] to-transparent"
             style={{ bottom: "calc(var(--nav-h, 68px) + env(safe-area-inset-bottom, 0px))", zIndex: 60 }}>
-            <button onClick={() => { setPhase("running"); setEventIndex(0); setValues({}); }}
-              className="w-full min-h-[56px] rounded-2xl font-black text-base text-white flex items-center justify-center gap-2 active:scale-95 transition"
-              style={{ background: `linear-gradient(135deg, ${battery.accent}, ${battery.accent}cc)` }}>
-              <Play className="w-5 h-5 fill-white" /> START {battery.name.toUpperCase()}
-            </button>
+            {profileReady(battery, profile.sex, profile.age) ? (
+              <button onClick={() => { setPhase("running"); setEventIndex(0); setValues({}); }}
+                className="w-full min-h-[56px] rounded-2xl font-black text-base text-white flex items-center justify-center gap-2 active:scale-95 transition"
+                style={{ background: `linear-gradient(135deg, ${battery.accent}, ${battery.accent}cc)` }}>
+                <Play className="w-5 h-5 fill-white" /> START {battery.name.toUpperCase()}
+              </button>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="w-full min-h-[56px] rounded-2xl font-black text-sm text-white/70 flex items-center justify-center gap-2 bg-gray-800 border border-gray-700 text-center px-3">
+                  {battery.ageOptional ? "Pick your sex above to get a score" : "Add your sex and age above to get a score"}
+                </div>
+                <button onClick={() => { setPhase("running"); setEventIndex(0); setValues({}); }}
+                  className="w-full text-[11px] text-gray-500 underline">
+                  Run it without a score
+                </button>
+              </div>
+            )}
           </div>,
           document.body
         )}
@@ -918,6 +1004,236 @@ function RestBetween({ secs, next, onSkip, index, total, accent }) {
      run    -> stopwatch, or a distance entry for the Cooper run
      steps  -> StepTracker over a fixed window
      manual -> tap counter, for burpees the pose model can't count */
+/* ── Run events: three ways to measure (2026-11-04) ─────────────────────────
+   JT: "have an option to select open run, track run, or free distance run",
+   with a step count on every run.
+     TRACK   a 400 m track: tap LAP each time round; the screen shows how many
+             laps the test distance is (1.5 mi ≈ 6.0 laps, 2 mi ≈ 8.0).
+     ROUTE   any route you run: GPS measures the distance and the app calls it
+             when you reach the test distance (stop when you cross your line).
+     FREE    run any distance you like; the app measures time + GPS distance
+             and projects your time for the test distance from your pace —
+             clearly labelled an ESTIMATE, and scored as one.
+   Steps are counted in every mode (phone in a pocket or armband). GPS on a
+   phone is usually within a few percent on open sky but drifts around tall
+   buildings and trees — a measured track or route is still the gold standard. */
+const M_PER_MILE = 1609.344;
+function parseDistanceM(label) {
+  const m = String(label || "").match(/([\d.]+)\s*(miles?|mi|km|kilometers?|meters?|metres?|m)\b/i);
+  if (!m) return null;
+  const n = Number(m[1]);
+  const u = m[2].toLowerCase();
+  return u.startsWith("mi") ? n * M_PER_MILE : u.startsWith("k") ? n * 1000 : n;
+}
+function haversineM(a, b) {
+  const R = 6371000, toR = (x) => (x * Math.PI) / 180;
+  const dLat = toR(b.lat - a.lat), dLon = toR(b.lon - a.lon);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+const fmtMiles = (m) => `${(m / M_PER_MILE).toFixed(2)} mi`;
+
+function RunRunner({ event, index, total, accent, onDone, onAbort }) {
+  const target = parseDistanceM(event.distanceLabel);
+  const LAP_M = 400;
+  const lapsNeeded = target ? target / LAP_M : null;
+  const [mode, setMode] = useState(() => { try { return localStorage.getItem("rns_run_mode") || "track"; } catch (_) { return "track"; } });
+  const pickMode = (m) => { setMode(m); try { localStorage.setItem("rns_run_mode", m); } catch (_) {} };
+  const [running, setRunning] = useState(false);
+  const [startAt, setStartAt] = useState(null);
+  const [now, setNow] = useState(0);
+  const [laps, setLaps] = useState([]);              // ms timestamps
+  const [steps, setSteps] = useState(0);
+  const stepBase = useRef(null);
+  const [gpsM, setGpsM] = useState(0);
+  const [gpsAcc, setGpsAcc] = useState(null);
+  const [gpsErr, setGpsErr] = useState(null);
+  const lastFix = useRef(null);
+  const watchId = useRef(null);
+  const announced = useRef(false);
+  const [finished, setFinished] = useState(null);   // { secs, meta } awaiting save
+
+  const elapsedMs = startAt ? (running ? now : (finished ? finished.endMs : now)) - startAt : 0;
+
+  useEffect(() => {
+    if (!running) return;
+    const t = setInterval(() => setNow(Date.now()), 200);
+    return () => clearInterval(t);
+  }, [running]);
+
+  // GPS for ROUTE and FREE. Fixes worse than 30 m are ignored, and so is any
+  // jump implying > 9 m/s (faster than a 3-minute mile) — that's drift.
+  useEffect(() => {
+    if (!running || mode === "track") return;
+    if (!navigator.geolocation) { setGpsErr("No GPS on this device"); return; }
+    watchId.current = navigator.geolocation.watchPosition((pos) => {
+      const { latitude: lat, longitude: lon, accuracy } = pos.coords;
+      setGpsAcc(Math.round(accuracy));
+      if (accuracy > 30) return;
+      const fix = { lat, lon, t: pos.timestamp };
+      const prev = lastFix.current;
+      if (prev) {
+        const d = haversineM(prev, fix);
+        const dt = Math.max(0.5, (fix.t - prev.t) / 1000);
+        if (d / dt > 9) return;
+        if (d < 2) return;                                // standing still
+        setGpsM((m) => m + d);
+      }
+      lastFix.current = fix;
+    }, (err) => setGpsErr(err.code === 1 ? "Location permission is off — allow it to measure distance" : "Weak GPS signal"),
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+    return () => { if (watchId.current != null) navigator.geolocation.clearWatch(watchId.current); watchId.current = null; };
+  }, [running, mode]);
+
+  // ROUTE: call it when the GPS distance reaches the test distance.
+  useEffect(() => {
+    if (mode !== "route" || !running || !target || announced.current) return;
+    if (gpsM >= target) { announced.current = true; sayNow("Distance reached. Stop when you cross your line."); }
+  }, [gpsM, mode, running, target]);
+
+  const start = () => {
+    const t = Date.now();
+    lastFix.current = null; stepBase.current = null; announced.current = false;
+    setGpsM(0); setSteps(0); setLaps([]); setFinished(null); setGpsErr(null);
+    setStartAt(t); setNow(t); setRunning(true); sayNow("Go");
+  };
+  const lap = () => {
+    const t = Date.now();
+    const next = [...laps, t];
+    setLaps(next);
+    if (lapsNeeded && next.length >= Math.ceil(lapsNeeded - 0.05)) sayNow("Final lap done");
+    else sayNow(`Lap ${next.length}`);
+  };
+  const stop = () => {
+    const end = Date.now();
+    setRunning(false); setNow(end);
+    const secs = Math.round((end - startAt) / 1000);
+    const meta = { mode, steps, gps_m: Math.round(gpsM), laps: laps.length, target_m: target ? Math.round(target) : null };
+    let value = secs;
+    if (mode === "free") {
+      // Projected time for the test distance from your pace. Only possible
+      // with a usable GPS distance; otherwise there's nothing to project from.
+      if (target && gpsM > 200) {
+        value = Math.round(secs * (target / gpsM));
+        meta.estimated = true; meta.actual_secs = secs;
+      } else meta.noDistance = true;
+    }
+    setFinished({ secs, value, meta, endMs: end });
+  };
+
+  const distLine = mode === "track"
+    ? `${laps.length} of ${lapsNeeded ? lapsNeeded.toFixed(1) : "?"} laps · ${fmtMiles(laps.length * LAP_M)}`
+    : `${fmtMiles(gpsM)}${target ? ` of ${fmtMiles(target)}` : ""}${gpsAcc != null ? ` · GPS ±${gpsAcc} m` : ""}`;
+
+  const MODES = [
+    ["track", "Track", "400 m track — tap each lap"],
+    ["route", "Measured route", "GPS calls the distance"],
+    ["free", "Free run", "Any distance — time projected"],
+  ];
+
+  return (
+    <TestShell
+      event={{ ...event, cue: mode === "track"
+        ? `${event.distanceLabel} on a 400 m track${lapsNeeded ? ` = ${lapsNeeded.toFixed(1)} laps` : ""}. Tap LAP each time round, FINISH as you cross the line.`
+        : mode === "route"
+          ? `Run your ${event.distanceLabel} route with the phone on you. GPS tracks the distance and tells you when you've reached it — tap STOP at your finish line.`
+          : `Run any distance with the phone on you. GPS measures it and your ${event.distanceLabel} time is projected from your pace.` }}
+      index={index} total={total} onAbort={onAbort}
+      hint={mode === "track" ? "Lane 1 of a standard track is 400 m." : "Keep the screen on — iPhones pause GPS when the screen locks."}>
+      <StepTracker isActive={running} onStepUpdate={(c) => {
+        if (stepBase.current === null) stepBase.current = c;
+        setSteps(Math.max(0, c - stepBase.current));
+      }} />
+
+      {!startAt && (
+        <div className="w-full max-w-sm mt-4 grid grid-cols-3 gap-1.5">
+          {MODES.map(([k, l, sub]) => (
+            <button key={k} onClick={() => pickMode(k)}
+              className={`rounded-xl border px-2 py-2 text-left min-h-[64px] ${mode === k ? "text-white" : "border-gray-700 text-gray-400"}`}
+              style={mode === k ? { borderColor: accent, background: `${accent}22` } : undefined}>
+              <span className="block text-xs font-black">{l}</span>
+              <span className="block text-[10px] text-gray-500 leading-tight mt-0.5">{sub}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="text-6xl font-black tabular-nums mt-6" style={{ color: accent }}>{fmtSecs(Math.floor(elapsedMs / 1000))}</div>
+      <p className="text-gray-300 text-sm mt-1 tabular-nums">{distLine}</p>
+      <p className="text-gray-500 text-xs mt-0.5 tabular-nums">{steps.toLocaleString()} steps · test distance {event.distanceLabel}</p>
+      {gpsErr && mode !== "track" && <p className="text-amber-400 text-[11px] mt-1">{gpsErr}</p>}
+
+      {finished ? (
+        <div className="w-full max-w-xs mt-5 space-y-2">
+          {finished.meta.estimated && (
+            <p className="text-[11px] text-amber-300 leading-snug">
+              You ran {fmtMiles(finished.meta.gps_m)} in {fmtSecs(finished.secs)}. At that pace,
+              {" "}{event.distanceLabel} ≈ <b>{fmtSecs(finished.value)}</b> — an estimate, and scored as one.
+            </p>
+          )}
+          {finished.meta.noDistance && (
+            <p className="text-[11px] text-amber-300 leading-snug">No usable GPS distance, so your time ({fmtSecs(finished.secs)}) is saved as-is.</p>
+          )}
+          <button onClick={() => onDone(finished.value, finished.meta)}
+            className="w-full min-h-[56px] rounded-2xl font-black text-black" style={{ background: accent }}>
+            SAVE {fmtSecs(finished.value)}{finished.meta.estimated ? " (EST.)" : ""}
+          </button>
+          <button onClick={() => { setStartAt(null); setFinished(null); }}
+            className="w-full min-h-[44px] rounded-xl border border-gray-700 text-gray-300 text-sm font-bold">Redo</button>
+        </div>
+      ) : !running ? (
+        <button onClick={start}
+          className="mt-6 min-h-[56px] px-10 rounded-2xl font-black text-base text-black flex items-center gap-2 active:scale-95"
+          style={{ background: accent }}>
+          <Play className="w-5 h-5 fill-black" /> START
+        </button>
+      ) : (
+        <div className="mt-6 flex gap-2 w-full max-w-xs">
+          {mode === "track" && (
+            <button onClick={lap}
+              className="flex-1 min-h-[64px] rounded-2xl font-black text-black text-lg active:scale-95" style={{ background: accent }}>
+              LAP {laps.length + 1}
+            </button>
+          )}
+          <button onClick={stop}
+            className={`${mode === "track" ? "w-28" : "flex-1"} min-h-[64px] rounded-2xl font-black bg-red-600 text-white flex items-center justify-center gap-2 active:scale-95`}>
+            <Square className="w-5 h-5" /> {mode === "track" ? "FINISH" : "STOP"}
+          </button>
+        </div>
+      )}
+    </TestShell>
+  );
+}
+
+/* Event screen frame. A real component at module scope (2026-11-04): it used
+   to be defined INSIDE EventRunner, so every re-render — each keystroke in a
+   time field, each stopwatch tick — made it a new component type and React
+   remounted the whole screen, dropping the keyboard on phones. */
+function TestShell({ event, index, total, onAbort, hint, children }) {
+  return createPortal(
+    <div className="fixed inset-0 bg-[#020817] flex flex-col text-white" style={{ zIndex: 99995 }}>
+      <div className="flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),20px)] pb-3">
+        <span className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
+          Event {index + 1} of {total}
+        </span>
+        <button onClick={onAbort} className="text-[11px] text-red-400 font-bold border border-red-500/40 rounded-full px-3 py-1.5">
+          Abandon
+        </button>
+      </div>
+      {/* Scrolls when the content is taller than the screen (the SDC steps). */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="min-h-full flex flex-col items-center justify-center px-6 py-4 text-center">
+          <h2 className="text-2xl font-black">{event.name}</h2>
+          <p className="text-gray-400 text-xs mt-2 max-w-sm leading-snug">{event.cue}</p>
+          {children}
+        </div>
+      </div>
+      {hint && <p className="text-center text-[11px] text-gray-600 pb-[max(env(safe-area-inset-bottom),20px)] px-6">{hint}</p>}
+    </div>,
+    document.body
+  );
+}
+
 function EventRunner({ event, index, total, accent, onDone, onAbort }) {
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
@@ -931,68 +1247,122 @@ function EventRunner({ event, index, total, accent, onDone, onAbort }) {
   const stepBase = useRef(null);
 
   const cap = event.fixedSeconds ?? event.seconds ?? null;
+  // Timed rep events: 3-2-1 lead-in, the live count, and a guard so the event
+  // finishes exactly once (time running out OR the DONE button).
+  const [countdown, setCountdown] = useState(null);
+  // Lap stopwatch for multi-segment entry events (Sprint-Drag-Carry).
+  const [swStart, setSwStart] = useState(null);
+  const [laps, setLaps] = useState([]);          // ms at the end of each segment
+  const [swNow, setSwNow] = useState(0);
+  const swDone = !!event.segments && laps.length >= event.segments.length;
+  useEffect(() => {
+    if (!swStart || swDone) return;
+    const t = setInterval(() => setSwNow(Date.now()), 100);
+    return () => clearInterval(t);
+  }, [swStart, swDone]);
+  const lastCountRef = useRef(0);
+  const finishedRef = useRef(false);
+  const startClock = () => {
+    if (countdown != null || running) return;
+    let n = 3;
+    setCountdown(n);
+    sayNow("3");
+    const t = setInterval(() => {
+      n -= 1;
+      if (n > 0) { setCountdown(n); sayNow(String(n)); }
+      else { clearInterval(t); setCountdown(0); sayNow("Go"); setRunning(true); setTimeout(() => setCountdown(null), 600); }
+    }, 1000);
+  };
+  useEffect(() => {
+    if (event.how !== "reps" || !event.seconds || !running) return;
+    const left = event.seconds - elapsed;
+    if (left === 30 || left === 10) sayNow(`${left} seconds`);
+  }, [elapsed]); // eslint-disable-line
 
+  // Wall-clock based (2026-11-04): counting interval ticks drifted badly while
+  // the pose model was busy — a phone under load ran the 2:00 clock slow.
+  // Elapsed is now always "seconds since START", whatever the tick rate.
+  const runStartRef = useRef(null);
   useEffect(() => {
     if (!running) return;
-    const t = setInterval(() => setElapsed((s) => s + 1), 1000);
+    runStartRef.current = Date.now() - elapsed * 1000;
+    const t = setInterval(() => setElapsed(Math.floor((Date.now() - runStartRef.current) / 1000)), 250);
     return () => clearInterval(t);
-  }, [running]);
+  }, [running]); // eslint-disable-line
 
-  // Auto-stop at the cap for capped events.
+  // Auto-stop at the cap for capped events. A timed REP event also ends
+  // itself with the count at 0:00 — under the camera there's no other screen
+  // to check a number on, and the real test ends on time, not on a tap.
   useEffect(() => {
     if (cap && running && elapsed >= cap) {
       setRunning(false);
-      if (event.how === "reps" || event.how === "manual") {
-        // handled by the finish button so the number can be checked first
+      if (event.how === "reps" && !finishedRef.current) {
+        finishedRef.current = true;
+        sayNow("Time");
+        onDone(lastCountRef.current);
       }
     }
-  }, [elapsed, cap, running, event.how]);
+  }, [elapsed, cap, running, event.how]); // eslint-disable-line
 
   const remaining = cap ? Math.max(0, cap - elapsed) : null;
 
-  /* Rep events hand straight off to the existing camera tracker. */
+  /* Rep events hand straight off to the existing camera tracker.
+     2026-11-04 (JT: "it counted, but it didn't start the countdown on the
+     2 minutes"): `running` was never set for rep events, so the clock sat at
+     2:00 forever and nothing ended the event. Now a timed rep event works
+     like the real test: get into position with the camera live, tap START
+     (or say nothing — 3-2-1-GO is spoken), the clock runs, reps only count
+     while it runs, and at 0:00 the event ends itself with your count. */
   if (event.how === "reps") {
+    const timed = !!event.seconds;
     return (
-      <RepTracker
-        exerciseName={event.exercise}
-        targetReps={0}
-        defaultFacingMode="user"
-        keepCameraAlive={true}
-        timedMode={!!event.seconds}
-        secondsLeft={event.seconds ? remaining : null}
-        // Scored against a published standard: the depth requirement and
-        // "count at my depth" are never offered here (2026-10-14).
-        strictDepth={true}
-        onComplete={(reps) => onDone(reps)}
-        onClose={onAbort}
-      />
+      <>
+        <RepTracker
+          exerciseName={event.exercise}
+          targetReps={0}
+          defaultFacingMode="user"
+          keepCameraAlive={true}
+          timedMode={timed && running}
+          secondsLeft={timed ? remaining : null}
+          countingEnabled={!timed || running || elapsed > 0}
+          onCountChange={(c) => { lastCountRef.current = c; }}
+          // Scored against a published standard: the depth requirement and
+          // "count at my depth" are never offered here (2026-10-14).
+          strictDepth={true}
+          onComplete={(reps) => { finishedRef.current = true; setRunning(false); onDone(reps); }}
+          onClose={onAbort}
+        />
+        {timed && !running && elapsed === 0 && createPortal(
+          <div className="fixed inset-x-0 flex justify-center px-4 pointer-events-none" style={{ top: "38%", zIndex: 100000 }}>
+            <div className="pointer-events-auto w-full max-w-xs rounded-2xl bg-black/80 border border-white/20 backdrop-blur-sm p-4 text-center">
+              {countdown == null ? (
+                <>
+                  <p className="text-white font-black text-lg">{event.name}</p>
+                  <p className="text-gray-300 text-xs mt-1 leading-snug">
+                    Get into position in the frame. Reps start counting when the {fmtSecs(event.seconds)} clock starts.
+                  </p>
+                  <button onClick={startClock}
+                    className="mt-3 w-full min-h-[56px] rounded-xl font-black text-black text-base flex items-center justify-center gap-2 active:scale-95"
+                    style={{ background: accent }}>
+                    <Play className="w-5 h-5 fill-black" /> START {fmtSecs(event.seconds)} CLOCK
+                  </button>
+                </>
+              ) : (
+                <p className="text-7xl font-black tabular-nums" style={{ color: accent }}>{countdown || "GO"}</p>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
+      </>
     );
   }
 
-  const Shell = ({ children, hint }) => createPortal(
-    <div className="fixed inset-0 bg-[#020817] flex flex-col text-white" style={{ zIndex: 99995 }}>
-      <div className="flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),20px)] pb-3">
-        <span className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
-          Event {index + 1} of {total}
-        </span>
-        <button onClick={onAbort} className="text-[11px] text-red-400 font-bold border border-red-500/40 rounded-full px-3 py-1.5">
-          Abandon
-        </button>
-      </div>
-      <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-        <h2 className="text-2xl font-black">{event.name}</h2>
-        <p className="text-gray-500 text-xs mt-2 max-w-xs leading-snug">{event.cue}</p>
-        {children}
-      </div>
-      {hint && <p className="text-center text-[11px] text-gray-600 pb-[max(env(safe-area-inset-bottom),20px)] px-6">{hint}</p>}
-    </div>,
-    document.body
-  );
 
   /* Count-up hold: plank, wall sit. */
   if (event.how === "hold") {
     return (
-      <Shell hint="The timer counts up. Your score is how long you lasted.">
+      <TestShell event={event} index={index} total={total} onAbort={onAbort} hint="The timer counts up. Your score is how long you lasted.">
         <div className="text-7xl font-black tabular-nums my-8" style={{ color: accent }}>
           {fmtSecs(elapsed)}
         </div>
@@ -1008,7 +1378,7 @@ function EventRunner({ event, index, total, accent, onDone, onAbort }) {
             <Square className="w-5 h-5" /> I DROPPED
           </button>
         )}
-      </Shell>
+      </TestShell>
     );
   }
 
@@ -1037,8 +1407,66 @@ function EventRunner({ event, index, total, accent, onDone, onAbort }) {
       ? (Number(entryA) || 0) * 60 + (Number(entryB) || 0)
       : Number(entryA) || 0;
     const ready = value > 0;
+    const segs = event.segments || null;
+    const fmtMs = (ms) => { const t = Math.max(0, ms) / 1000; return `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, "0")}`; };
+    const swElapsed = swStart ? ((swDone ? laps[laps.length - 1] : swNow) - swStart) : 0;
+    const lap = () => {
+      const now = Date.now();
+      if (!swStart) { setSwStart(now); setSwNow(now); sayNow("Go"); return; }
+      const next = [...laps, now];
+      setLaps(next);
+      if (next.length >= segs.length) {
+        const total = Math.round((now - swStart) / 1000);
+        setEntryA(String(Math.floor(total / 60))); setEntryB(String(total % 60));
+        sayNow("Time");
+      } else sayNow(segs[next.length].name);
+    };
+    const current = swStart ? Math.min(laps.length, segs ? segs.length - 1 : 0) : -1;
     return (
-      <Shell hint={event.equipment ? `Needs: ${event.equipment}` : undefined}>
+      <TestShell event={event} index={index} total={total} onAbort={onAbort} hint={event.equipment ? `Needs: ${event.equipment}` : undefined}>
+        {segs && (
+          <div className="w-full max-w-sm mt-4 text-left">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">How it's done — {segs.length} shuttles</p>
+            <ol className="space-y-1.5">
+              {segs.map((g, i) => {
+                const doneSeg = i < laps.length;
+                const split = doneSeg ? laps[i] - (i === 0 ? swStart : laps[i - 1]) : null;
+                return (
+                  <li key={i} className={`rounded-xl border px-3 py-2 ${i === current && !swDone ? "bg-white/5" : doneSeg ? "border-green-600/40 bg-green-900/10" : "border-gray-800 bg-[#0a0a0a]"}`}
+                    style={i === current && !swDone ? { borderColor: accent } : undefined}>
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-gray-800 text-[11px] font-black flex items-center justify-center shrink-0">{i + 1}</span>
+                      <span className="text-sm font-bold text-white">{g.name}</span>
+                      <span className="text-[10px] text-gray-500">25 m out + 25 m back</span>
+                      {split != null && <span className="ml-auto text-xs font-bold tabular-nums text-green-400">{fmtMs(split)}</span>}
+                    </div>
+                    <p className="text-[11px] text-gray-400 leading-snug mt-1">{g.how}</p>
+                  </li>
+                );
+              })}
+            </ol>
+            {event.rules && <p className="text-[10px] text-gray-500 leading-snug mt-2">{event.rules}</p>}
+
+            {/* Stopwatch: someone at the lane taps through the segments. */}
+            <div className="mt-4 rounded-2xl border border-gray-800 bg-[#0a0a0a] p-3 text-center">
+              <p className="text-[10px] uppercase tracking-widest text-gray-500">Stopwatch — a partner taps as each shuttle ends</p>
+              <p className="text-5xl font-black tabular-nums my-2" style={{ color: accent }}>{fmtMs(swElapsed)}</p>
+              {!swDone ? (
+                <button onClick={lap}
+                  className="w-full min-h-[56px] rounded-xl font-black text-black text-base active:scale-95"
+                  style={{ background: accent }}>
+                  {!swStart ? "START — GO" : laps.length === segs.length - 1 ? `FINISH (${segs[laps.length].name} done)` : `${segs[laps.length].name} done → ${segs[laps.length + 1].name}`}
+                </button>
+              ) : (
+                <button onClick={() => { setSwStart(null); setLaps([]); setSwNow(0); }}
+                  className="w-full min-h-[44px] rounded-xl border border-gray-700 text-gray-300 font-bold text-sm">
+                  Reset stopwatch
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-gray-500 text-center mt-3">{swDone ? "Total filled in below — check it and save." : "Or type the total time from your own stopwatch:"}</p>
+          </div>
+        )}
         {isTime ? (
           <div className="flex items-end gap-2 my-8">
             <div>
@@ -1070,15 +1498,21 @@ function EventRunner({ event, index, total, accent, onDone, onAbort }) {
           style={{ background: accent }}>
           SAVE RESULT
         </button>
-      </Shell>
+      </TestShell>
     );
+  }
+
+  /* Run (2026-11-04): track / open route with GPS / free distance, with steps.
+     The Cooper 12-minute run keeps its own fixed-clock screen below. */
+  if (event.how === "run" && !event.fixedSeconds) {
+    return <RunRunner event={event} index={index} total={total} accent={accent} onDone={onDone} onAbort={onAbort} />;
   }
 
   /* Run: a stopwatch for a fixed distance, or a fixed clock for the Cooper. */
   if (event.how === "run") {
     const isCooper = !!event.fixedSeconds;
     return (
-      <Shell hint={isCooper
+      <TestShell event={event} index={index} total={total} onAbort={onAbort} hint={isCooper
         ? "Run for 12 minutes, then enter how far you got."
         : "Start the clock as you set off. Tap STOP as you finish."}>
         <div className="text-6xl font-black tabular-nums my-6" style={{ color: accent }}>
@@ -1111,14 +1545,14 @@ function EventRunner({ event, index, total, accent, onDone, onAbort }) {
             <Square className="w-5 h-5" /> STOP
           </button>
         )}
-      </Shell>
+      </TestShell>
     );
   }
 
   /* Step burst — the native counter over a fixed window. */
   if (event.how === "steps") {
     return (
-      <Shell hint="Any pace. Steps feed your output score directly.">
+      <TestShell event={event} index={index} total={total} onAbort={onAbort} hint="Any pace. Steps feed your output score directly.">
         <StepTracker isActive={running} onStepUpdate={(c) => {
           if (stepBase.current === null) stepBase.current = c;
           setSteps(Math.max(0, c - stepBase.current));
@@ -1142,13 +1576,13 @@ function EventRunner({ event, index, total, accent, onDone, onAbort }) {
             {remaining === 0 ? <><CheckCircle className="w-5 h-5" /> DONE</> : <><Square className="w-5 h-5" /> STOP EARLY</>}
           </button>
         )}
-      </Shell>
+      </TestShell>
     );
   }
 
   /* Manual tap — burpees. */
   return (
-    <Shell hint="Tap anywhere on the big number for each rep.">
+    <TestShell event={event} index={index} total={total} onAbort={onAbort} hint="Tap anywhere on the big number for each rep.">
       <button onClick={() => running && setTaps((t) => t + 1)}
         className="my-6 w-56 h-56 rounded-full flex flex-col items-center justify-center active:scale-95 transition"
         style={{ background: `${accent}22`, border: `3px solid ${accent}` }}>
@@ -1172,7 +1606,7 @@ function EventRunner({ event, index, total, accent, onDone, onAbort }) {
           {remaining === 0 ? "DONE" : "STOP EARLY"}
         </button>
       )}
-    </Shell>
+    </TestShell>
   );
 }
 
@@ -1182,7 +1616,11 @@ function EventRunner({ event, index, total, accent, onDone, onAbort }) {
      standards -> Navy pass/fail with per-event points
      line      -> one output number and a plate tier
      baseline  -> per-event change since your last test */
-function Results({ record, onRestart, onExit }) {
+function Results({ record: initialRecord, onRestart, onExit }) {
+  // Local copy so the "score this test" card below can add age/sex and rescore.
+  const [record, setRecord] = useState(initialRecord);
+  const [fixSex, setFixSex] = useState(initialRecord.sex || "");
+  const [fixAge, setFixAge] = useState(initialRecord.age ? String(initialRecord.age) : "");
   // A hand-built battery isn't in BATTERIES, and a record from an older build
   // may name one that no longer exists. Either way the record carries its own
   // events, so fall back to a descriptor good enough to render them rather than
@@ -1271,6 +1709,49 @@ function Results({ record, onRestart, onExit }) {
           </p>
         </div>
 
+        {/* ── Not scored yet: add age/sex here and score it now (2026-11-04) ── */}
+        {battery.needsProfile && !profileReady(battery, record.sex, record.age) && (
+          <div className="rounded-2xl border-2 border-amber-500/60 bg-amber-950/30 p-4 space-y-3">
+            <div className="flex gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+              <div>
+                <p className="text-sm font-black text-amber-200">Score this test</p>
+                <p className="text-[11px] text-amber-200/80 leading-snug">
+                  The standard is set by {battery.ageOptional ? "sex" : "sex and age group"}. Add {battery.ageOptional ? "it" : "them"} and your
+                  results are scored against the official table — pass/fail and points.
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {[["male", "Male"], ["female", "Female"]].map(([v, l]) => (
+                <button key={v} onClick={() => setFixSex(v)}
+                  className={`min-h-[44px] rounded-xl border text-sm font-semibold ${fixSex === v ? "bg-[#00a9ff]/20 border-[#00a9ff] text-white" : "border-gray-700 text-gray-400"}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+            {!battery.ageOptional && (
+              <input type="number" inputMode="numeric" min="17" max="99" value={fixAge}
+                onChange={(e) => setFixAge(e.target.value)} placeholder="Age"
+                className="w-full min-h-[44px] bg-[#0a0a0a] border border-gray-700 rounded-xl px-3 text-white text-sm" />
+            )}
+            <button
+              disabled={!profileReady(battery, fixSex, fixAge)}
+              onClick={() => {
+                const next = { ...record, sex: fixSex, age: fixAge ? Number(fixAge) : null };
+                setRecord(next);
+                saveLocal(next);
+                try { saveProfile({ ...(loadProfile() || {}), sex: fixSex, age: fixAge }); } catch (_) {}
+              }}
+              className="w-full min-h-[48px] rounded-xl bg-[#00a9ff] text-white font-black text-sm disabled:opacity-40">
+              Score it
+            </button>
+            {fixAge && !battery.ageOptional && !bandFor(battery, fixAge) && (
+              <p className="text-[10px] text-amber-400">The official table doesn't cover that age.</p>
+            )}
+          </div>
+        )}
+
         {/* ── Navy result ──────────────────────────────────────────────── */}
         {prt && (
           prt.overall ? (
@@ -1349,6 +1830,7 @@ function Results({ record, onRestart, onExit }) {
               These are minimums, not competitive scores. Clearing them is the floor for a
               contract — candidates who get selected are well past it.
             </p>
+            <ReadinessLine value={readinessScore(pst.scored, record.events)} />
           </div>
         )}
 
@@ -1414,6 +1896,7 @@ function Results({ record, onRestart, onExit }) {
             <p className="text-[11px] text-gray-500 mt-3 leading-snug">
               {gate.cardNote || "This is not a score and not a pass. MARSOC hands out the standard for each Phase I screening event on arrival, so the app checks what is published and stops."}
             </p>
+            <ReadinessLine value={readinessScore(gate.scored, record.events)} />
           </div>
         )}
 
@@ -1525,8 +2008,16 @@ function Results({ record, onRestart, onExit }) {
                 <div key={e.key} className="px-4 py-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-300">{e.name}</span>
-                    <span className="font-bold tabular-nums">{fmtValue(e.value, e.unit)}</span>
+                    <span className="font-bold tabular-nums">{fmtValue(e.value, e.unit)}{e.meta?.estimated ? " est." : ""}</span>
                   </div>
+                  {e.meta && (
+                    <p className="text-[10px] text-gray-500 mt-0.5">
+                      {e.meta.mode === "track" ? `Track · ${e.meta.laps} laps` : e.meta.mode === "route" ? "Measured route" : "Free run"}
+                      {e.meta.gps_m ? ` · GPS ${(e.meta.gps_m / 1609.344).toFixed(2)} mi` : ""}
+                      {e.meta.steps ? ` · ${Number(e.meta.steps).toLocaleString()} steps` : ""}
+                      {e.meta.estimated ? ` · projected from ${fmtSecs(e.meta.actual_secs)} at your pace` : ""}
+                    </p>
+                  )}
                   <div className="flex items-center gap-3 mt-1">
                     {scored && (
                       <span className="text-[11px] font-bold" style={{ color: scored.color }}>

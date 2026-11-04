@@ -67,7 +67,7 @@ function writeCustomDepths(map) {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function RepTracker({ exerciseName, targetReps, onComplete, onClose, defaultFacingMode = "user", exerciseEmoji = "", setLabel = "", paused = false, onPause, autoAdvance = false, onCountChange, keepCameraAlive = false, secondsLeft = null, timedMode = false, strictDepth = false, customConfig = null }) {
+export default function RepTracker({ exerciseName, targetReps, onComplete, onClose, defaultFacingMode = "user", exerciseEmoji = "", setLabel = "", paused = false, onPause, autoAdvance = false, onCountChange, keepCameraAlive = false, secondsLeft = null, timedMode = false, strictDepth = false, customConfig = null, countingEnabled = true }) {
   // customConfig (2026-10-14): a movement learned by the Movement Trainer
   // (lib/movementTemplates.js) is counted in place of a library exercise.
   const initialConfig = customConfig || matchExercise(exerciseName);
@@ -777,7 +777,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
       if (!v || document.visibilityState !== "visible") return;
       const now = performance.now();
       // A paused workout isn't a frozen camera. Restart the clock instead.
-      if (pausedRef.current) { lastFrameTime.current = { t: v.currentTime, at: now }; return; }
+      if (userPausedRef.current) { lastFrameTime.current = { t: v.currentTime, at: now }; return; }
       const seen = lastFrameTime.current;
       if (v.currentTime !== seen.t) {
         lastFrameTime.current = { t: v.currentTime, at: now };
@@ -788,8 +788,15 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     return () => clearInterval(id);
   }, [cameraLost, initialConfig.trackable]);
   // Pause + multi-person refs (read inside RAF closure)
-  const pausedRef = useRef(paused);
-  useEffect(() => { pausedRef.current = paused; }, [paused]);
+  // countingEnabled=false (2026-11-04): camera and skeleton run so you can get
+  // into position, but no rep counts until the test clock starts. Same effect
+  // on counting as `paused`, without the PAUSED overlay over the camera.
+  const pausedRef = useRef(paused || !countingEnabled);
+  useEffect(() => { pausedRef.current = paused || !countingEnabled; }, [paused, countingEnabled]);
+  // The workout's own pause only — the camera keeps running while waiting
+  // for the test clock, so frozen-feed and background recovery still apply.
+  const userPausedRef = useRef(paused);
+  useEffect(() => { userPausedRef.current = paused; }, [paused]);
   const multiPersonRef = useRef(false);
 
   // ── Notification / background recovery ────────────────────────
@@ -799,7 +806,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     let appListener = null;
 
     const recover = () => {
-      if (pausedRef.current) return;
+      if (userPausedRef.current) return;
       const video = videoRef.current;
       const landmarker = landmarkerRef.current;
       if (!video || !landmarker) return;
