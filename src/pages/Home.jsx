@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import GithubReleasesWidget from "@/components/dashboard/GithubReleasesWidget";
 import ProgramStatusStrip from "@/components/ProgramStatusStrip";
+import { featuredChallenge } from "@/lib/fitnessTests";
 const FitnessQuiz = React.lazy(() => import("@/components/FitnessQuiz"));
 const MuscleRecovery = React.lazy(() => import("@/components/recovery/MuscleRecovery"));
 
@@ -171,6 +172,47 @@ export default function Home() {
           taps open for today's plan + Start. Renders nothing when the user has
           no active program, so Home is untouched for everyone else. */}
       <ProgramStatusStrip />
+
+      {/* ── HOLIDAY CHALLENGE (2026-11-09) ───────────────────────────────
+          Veterans Day Murph. Shows only while featuredChallenge() says it's in
+          season (Nov 1 – Nov 12); renders nothing the rest of the year. */}
+      {(() => {
+        const f = featuredChallenge();
+        if (!f) return null;
+        const when = f.today ? "TODAY" : f.daysLeft > 0 ? `${f.daysLeft} DAY${f.daysLeft === 1 ? "" : "S"} TO GO` : "THIS WEEK";
+        const go = () => navigate(`${createPageUrl("FitnessTest")}?test=${f.battery.key}`);
+        return (
+          <div className="px-6 mb-4">
+            <div onClick={go} role="button" tabIndex={0}
+              onKeyDown={(e) => e.key === "Enter" && go()}
+              className="rounded-2xl p-4 cursor-pointer active:scale-[0.99] transition-transform"
+              style={{
+                background: "linear-gradient(135deg, #3b0a0a 0%, #1a0b24 50%, #071a2e 100%)",
+                border: "2px solid rgba(239,68,68,0.7)",
+                boxShadow: "0 0 36px rgba(239,68,68,0.22)",
+              }}>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black tracking-[0.2em] text-red-300">
+                  🇺🇸 {f.battery.holiday.name.toUpperCase()} · NOV {f.battery.holiday.day}
+                </span>
+                <span className="ml-auto text-[10px] font-black tracking-wider px-2 py-0.5 rounded-full bg-white text-[#7f1d1d]">
+                  {when}
+                </span>
+              </div>
+              <p className="text-2xl font-black text-white tracking-tight mt-1.5 leading-none">VETERANS DAY MURPH</p>
+              <p className="text-gray-300 text-[13px] mt-1.5 leading-snug">
+                1 mile · 100 pull-ups · 200 push-ups · 300 squats · 1 mile. For time.
+              </p>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-[11px] text-gray-400">In honor of LT Michael P. Murphy</span>
+                <span className="text-[12px] font-black text-white flex items-center gap-1">
+                  Take it <ChevronRight className="w-4 h-4" />
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── FITNESS TEST ─────────────────────────────────────────────────
           First card on the page, above everything else, because a test is how
