@@ -656,6 +656,40 @@ export const BATTERIES = {
     ],
   },
 
+  // ── HERO CHALLENGES (2026-11-09) ───────────────────────────────────────────
+  // Murph — the hero workout named for Navy SEAL LT Michael P. Murphy, Medal of
+  // Honor, killed in action in Afghanistan on 28 June 2005 (Operation Red
+  // Wings). Featured for Veterans Day, 11 November.
+  //
+  // Not a test of record: no service publishes a Murph standard, so there is
+  // no pass/fail. It is FOR TIME — one clock that never stops, from the first
+  // step of the first mile to the last step of the second. `runner: "murph"`
+  // hands the whole thing to MurphRunner instead of the event-by-event runner,
+  // because the event runner rests between events and Murph has no rests.
+  //
+  // `events` here is the full, straight-through version, for the card list.
+  // The variant actually run (full/half, partitioned, vest) is built by
+  // murphEvents() and stored on the record as `murph`.
+  murph: {
+    key: "murph",
+    name: "Murph",
+    group: "military",
+    branch: "challenges",
+    blurb: "1-mile run, 100 pull-ups, 200 push-ups, 300 air squats, 1-mile run — for time. Wear a 20-lb vest if you have one. In honor of LT Michael P. Murphy and every veteran.",
+    icon: "flame",
+    accent: "#ef4444",
+    scoring: "challenge",
+    runner: "murph",
+    needsProfile: false,
+    holiday: { name: "Veterans Day", month: 11, day: 11 },
+    disclaimer:
+      "Murph is a hero workout, not an official military test, so it has no pass/fail — your score is your time. " +
+      "Partitioning the pull-ups, push-ups and squats is allowed; the two miles are run unbroken, at the start and the end. " +
+      "Scale it (half Murph, band-assisted or jumping pull-ups, knee push-ups) rather than skip it — and if you haven't " +
+      "trained near this volume, a full Murph is a big jump. Stop if you feel unwell.",
+    events: [], // filled just below by murphEvents()
+  },
+
   // ── PUBLIC SAFETY (2026-10-14) ─────────────────────────────────────────────
   // Pass/fail against official published minimums. Standards and sources live
   // in publicSafetyStandards.js; scoring "gate" + a PUBLIC_SAFETY entry is what
@@ -916,12 +950,73 @@ export const BATTERIES = {
   },
 };
 
+// ── Murph variants ───────────────────────────────────────────────────────────
+// Every Murph event is timed as a SPLIT (seconds), and the record also gets a
+// `murph_total`. Straight through = five blocks; partitioned = run, the classic
+// 20 rounds of 5 pull-ups / 10 push-ups / 15 squats, run. Half Murph halves
+// every number (half-mile runs, 50/100/150, 10 rounds).
+export const MURPH_HONOREE =
+  "LT Michael P. Murphy, U.S. Navy SEAL — Medal of Honor, killed in action in Afghanistan on June 28, 2005.";
+
+export function murphEvents({ half = false, partitioned = false } = {}) {
+  const k = half ? 0.5 : 1;
+  const runLabel = half ? "½ mile" : "1 mile";
+  const run = (key, name) => ({
+    key, name: `${name} (${runLabel})`, how: "target", segment: "run", unit: "secs",
+    distanceLabel: half ? "0.5 miles" : "1 mile", estSeconds: Math.round(600 * k),
+    cue: half ? "Run half a mile. Tap when you're back." : "Run one mile. Tap when you're back.",
+  });
+  const block = (key, name, reps, est) => ({
+    key, name: `${reps} ${name}`, how: "target", segment: "reps", unit: "secs",
+    targetReps: reps, estSeconds: Math.round(est * k),
+    cue: "Break them up however you like. Tap DONE when the last rep is in.",
+  });
+  const rounds = half ? 10 : 20;
+  const middle = partitioned
+    ? [{
+        key: "murph_rounds", name: `${rounds} rounds: 5 pull-ups · 10 push-ups · 15 squats`,
+        how: "target", segment: "rounds", unit: "secs", rounds,
+        roundReps: { pullups: 5, pushups: 10, squats: 15 }, estSeconds: Math.round(2400 * k),
+        cue: "5 pull-ups, 10 push-ups, 15 air squats = one round. Tap ROUND DONE after each.",
+      }]
+    : [
+        block("murph_pullups", "Pull-ups", 100 * k, 600),
+        block("murph_pushups", "Push-ups", 200 * k, 900),
+        block("murph_squats", "Air Squats", 300 * k, 900),
+      ];
+  return [run("murph_run1", "Run"), ...middle, run("murph_run2", "Run")];
+}
+BATTERIES.murph.events = murphEvents();
+
+/**
+ * Is a holiday challenge "on" right now? Featured from 10 days before the date
+ * through the day after, so it can be advertised ahead and still be there the
+ * morning after for people who did it late. Local time on purpose: Veterans
+ * Day is the 11th wherever the user is.
+ */
+export function featuredChallenge(now = new Date()) {
+  for (const b of Object.values(BATTERIES)) {
+    if (!b.holiday) continue;
+    const y = now.getFullYear();
+    const day = new Date(y, b.holiday.month - 1, b.holiday.day);
+    const from = new Date(day); from.setDate(day.getDate() - 10);
+    const to = new Date(day); to.setDate(day.getDate() + 2);  // through the 12th
+    if (now >= from && now < to) {
+      const today = now.getMonth() === day.getMonth() && now.getDate() === day.getDate();
+      // round, not ceil: a daylight-saving change makes one day 23 or 25 hours.
+      const daysLeft = Math.round((day - new Date(y, now.getMonth(), now.getDate())) / 86400000);
+      return { battery: b, today, daysLeft, date: day };
+    }
+  }
+  return null;
+}
+
 export const BATTERY_LIST = Object.values(BATTERIES);
 
 /** Total wall-clock estimate for a battery, in minutes. */
 export function batteryMinutes(battery) {
   const secs = battery.events.reduce((t, e) => {
-    const work = e.fixedSeconds ?? e.seconds ?? 90;   // 90s assumed for untimed holds
+    const work = e.fixedSeconds ?? e.seconds ?? e.estSeconds ?? 90;   // 90s assumed for untimed holds
     return t + work + (e.restAfter || 0);
   }, 0);
   return Math.max(1, Math.round(secs / 60));
@@ -945,6 +1040,9 @@ export const LOWER_IS_BETTER = new Set([
   // Public safety. `tread15` is a hold and deliberately absent, like `tread`.
   "sprint300", "sprint220y", "wct_pack", "wct_field", "wct_walk",
   "cpat_time", "swim500m", "swim200bdu",
+  // Murph: every split and the total are times.
+  "murph_run1", "murph_pullups", "murph_pushups", "murph_squats", "murph_rounds",
+  "murph_run2", "murph_total",
 ]);
 
 /** Per-event delta against the previous test of the same battery. */
@@ -1024,6 +1122,8 @@ export const batteriesInGroup = (group) =>
 // because a selection screening test answers a different question from a test
 // of record: "would I be competitive" rather than "am I within standard".
 export const MILITARY_BRANCHES = [
+  // Seasonal hero workouts. First in the list so the featured one is one tap away.
+  { key: "challenges", label: "HERO CHALLENGES", sub: "Murph · Veterans Day, Nov 11", accent: "#ef4444" },
   { key: "navy",     label: "NAVY",            sub: "Physical Readiness Test",      accent: "#4ade80" },
   { key: "army",     label: "ARMY",            sub: "Army Fitness Test",            accent: "#84cc16" },
   { key: "airforce", label: "AIR FORCE",       sub: "Physical Fitness Readiness Assessment", accent: "#60a5fa" },
@@ -1039,6 +1139,11 @@ export const MILITARY_BRANCHES = [
  */
 export function eventFormatLabel(e) {
   if (!e) return "";
+  if (e.how === "target") {
+    if (e.segment === "run") return "for time · " + (e.distanceLabel || "distance");
+    if (e.segment === "rounds") return "for time · " + e.rounds + " rounds";
+    return "for time · " + e.targetReps + " reps";
+  }
   if (e.fixedSeconds) {
     return e.entryKind === "yards" ? "distance in " + Math.round(e.fixedSeconds / 60) + " min"
       : "for " + Math.floor(e.fixedSeconds / 60) + ":" + String(e.fixedSeconds % 60).padStart(2, "0");
