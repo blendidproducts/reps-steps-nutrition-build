@@ -26,6 +26,7 @@ import {
   compareToPrevious, ageBand, TEST_GROUPS, batteriesInGroup,
   CUSTOM_EVENT_POOL, buildCustomBattery,
   MILITARY_BRANCHES, batteriesInBranch, eventFormatLabel,
+  murphEvents, featuredChallenge, MURPH_HONOREE,
 } from "@/lib/fitnessTests";
 import {
   PENDING, scoreAftTest, aftBand, scorePstTest, PST_PROGRAMS, PST_MINIMUMS,
@@ -44,6 +45,7 @@ import {
   ChevronLeft, Shield, Zap, Flame, Dumbbell, Play, Square, Timer as TimerIcon,
   CheckCircle, AlertTriangle, TrendingUp, TrendingDown, Minus, RotateCcw, Footprints,
   SlidersHorizontal, ChevronDown, Plus, Check, Lock, Waves,
+  Flag, Share2, Undo2,
 } from "lucide-react";
 import {
   PUBLIC_SAFETY, PUBLIC_SAFETY_BRANCHES, PUBLIC_SAFETY_PENDING,
@@ -217,6 +219,18 @@ export default function FitnessTest() {
   // Defaults to the arduous pack test, the one fireline jobs require.
   const [wctLevel, setWctLevel] = useState("wct_pack");
 
+  // Murph only (2026-11-09): which version. Remembered, because whoever did
+  // half Murph with no vest last year will want the same thing to compare.
+  const [murphOpts, setMurphOpts] = useState(() => {
+    try { return { half: false, partitioned: false, vest: false, ...JSON.parse(localStorage.getItem("rns_murph_opts") || "{}") }; }
+    catch (_) { return { half: false, partitioned: false, vest: false }; }
+  });
+  const setMurph = (patch) => setMurphOpts((o) => {
+    const n = { ...o, ...patch };
+    try { localStorage.setItem("rns_murph_opts", JSON.stringify(n)); } catch (_) {}
+    return n;
+  });
+
   // Custom battery: the picked event keys, assembled on demand. Memoised so the
   // battery object keeps its identity between renders - finishEvent closes over
   // it, and a fresh object every render would re-fire its effects.
@@ -246,8 +260,11 @@ export default function FitnessTest() {
     if (b.needsLevelChoice) {
       return { ...b, events: b.events.filter((e) => !e.level || e.key === wctLevel) };
     }
+    if (b.runner === "murph") {
+      return { ...b, events: murphEvents(murphOpts) };
+    }
     return b;
-  }, [batteryKey, customKeys, oftCardio, usmcUpper, marsocRuck, wctLevel]);
+  }, [batteryKey, customKeys, oftCardio, usmcUpper, marsocRuck, wctLevel, murphOpts]);
 
   const event = battery?.events[eventIndex] || null;
 
@@ -266,6 +283,24 @@ export default function FitnessTest() {
     if (TEST_GROUPS.some((g) => g.key === groupParam)) setOpenGroup(groupParam);
   }, [groupParam]);
 
+  // ?test=<battery key> opens straight onto one test, selected (2026-11-09).
+  // This is the link the Veterans Day Murph ads and the Home banner use:
+  // .../FitnessTest?test=murph
+  const testParam = params.get("test");
+  const pickBattery = useCallback((key) => {
+    const b = BATTERIES[key];
+    if (!b) return;
+    setBatteryKey(key);
+    setOpenGroup(b.group);
+    if (b.branch) setOpenBranch(b.branch);
+    // Let the options panel render, then bring it into view.
+    setTimeout(() => {
+      try { document.getElementById("test-options")?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch (_) {}
+    }, 150);
+  }, []);
+  useEffect(() => { if (testParam) pickBattery(testParam); }, [testParam, pickBattery]);
+  const featured = useMemo(() => featuredChallenge(), []);
+
   const metasRef = useRef({});
   /** Record an event's result and move on (or finish). */
   const finishEvent = useCallback((value, meta) => {
@@ -283,8 +318,10 @@ export default function FitnessTest() {
     }
   }, [battery, eventIndex, values]); // eslint-disable-line
 
-  function finishTest(finalValues) {
-    const events = battery.events.map((e) => ({
+  function finishTest(finalValues, extra = null) {
+    // A runner that measures the whole test itself (Murph) hands over its own
+    // event list; everyone else is built from the battery, one value per event.
+    const events = extra?.events || battery.events.map((e) => ({
       key: e.key, name: e.name, unit: e.unit, value: finalValues[e.key] ?? 0,
       ...(metasRef.current[e.key] ? { meta: metasRef.current[e.key] } : {}),
     }));
@@ -299,6 +336,7 @@ export default function FitnessTest() {
       // held to is part of what the result MEANS, so a past test has to keep it.
       combat: battery.hasCombatStandard ? aftCombat : false,
       program: battery.needsProgram ? pstProgram : null,
+      murph: battery.runner === "murph" ? { ...murphOpts, ...(extra?.murph || {}) } : null,
       events,
     };
     saveLocal(record);
@@ -338,6 +376,12 @@ export default function FitnessTest() {
         </div>
 
         <div className="max-w-lg mx-auto px-4 py-5 space-y-3">
+          {/* Holiday challenge, featured while it's in season (2026-11-09). */}
+          {featured && (
+            <FeaturedChallengeCard f={featured} selected={batteryKey === featured.battery.key}
+              onSelect={() => pickBattery(featured.battery.key)} />
+          )}
+
           {/* One section per kind of test. Collapsed by default except the one
               you arrived at, because three open lists of batteries is a long
               scroll on a phone and the choice of KIND is the real first
@@ -434,6 +478,10 @@ export default function FitnessTest() {
               </div>
             );
           })}
+
+          {battery?.runner === "murph" && (
+            <MurphOptions opts={murphOpts} onChange={setMurph} events={battery.events} />
+          )}
 
           {/* The Marine upper-body choice is not cosmetic: push-ups are capped
               at 70 points, so picking them caps the whole PFT at 270. Say that
@@ -779,6 +827,17 @@ export default function FitnessTest() {
   }
 
   /* ── RUNNING ─────────────────────────────────────────────────────────── */
+  if (phase === "running" && battery?.runner === "murph") {
+    return (
+      <MurphRunner
+        battery={battery}
+        opts={murphOpts}
+        onFinish={(events, murphExtra) => finishTest({}, { events, murph: murphExtra })}
+        onAbort={() => restart()}
+      />
+    );
+  }
+
   if (phase === "running" && event) {
     if (resting > 0) {
       return <RestBetween secs={resting} next={event} onSkip={() => setResting(0)}
@@ -853,7 +912,12 @@ function BatteryCard({ b, selected, onSelect }) {
                 scored test tells you pass or fail against the service's own
                 table; a record-only one is an accurate scoresheet and a
                 history, because we don't hold that service's table yet. */}
-            {b.standardsPending ? (
+            {b.scoring === "challenge" ? (
+              <span className="text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded"
+                style={{ background: "#7f1d1d", color: "#fecaca" }}>
+                FOR TIME · HERO WORKOUT
+              </span>
+            ) : b.standardsPending ? (
               <span className="text-[9px] font-black tracking-wider px-1.5 py-0.5 rounded"
                 style={{ background: "#78350f", color: "#fcd34d" }}>
                 RECORD ONLY
@@ -1632,8 +1696,11 @@ function Results({ record: initialRecord, onRestart, onExit }) {
     accent: "#f97316",
     disclaimer: null,
   };
+  // Murph: a half Murph is a different workout, so it only compares with
+  // other half Murphs (and full with full).
   const previous = loadHistory().find(
     (r) => r.battery === record.battery && r.id !== record.id
+      && (battery.runner !== "murph" || !!r.murph?.half === !!record.murph?.half)
   ) || null;
 
   const prt = battery.scoring === "standards"
@@ -1701,6 +1768,7 @@ function Results({ record: initialRecord, onRestart, onExit }) {
               : oft ? (oft.passed ? "🎖️" : "📋")
               : usmc ? (usmc.passed ? "🎖️" : "📋")
               : gate ? (gate.passed ? "🎖️" : "📋")
+              : battery.scoring === "challenge" ? "🇺🇸"
               : "📊"}
           </div>
           <h1 className="text-2xl font-black">{battery.name}</h1>
@@ -1750,6 +1818,10 @@ function Results({ record: initialRecord, onRestart, onExit }) {
               <p className="text-[10px] text-amber-400">The official table doesn't cover that age.</p>
             )}
           </div>
+        )}
+
+        {battery.scoring === "challenge" && (
+          <ChallengeResult record={record} battery={battery} previous={previous} />
         )}
 
         {/* ── Navy result ──────────────────────────────────────────────── */}
@@ -2097,6 +2169,380 @@ function Row({ label, value, contrib }) {
       <span className="text-gray-300">
         {value} <span className="text-gray-600">→ +{contrib}</span>
       </span>
+    </div>
+  );
+}
+
+/* ══ MURPH (2026-11-09) ═══════════════════════════════════════════════════════
+   Veterans Day hero workout. Everything below is Murph-only. */
+
+const MURPH_SHARE_URL = "https://repsandstepsartp.base44.app/FitnessTest?test=murph";
+
+function murphLabel(m) {
+  if (!m) return "";
+  return [
+    m.half ? "Half Murph" : "Full Murph",
+    m.partitioned ? "partitioned" : "straight through",
+    m.vest ? "20-lb vest" : "no vest",
+  ].join(" · ");
+}
+
+/* Featured card at the top of the test list while the holiday is in season. */
+function FeaturedChallengeCard({ f, selected, onSelect }) {
+  const b = f.battery;
+  const when = f.today ? "TODAY"
+    : f.daysLeft > 0 ? `${f.daysLeft} DAY${f.daysLeft === 1 ? "" : "S"} TO GO`
+    : "THIS WEEK";
+  return (
+    <button onClick={onSelect}
+      className="w-full text-left rounded-2xl overflow-hidden active:scale-[0.99] transition-transform"
+      style={{
+        background: "linear-gradient(135deg, #3b0a0a 0%, #1a0b24 50%, #071a2e 100%)",
+        border: `2px solid ${selected ? "#ffffff" : "rgba(239,68,68,0.7)"}`,
+        boxShadow: "0 0 36px rgba(239,68,68,0.22)",
+      }}>
+      <div className="p-4">
+        <div className="flex items-center gap-2">
+          <Flag className="w-4 h-4 text-red-400" />
+          <span className="text-[10px] font-black tracking-[0.2em] text-red-300">
+            {b.holiday.name.toUpperCase()} · NOV {b.holiday.day}
+          </span>
+          <span className="ml-auto text-[10px] font-black tracking-wider px-2 py-0.5 rounded-full bg-white text-[#7f1d1d]">
+            {when}
+          </span>
+        </div>
+        <p className="text-3xl font-black tracking-tight mt-2 leading-none">VETERANS DAY MURPH</p>
+        <p className="text-sm text-gray-200 mt-2 leading-snug">
+          1 mile · 100 pull-ups · 200 push-ups · 300 squats · 1 mile. For time.
+        </p>
+        <p className="text-[11px] text-gray-400 mt-2 leading-snug">
+          In honor of {MURPH_HONOREE.split(" — ")[0]} and everyone who has served.
+        </p>
+        <span className="mt-3 inline-flex items-center gap-1.5 min-h-[40px] px-4 rounded-xl font-black text-sm text-white"
+          style={{ background: "linear-gradient(135deg, #ef4444, #b91c1c)" }}>
+          <Play className="w-4 h-4 fill-white" /> {selected ? "Selected — set it up below" : "Take the challenge"}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+/* Setup: which Murph. Three independent switches plus the plan they produce. */
+function MurphOptions({ opts, onChange, events }) {
+  const Toggle = ({ k, on, off }) => (
+    <div className="grid grid-cols-2 gap-2">
+      {[[false, off], [true, on]].map(([v, [l, sub]]) => (
+        <button key={String(v)} onClick={() => onChange({ [k]: v })}
+          className={`min-h-[52px] rounded-xl border px-3 py-1.5 text-left ${
+            !!opts[k] === v ? "bg-[#ef4444]/20 border-[#ef4444] text-white" : "border-gray-700 text-gray-400"
+          }`}>
+          <span className="block text-sm font-bold">{l}</span>
+          <span className="block text-[10px] text-gray-500 leading-tight">{sub}</span>
+        </button>
+      ))}
+    </div>
+  );
+  return (
+    <div id="test-options" className="bg-[#111] border border-gray-800 rounded-2xl p-4 space-y-3 scroll-mt-24">
+      <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Your Murph</p>
+      <Toggle k="half" off={["Full Murph", "1 mi · 100 · 200 · 300 · 1 mi"]} on={["Half Murph", "½ mi · 50 · 100 · 150 · ½ mi"]} />
+      <Toggle k="partitioned" off={["Straight through", "All pull-ups, then push-ups, then squats"]}
+        on={["Partitioned", `${opts.half ? 10 : 20} rounds of 5 · 10 · 15`]} />
+      <Toggle k="vest" off={["No vest", "Bodyweight"]} on={["20-lb vest", "Rx — vest or body armor"]} />
+      <div className="pt-2 border-t border-white/10 space-y-1.5">
+        {events.map((e, i) => (
+          <div key={e.key} className="flex items-center gap-2 text-[12px]">
+            <span className="w-4 text-gray-600 font-bold">{i + 1}</span>
+            <span className="text-gray-200 flex-1">{e.name}</span>
+          </div>
+        ))}
+        <p className="text-[10px] text-gray-500 leading-snug pt-1">
+          One clock, no rests — it runs from the first step to the last. Tap each block as you
+          finish it and the app keeps your splits. Doing it at the gym without your phone? Start
+          it, then choose "Enter my time".
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* The runner: one continuous clock across every block. */
+function MurphRunner({ battery, opts, onFinish, onAbort }) {
+  const events = battery.events;
+  const [stage, setStage] = useState("ready");      // ready | countdown | go | manual
+  const [count, setCount] = useState(3);
+  const [startAt, setStartAt] = useState(null);
+  const [now, setNow] = useState(Date.now());
+  const [ends, setEnds] = useState([]);              // ms at the end of each finished block
+  const [rounds, setRounds] = useState(0);           // rounds done in a partitioned block
+  const [tally, setTally] = useState(0);             // optional rep tally for the current block
+  const [quitArmed, setQuitArmed] = useState(false);
+  const [mm, setMm] = useState("");
+  const [ss, setSs] = useState("");
+  const finished = useRef(false);
+
+  const seg = events[ends.length] || null;
+  const segStart = ends.length ? ends[ends.length - 1] : startAt;
+  const totalMs = startAt ? now - startAt : 0;
+  const segMs = segStart ? now - segStart : 0;
+  const clock = (ms) => {
+    const t = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+    return h ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
+  };
+
+  // Wall-clock ticks; keep the screen awake for an hour-long workout.
+  useEffect(() => {
+    if (stage !== "go") return;
+    const t = setInterval(() => setNow(Date.now()), 250);
+    let lock = null;
+    (async () => { try { lock = await navigator.wakeLock?.request?.("screen"); } catch (_) {} })();
+    return () => { clearInterval(t); try { lock?.release?.(); } catch (_) {} };
+  }, [stage]);
+
+  const announce = (e) => {
+    if (!e) return;
+    sayNow(e.segment === "run" ? (opts.half ? "Run. Half a mile." : "Run. One mile.")
+      : e.segment === "rounds" ? `${e.rounds} rounds. Five, ten, fifteen.`
+      : `${e.targetReps} ${e.name.replace(/^\d+\s*/, "")}`);
+  };
+
+  const begin = () => {
+    setStage("countdown");
+    let n = 3; setCount(n); sayNow("3");
+    const t = setInterval(() => {
+      n -= 1;
+      if (n > 0) { setCount(n); sayNow(String(n)); return; }
+      clearInterval(t);
+      const t0 = Date.now();
+      setStartAt(t0); setNow(t0); setStage("go");
+      setTimeout(() => announce(events[0]), 400);
+    }, 1000);
+  };
+
+  const complete = (allEnds) => {
+    if (finished.current) return;
+    finished.current = true;
+    const out = events.map((e, i) => ({
+      key: e.key, name: e.name, unit: "secs",
+      value: Math.round(((allEnds[i]) - (i ? allEnds[i - 1] : startAt)) / 1000),
+    }));
+    const total = Math.round((allEnds[allEnds.length - 1] - startAt) / 1000);
+    out.push({ key: "murph_total", name: "Total time", unit: "secs", value: total });
+    sayNow(`Time. ${Math.floor(total / 60)} minutes ${total % 60} seconds. Well done.`);
+    onFinish(out, { manual: false });
+  };
+
+  const nextBlock = () => {
+    const t = Date.now();
+    const next = [...ends, t];
+    setEnds(next); setTally(0); setRounds(0); setNow(t);
+    if (next.length >= events.length) complete(next);
+    else announce(events[next.length]);
+  };
+
+  const roundDone = () => {
+    const r = rounds + 1;
+    if (r >= seg.rounds) { nextBlock(); return; }
+    setRounds(r);
+    sayNow(`Round ${r + 1}`);
+  };
+
+  const undo = () => {
+    if (seg?.segment === "rounds" && rounds > 0) { setRounds(rounds - 1); return; }
+    if (!ends.length) return;
+    const prev = events[ends.length - 1];
+    setEnds(ends.slice(0, -1));
+    if (prev.segment === "rounds") setRounds(prev.rounds - 1);
+  };
+
+  const submitManual = () => {
+    const total = (Number(mm) || 0) * 60 + (Number(ss) || 0);
+    if (total <= 0 || finished.current) return;
+    finished.current = true;
+    onFinish([{ key: "murph_total", name: "Total time", unit: "secs", value: total }], { manual: true });
+  };
+
+  const quit = () => {
+    if (!quitArmed) { setQuitArmed(true); setTimeout(() => setQuitArmed(false), 3000); return; }
+    onAbort();
+  };
+
+  const header = (
+    <div className="flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),20px)] pb-3">
+      <span className="text-[11px] font-black uppercase tracking-widest text-red-300">
+        {opts.half ? "Half Murph" : "Murph"}{opts.vest ? " · vest" : ""}
+      </span>
+      <button onClick={quit} className="text-[11px] text-red-400 font-bold border border-red-500/40 rounded-full px-3 py-1.5">
+        {quitArmed ? "Tap again to quit" : "Abandon"}
+      </button>
+    </div>
+  );
+
+  let body;
+  if (stage === "ready" || stage === "countdown") {
+    body = (
+      <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+        {stage === "countdown" ? (
+          <p className="text-[120px] font-black leading-none tabular-nums">{count}</p>
+        ) : (
+          <>
+            <Flag className="w-10 h-10 text-red-400" />
+            <h2 className="text-3xl font-black mt-3">{opts.half ? "HALF MURPH" : "MURPH"}</h2>
+            <p className="text-[11px] text-gray-400 mt-2 max-w-xs leading-snug">{MURPH_HONOREE}</p>
+            <div className="mt-5 w-full max-w-xs space-y-1.5 text-left">
+              {events.map((e, i) => (
+                <p key={e.key} className="text-sm text-gray-200"><span className="text-gray-600 font-bold mr-2">{i + 1}</span>{e.name}</p>
+              ))}
+            </div>
+            {opts.vest && <p className="text-[11px] text-amber-300 mt-3">Vest on? 20 lb, the whole way.</p>}
+            <button onClick={begin}
+              className="mt-6 min-h-[60px] w-full max-w-xs rounded-2xl font-black text-lg text-white flex items-center justify-center gap-2 active:scale-95"
+              style={{ background: "linear-gradient(135deg, #ef4444, #b91c1c)" }}>
+              <Play className="w-5 h-5 fill-white" /> START THE CLOCK
+            </button>
+            <button onClick={() => setStage("manual")} className="mt-3 text-[12px] text-gray-400 underline">
+              Already did it? Enter my time
+            </button>
+          </>
+        )}
+      </div>
+    );
+  } else if (stage === "manual") {
+    body = (
+      <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+        <h2 className="text-2xl font-black">Enter your Murph time</h2>
+        <p className="text-[11px] text-gray-400 mt-2">Total, first step to last.</p>
+        <div className="flex items-center gap-2 mt-5">
+          <input type="number" inputMode="numeric" min="0" value={mm} onChange={(e) => setMm(e.target.value)}
+            placeholder="min" className="w-24 min-h-[56px] bg-[#0a0a0a] border border-gray-700 rounded-xl text-center text-2xl font-black" />
+          <span className="text-2xl font-black">:</span>
+          <input type="number" inputMode="numeric" min="0" max="59" value={ss} onChange={(e) => setSs(e.target.value)}
+            placeholder="sec" className="w-24 min-h-[56px] bg-[#0a0a0a] border border-gray-700 rounded-xl text-center text-2xl font-black" />
+        </div>
+        <button onClick={submitManual} disabled={!((Number(mm) || 0) * 60 + (Number(ss) || 0))}
+          className="mt-6 min-h-[56px] w-full max-w-xs rounded-2xl font-black text-white bg-[#ef4444] disabled:opacity-40">
+          Save my time
+        </button>
+        <button onClick={() => setStage("ready")} className="mt-3 text-[12px] text-gray-400 underline">Back</button>
+      </div>
+    );
+  } else if (seg) {
+    const isRounds = seg.segment === "rounds";
+    const isRun = seg.segment === "run";
+    const pct = isRounds ? rounds / seg.rounds : seg.targetReps ? Math.min(1, tally / seg.targetReps) : 0;
+    body = (
+      <div className="flex-1 flex flex-col px-5">
+        <div className="text-center pt-2">
+          <p className="text-[10px] uppercase tracking-widest text-gray-500">Total</p>
+          <p className="text-6xl font-black tabular-nums leading-none">{clock(totalMs)}</p>
+        </div>
+
+        <div className="flex gap-1 mt-4">
+          {events.map((e, i) => (
+            <span key={e.key} className="flex-1 h-1.5 rounded-full"
+              style={{ background: i < ends.length ? "#4ade80" : i === ends.length ? "#ef4444" : "#1f2937" }} />
+          ))}
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-red-500/40 bg-red-950/20 p-4 text-center">
+          <p className="text-[10px] uppercase tracking-widest text-red-300">
+            Block {ends.length + 1} of {events.length} · {clock(segMs)}
+          </p>
+          <p className="text-2xl font-black mt-1 leading-tight">
+            {isRounds ? `Round ${rounds + 1} of ${seg.rounds}` : seg.name}
+          </p>
+          <p className="text-[12px] text-gray-400 mt-1 leading-snug">
+            {isRounds ? "5 pull-ups · 10 push-ups · 15 air squats" : seg.cue}
+          </p>
+          {(isRounds || seg.targetReps) && (
+            <div className="h-2 rounded-full bg-gray-800 mt-3 overflow-hidden">
+              <div className="h-full bg-red-500 transition-all" style={{ width: `${pct * 100}%` }} />
+            </div>
+          )}
+          {seg.targetReps && (
+            <div className="mt-3">
+              <p className="text-[11px] text-gray-400">
+                Optional count: <b className="text-white tabular-nums">{tally}</b> / {seg.targetReps}
+              </p>
+              <div className="grid grid-cols-4 gap-2 mt-2">
+                {[-5, 5, 10, 25].map((n) => (
+                  <button key={n} onClick={() => setTally((t) => Math.max(0, Math.min(seg.targetReps, t + n)))}
+                    className="min-h-[44px] rounded-xl border border-gray-700 text-sm font-bold text-gray-200 active:scale-95">
+                    {n > 0 ? `+${n}` : n}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-auto pb-[max(env(safe-area-inset-bottom),20px)] pt-4 space-y-2">
+          <button onClick={isRounds ? roundDone : nextBlock}
+            className="w-full min-h-[72px] rounded-2xl font-black text-xl text-black active:scale-95 flex items-center justify-center gap-2"
+            style={{ background: "#4ade80" }}>
+            <CheckCircle className="w-6 h-6" />
+            {isRounds ? (rounds + 1 >= seg.rounds ? "LAST ROUND DONE" : "ROUND DONE")
+              : isRun ? (ends.length + 1 >= events.length ? "FINISHED — STOP CLOCK" : "RUN DONE")
+              : `ALL ${seg.targetReps} DONE`}
+          </button>
+          <button onClick={undo} disabled={!ends.length && !rounds}
+            className="w-full min-h-[40px] rounded-xl text-[12px] text-gray-400 flex items-center justify-center gap-1.5 disabled:opacity-30">
+            <Undo2 className="w-3.5 h-3.5" /> Undo last tap
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 bg-[#020817] flex flex-col text-white" style={{ zIndex: 99995 }}>
+      {header}
+      {body}
+    </div>,
+    document.body
+  );
+}
+
+/* Results: the time, how it compares, and a share button for Veterans Day. */
+function ChallengeResult({ record, battery, previous }) {
+  const total = record.events.find((e) => e.key === "murph_total")?.value || 0;
+  const prevTotal = previous?.events?.find((e) => e.key === "murph_total")?.value || null;
+  const diff = prevTotal ? total - prevTotal : null;
+  const [shareMsg, setShareMsg] = useState("");
+  const text = `I finished ${record.murph?.half ? "Half Murph" : "Murph"} in ${fmtSecs(total)}`
+    + `${record.murph?.vest ? " with a 20-lb vest" : ""} for Veterans Day. `
+    + `1 mile, 100 pull-ups, 200 push-ups, 300 squats, 1 mile — in honor of LT Michael P. Murphy and every veteran. `
+    + `Take the challenge with Reps & Steps: ${MURPH_SHARE_URL} #Murph #VeteransDay #RepsAndSteps`;
+  const share = async () => {
+    try {
+      if (navigator.share) { await navigator.share({ title: "Murph Challenge", text }); setShareMsg("Shared"); return; }
+    } catch (e) { if (e?.name === "AbortError") return; }
+    try { await navigator.clipboard.writeText(text); setShareMsg("Copied — paste it anywhere"); }
+    catch (_) { setShareMsg("Couldn't share on this device"); }
+  };
+  return (
+    <div className="rounded-2xl border-2 border-red-500/60 p-5 text-center"
+      style={{ background: "linear-gradient(135deg, #3b0a0a, #071a2e)" }}>
+      <p className="text-[10px] uppercase tracking-widest text-red-300">Your time</p>
+      <p className="text-6xl font-black tabular-nums leading-none mt-1">{fmtSecs(total)}</p>
+      <p className="text-[11px] text-gray-400 mt-2">
+        {murphLabel(record.murph)}{record.murph?.manual ? " · entered by hand" : ""}
+      </p>
+      {diff != null && diff !== 0 && (
+        <p className={`text-sm font-bold mt-2 ${diff < 0 ? "text-green-400" : "text-amber-400"}`}>
+          {diff < 0 ? `${fmtSecs(-diff)} faster` : `${fmtSecs(diff)} slower`} than last time ({fmtSecs(prevTotal)})
+        </p>
+      )}
+      {!previous && (
+        <p className="text-[11px] text-gray-400 mt-2">Your first one on record. Beat it next year.</p>
+      )}
+      <p className="text-[11px] text-gray-300 mt-3 leading-snug">{MURPH_HONOREE} Thank you to everyone who has served.</p>
+      <button onClick={share}
+        className="mt-4 w-full min-h-[52px] rounded-xl bg-white text-[#7f1d1d] font-black text-sm flex items-center justify-center gap-2 active:scale-95">
+        <Share2 className="w-4 h-4" /> Share my Murph time
+      </button>
+      {shareMsg && <p className="text-[11px] text-gray-400 mt-2">{shareMsg}</p>}
     </div>
   );
 }
