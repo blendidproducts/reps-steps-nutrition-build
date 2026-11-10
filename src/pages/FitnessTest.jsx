@@ -150,6 +150,37 @@ function sayNow(text) {
   } catch (_) { /* no voice on this device */ }
 }
 
+// Beep + buzz for "you hit it" moments (mile reached, a rep total full).
+// The AudioContext is created on the START tap (iOS only allows sound that a
+// tap unlocked); vibration works on Android, iPhones ignore it.
+let __murphAudio = null;
+function unlockMurphAudio() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!__murphAudio) __murphAudio = new AC();
+    __murphAudio.resume?.();
+  } catch (_) {}
+}
+function alertCue(long = true) {
+  try { navigator.vibrate?.(long ? [250, 120, 250, 120, 500] : [200, 100, 200]); } catch (_) {}
+  try {
+    const ac = __murphAudio;
+    if (!ac) return;
+    const tones = long ? [880, 1175, 1568] : [988, 1319];
+    tones.forEach((f, i) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      const t0 = ac.currentTime + i * 0.18;
+      o.type = "square"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+      o.connect(g); g.connect(ac.destination);
+      o.start(t0); o.stop(t0 + 0.17);
+    });
+  } catch (_) {}
+}
+
 /* ── local history ─────────────────────────────────────────────────────────── */
 function loadHistory() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY) || "[]"); } catch { return []; }
@@ -2386,6 +2417,9 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
   const watchId = useRef(null);
   const segRef = useRef(null);
   const calledMile = useRef(false);
+  const [reachedAt, setReachedAt] = useState(null);   // when GPS hit the run distance
+  const [autoLeft, setAutoLeft] = useState(null);     // seconds until the run clock stops itself
+  const [keepGoing, setKeepGoing] = useState(false);
   const hasRuns = events.some((e) => e.segment === "run");
   const runTarget = opts.half ? M_PER_MILE / 2 : M_PER_MILE;
   const gpsOk = gpsAcc != null && gpsAcc <= MURPH_GPS_OK_M;
@@ -2445,16 +2479,33 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
     releaseSharedCamera();
   }, []);
 
-  // Call out the mile once per run.
+  // Distance reached (2026-11-10, JT: "it should stop or say distance
+  // reached"): beep + buzz + voice, a green banner with the split, then the
+  // run clock stops itself after 5 s — split taken at the moment the mile was
+  // reached, not when the countdown ends. "Keep running" cancels the stop.
   useEffect(() => {
-    if (seg?.segment !== "run" || calledMile.current || runM < runTarget) return;
+    if (stage !== "go" || seg?.segment !== "run" || calledMile.current || runM < runTarget) return;
     calledMile.current = true;
-    sayNow(opts.half ? "Half mile. Tap run done when you're back." : "One mile. Tap run done when you're back.");
-  }, [runM, seg, runTarget, opts.half]);
+    setReachedAt(Date.now()); setKeepGoing(false); setAutoLeft(5);
+    alertCue(true);
+    const last = ends.length + 1 >= events.length;
+    sayNow(`${opts.half ? "Half mile" : "One mile"} reached. ${last ? "Stopping the clock" : "Next block"} in five seconds.`);
+  }, [runM, seg, runTarget, opts.half, stage]);
+  useEffect(() => {
+    if (autoLeft == null || keepGoing || tracking) return;   // camera open: wait until it closes
+    if (autoLeft <= 0) {
+      setAutoLeft(null);
+      if (seg?.segment === "run" && reachedAt) nextBlock(pools, reachedAt);
+      return;
+    }
+    const t = setTimeout(() => setAutoLeft((x) => (x == null ? null : x - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [autoLeft, keepGoing, tracking]);
 
   const resetRun = () => {
     runMRef.current = 0; setRunM(0); lastFix.current = null;
     stepBase.current = null; setSteps(0); calledMile.current = false;
+    setReachedAt(null); setAutoLeft(null); setKeepGoing(false);
   };
 
   const announce = (e) => {
@@ -2471,6 +2522,7 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
   };
 
   const begin = async () => {
+    unlockMurphAudio();
     // iPhone asks for motion (step) permission only from a tap — this one.
     try { if (typeof DeviceMotionEvent !== "undefined" && DeviceMotionEvent.requestPermission) await DeviceMotionEvent.requestPermission(); } catch (_) {}
     setStage("countdown");
@@ -2521,8 +2573,8 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
 
   // P = the movement totals to judge "already full" by (fresh, when called
   // straight after setPools, which hasn't re-rendered yet).
-  const nextBlock = (P = pools) => {
-    const t = Date.now();
+  const nextBlock = (P = pools, endAt = null) => {
+    const t = endAt || Date.now();
     const i = ends.length;
     const cur = events[i];
     if (cur?.segment === "run") {
@@ -2534,7 +2586,7 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
       metaRef.current[next.length] = { ...(metaRef.current[next.length] || {}), covered: true };
       next.push(t);
     }
-    setEnds(next); setRounds(0); setNow(t); setTracking(false); setTrackPool(null);
+    setEnds(next); setRounds(0); setNow(Date.now()); setTracking(false); setTrackPool(null); setAutoLeft(null);
     const nxt = events[next.length];
     if (nxt?.segment === "run") resetRun();
     if (!canTrack(nxt)) releaseSharedCamera();
@@ -2561,7 +2613,7 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
       reps: { ...(m.reps || {}), [key]: ((m.reps || {})[key] || 0) + (v - prev) },
       ...(ai ? { ai: { ...(m.ai || {}), [key]: ((m.ai || {})[key] || 0) + ai } } : {}),
     };
-    if (v >= def.target && prev < def.target) sayNow(`${def.name} done.`);
+    if (v >= def.target && prev < def.target) { alertCue(false); sayNow(`${def.name} done.`); }
     if (seg && seg.segment !== "run" && isFull(seg, next)) {
       if (seg.segment === "mix") sayNow("All reps done.");
       nextBlock(next);
@@ -2803,6 +2855,26 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
                   </div>
                 );
               })}
+            </div>
+          )}
+          {isRun && reachedAt && (
+            <div className="mt-3 rounded-xl border-2 border-green-400 bg-green-500/15 p-3 text-center">
+              <p className="text-xl font-black text-green-300">✓ {opts.half ? "½ MILE" : "1 MILE"} REACHED</p>
+              <p className="text-[12px] text-gray-300">Run split {clock(reachedAt - segStart)}</p>
+              {autoLeft != null && !keepGoing ? (
+                <div className="flex gap-2 mt-2">
+                  <button onClick={() => { setAutoLeft(null); nextBlock(pools, reachedAt); }}
+                    className="flex-1 min-h-[48px] rounded-lg bg-green-400 text-black font-black text-sm active:scale-95">
+                    {ends.length + 1 >= events.length ? "STOP CLOCK" : "NEXT BLOCK"} ({autoLeft})
+                  </button>
+                  <button onClick={() => { setKeepGoing(true); setAutoLeft(null); }}
+                    className="flex-1 min-h-[48px] rounded-lg border border-gray-600 text-gray-200 font-bold text-sm active:scale-95">
+                    Keep running
+                  </button>
+                </div>
+              ) : (
+                <p className="text-[11px] text-gray-400 mt-1">Tap RUN DONE when you're back.</p>
+              )}
             </div>
           )}
           {isRun && (
