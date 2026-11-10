@@ -45,7 +45,7 @@ import {
   ChevronLeft, Shield, Zap, Flame, Dumbbell, Play, Square, Timer as TimerIcon,
   CheckCircle, AlertTriangle, TrendingUp, TrendingDown, Minus, RotateCcw, Footprints,
   SlidersHorizontal, ChevronDown, Plus, Check, Lock, Waves,
-  Flag, Share2, Undo2,
+  Flag, Share2, Undo2, Camera,
 } from "lucide-react";
 import {
   PUBLIC_SAFETY, PUBLIC_SAFETY_BRANCHES, PUBLIC_SAFETY_PENDING,
@@ -222,8 +222,9 @@ export default function FitnessTest() {
   // Murph only (2026-11-09): which version. Remembered, because whoever did
   // half Murph with no vest last year will want the same thing to compare.
   const [murphOpts, setMurphOpts] = useState(() => {
-    try { return { half: false, partitioned: false, vest: false, ...JSON.parse(localStorage.getItem("rns_murph_opts") || "{}") }; }
-    catch (_) { return { half: false, partitioned: false, vest: false }; }
+    const d = { half: false, partitioned: false, vest: false, aiTrack: true };
+    try { return { ...d, ...JSON.parse(localStorage.getItem("rns_murph_opts") || "{}") }; }
+    catch (_) { return d; }
   });
   const setMurph = (patch) => setMurphOpts((o) => {
     const n = { ...o, ...patch };
@@ -2084,7 +2085,12 @@ function Results({ record: initialRecord, onRestart, onExit }) {
                   </div>
                   {e.meta && (
                     <p className="text-[10px] text-gray-500 mt-0.5">
-                      {e.meta.mode === "track" ? `Track · ${e.meta.laps} laps` : e.meta.mode === "route" ? "Measured route" : "Free run"}
+                      {e.meta.mode === "track" ? `Track · ${e.meta.laps} laps` : e.meta.mode === "route" ? "Measured route"
+                        : e.meta.mode === "gps" ? (e.meta.gps_m ? "Tracked run" : "Timed run")
+                        : e.meta.mode === "ai" ? `AiRTP counted ${e.meta.ai_reps} of ${e.meta.target}`
+                        : e.meta.mode === "mix" ? `Pull-ups ${e.meta.pullups || 0} · Push-ups ${e.meta.pushups || 0} · Squats ${e.meta.squats || 0}`
+                          + (e.meta.ai && (e.meta.ai.pushups || e.meta.ai.squats) ? ` · AiRTP counted ${(e.meta.ai.pushups || 0) + (e.meta.ai.squats || 0)}` : "")
+                        : "Free run"}
                       {e.meta.gps_m ? ` · GPS ${(e.meta.gps_m / 1609.344).toFixed(2)} mi` : ""}
                       {e.meta.steps ? ` · ${Number(e.meta.steps).toLocaleString()} steps` : ""}
                       {e.meta.estimated ? ` · projected from ${fmtSecs(e.meta.actual_secs)} at your pace` : ""}
@@ -2182,7 +2188,7 @@ function murphLabel(m) {
   if (!m) return "";
   return [
     m.half ? "Half Murph" : "Full Murph",
-    m.partitioned ? "partitioned" : "straight through",
+    m.mix ? "any order" : m.partitioned ? "partitioned" : "straight through",
     m.vest ? "20-lb vest" : "no vest",
   ].join(" · ");
 }
@@ -2246,9 +2252,26 @@ function MurphOptions({ opts, onChange, events }) {
     <div id="test-options" className="bg-[#111] border border-gray-800 rounded-2xl p-4 space-y-3 scroll-mt-24">
       <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Your Murph</p>
       <Toggle k="half" off={["Full Murph", "1 mi · 100 · 200 · 300 · 1 mi"]} on={["Half Murph", "½ mi · 50 · 100 · 150 · ½ mi"]} />
-      <Toggle k="partitioned" off={["Straight through", "All pull-ups, then push-ups, then squats"]}
-        on={["Partitioned", `${opts.half ? 10 : 20} rounds of 5 · 10 · 15`]} />
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          ["straight", "Straight", "Pull-ups → push-ups → squats", { partitioned: false, mix: false }],
+          ["mix", "Any order", "Switch whenever you're tired", { partitioned: false, mix: true }],
+          ["partitioned", "Rounds", `${opts.half ? 10 : 20} × 5 · 10 · 15`, { partitioned: true, mix: false }],
+        ].map(([k, l, sub, patch]) => {
+          const on = k === (opts.mix ? "mix" : opts.partitioned ? "partitioned" : "straight");
+          return (
+            <button key={k} onClick={() => onChange(patch)}
+              className={`min-h-[56px] rounded-xl border px-2 py-1.5 text-left ${
+                on ? "bg-[#ef4444]/20 border-[#ef4444] text-white" : "border-gray-700 text-gray-400"}`}>
+              <span className="block text-sm font-bold">{l}</span>
+              <span className="block text-[10px] text-gray-500 leading-tight">{sub}</span>
+            </button>
+          );
+        })}
+      </div>
       <Toggle k="vest" off={["No vest", "Bodyweight"]} on={["20-lb vest", "Rx — vest or body armor"]} />
+      <Toggle k="aiTrack" off={["Count by hand", "Tap DONE yourself"]}
+        on={["AiRTP counts", opts.partitioned ? "Not in partitioned rounds" : "Camera counts push-ups & squats"]} />
       <div className="pt-2 border-t border-white/10 space-y-1.5">
         {events.map((e, i) => (
           <div key={e.key} className="flex items-center gap-2 text-[12px]">
@@ -2257,8 +2280,9 @@ function MurphOptions({ opts, onChange, events }) {
           </div>
         ))}
         <p className="text-[10px] text-gray-500 leading-snug pt-1">
-          One clock, no rests — it runs from the first step to the last. Tap each block as you
-          finish it and the app keeps your splits. Doing it at the gym without your phone? Start
+          One clock, no rests — it runs from the first step to the last. The miles are tracked by
+          GPS and steps; with AiRTP on, the camera opens for the push-ups and squats and counts
+          them, breaks and all. Pull-ups you tap. Doing it at the gym without your phone? Start
           it, then choose "Enter my time".
         </p>
       </div>
@@ -2266,7 +2290,15 @@ function MurphOptions({ opts, onChange, events }) {
   );
 }
 
-/* The runner: one continuous clock across every block. */
+/* The runner: one continuous clock across every block.
+   2026-11-09 v2 (JT, after a live test): push-ups and squats hand off to the
+   AiRTP camera tracker (RepTracker) — it opens on its own at the start of
+   those blocks, keeps counting through breaks, and finishes the block when the
+   count reaches the target. Pull-ups stay tap-to-finish. Runs get GPS: the
+   ready screen waits for a lock ("GPS connected") before START, then each run
+   shows distance, pace and steps and calls out the mile. */
+const MURPH_GPS_OK_M = 30;   // a fix this good or better counts as "connected"
+
 function MurphRunner({ battery, opts, onFinish, onAbort }) {
   const events = battery.events;
   const [stage, setStage] = useState("ready");      // ready | countdown | go | manual
@@ -2275,13 +2307,42 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
   const [now, setNow] = useState(Date.now());
   const [ends, setEnds] = useState([]);              // ms at the end of each finished block
   const [rounds, setRounds] = useState(0);           // rounds done in a partitioned block
-  const [tally, setTally] = useState(0);             // optional rep tally for the current block
+  const [tally, setTally] = useState(0);             // reps done in the current block
   const [quitArmed, setQuitArmed] = useState(false);
   const [mm, setMm] = useState("");
   const [ss, setSs] = useState("");
   const finished = useRef(false);
 
+  // AiRTP
+  const aiOn = opts.aiTrack !== false;
+  const [tracking, setTracking] = useState(false);
+  const [trackBase, setTrackBase] = useState(0);     // tally when the camera opened
+  const [live, setLive] = useState(0);               // camera count since it opened
+  const liveRef = useRef(0);
+  const metaRef = useRef({});                         // per-block meta, by index
+  // Any-order block: reps done per movement, which one the camera is on, and
+  // a history so Undo can step back one tap at a time.
+  const [pools, setPools] = useState({});
+  const [trackPool, setTrackPool] = useState(null);
+  const poolHist = useRef([]);
+
+  // GPS + steps
+  const [gpsAcc, setGpsAcc] = useState(null);
+  const [gpsErr, setGpsErr] = useState(null);
+  const [runM, setRunM] = useState(0);
+  const runMRef = useRef(0);
+  const [steps, setSteps] = useState(0);
+  const stepBase = useRef(null);
+  const lastFix = useRef(null);
+  const watchId = useRef(null);
+  const segRef = useRef(null);
+  const calledMile = useRef(false);
+  const hasRuns = events.some((e) => e.segment === "run");
+  const runTarget = opts.half ? M_PER_MILE / 2 : M_PER_MILE;
+  const gpsOk = gpsAcc != null && gpsAcc <= MURPH_GPS_OK_M;
+
   const seg = events[ends.length] || null;
+  segRef.current = stage === "go" ? seg : null;
   const segStart = ends.length ? ends[ends.length - 1] : startAt;
   const totalMs = startAt ? now - startAt : 0;
   const segMs = segStart ? now - segStart : 0;
@@ -2290,6 +2351,7 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
     const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
     return h ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
   };
+  const canTrack = (e) => aiOn && !!e?.exercise && e.segment === "reps";
 
   // Wall-clock ticks; keep the screen awake for an hour-long workout.
   useEffect(() => {
@@ -2300,14 +2362,73 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
     return () => { clearInterval(t); try { lock?.release?.(); } catch (_) {} };
   }, [stage]);
 
+  // One GPS watch from the ready screen to the end: it warms up the lock
+  // before START, and only adds distance while a run block is on.
+  useEffect(() => {
+    if (!hasRuns || (stage !== "ready" && stage !== "countdown" && stage !== "go")) return;
+    if (watchId.current != null) return;
+    if (!navigator.geolocation) { setGpsErr("No GPS on this device"); return; }
+    watchId.current = navigator.geolocation.watchPosition((pos) => {
+      const { latitude: lat, longitude: lon, accuracy } = pos.coords;
+      setGpsAcc(Math.round(accuracy)); setGpsErr(null);
+      if (segRef.current?.segment !== "run" || accuracy > MURPH_GPS_OK_M) return;
+      const fix = { lat, lon, t: pos.timestamp };
+      const prev = lastFix.current;
+      if (prev) {
+        const d = haversineM(prev, fix);
+        const dt = Math.max(0.5, (fix.t - prev.t) / 1000);
+        if (d / dt > 9 || d < 2) return;   // drift, or standing still
+        runMRef.current += d; setRunM(runMRef.current);
+      }
+      lastFix.current = fix;
+    }, (err) => setGpsErr(err.code === 1 ? "Location is off for this site — allow it to track the miles" : "Weak GPS signal"),
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+  }, [stage, hasRuns]);
+  useEffect(() => () => {
+    if (watchId.current != null) navigator.geolocation?.clearWatch(watchId.current);
+    releaseSharedCamera();
+  }, []);
+
+  // Call out the mile once per run.
+  useEffect(() => {
+    if (seg?.segment !== "run" || calledMile.current || runM < runTarget) return;
+    calledMile.current = true;
+    sayNow(opts.half ? "Half mile. Tap run done when you're back." : "One mile. Tap run done when you're back.");
+  }, [runM, seg, runTarget, opts.half]);
+
+  const resetRun = () => {
+    runMRef.current = 0; setRunM(0); lastFix.current = null;
+    stepBase.current = null; setSteps(0); calledMile.current = false;
+  };
+
   const announce = (e) => {
     if (!e) return;
     sayNow(e.segment === "run" ? (opts.half ? "Run. Half a mile." : "Run. One mile.")
+      : e.segment === "mix" ? "Any order. Pull-ups, push-ups, squats. Switch whenever you want."
       : e.segment === "rounds" ? `${e.rounds} rounds. Five, ten, fifteen.`
       : `${e.targetReps} ${e.name.replace(/^\d+\s*/, "")}`);
   };
 
-  const begin = () => {
+  const openTracker = (base, poolKey = null) => {
+    liveRef.current = 0; setLive(0); setTrackBase(base); setTrackPool(poolKey); setTracking(true);
+  };
+  const mixDone = (e, p) => e?.segment === "mix" && e.pools.every((x) => (p[x.key] || 0) >= x.target);
+  const setPool = (key, val) => {
+    const pool = seg.pools.find((x) => x.key === key);
+    const v = Math.max(0, Math.min(pool.target, val));
+    poolHist.current.push({ key, prev: pools[key] || 0 });
+    const next = { ...pools, [key]: v };
+    setPools(next);
+    const i = ends.length;
+    metaRef.current[i] = { ...(metaRef.current[i] || {}), mode: "mix", ...next };
+    if (v >= pool.target && (pools[key] || 0) < pool.target) sayNow(`${pool.name} done.`);
+    if (mixDone(seg, next)) { sayNow("All reps done."); nextBlock(); }
+    return next;
+  };
+
+  const begin = async () => {
+    // iPhone asks for motion (step) permission only from a tap — this one.
+    try { if (typeof DeviceMotionEvent !== "undefined" && DeviceMotionEvent.requestPermission) await DeviceMotionEvent.requestPermission(); } catch (_) {}
     setStage("countdown");
     let n = 3; setCount(n); sayNow("3");
     const t = setInterval(() => {
@@ -2315,17 +2436,23 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
       if (n > 0) { setCount(n); sayNow(String(n)); return; }
       clearInterval(t);
       const t0 = Date.now();
+      resetRun();
       setStartAt(t0); setNow(t0); setStage("go");
-      setTimeout(() => announce(events[0]), 400);
+      sayNow("Go");
+      setTimeout(() => announce(events[0]), 700);
+      if (canTrack(events[0])) openTracker(0);
     }, 1000);
   };
 
   const complete = (allEnds) => {
     if (finished.current) return;
     finished.current = true;
+    if (watchId.current != null) { navigator.geolocation?.clearWatch(watchId.current); watchId.current = null; }
+    releaseSharedCamera();
     const out = events.map((e, i) => ({
       key: e.key, name: e.name, unit: "secs",
       value: Math.round(((allEnds[i]) - (i ? allEnds[i - 1] : startAt)) / 1000),
+      ...(metaRef.current[i] ? { meta: metaRef.current[i] } : {}),
     }));
     const total = Math.round((allEnds[allEnds.length - 1] - startAt) / 1000);
     out.push({ key: "murph_total", name: "Total time", unit: "secs", value: total });
@@ -2333,12 +2460,47 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
     onFinish(out, { manual: false });
   };
 
-  const nextBlock = () => {
+  const nextBlock = (doneTally = tally) => {
     const t = Date.now();
+    const i = ends.length;
+    const cur = events[i];
+    if (cur?.segment === "run") {
+      metaRef.current[i] = { mode: "gps", gps_m: Math.round(runMRef.current), steps };
+    } else if (cur?.exercise && metaRef.current[i]?.ai_reps) {
+      metaRef.current[i] = { ...metaRef.current[i], target: cur.targetReps };
+    }
     const next = [...ends, t];
-    setEnds(next); setTally(0); setRounds(0); setNow(t);
+    setEnds(next); setTally(0); setRounds(0); setNow(t); setTracking(false);
+    setPools({}); setTrackPool(null); poolHist.current = [];
+    const nxt = events[next.length];
+    if (nxt?.segment === "run") resetRun();
+    if (!canTrack(nxt)) releaseSharedCamera();
     if (next.length >= events.length) complete(next);
-    else announce(events[next.length]);
+    else {
+      announce(nxt);
+      if (canTrack(nxt)) openTracker(0);
+    }
+  };
+
+  // The camera closed (target reached, DONE, or X). Keep what it counted.
+  const commitTrack = (reps) => {
+    const counted = Math.max(0, reps || 0);
+    const i = ends.length;
+    if (seg?.segment === "mix" && trackPool) {
+      const key = trackPool;
+      const pl = seg.pools.find((x) => x.key === key);
+      const used = Math.min(counted, Math.max(0, pl.target - trackBase));   // never past the target
+      setTracking(false); setTrackPool(null); liveRef.current = 0; setLive(0);
+      const aiPrev = metaRef.current[i]?.ai || {};
+      metaRef.current[i] = { ...(metaRef.current[i] || {}), mode: "mix", ai: { ...aiPrev, [key]: (aiPrev[key] || 0) + used } };
+      if (used) setPool(key, trackBase + used);
+      return;
+    }
+    const prevAi = metaRef.current[i]?.ai_reps || 0;
+    metaRef.current[i] = { mode: "ai", ai_reps: prevAi + counted, target: seg?.targetReps };
+    const newTally = Math.min(seg?.targetReps || 0, trackBase + counted);
+    setTally(newTally); setTracking(false); liveRef.current = 0; setLive(0);
+    if (seg?.targetReps && newTally >= seg.targetReps) nextBlock(newTally);
   };
 
   const roundDone = () => {
@@ -2350,10 +2512,19 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
 
   const undo = () => {
     if (seg?.segment === "rounds" && rounds > 0) { setRounds(rounds - 1); return; }
+    if (seg?.segment === "mix" && poolHist.current.length) {
+      const h = poolHist.current.pop();
+      const next = { ...pools, [h.key]: h.prev };
+      setPools(next);
+      metaRef.current[ends.length] = { ...(metaRef.current[ends.length] || {}), ...next };
+      return;
+    }
     if (!ends.length) return;
     const prev = events[ends.length - 1];
     setEnds(ends.slice(0, -1));
+    delete metaRef.current[ends.length - 1];
     if (prev.segment === "rounds") setRounds(prev.rounds - 1);
+    if (prev.segment === "run") resetRun();
   };
 
   const submitManual = () => {
@@ -2396,11 +2567,28 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
               ))}
             </div>
             {opts.vest && <p className="text-[11px] text-amber-300 mt-3">Vest on? 20 lb, the whole way.</p>}
+            {hasRuns && (
+              <div className={`mt-4 w-full max-w-xs rounded-xl border px-3 py-2 flex items-center gap-2 text-left ${
+                gpsOk ? "border-green-500/50 bg-green-950/30" : "border-amber-500/40 bg-amber-950/20"}`}>
+                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${gpsOk ? "bg-green-400" : "bg-amber-400 animate-pulse"}`} />
+                <span className="text-[12px] leading-tight">
+                  {gpsOk ? <><b className="text-green-300">GPS connected</b> <span className="text-gray-400">· ±{gpsAcc} m</span></>
+                    : gpsErr ? <span className="text-amber-200">{gpsErr}</span>
+                    : <span className="text-amber-200">Finding GPS{gpsAcc != null ? ` · ±${gpsAcc} m` : ""}… step outside for a faster lock</span>}
+                </span>
+              </div>
+            )}
+            {aiOn && !opts.partitioned && (
+              <p className="text-[11px] text-green-300/90 mt-2 max-w-xs">AiRTP camera will count your push-ups and squats — prop the phone up when you get there.</p>
+            )}
             <button onClick={begin}
-              className="mt-6 min-h-[60px] w-full max-w-xs rounded-2xl font-black text-lg text-white flex items-center justify-center gap-2 active:scale-95"
-              style={{ background: "linear-gradient(135deg, #ef4444, #b91c1c)" }}>
-              <Play className="w-5 h-5 fill-white" /> START THE CLOCK
+              className="mt-5 min-h-[60px] w-full max-w-xs rounded-2xl font-black text-lg text-white flex items-center justify-center gap-2 active:scale-95"
+              style={{ background: (!hasRuns || gpsOk) ? "linear-gradient(135deg, #ef4444, #b91c1c)" : "#374151" }}>
+              <Play className="w-5 h-5 fill-white" /> {hasRuns && gpsOk ? "GPS READY — START" : "START THE CLOCK"}
             </button>
+            {hasRuns && !gpsOk && (
+              <p className="text-[10px] text-gray-500 mt-1.5 max-w-xs">You can start without a lock — the run time still counts, just no distance.</p>
+            )}
             <button onClick={() => setStage("manual")} className="mt-3 text-[12px] text-gray-400 underline">
               Already did it? Enter my time
             </button>
@@ -2427,6 +2615,39 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
         <button onClick={() => setStage("ready")} className="mt-3 text-[12px] text-gray-400 underline">Back</button>
       </div>
     );
+  } else if (seg && tracking && (canTrack(seg) || (seg.segment === "mix" && trackPool))) {
+    // AiRTP owns the screen; a small HUD keeps the Murph clock and count visible.
+    const tp = seg.segment === "mix" ? seg.pools.find((x) => x.key === trackPool) : null;
+    const tExercise = tp ? tp.exercise : seg.exercise;
+    const tTarget = tp ? tp.target : seg.targetReps;
+    const shown = Math.min(tTarget, trackBase + live);
+    return (
+      <>
+        <RepTracker
+          key={`murph-${ends.length}-${trackPool || ""}`}
+          exerciseName={tExercise}
+          targetReps={tTarget - trackBase}
+          autoAdvance={true}
+          keepCameraAlive={true}
+          defaultFacingMode="user"
+          setLabel={`Murph · ${tp ? tp.name : seg.name}`}
+          onCountChange={(c) => { liveRef.current = c; setLive(c); }}
+          onComplete={(reps) => commitTrack(reps)}
+          onClose={() => commitTrack(liveRef.current)}
+        />
+        {createPortal(
+          <div className="fixed inset-x-0 flex justify-center pointer-events-none"
+            style={{ top: "calc(env(safe-area-inset-top) + 84px)", zIndex: 100000 }}>
+            <div className="rounded-full bg-black/80 border border-red-500/60 px-4 py-1.5 flex items-center gap-3 text-white">
+              <span className="text-[10px] font-black tracking-widest text-red-300">MURPH</span>
+              <span className="text-lg font-black tabular-nums">{clock(totalMs)}</span>
+              <span className="text-sm font-bold tabular-nums text-green-300">{tp ? `${tp.name} ` : ""}{shown}/{tTarget}</span>
+            </div>
+          </div>,
+          document.body
+        )}
+      </>
+    );
   } else if (seg) {
     const isRounds = seg.segment === "rounds";
     const isRun = seg.segment === "run";
@@ -2450,11 +2671,80 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
             Block {ends.length + 1} of {events.length} · {clock(segMs)}
           </p>
           <p className="text-2xl font-black mt-1 leading-tight">
-            {isRounds ? `Round ${rounds + 1} of ${seg.rounds}` : seg.name}
+            {isRounds ? `Round ${rounds + 1} of ${seg.rounds}` : seg.segment === "mix" ? "Any order" : seg.name}
           </p>
           <p className="text-[12px] text-gray-400 mt-1 leading-snug">
             {isRounds ? "5 pull-ups · 10 push-ups · 15 air squats" : seg.cue}
           </p>
+          {seg.segment === "mix" && (
+            <div className="mt-3 space-y-2 text-left">
+              {seg.pools.map((pl) => {
+                const done = pools[pl.key] || 0;
+                const full = done >= pl.target;
+                const steps = pl.exercise ? [-5, 5, 10] : [-1, 1, 5, 10];
+                return (
+                  <div key={pl.key} className={`rounded-xl border p-2.5 ${full ? "border-green-500/50 bg-green-950/20" : "border-gray-700 bg-black/30"}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-sm">{full ? "✓ " : ""}{pl.name}</span>
+                      <span className="font-black tabular-nums">{done}<span className="text-gray-500 text-xs"> / {pl.target}</span></span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-gray-800 mt-1.5 overflow-hidden">
+                      <div className={`h-full ${full ? "bg-green-400" : "bg-red-500"}`} style={{ width: `${Math.min(100, (done / pl.target) * 100)}%` }} />
+                    </div>
+                    {!full && (
+                      <div className="flex gap-1.5 mt-2">
+                        {pl.exercise && aiOn && (
+                          <button onClick={() => openTracker(done, pl.key)}
+                            className="flex-[2] min-h-[44px] rounded-lg font-black text-black text-xs flex items-center justify-center gap-1 active:scale-95"
+                            style={{ background: "linear-gradient(160deg,#3DDC7A,#12923F)" }}>
+                            <Camera className="w-4 h-4" /> AiRTP
+                          </button>
+                        )}
+                        {steps.map((n) => (
+                          <button key={n} onClick={() => setPool(pl.key, done + n)}
+                            className="flex-1 min-h-[44px] rounded-lg border border-gray-700 text-xs font-bold text-gray-200 active:scale-95">
+                            {n > 0 ? `+${n}` : n}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {isRun && (
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className="text-2xl font-black tabular-nums">{(runM / M_PER_MILE).toFixed(2)}</p>
+                <p className="text-[10px] text-gray-400">of {opts.half ? "0.50" : "1.00"} mi</p>
+              </div>
+              <div>
+                <p className="text-2xl font-black tabular-nums">
+                  {runM > 80 ? clock((segMs / runM) * M_PER_MILE) : "–:––"}
+                </p>
+                <p className="text-[10px] text-gray-400">pace /mi</p>
+              </div>
+              <div>
+                <p className="text-2xl font-black tabular-nums">{steps.toLocaleString()}</p>
+                <p className="text-[10px] text-gray-400">steps</p>
+              </div>
+              <div className="col-span-3 h-2 rounded-full bg-gray-800 overflow-hidden">
+                <div className="h-full bg-green-400 transition-all" style={{ width: `${Math.min(100, (runM / runTarget) * 100)}%` }} />
+              </div>
+              <p className="col-span-3 text-[10px] text-gray-500">
+                {gpsOk ? `GPS ±${gpsAcc} m` : gpsErr || "Waiting for GPS — time still counts"}
+              </p>
+            </div>
+          )}
+          {canTrack(seg) && (
+            <button onClick={() => openTracker(tally)}
+              className="mt-3 w-full min-h-[56px] rounded-xl font-black text-black flex items-center justify-center gap-2 active:scale-95"
+              style={{ background: "linear-gradient(160deg,#3DDC7A,#12923F)" }}>
+              <Camera className="w-5 h-5" />
+              {tally ? `RESUME AiRTP · ${seg.targetReps - tally} LEFT` : `AiRTP COUNT ${seg.targetReps}`}
+            </button>
+          )}
           {(isRounds || seg.targetReps) && (
             <div className="h-2 rounded-full bg-gray-800 mt-3 overflow-hidden">
               <div className="h-full bg-red-500 transition-all" style={{ width: `${pct * 100}%` }} />
@@ -2463,7 +2753,7 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
           {seg.targetReps && (
             <div className="mt-3">
               <p className="text-[11px] text-gray-400">
-                Optional count: <b className="text-white tabular-nums">{tally}</b> / {seg.targetReps}
+                {canTrack(seg) ? "Counted" : "Optional count"}: <b className="text-white tabular-nums">{tally}</b> / {seg.targetReps}
               </p>
               <div className="grid grid-cols-4 gap-2 mt-2">
                 {[-5, 5, 10, 25].map((n) => (
@@ -2478,15 +2768,16 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
         </div>
 
         <div className="mt-auto pb-[max(env(safe-area-inset-bottom),20px)] pt-4 space-y-2">
-          <button onClick={isRounds ? roundDone : nextBlock}
+          <button onClick={isRounds ? roundDone : () => nextBlock()}
             className="w-full min-h-[72px] rounded-2xl font-black text-xl text-black active:scale-95 flex items-center justify-center gap-2"
             style={{ background: "#4ade80" }}>
             <CheckCircle className="w-6 h-6" />
             {isRounds ? (rounds + 1 >= seg.rounds ? "LAST ROUND DONE" : "ROUND DONE")
               : isRun ? (ends.length + 1 >= events.length ? "FINISHED — STOP CLOCK" : "RUN DONE")
+              : seg.segment === "mix" ? "ALL REPS DONE"
               : `ALL ${seg.targetReps} DONE`}
           </button>
-          <button onClick={undo} disabled={!ends.length && !rounds}
+          <button onClick={undo} disabled={!ends.length && !rounds && !poolHist.current.length}
             className="w-full min-h-[40px] rounded-xl text-[12px] text-gray-400 flex items-center justify-center gap-1.5 disabled:opacity-30">
             <Undo2 className="w-3.5 h-3.5" /> Undo last tap
           </button>
@@ -2497,6 +2788,10 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
 
   return createPortal(
     <div className="fixed inset-0 bg-[#020817] flex flex-col text-white" style={{ zIndex: 99995 }}>
+      <StepTracker isActive={stage === "go" && seg?.segment === "run"} onStepUpdate={(c) => {
+        if (stepBase.current == null) stepBase.current = c;
+        setSteps(Math.max(0, c - stepBase.current));
+      }} />
       {header}
       {body}
     </div>,
