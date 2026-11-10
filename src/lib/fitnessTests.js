@@ -958,7 +958,39 @@ export const BATTERIES = {
 export const MURPH_HONOREE =
   "LT Michael P. Murphy, U.S. Navy SEAL — Medal of Honor, killed in action in Afghanistan on June 28, 2005.";
 
-export function murphEvents({ half = false, partitioned = false, mix = false } = {}) {
+// Rounds splits (2026-11-10, JT): "four equal sets, eight, or randomize".
+// Even = equal rounds, remainder spread over the first ones (100 / 8 = 13,13,13,13,12,12,12,12).
+// Random = uneven rounds from a seeded generator, so the plan is stable for
+// the whole workout and the totals are still exactly 100 / 200 / 300.
+export function splitEven(total, n) {
+  const b = Math.floor(total / n), r = total % n;
+  return Array.from({ length: n }, (_, i) => b + (i < r ? 1 : 0));
+}
+function seededRandom(seed) {
+  let a = (seed >>> 0) || 1;
+  return () => {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+export function splitRandom(total, n, rand) {
+  if (n <= 1) return [total];
+  const w = Array.from({ length: n }, () => 0.35 + rand() * 1.3);
+  const sw = w.reduce((x, y) => x + y, 0);
+  const parts = w.map((x) => Math.max(1, Math.round((total * x) / sw)));
+  let d = total - parts.reduce((x, y) => x + y, 0), guard = 0;
+  while (d !== 0 && guard++ < 100000) {
+    const j = Math.floor(rand() * n);
+    if (d > 0) { parts[j] += 1; d -= 1; } else if (parts[j] > 1) { parts[j] -= 1; d += 1; }
+  }
+  return parts;
+}
+export const MURPH_ROUND_CHOICES = [4, 5, 8, 10, 20];
+const span = (arr) => { const lo = Math.min(...arr), hi = Math.max(...arr); return lo === hi ? `${lo}` : `${lo}–${hi}`; };
+
+export function murphEvents({ half = false, partitioned = false, mix = false, roundsN = null, randomSplit = false, seed = 1 } = {}) {
   const k = half ? 0.5 : 1;
   const runLabel = half ? "½ mile" : "1 mile";
   const run = (key, name) => ({
@@ -968,12 +1000,17 @@ export function murphEvents({ half = false, partitioned = false, mix = false } =
   });
   // `exercise` = the AiRTP tracker's name for it. Pull-ups have none: the
   // camera can't count them, so that block stays tap-to-finish.
-  const block = (key, name, reps, est, exercise = null) => ({
+  // `pool` = the movement total it fills (shared with reps done on the runs).
+  const block = (key, name, reps, est, exercise, pool) => ({
     key, name: `${reps} ${name}`, how: "target", segment: "reps", unit: "secs",
-    targetReps: reps, estSeconds: Math.round(est * k), exercise,
+    targetReps: reps, estSeconds: Math.round(est * k), exercise, pool,
     cue: "Break them up however you like. Tap DONE when the last rep is in.",
   });
-  const rounds = half ? 10 : 20;
+  const rounds = roundsN || (half ? 10 : 20);
+  const rand = seededRandom(seed);
+  const cut = (total) => (randomSplit ? splitRandom(total, rounds, rand) : splitEven(total, rounds));
+  const P = cut(100 * k), Q = cut(200 * k), S = cut(300 * k);
+  const plan = P.map((_, i) => ({ pullups: P[i], pushups: Q[i], squats: S[i] }));
   // ANY ORDER (2026-11-09, JT): all three rep totals open at once — do 30
   // push-ups, switch to squats when the arms are gone, grab some pull-ups,
   // come back. The block ends when every total is full.
@@ -990,15 +1027,18 @@ export function murphEvents({ half = false, partitioned = false, mix = false } =
       }]
     : partitioned
     ? [{
-        key: "murph_rounds", name: `${rounds} rounds: 5 pull-ups · 10 push-ups · 15 squats`,
-        how: "target", segment: "rounds", unit: "secs", rounds,
-        roundReps: { pullups: 5, pushups: 10, squats: 15 }, estSeconds: Math.round(2400 * k),
-        cue: "5 pull-ups, 10 push-ups, 15 air squats = one round. Tap ROUND DONE after each.",
+        key: "murph_rounds",
+        name: randomSplit
+          ? `${rounds} random rounds (${100 * k} · ${200 * k} · ${300 * k})`
+          : `${rounds} rounds: ${span(P)} pull-ups · ${span(Q)} push-ups · ${span(S)} squats`,
+        how: "target", segment: "rounds", unit: "secs", rounds, plan, randomSplit,
+        roundReps: plan[0], estSeconds: Math.round(2400 * k),
+        cue: "One round = the pull-ups, push-ups and squats shown. Tap ROUND DONE after each.",
       }]
     : [
-        block("murph_pullups", "Pull-ups", 100 * k, 600),
-        block("murph_pushups", "Push-ups", 200 * k, 900, "Push-Up"),
-        block("murph_squats", "Air Squats", 300 * k, 900, "Squat"),
+        block("murph_pullups", "Pull-ups", 100 * k, 600, null, "pullups"),
+        block("murph_pushups", "Push-ups", 200 * k, 900, "Push-Up", "pushups"),
+        block("murph_squats", "Air Squats", 300 * k, 900, "Squat", "squats"),
       ];
   return [run("murph_run1", "Run"), ...middle, run("murph_run2", "Run")];
 }
