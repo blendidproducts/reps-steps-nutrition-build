@@ -26,7 +26,7 @@ import {
   compareToPrevious, ageBand, TEST_GROUPS, batteriesInGroup,
   CUSTOM_EVENT_POOL, buildCustomBattery,
   MILITARY_BRANCHES, batteriesInBranch, eventFormatLabel,
-  murphEvents, featuredChallenge, MURPH_HONOREE,
+  murphEvents, featuredChallenge, MURPH_HONOREE, MURPH_ROUND_CHOICES,
 } from "@/lib/fitnessTests";
 import {
   PENDING, scoreAftTest, aftBand, scorePstTest, PST_PROGRAMS, PST_MINIMUMS,
@@ -2085,7 +2085,8 @@ function Results({ record: initialRecord, onRestart, onExit }) {
                   </div>
                   {e.meta && (
                     <p className="text-[10px] text-gray-500 mt-0.5">
-                      {e.meta.mode === "track" ? `Track · ${e.meta.laps} laps` : e.meta.mode === "route" ? "Measured route"
+                      {e.meta.mode === "murph" ? (e.meta.line || "")
+                        : e.meta.mode === "track" ? `Track · ${e.meta.laps} laps` : e.meta.mode === "route" ? "Measured route"
                         : e.meta.mode === "gps" ? (e.meta.gps_m ? "Tracked run" : "Timed run")
                         : e.meta.mode === "ai" ? `AiRTP counted ${e.meta.ai_reps} of ${e.meta.target}`
                         : e.meta.mode === "mix" ? `Pull-ups ${e.meta.pullups || 0} · Push-ups ${e.meta.pushups || 0} · Squats ${e.meta.squats || 0}`
@@ -2188,7 +2189,7 @@ function murphLabel(m) {
   if (!m) return "";
   return [
     m.half ? "Half Murph" : "Full Murph",
-    m.mix ? "any order" : m.partitioned ? "partitioned" : "straight through",
+    m.mix ? "any order" : m.partitioned ? `${m.roundsN || (m.half ? 10 : 20)} rounds${m.randomSplit ? ", random split" : ""}` : "straight through",
     m.vest ? "20-lb vest" : "no vest",
   ].join(" · ");
 }
@@ -2256,7 +2257,7 @@ function MurphOptions({ opts, onChange, events }) {
         {[
           ["straight", "Straight", "Pull-ups → push-ups → squats", { partitioned: false, mix: false }],
           ["mix", "Any order", "Switch whenever you're tired", { partitioned: false, mix: true }],
-          ["partitioned", "Rounds", `${opts.half ? 10 : 20} × 5 · 10 · 15`, { partitioned: true, mix: false }],
+          ["partitioned", "Rounds", `${opts.roundsN || (opts.half ? 10 : 20)} rounds · ${opts.randomSplit ? "random" : "even"}`, { partitioned: true, mix: false }],
         ].map(([k, l, sub, patch]) => {
           const on = k === (opts.mix ? "mix" : opts.partitioned ? "partitioned" : "straight");
           return (
@@ -2270,6 +2271,45 @@ function MurphOptions({ opts, onChange, events }) {
         })}
       </div>
       <Toggle k="vest" off={["No vest", "Bodyweight"]} on={["20-lb vest", "Rx — vest or body armor"]} />
+      {opts.partitioned && (() => {
+        const n = opts.roundsN || (opts.half ? 10 : 20);
+        const plan = events.find((e) => e.segment === "rounds")?.plan || [];
+        return (
+          <div className="rounded-xl border border-gray-800 p-3 space-y-2">
+            <p className="text-[11px] font-bold text-gray-300">How many rounds?</p>
+            <div className="grid grid-cols-5 gap-1.5">
+              {MURPH_ROUND_CHOICES.map((c) => (
+                <button key={c} onClick={() => onChange({ roundsN: c })}
+                  className={`min-h-[40px] rounded-lg border text-sm font-black ${
+                    n === c ? "bg-[#ef4444]/20 border-[#ef4444] text-white" : "border-gray-700 text-gray-400"}`}>
+                  {c}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {[[false, "Even split"], [true, "Random split"]].map(([v, l]) => (
+                <button key={l} onClick={() => onChange(v ? { randomSplit: true, seed: Math.floor(Math.random() * 1e9) } : { randomSplit: false })}
+                  className={`min-h-[40px] rounded-lg border text-sm font-bold ${
+                    !!opts.randomSplit === v ? "bg-[#ef4444]/20 border-[#ef4444] text-white" : "border-gray-700 text-gray-400"}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+            {opts.randomSplit && (
+              <button onClick={() => onChange({ seed: Math.floor(Math.random() * 1e9) })}
+                className="w-full min-h-[36px] rounded-lg border border-gray-700 text-[12px] font-bold text-gray-300">
+                ↻ Reshuffle the rounds
+              </button>
+            )}
+            <div className="max-h-40 overflow-y-auto text-[11px] text-gray-400 tabular-nums space-y-0.5">
+              {plan.map((r, i) => (
+                <p key={i}><span className="text-gray-600 w-6 inline-block">{i + 1}</span>
+                  {r.pullups} pull-ups · {r.pushups} push-ups · {r.squats} squats</p>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
       <Toggle k="aiTrack" off={["Count by hand", "Tap DONE yourself"]}
         on={["AiRTP counts", opts.partitioned ? "Not in partitioned rounds" : "Camera counts push-ups & squats"]} />
       <div className="pt-2 border-t border-white/10 space-y-1.5">
@@ -2307,24 +2347,33 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
   const [now, setNow] = useState(Date.now());
   const [ends, setEnds] = useState([]);              // ms at the end of each finished block
   const [rounds, setRounds] = useState(0);           // rounds done in a partitioned block
-  const [tally, setTally] = useState(0);             // reps done in the current block
   const [quitArmed, setQuitArmed] = useState(false);
   const [mm, setMm] = useState("");
   const [ss, setSs] = useState("");
   const finished = useRef(false);
 
-  // AiRTP
+  // AiRTP + movement totals
   const aiOn = opts.aiTrack !== false;
   const [tracking, setTracking] = useState(false);
-  const [trackBase, setTrackBase] = useState(0);     // tally when the camera opened
+  const [trackBase, setTrackBase] = useState(0);     // that movement's total when the camera opened
+  const [trackPool, setTrackPool] = useState(null);  // which movement the camera is counting
   const [live, setLive] = useState(0);               // camera count since it opened
   const liveRef = useRef(0);
   const metaRef = useRef({});                         // per-block meta, by index
-  // Any-order block: reps done per movement, which one the camera is on, and
-  // a history so Undo can step back one tap at a time.
+  // 2026-11-10 (JT, mid-run): ONE running total per movement for the whole
+  // Murph. Reps done during a run ("stop, knock out 25 push-ups, keep going"),
+  // in their own block, or in Any order all fill the same total, and a block
+  // whose total is already full is ticked off when you reach it.
   const [pools, setPools] = useState({});
-  const [trackPool, setTrackPool] = useState(null);
-  const poolHist = useRef([]);
+  const poolHist = useRef([]);                       // {key, prev, block} — Undo
+  const kk = opts.half ? 0.5 : 1;
+  const REPS = [
+    { key: "pullups", name: "Pull-ups", target: 100 * kk, exercise: null, steps: [1, 5, 10] },
+    { key: "pushups", name: "Push-ups", target: 200 * kk, exercise: "Push-Up", steps: [5, 10, 25] },
+    { key: "squats", name: "Air Squats", target: 300 * kk, exercise: "Squat", steps: [5, 10, 25] },
+  ];
+  const repDef = (key) => REPS.find((r) => r.key === key);
+  const extrasOn = !opts.partitioned;   // Rounds format is a fixed 5-10-15 structure
 
   // GPS + steps
   const [gpsAcc, setGpsAcc] = useState(null);
@@ -2351,7 +2400,14 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
     const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
     return h ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
   };
-  const canTrack = (e) => aiOn && !!e?.exercise && e.segment === "reps";
+  const canTrack = (e) => aiOn && e?.segment === "reps" && !!e.exercise;
+  const isFull = (e, P) => {
+    if (!e) return false;
+    if (e.segment === "reps" && e.pool) return (P[e.pool] || 0) >= repDef(e.pool).target;
+    if (e.segment === "mix") return REPS.every((r) => (P[r.key] || 0) >= r.target);
+    return false;
+  };
+  const tally = seg?.pool ? (pools[seg.pool] || 0) : 0;
 
   // Wall-clock ticks; keep the screen awake for an hour-long workout.
   useEffect(() => {
@@ -2405,25 +2461,13 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
     if (!e) return;
     sayNow(e.segment === "run" ? (opts.half ? "Run. Half a mile." : "Run. One mile.")
       : e.segment === "mix" ? "Any order. Pull-ups, push-ups, squats. Switch whenever you want."
-      : e.segment === "rounds" ? `${e.rounds} rounds. Five, ten, fifteen.`
+      : e.segment === "rounds" ? `${e.rounds} rounds. Round 1: ${e.plan[0].pullups} pull-ups, ${e.plan[0].pushups} push-ups, ${e.plan[0].squats} squats.`
+      : e.pool ? `${repDef(e.pool).target - (pools[e.pool] || 0)} ${repDef(e.pool).name} to go`
       : `${e.targetReps} ${e.name.replace(/^\d+\s*/, "")}`);
   };
 
-  const openTracker = (base, poolKey = null) => {
+  const openTracker = (base, poolKey) => {
     liveRef.current = 0; setLive(0); setTrackBase(base); setTrackPool(poolKey); setTracking(true);
-  };
-  const mixDone = (e, p) => e?.segment === "mix" && e.pools.every((x) => (p[x.key] || 0) >= x.target);
-  const setPool = (key, val) => {
-    const pool = seg.pools.find((x) => x.key === key);
-    const v = Math.max(0, Math.min(pool.target, val));
-    poolHist.current.push({ key, prev: pools[key] || 0 });
-    const next = { ...pools, [key]: v };
-    setPools(next);
-    const i = ends.length;
-    metaRef.current[i] = { ...(metaRef.current[i] || {}), mode: "mix", ...next };
-    if (v >= pool.target && (pools[key] || 0) < pool.target) sayNow(`${pool.name} done.`);
-    if (mixDone(seg, next)) { sayNow("All reps done."); nextBlock(); }
-    return next;
   };
 
   const begin = async () => {
@@ -2440,89 +2484,128 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
       setStartAt(t0); setNow(t0); setStage("go");
       sayNow("Go");
       setTimeout(() => announce(events[0]), 700);
-      if (canTrack(events[0])) openTracker(0);
+      if (canTrack(events[0])) openTracker(0, events[0].pool);
     }, 1000);
   };
+
+  const repsText = (r) => REPS.filter((d) => r?.[d.key] > 0).map((d) => `${r[d.key]} ${d.name.toLowerCase()}`).join(" · ");
 
   const complete = (allEnds) => {
     if (finished.current) return;
     finished.current = true;
     if (watchId.current != null) { navigator.geolocation?.clearWatch(watchId.current); watchId.current = null; }
     releaseSharedCamera();
-    const out = events.map((e, i) => ({
-      key: e.key, name: e.name, unit: "secs",
-      value: Math.round(((allEnds[i]) - (i ? allEnds[i - 1] : startAt)) / 1000),
-      ...(metaRef.current[i] ? { meta: metaRef.current[i] } : {}),
-    }));
+    const out = events.map((e, i) => {
+      const m = metaRef.current[i] || {};
+      const r = repsText(m.reps);
+      const ai = (m.ai?.pushups || 0) + (m.ai?.squats || 0);
+      let line = "";
+      if (e.segment === "run") line = (m.gps_m ? "Tracked run" : "Timed run") + (r ? ` · + ${r} on the run` : "");
+      else if (m.covered && !r) line = "Already done on the run";
+      else if (e.segment === "rounds") line = `${e.rounds} rounds · ${e.randomSplit ? "random" : "even"} split`;
+      else line = r + (ai ? `${r ? " · " : ""}AiRTP counted ${ai}` : "");
+      const meta = line || m.gps_m || m.steps
+        ? { mode: "murph", line, gps_m: m.gps_m || 0, steps: m.steps || 0, reps: m.reps || null, ai: m.ai || null }
+        : null;
+      return {
+        key: e.key, name: e.name, unit: "secs",
+        value: Math.round(((allEnds[i]) - (i ? allEnds[i - 1] : startAt)) / 1000),
+        ...(meta ? { meta } : {}),
+      };
+    });
     const total = Math.round((allEnds[allEnds.length - 1] - startAt) / 1000);
     out.push({ key: "murph_total", name: "Total time", unit: "secs", value: total });
     sayNow(`Time. ${Math.floor(total / 60)} minutes ${total % 60} seconds. Well done.`);
     onFinish(out, { manual: false });
   };
 
-  const nextBlock = (doneTally = tally) => {
+  // P = the movement totals to judge "already full" by (fresh, when called
+  // straight after setPools, which hasn't re-rendered yet).
+  const nextBlock = (P = pools) => {
     const t = Date.now();
     const i = ends.length;
     const cur = events[i];
     if (cur?.segment === "run") {
-      metaRef.current[i] = { mode: "gps", gps_m: Math.round(runMRef.current), steps };
-    } else if (cur?.exercise && metaRef.current[i]?.ai_reps) {
-      metaRef.current[i] = { ...metaRef.current[i], target: cur.targetReps };
+      metaRef.current[i] = { ...(metaRef.current[i] || {}), gps_m: Math.round(runMRef.current), steps };
     }
     const next = [...ends, t];
-    setEnds(next); setTally(0); setRounds(0); setNow(t); setTracking(false);
-    setPools({}); setTrackPool(null); poolHist.current = [];
+    // Blocks already covered by reps done on the run are ticked off now.
+    while (next.length < events.length && isFull(events[next.length], P)) {
+      metaRef.current[next.length] = { ...(metaRef.current[next.length] || {}), covered: true };
+      next.push(t);
+    }
+    setEnds(next); setRounds(0); setNow(t); setTracking(false); setTrackPool(null);
     const nxt = events[next.length];
     if (nxt?.segment === "run") resetRun();
     if (!canTrack(nxt)) releaseSharedCamera();
     if (next.length >= events.length) complete(next);
     else {
       announce(nxt);
-      if (canTrack(nxt)) openTracker(0);
+      if (canTrack(nxt)) openTracker(P[nxt.pool] || 0, nxt.pool);
     }
+  };
+
+  // Set a movement's total. ai = how many of the added reps the camera counted.
+  const addReps = (key, val, ai = 0) => {
+    const def = repDef(key);
+    const prev = pools[key] || 0;
+    const v = Math.max(0, Math.min(def.target, val));
+    if (v === prev) return false;
+    const i = ends.length;
+    poolHist.current.push({ key, prev, block: i });
+    const next = { ...pools, [key]: v };
+    setPools(next);
+    const m = metaRef.current[i] || {};
+    metaRef.current[i] = {
+      ...m,
+      reps: { ...(m.reps || {}), [key]: ((m.reps || {})[key] || 0) + (v - prev) },
+      ...(ai ? { ai: { ...(m.ai || {}), [key]: ((m.ai || {})[key] || 0) + ai } } : {}),
+    };
+    if (v >= def.target && prev < def.target) sayNow(`${def.name} done.`);
+    if (seg && seg.segment !== "run" && isFull(seg, next)) {
+      if (seg.segment === "mix") sayNow("All reps done.");
+      nextBlock(next);
+    }
+    return true;
   };
 
   // The camera closed (target reached, DONE, or X). Keep what it counted.
   const commitTrack = (reps) => {
+    const key = trackPool;
+    const def = repDef(key);
     const counted = Math.max(0, reps || 0);
-    const i = ends.length;
-    if (seg?.segment === "mix" && trackPool) {
-      const key = trackPool;
-      const pl = seg.pools.find((x) => x.key === key);
-      const used = Math.min(counted, Math.max(0, pl.target - trackBase));   // never past the target
-      setTracking(false); setTrackPool(null); liveRef.current = 0; setLive(0);
-      const aiPrev = metaRef.current[i]?.ai || {};
-      metaRef.current[i] = { ...(metaRef.current[i] || {}), mode: "mix", ai: { ...aiPrev, [key]: (aiPrev[key] || 0) + used } };
-      if (used) setPool(key, trackBase + used);
-      return;
-    }
-    const prevAi = metaRef.current[i]?.ai_reps || 0;
-    metaRef.current[i] = { mode: "ai", ai_reps: prevAi + counted, target: seg?.targetReps };
-    const newTally = Math.min(seg?.targetReps || 0, trackBase + counted);
-    setTally(newTally); setTracking(false); liveRef.current = 0; setLive(0);
-    if (seg?.targetReps && newTally >= seg.targetReps) nextBlock(newTally);
+    setTracking(false); setTrackPool(null); liveRef.current = 0; setLive(0);
+    if (!def) return;
+    const used = Math.min(counted, Math.max(0, def.target - trackBase));   // never past the target
+    if (used) addReps(key, trackBase + used, used);
   };
 
   const roundDone = () => {
     const r = rounds + 1;
     if (r >= seg.rounds) { nextBlock(); return; }
     setRounds(r);
-    sayNow(`Round ${r + 1}`);
+    const nx = seg.plan?.[r];
+    sayNow(nx ? `Round ${r + 1}. ${nx.pullups}, ${nx.pushups}, ${nx.squats}.` : `Round ${r + 1}`);
   };
 
   const undo = () => {
-    if (seg?.segment === "rounds" && rounds > 0) { setRounds(rounds - 1); return; }
-    if (seg?.segment === "mix" && poolHist.current.length) {
-      const h = poolHist.current.pop();
-      const next = { ...pools, [h.key]: h.prev };
-      setPools(next);
-      metaRef.current[ends.length] = { ...(metaRef.current[ends.length] || {}), ...next };
+    const h = poolHist.current[poolHist.current.length - 1];
+    if (h && h.block === ends.length) {
+      poolHist.current.pop();
+      const delta = (pools[h.key] || 0) - h.prev;
+      setPools({ ...pools, [h.key]: h.prev });
+      const m = metaRef.current[h.block];
+      if (m?.reps) m.reps[h.key] = (m.reps[h.key] || 0) - delta;
       return;
     }
+    if (seg?.segment === "rounds" && rounds > 0) { setRounds(rounds - 1); return; }
     if (!ends.length) return;
-    const prev = events[ends.length - 1];
-    setEnds(ends.slice(0, -1));
-    delete metaRef.current[ends.length - 1];
+    // Step back one block (and over any that were ticked off with it).
+    let n = ends.length - 1;
+    while (n > 0 && metaRef.current[n]?.covered && ends[n - 1] === ends[n]) { delete metaRef.current[n]; n -= 1; }
+    const prev = events[n];
+    delete metaRef.current[n]?.covered;
+    setEnds(ends.slice(0, n));
     if (prev.segment === "rounds") setRounds(prev.rounds - 1);
     if (prev.segment === "run") resetRun();
   };
@@ -2615,22 +2698,20 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
         <button onClick={() => setStage("ready")} className="mt-3 text-[12px] text-gray-400 underline">Back</button>
       </div>
     );
-  } else if (seg && tracking && (canTrack(seg) || (seg.segment === "mix" && trackPool))) {
+  } else if (seg && tracking && trackPool) {
     // AiRTP owns the screen; a small HUD keeps the Murph clock and count visible.
-    const tp = seg.segment === "mix" ? seg.pools.find((x) => x.key === trackPool) : null;
-    const tExercise = tp ? tp.exercise : seg.exercise;
-    const tTarget = tp ? tp.target : seg.targetReps;
-    const shown = Math.min(tTarget, trackBase + live);
+    const def = repDef(trackPool);
+    const shown = Math.min(def.target, trackBase + live);
     return (
       <>
         <RepTracker
-          key={`murph-${ends.length}-${trackPool || ""}`}
-          exerciseName={tExercise}
-          targetReps={tTarget - trackBase}
+          key={`murph-${ends.length}-${trackPool}`}
+          exerciseName={def.exercise}
+          targetReps={def.target - trackBase}
           autoAdvance={true}
           keepCameraAlive={true}
           defaultFacingMode="user"
-          setLabel={`Murph · ${tp ? tp.name : seg.name}`}
+          setLabel={`Murph · ${def.name}`}
           onCountChange={(c) => { liveRef.current = c; setLive(c); }}
           onComplete={(reps) => commitTrack(reps)}
           onClose={() => commitTrack(liveRef.current)}
@@ -2641,7 +2722,7 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
             <div className="rounded-full bg-black/80 border border-red-500/60 px-4 py-1.5 flex items-center gap-3 text-white">
               <span className="text-[10px] font-black tracking-widest text-red-300">MURPH</span>
               <span className="text-lg font-black tabular-nums">{clock(totalMs)}</span>
-              <span className="text-sm font-bold tabular-nums text-green-300">{tp ? `${tp.name} ` : ""}{shown}/{tTarget}</span>
+              <span className="text-sm font-bold tabular-nums text-green-300">{def.name} {shown}/{def.target}</span>
             </div>
           </div>,
           document.body
@@ -2653,10 +2734,10 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
     const isRun = seg.segment === "run";
     const pct = isRounds ? rounds / seg.rounds : seg.targetReps ? Math.min(1, tally / seg.targetReps) : 0;
     body = (
-      <div className="flex-1 flex flex-col px-5">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col px-5">
         <div className="text-center pt-2">
           <p className="text-[10px] uppercase tracking-widest text-gray-500">Total</p>
-          <p className="text-6xl font-black tabular-nums leading-none">{clock(totalMs)}</p>
+          <p className={`${isRun && extrasOn ? "text-5xl" : "text-6xl"} font-black tabular-nums leading-none`}>{clock(totalMs)}</p>
         </div>
 
         <div className="flex gap-1 mt-4">
@@ -2674,7 +2755,18 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
             {isRounds ? `Round ${rounds + 1} of ${seg.rounds}` : seg.segment === "mix" ? "Any order" : seg.name}
           </p>
           <p className="text-[12px] text-gray-400 mt-1 leading-snug">
-            {isRounds ? "5 pull-ups · 10 push-ups · 15 air squats" : seg.cue}
+            {isRounds ? (() => {
+              const cur = seg.plan?.[rounds] || { pullups: 5, pushups: 10, squats: 15 };
+              const nx = seg.plan?.[rounds + 1];
+              return (
+                <>
+                  <span className="block text-xl font-black text-white mt-1">
+                    {cur.pullups} pull-ups · {cur.pushups} push-ups · {cur.squats} squats
+                  </span>
+                  {nx && <span className="block text-[11px] text-gray-500 mt-1">Next: {nx.pullups} · {nx.pushups} · {nx.squats}</span>}
+                </>
+              );
+            })() : seg.cue}
           </p>
           {seg.segment === "mix" && (
             <div className="mt-3 space-y-2 text-left">
@@ -2701,7 +2793,7 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
                           </button>
                         )}
                         {steps.map((n) => (
-                          <button key={n} onClick={() => setPool(pl.key, done + n)}
+                          <button key={n} onClick={() => addReps(pl.key, done + n)}
                             className="flex-1 min-h-[44px] rounded-lg border border-gray-700 text-xs font-bold text-gray-200 active:scale-95">
                             {n > 0 ? `+${n}` : n}
                           </button>
@@ -2737,8 +2829,42 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
               </p>
             </div>
           )}
+          {isRun && extrasOn && (
+            <div className="mt-3 pt-3 border-t border-white/10 text-left">
+              <p className="text-[10px] uppercase tracking-widest text-gray-400 text-center">
+                Reps on the run · they count toward your totals
+              </p>
+              <div className="mt-2 space-y-1.5">
+                {REPS.map((r) => {
+                  const done = pools[r.key] || 0;
+                  const full = done >= r.target;
+                  return (
+                    <div key={r.key} className="flex items-center gap-1.5">
+                      <div className="w-[84px] shrink-0">
+                        <p className="text-[12px] font-bold leading-tight">{full ? "✓ " : ""}{r.name}</p>
+                        <p className="text-[11px] text-gray-400 tabular-nums">{done}/{r.target}</p>
+                      </div>
+                      {!full && r.exercise && aiOn && (
+                        <button onClick={() => openTracker(done, r.key)}
+                          className="min-h-[42px] px-2.5 rounded-lg font-black text-black text-[11px] flex items-center gap-1 active:scale-95 shrink-0"
+                          style={{ background: "linear-gradient(160deg,#3DDC7A,#12923F)" }}>
+                          <Camera className="w-3.5 h-3.5" /> AiRTP
+                        </button>
+                      )}
+                      {!full && r.steps.map((n) => (
+                        <button key={n} onClick={() => addReps(r.key, done + n)}
+                          className="flex-1 min-h-[42px] rounded-lg border border-gray-700 text-[12px] font-bold text-gray-200 active:scale-95">
+                          +{n}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {canTrack(seg) && (
-            <button onClick={() => openTracker(tally)}
+            <button onClick={() => openTracker(tally, seg.pool)}
               className="mt-3 w-full min-h-[56px] rounded-xl font-black text-black flex items-center justify-center gap-2 active:scale-95"
               style={{ background: "linear-gradient(160deg,#3DDC7A,#12923F)" }}>
               <Camera className="w-5 h-5" />
@@ -2757,7 +2883,7 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
               </p>
               <div className="grid grid-cols-4 gap-2 mt-2">
                 {[-5, 5, 10, 25].map((n) => (
-                  <button key={n} onClick={() => setTally((t) => Math.max(0, Math.min(seg.targetReps, t + n)))}
+                  <button key={n} onClick={() => addReps(seg.pool, tally + n)}
                     className="min-h-[44px] rounded-xl border border-gray-700 text-sm font-bold text-gray-200 active:scale-95">
                     {n > 0 ? `+${n}` : n}
                   </button>
@@ -2768,7 +2894,9 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
         </div>
 
         <div className="mt-auto pb-[max(env(safe-area-inset-bottom),20px)] pt-4 space-y-2">
-          <button onClick={isRounds ? roundDone : () => nextBlock()}
+          <button onClick={isRounds ? roundDone
+            : seg.pool && tally < seg.targetReps ? () => { if (!addReps(seg.pool, seg.targetReps)) nextBlock(); }
+            : () => nextBlock()}
             className="w-full min-h-[72px] rounded-2xl font-black text-xl text-black active:scale-95 flex items-center justify-center gap-2"
             style={{ background: "#4ade80" }}>
             <CheckCircle className="w-6 h-6" />
