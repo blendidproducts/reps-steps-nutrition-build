@@ -958,7 +958,7 @@ export const BATTERIES = {
 export const MURPH_HONOREE =
   "LT Michael P. Murphy, U.S. Navy SEAL — Medal of Honor, killed in action in Afghanistan on June 28, 2005.";
 
-export function murphEvents({ half = false, partitioned = false } = {}) {
+export function murphEvents({ half = false, partitioned = false, mix = false } = {}) {
   const k = half ? 0.5 : 1;
   const runLabel = half ? "½ mile" : "1 mile";
   const run = (key, name) => ({
@@ -966,13 +966,29 @@ export function murphEvents({ half = false, partitioned = false } = {}) {
     distanceLabel: half ? "0.5 miles" : "1 mile", estSeconds: Math.round(600 * k),
     cue: half ? "Run half a mile. Tap when you're back." : "Run one mile. Tap when you're back.",
   });
-  const block = (key, name, reps, est) => ({
+  // `exercise` = the AiRTP tracker's name for it. Pull-ups have none: the
+  // camera can't count them, so that block stays tap-to-finish.
+  const block = (key, name, reps, est, exercise = null) => ({
     key, name: `${reps} ${name}`, how: "target", segment: "reps", unit: "secs",
-    targetReps: reps, estSeconds: Math.round(est * k),
+    targetReps: reps, estSeconds: Math.round(est * k), exercise,
     cue: "Break them up however you like. Tap DONE when the last rep is in.",
   });
   const rounds = half ? 10 : 20;
-  const middle = partitioned
+  // ANY ORDER (2026-11-09, JT): all three rep totals open at once — do 30
+  // push-ups, switch to squats when the arms are gone, grab some pull-ups,
+  // come back. The block ends when every total is full.
+  const middle = mix
+    ? [{
+        key: "murph_mix", name: `Any order: ${100 * k} pull-ups · ${200 * k} push-ups · ${300 * k} squats`,
+        how: "target", segment: "mix", unit: "secs", estSeconds: Math.round(2400 * k),
+        pools: [
+          { key: "pullups", name: "Pull-ups", target: 100 * k, exercise: null },
+          { key: "pushups", name: "Push-ups", target: 200 * k, exercise: "Push-Up" },
+          { key: "squats", name: "Air Squats", target: 300 * k, exercise: "Squat" },
+        ],
+        cue: "Any order, any split. Switch whenever you're tired.",
+      }]
+    : partitioned
     ? [{
         key: "murph_rounds", name: `${rounds} rounds: 5 pull-ups · 10 push-ups · 15 squats`,
         how: "target", segment: "rounds", unit: "secs", rounds,
@@ -981,8 +997,8 @@ export function murphEvents({ half = false, partitioned = false } = {}) {
       }]
     : [
         block("murph_pullups", "Pull-ups", 100 * k, 600),
-        block("murph_pushups", "Push-ups", 200 * k, 900),
-        block("murph_squats", "Air Squats", 300 * k, 900),
+        block("murph_pushups", "Push-ups", 200 * k, 900, "Push-Up"),
+        block("murph_squats", "Air Squats", 300 * k, 900, "Squat"),
       ];
   return [run("murph_run1", "Run"), ...middle, run("murph_run2", "Run")];
 }
@@ -1142,6 +1158,7 @@ export function eventFormatLabel(e) {
   if (e.how === "target") {
     if (e.segment === "run") return "for time · " + (e.distanceLabel || "distance");
     if (e.segment === "rounds") return "for time · " + e.rounds + " rounds";
+    if (e.segment === "mix") return "for time · any order";
     return "for time · " + e.targetReps + " reps";
   }
   if (e.fixedSeconds) {
