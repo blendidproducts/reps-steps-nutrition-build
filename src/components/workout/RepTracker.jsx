@@ -30,7 +30,7 @@ import {
   X, Camera, Activity, CheckCircle,
   ChevronUp, ChevronDown, AlertTriangle, RotateCcw, Hand, FlaskConical,
   Pause, Play as PlayIcon, Users, Route, Crosshair,
-  Video, VideoOff, Circle, Square, Download, Mic, MicOff, CameraOff,
+  Video, VideoOff, Circle, Square, Download, Mic, MicOff, CameraOff, Keyboard,
 } from "lucide-react";
 
 // ─── MediaPipe CDN ────────────────────────────────────────────────────────────
@@ -92,6 +92,9 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     return preferredFacing(defaultFacingMode);
   });
   const [repFlash,       setRepFlash]       = useState(false);
+  // Manual mode: type the rep total instead of tapping (2026-11-04)
+  const [numEntryOpen,   setNumEntryOpen]   = useState(false);
+  const [numDraft,       setNumDraft]       = useState("");
   // ── Camera health (2026-10-07) ────────────────────────────────
   // `cameraLost` is the reason string when the stream dies, null when healthy.
   const [cameraLost,     setCameraLost]     = useState(null);
@@ -934,6 +937,21 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
     triggerRepFlash();
     announceRep(next);
   }
+  function handleManualUndo() {
+    setRepCount((c) => Math.max(0, c - 1));
+  }
+  function openNumEntry() {
+    setNumDraft(repCount ? String(repCount) : "");
+    setNumEntryOpen(true);
+  }
+  function commitNumEntry() {
+    const n = parseInt(numDraft, 10);
+    if (Number.isFinite(n) && n >= 0 && n <= 9999) {
+      setRepCount(n);
+      if (repCounterRef.current?.setCount) repCounterRef.current.setCount(n);
+    }
+    setNumEntryOpen(false);
+  }
 
   // ── Exercise picker ────────────────────────────────────────────
   function changeExercise(cfg) {
@@ -1057,7 +1075,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
               <Hand className="w-7 h-7 text-white/30" />
             </div>
             <p className="text-white/30 text-sm font-medium">TAP ANYWHERE TO COUNT</p>
-            <p className="text-white/20 text-xs">Auto-tracking not available for this exercise</p>
+            <p className="text-white/20 text-xs">No auto-tracking for this one · or use TYPE # below</p>
           </div>
         </button>
 
@@ -1073,7 +1091,17 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
             </div>
           )}
           <div className="flex items-center gap-3">
-            <div className="w-16 h-14" />{/* spacer — no camera flip in manual mode */}
+            {/* Type the total instead of tapping (2026-11-04) — sits where the
+                camera-flip button would be in camera mode. */}
+            <button onClick={openNumEntry} aria-label="Type the number of reps"
+              className="flex-shrink-0 flex flex-col items-center justify-center gap-1 w-12 h-14 bg-gray-800 rounded-2xl border border-[#00a9ff]/40 active:scale-95 transition-transform">
+              <Keyboard className="w-5 h-5 text-[#00a9ff]" />
+              <span className="text-[#00a9ff] text-[10px] font-bold leading-none">TYPE #</span>
+            </button>
+            <button onClick={handleManualUndo} aria-label="Minus one rep"
+              className="flex-shrink-0 flex flex-col items-center justify-center gap-1 w-12 h-14 bg-gray-800 rounded-2xl border border-white/15 active:scale-95 transition-transform">
+              <span className="text-white text-xl font-black leading-none">−1</span>
+            </button>
             <button onClick={resetCount}
               className="flex-shrink-0 flex flex-col items-center justify-center gap-1 w-14 h-14 bg-gray-800 rounded-2xl border border-white/15 active:scale-95 transition-transform">
               <RotateCcw className="w-5 h-5 text-gray-400" />
@@ -1086,6 +1114,31 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
             </button>
           </div>
         </div>
+
+        {/* Type-the-number sheet (2026-11-04) */}
+        {numEntryOpen && (
+          <div className="absolute inset-0 z-40 bg-black/70 flex items-center justify-center px-6"
+            onClick={() => setNumEntryOpen(false)}>
+            <form onClick={(e) => e.stopPropagation()}
+              onSubmit={(e) => { e.preventDefault(); commitNumEntry(); }}
+              className="w-full max-w-xs bg-[#0f172a] rounded-2xl border border-white/15 p-5 flex flex-col gap-4">
+              <p className="text-white font-bold text-center">How many {unitLabel}?</p>
+              <input
+                type="number" inputMode="numeric" pattern="[0-9]*" min="0" max="9999"
+                autoFocus value={numDraft}
+                onChange={(e) => setNumDraft(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+                aria-label={`Number of ${unitLabel}`}
+                className="w-full text-center text-5xl font-black tabular-nums bg-black/40 text-white rounded-xl border border-white/20 py-3 outline-none focus:border-[#00a9ff]"
+              />
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setNumEntryOpen(false)}
+                  className="flex-1 h-12 rounded-xl bg-gray-800 text-gray-300 font-bold">Cancel</button>
+                <button type="submit"
+                  className="flex-1 h-12 rounded-xl bg-[#00a9ff] text-white font-bold">Save</button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* Exercise picker sheet */}
         <AnimatePresence>

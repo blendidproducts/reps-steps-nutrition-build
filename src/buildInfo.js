@@ -2,6 +2,6 @@
 // The stamp matches the commit message of the deploy that produced it, so the
 // string shown in the app can be found directly in git log.
 export const BUILD = {
-  stamp: "2026-11-04 07:50",
-  iso: "2026-11-04T15:50:27Z",
+  stamp: "2026-11-10 08:27",
+  iso: "2026-11-10T16:27:18Z",
 };

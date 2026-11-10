@@ -50,8 +50,9 @@ import {
 } from "@/lib/shareCard";
 
 // ── Body-trackable exercises (AI pose detection verified) ────────────────────
-// Removed: Mountain Climber, Burpee, Sit-Up, Crunch, Bicycle Crunch, Arm Circle
-// — pose model cannot reliably count reps for these movements.
+// Mountain Climber, Burpee, Sit-Up, Crunch, Bicycle Crunch: the pose model
+// can't reliably count these, so they're back as `manual: true` moves (see the
+// end of this list) — tap-to-count or type the number, no camera tracking.
 const ALL_EXERCISES = [
   { name: "Push-Up",       cue: "Side view · lower chest to floor · full lockout",     emoji: "💪", cameraTip: "Place phone on floor beside you" },
   { name: "Squat",         cue: "Side view · break parallel · drive through heels",     emoji: "🦵", cameraTip: "Place phone at hip height to side" },
@@ -67,7 +68,7 @@ const ALL_EXERCISES = [
   { name: "Wide Push-Up",    cue: "Side view · hands wider than shoulders · chest to floor",  emoji: "💪", cameraTip: "Place phone on floor beside you" },
   { name: "Diamond Push-Up", cue: "Side view · hands form a diamond · elbows tight",          emoji: "🔺", cameraTip: "Place phone on floor beside you" },
   { name: "Incline Push-Up", cue: "Side view · hands on elevated surface · lower chest",       emoji: "📈", cameraTip: "Place phone on floor beside you" },
-  { name: "Decline Push-Up", cue: "Feet elevated · upper-chest focus · manual rep count",       emoji: "📉", cameraTip: "No camera needed — tap the screen to count reps" },
+  { name: "Decline Push-Up", cue: "Feet elevated · upper-chest focus · manual rep count",       emoji: "📉", cameraTip: "No camera needed — tap the screen to count reps", manual: true },
   { name: "Tricep Dip",      cue: "Side view · lower until 90° elbow · full extension up",      emoji: "🪑", cameraTip: "Place phone at hip height to side" },
   // "Tricep Extension" removed (Round 14) — duplicated Tricep Dip in the builder
   // and isn't one of the 83 canonical DB exercises (no image, same elbow tracking).
@@ -78,7 +79,30 @@ const ALL_EXERCISES = [
   // Scored in FEET, not reps — the tracker measures how far you crawl away from
   // the phone. See DistanceTracker in exerciseTracking.js for the range limit.
   { name: "Bear Crawl",      cue: "20 ft · crawl straight away from the phone · knees hover",    emoji: "🐻", cameraTip: "Phone on the ground at the START line, facing down the lane", beta: true },
+  // ── Manual-count moves (2026-11-04) ──
+  // JT: "Burpees are not being tracked at all... I need to be able to input the
+  // number manually." These run RepTracker in manual mode (no camera, no
+  // MediaPipe): tap anywhere to count, −1 to undo, TYPE # to enter the total.
+  { name: "Burpee",           cue: "Squat · kick back to plank · chest down · jump up",  emoji: "🔥", cameraTip: "No tracking — tap to count, or type your number", manual: true },
+  { name: "Mountain Climber", cue: "Plank · drive knees to chest · hips level",            emoji: "⛰️", cameraTip: "No tracking — tap to count, or type your number", manual: true },
+  { name: "Sit-Up",           cue: "Knees bent · chest to knees · control the descent",    emoji: "🧘", cameraTip: "No tracking — tap to count, or type your number", manual: true },
+  { name: "Crunch",           cue: "Knees bent · shoulder blades off the floor",           emoji: "🎯", cameraTip: "No tracking — tap to count, or type your number", manual: true },
+  { name: "Bicycle Crunch",   cue: "Elbow to opposite knee · extend the other leg",        emoji: "🚲", cameraTip: "No tracking — tap to count, or type your number", manual: true },
 ];
+
+// Stable per-name config that forces RepTracker into manual tap mode. Cached so
+// RepTracker gets the same object on every render.
+const _manualCfgCache = new Map();
+function manualConfigFor(name) {
+  if (!name) return null;
+  if (!ALL_EXERCISES.some(e => e.name === name && e.manual)) return null;
+  if (!_manualCfgCache.has(name)) {
+    let base = null;
+    try { base = matchExercise(name); } catch (_) {}
+    _manualCfgCache.set(name, { ...(base || {}), name, mode: "reps", trackable: false });
+  }
+  return _manualCfgCache.get(name);
+}
 
 const TIME_OPTIONS  = [{ label: "30s", seconds: 30 }, { label: "45s", seconds: 45 }, { label: "60s", seconds: 60 }, { label: "90s", seconds: 90 }];
 const SETS_OPTIONS  = [1, 2, 3, 4, 5];
@@ -130,7 +154,7 @@ function formatTime(s) {
 // ── Exercise Preview Card — shown before each exercise starts ─────────────────
 function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl, onActiveRecovery, weight = 0, weightUnit = "lb", onWeightChange, autoTrack = false, onToggleAutoTrack, autoArmed = true }) {
   // Auto Track only applies to moves the camera can count.
-  const camTrackable = (() => { try { return matchExercise(exercise?.name)?.trackable !== false; } catch (_) { return false; } })();
+  const camTrackable = !exercise?.manual && (() => { try { return matchExercise(exercise?.name)?.trackable !== false; } catch (_) { return false; } })();
   const showAutoCam = autoTrack && camTrackable;
   // Countdown only runs AFTER user presses START NOW — never auto-launches
   const [started, setStarted] = useState(false);
@@ -1866,8 +1890,12 @@ function ARTPWorkoutInner() {
   };
 
   const handleRepTrackerComplete = useCallback((reps) => {
-    pendingReps.current = reps;
-    finishExercise(reps); // RepTracker DONE = advance immediately; no second tap needed
+    // 2026-11-04: DONE used to record ONLY the tracker's count, silently
+    // dropping taps on the ManualRepCounter overlay (conditioning moves). Take
+    // the higher of the two, same rule as the timer/skip paths.
+    const final = Math.max(reps || 0, manualRepsRef.current || 0);
+    pendingReps.current = final;
+    finishExercise(final); // RepTracker DONE = advance immediately; no second tap needed
   }, [finishExercise]);
 
   // Accumulate steps across StepTracker remounts (each phase creates a new instance starting from 0)
@@ -2667,6 +2695,7 @@ function ARTPWorkoutInner() {
             key={`artp-${exerciseIndex}-set${currentSet}`}
             exerciseName={currentEx?.name}
             exerciseEmoji={currentEx?.emoji}
+            customConfig={manualConfigFor(currentEx?.name)}
             setLabel={totalSets > 1 ? `Set ${currentSet}/${totalSets}` : ""}
             targetReps={mode === "goal" ? repGoalPerEx : mode === "time" ? targetRepsPerEx : 0}
             autoAdvance={mode === "goal"}
