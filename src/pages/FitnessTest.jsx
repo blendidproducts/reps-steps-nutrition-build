@@ -2822,39 +2822,11 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
           </p>
           {seg.segment === "mix" && (
             <div className="mt-3 space-y-2 text-left">
-              {seg.pools.map((pl) => {
-                const done = pools[pl.key] || 0;
-                const full = done >= pl.target;
-                const steps = pl.exercise ? [-5, 5, 10] : [-1, 1, 5, 10];
-                return (
-                  <div key={pl.key} className={`rounded-xl border p-2.5 ${full ? "border-green-500/50 bg-green-950/20" : "border-gray-700 bg-black/30"}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="font-black text-sm">{full ? "✓ " : ""}{pl.name}</span>
-                      <span className="font-black tabular-nums">{done}<span className="text-gray-500 text-xs"> / {pl.target}</span></span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-gray-800 mt-1.5 overflow-hidden">
-                      <div className={`h-full ${full ? "bg-green-400" : "bg-red-500"}`} style={{ width: `${Math.min(100, (done / pl.target) * 100)}%` }} />
-                    </div>
-                    {!full && (
-                      <div className="flex gap-1.5 mt-2">
-                        {pl.exercise && aiOn && (
-                          <button onClick={() => openTracker(done, pl.key)}
-                            className="flex-[2] min-h-[44px] rounded-lg font-black text-black text-xs flex items-center justify-center gap-1 active:scale-95"
-                            style={{ background: "linear-gradient(160deg,#3DDC7A,#12923F)" }}>
-                            <Camera className="w-4 h-4" /> AiRTP
-                          </button>
-                        )}
-                        {steps.map((n) => (
-                          <button key={n} onClick={() => addReps(pl.key, done + n)}
-                            className="flex-1 min-h-[44px] rounded-lg border border-gray-700 text-xs font-bold text-gray-200 active:scale-95">
-                            {n > 0 ? `+${n}` : n}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              {REPS.map((r) => (
+                <MurphRepRow key={r.key} def={r} done={pools[r.key] || 0}
+                  onSet={(v) => addReps(r.key, v)}
+                  onCamera={r.exercise && aiOn ? () => openTracker(pools[r.key] || 0, r.key) : null} />
+              ))}
             </div>
           )}
           {isRun && reachedAt && (
@@ -2906,66 +2878,32 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
               <p className="text-[10px] uppercase tracking-widest text-gray-400 text-center">
                 Reps on the run · they count toward your totals
               </p>
-              <div className="mt-2 space-y-1.5">
-                {REPS.map((r) => {
-                  const done = pools[r.key] || 0;
-                  const full = done >= r.target;
-                  return (
-                    <div key={r.key} className="flex items-center gap-1.5">
-                      <div className="w-[84px] shrink-0">
-                        <p className="text-[12px] font-bold leading-tight">{full ? "✓ " : ""}{r.name}</p>
-                        <p className="text-[11px] text-gray-400 tabular-nums">{done}/{r.target}</p>
-                      </div>
-                      {!full && r.exercise && aiOn && (
-                        <button onClick={() => openTracker(done, r.key)}
-                          className="min-h-[42px] px-2.5 rounded-lg font-black text-black text-[11px] flex items-center gap-1 active:scale-95 shrink-0"
-                          style={{ background: "linear-gradient(160deg,#3DDC7A,#12923F)" }}>
-                          <Camera className="w-3.5 h-3.5" /> AiRTP
-                        </button>
-                      )}
-                      {!full && r.steps.map((n) => (
-                        <button key={n} onClick={() => addReps(r.key, done + n)}
-                          className="flex-1 min-h-[42px] rounded-lg border border-gray-700 text-[12px] font-bold text-gray-200 active:scale-95">
-                          +{n}
-                        </button>
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          {canTrack(seg) && (
-            <button onClick={() => openTracker(tally, seg.pool)}
-              className="mt-3 w-full min-h-[56px] rounded-xl font-black text-black flex items-center justify-center gap-2 active:scale-95"
-              style={{ background: "linear-gradient(160deg,#3DDC7A,#12923F)" }}>
-              <Camera className="w-5 h-5" />
-              {tally ? `RESUME AiRTP · ${seg.targetReps - tally} LEFT` : `AiRTP COUNT ${seg.targetReps}`}
-            </button>
-          )}
-          {(isRounds || seg.targetReps) && (
-            <div className="h-2 rounded-full bg-gray-800 mt-3 overflow-hidden">
-              <div className="h-full bg-red-500 transition-all" style={{ width: `${pct * 100}%` }} />
-            </div>
-          )}
-          {seg.targetReps && (
-            <div className="mt-3">
-              <p className="text-[11px] text-gray-400">
-                {canTrack(seg) ? "Counted" : "Optional count"}: <b className="text-white tabular-nums">{tally}</b> / {seg.targetReps}
-              </p>
-              <div className="grid grid-cols-4 gap-2 mt-2">
-                {[-5, 5, 10, 25].map((n) => (
-                  <button key={n} onClick={() => addReps(seg.pool, tally + n)}
-                    className="min-h-[44px] rounded-xl border border-gray-700 text-sm font-bold text-gray-200 active:scale-95">
-                    {n > 0 ? `+${n}` : n}
-                  </button>
+              <div className="mt-2 space-y-2">
+                {REPS.map((r) => (
+                  <MurphRepRow key={r.key} def={r} done={pools[r.key] || 0} compact
+                    onSet={(v) => addReps(r.key, v)}
+                    onCamera={r.exercise && aiOn ? () => openTracker(pools[r.key] || 0, r.key) : null} />
                 ))}
               </div>
             </div>
           )}
+          {isRounds && (
+            <div className="h-2 rounded-full bg-gray-800 mt-3 overflow-hidden">
+              <div className="h-full bg-red-500 transition-all" style={{ width: `${pct * 100}%` }} />
+            </div>
+          )}
+          {seg.pool && (
+            <div className="mt-3 text-left">
+              <MurphRepRow def={repDef(seg.pool)} done={tally}
+                onSet={(v) => addReps(seg.pool, v)}
+                onCamera={canTrack(seg) ? () => openTracker(tally, seg.pool) : null} />
+            </div>
+          )}
         </div>
 
-        <div className="mt-auto pb-[max(env(safe-area-inset-bottom),20px)] pt-4 space-y-2">
+        {/* Pinned to the bottom of the scroll area: the run screen's rep rows
+            can be taller than a phone, and RUN DONE must never scroll away. */}
+        <div className="mt-auto sticky bottom-0 -mx-5 px-5 bg-[#020817] pb-[max(env(safe-area-inset-bottom),16px)] pt-3 space-y-1 border-t border-white/5">
           <button onClick={isRounds ? roundDone
             : seg.pool && tally < seg.targetReps ? () => { if (!addReps(seg.pool, seg.targetReps)) nextBlock(); }
             : () => nextBlock()}
@@ -2996,6 +2934,70 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
       {body}
     </div>,
     document.body
+  );
+}
+
+/* One movement's counter (2026-11-10, JT): a big running count that updates
+   the moment you tap +5 / +10 (with a "+10" flash so you know it took), and
+   the AiRTP camera button right beside the tap buttons — one tap to switch to
+   tracking. Used on the run screen, in Any order and in the single blocks. */
+function MurphRepRow({ def, done, onSet, onCamera, compact = false }) {
+  const full = done >= def.target;
+  const [flash, setFlash] = useState(null);
+  useEffect(() => {
+    if (flash == null) return;
+    const t = setTimeout(() => setFlash(null), 1200);
+    return () => clearTimeout(t);
+  }, [flash]);
+  const steps = def.exercise ? [-5, 5, 10, 25] : [-1, 1, 5, 10];
+  const bump = (n) => {
+    const v = Math.max(0, Math.min(def.target, done + n));
+    if (v === done) return;
+    onSet(v);
+    setFlash({ n: v - done, k: Date.now() });
+  };
+  return (
+    <div className={`rounded-xl border p-2.5 ${full ? "border-green-500/50 bg-green-950/20" : "border-gray-700 bg-black/30"}`}>
+      <div className="flex items-end justify-between gap-2">
+        <div>
+          <p className="font-black text-sm leading-tight">{full ? "✓ " : ""}{def.name}</p>
+          <p className="text-[10px] text-gray-500 leading-tight">
+            {full ? "Done" : `${def.target - done} to go`}{!def.exercise && !full ? " · tap to count" : ""}
+          </p>
+        </div>
+        <div className="flex items-baseline gap-1.5 tabular-nums">
+          {flash && (
+            <span key={flash.k} className={`text-sm font-black ${flash.n > 0 ? "text-green-400" : "text-amber-400"}`}>
+              {flash.n > 0 ? `+${flash.n}` : flash.n}
+            </span>
+          )}
+          <span className={`${compact ? "text-2xl" : "text-3xl"} font-black text-white leading-none`}>{done}</span>
+          <span className="text-sm text-gray-500">/ {def.target}</span>
+        </div>
+      </div>
+      <div className="h-1.5 rounded-full bg-gray-800 mt-2 overflow-hidden">
+        <div className={`h-full transition-all ${full ? "bg-green-400" : "bg-red-500"}`}
+          style={{ width: `${Math.min(100, (done / def.target) * 100)}%` }} />
+      </div>
+      {!full && (
+        <div className="flex gap-1.5 mt-2">
+          {onCamera && (
+            <button onClick={onCamera} aria-label={`Count ${def.name} with the camera`}
+              className="flex-[1.4] min-h-[44px] rounded-lg font-black text-black text-xs flex items-center justify-center gap-1 active:scale-95"
+              style={{ background: "linear-gradient(160deg,#3DDC7A,#12923F)" }}>
+              <Camera className="w-4 h-4" /> AiRTP
+            </button>
+          )}
+          {steps.map((n) => (
+            <button key={n} onClick={() => bump(n)}
+              className={`flex-1 min-h-[44px] rounded-lg border text-sm font-bold active:scale-95 ${
+                n < 0 ? "border-gray-800 text-gray-500" : "border-gray-600 text-gray-100"}`}>
+              {n > 0 ? `+${n}` : `−${-n}`}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
