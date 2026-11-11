@@ -194,6 +194,67 @@ function saveLocal(record) {
 }
 const lastOfBattery = (key) => loadHistory().find((r) => r.battery === key) || null;
 
+/* Murph → Workout History (2026-11-11, JT: "it did not add it to my history").
+   Fitness tests were only kept on the phone (localStorage) plus a Base44
+   `FitnessTest` entity that was never created, so the History page — which
+   lists WorkoutSession — never saw a Murph. Now a finished Murph is also
+   written as a WorkoutSession, and any Murph still sitting on the phone
+   without one is back-filled the next time the Fitness Test page opens. */
+function murphSession(rec) {
+  const ev = rec.events || [];
+  const total = ev.find((e) => e.key === "murph_total")?.value || 0;
+  const end = new Date(rec.taken_at || Date.now());
+  const k = rec.murph?.half ? 0.5 : 1;
+  const runs = ev.filter((e) => e.key.startsWith("murph_run"));
+  const gpsM = ev.reduce((n, e) => n + (e.meta?.gps_m || 0), 0);
+  const steps = ev.reduce((n, e) => n + (e.meta?.steps || 0), 0);
+  const ai = ev.reduce((n, e) => n + (e.meta?.ai?.pushups || 0) + (e.meta?.ai?.squats || 0), 0);
+  const exercises = [
+    ...runs.slice(0, 1).map((e) => ({ exercise_name: `${k < 1 ? "½" : "1"} mile run`, reps_completed: 0, time_spent: e.value })),
+    { exercise_name: "Pull-ups", reps_completed: 100 * k },
+    { exercise_name: "Push-ups", reps_completed: 200 * k },
+    { exercise_name: "Air Squats", reps_completed: 300 * k },
+    ...runs.slice(1, 2).map((e) => ({ exercise_name: `${k < 1 ? "½" : "1"} mile run`, reps_completed: 0, time_spent: e.value })),
+  ];
+  return {
+    workout_id: "murph",
+    start_time: new Date(end.getTime() - total * 1000).toISOString(),
+    end_time: end.toISOString(),
+    duration: total,
+    total_reps: 600 * k,
+    exercises_completed: exercises,
+    weight_added_lbs: rec.murph?.vest ? 20 : 0,
+    ...(gpsM || steps ? { cardio_analytics: {
+      total_steps: steps,
+      total_distance_miles: Number((gpsM / M_PER_MILE).toFixed(2)),
+    } } : {}),
+    notes: `${rec.murph?.half ? "Half Murph" : "Murph"} · ${fmtSecs(total)} · ${murphLabel(rec.murph)}`
+      + (ai ? ` · AiRTP counted ${ai}` : "") + (rec.murph?.manual ? " · time entered by hand" : ""),
+  };
+}
+async function saveMurphSession(rec) {
+  if (!rec || rec.battery !== "murph" || rec.session_id) return rec;
+  try {
+    const row = await base44.entities.WorkoutSession.create(murphSession(rec));
+    if (row?.id) { const r = { ...rec, session_id: row.id }; saveLocal(r); return r; }
+  } catch (_) { /* offline or signed out: stays on the phone, retried next visit */ }
+  return rec;
+}
+
+/* Crash-safe Murph (2026-11-11): an hour-long workout is long enough for iOS
+   to reload the page (screen recording + camera + GPS is a lot of memory).
+   The runner saves its progress every few seconds; opening the page again
+   offers to pick up exactly where it stopped, clock included. */
+const MURPH_LIVE_KEY = "rns_murph_live";
+function loadMurphLive() {
+  try {
+    const s = JSON.parse(localStorage.getItem(MURPH_LIVE_KEY) || "null");
+    if (s && s.v === 1 && s.startAt && Date.now() - s.savedAt < 6 * 3600e3) return s;
+  } catch (_) {}
+  return null;
+}
+const clearMurphLive = () => { try { localStorage.removeItem(MURPH_LIVE_KEY); } catch (_) {} };
+
 /** Profile for the military battery, remembered so it's asked once. */
 function loadProfile() {
   try { return JSON.parse(localStorage.getItem("rns_test_profile") || "null"); } catch { return null; }
@@ -257,6 +318,15 @@ export default function FitnessTest() {
     try { return { ...d, ...JSON.parse(localStorage.getItem("rns_murph_opts") || "{}") }; }
     catch (_) { return d; }
   });
+  // Back-fill: any Murph finished on this phone that never reached History.
+  useEffect(() => {
+    (async () => {
+      for (const r of loadHistory().filter((x) => x.battery === "murph" && !x.session_id)) await saveMurphSession(r);
+    })();
+  }, []);
+  const [murphLive, setMurphLive] = useState(() => loadMurphLive());
+  const [murphResume, setMurphResume] = useState(null);
+
   const setMurph = (patch) => setMurphOpts((o) => {
     const n = { ...o, ...patch };
     try { localStorage.setItem("rns_murph_opts", JSON.stringify(n)); } catch (_) {}
@@ -382,6 +452,7 @@ export default function FitnessTest() {
     (async () => {
       try { await base44.entities.FitnessTest?.create?.(record); } catch (_) {}
     })();
+    if (record.battery === "murph") { clearMurphLive(); saveMurphSession(record); }
   }
 
   const [result, setResult] = useState(null);
@@ -408,6 +479,28 @@ export default function FitnessTest() {
         </div>
 
         <div className="max-w-lg mx-auto px-4 py-5 space-y-3">
+          {murphLive && (
+            <div className="rounded-2xl border-2 border-amber-400 bg-amber-500/10 p-4">
+              <p className="font-black text-amber-300">Murph in progress</p>
+              <p className="text-[12px] text-gray-300 mt-1">
+                Started {new Date(murphLive.startAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                {" · "}block {Math.min((murphLive.ends || []).length + 1, 99)} · the clock kept running.
+              </p>
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => {
+                  setMurphOpts(murphLive.opts); setBatteryKey("murph"); setMurphResume(murphLive);
+                  setMurphLive(null); setPhase("running");
+                }} className="flex-1 min-h-[48px] rounded-xl bg-amber-400 text-black font-black text-sm active:scale-95">
+                  RESUME
+                </button>
+                <button onClick={() => { clearMurphLive(); setMurphLive(null); }}
+                  className="flex-1 min-h-[48px] rounded-xl border border-gray-600 text-gray-300 font-bold text-sm active:scale-95">
+                  Discard
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Holiday challenge, featured while it's in season (2026-11-09). */}
           {featured && (
             <FeaturedChallengeCard f={featured} selected={batteryKey === featured.battery.key}
@@ -864,8 +957,9 @@ export default function FitnessTest() {
       <MurphRunner
         battery={battery}
         opts={murphOpts}
-        onFinish={(events, murphExtra) => finishTest({}, { events, murph: murphExtra })}
-        onAbort={() => restart()}
+        resume={murphResume}
+        onFinish={(events, murphExtra) => { setMurphResume(null); finishTest({}, { events, murph: murphExtra }); }}
+        onAbort={() => { clearMurphLive(); setMurphResume(null); restart(); }}
       />
     );
   }
@@ -2392,14 +2486,14 @@ function MurphOptions({ opts, onChange, events }) {
    shows distance, pace and steps and calls out the mile. */
 const MURPH_GPS_OK_M = 30;   // a fix this good or better counts as "connected"
 
-function MurphRunner({ battery, opts, onFinish, onAbort }) {
+function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
   const events = battery.events;
-  const [stage, setStage] = useState("ready");      // ready | countdown | go | manual
+  const [stage, setStage] = useState(resume ? "go" : "ready");      // ready | countdown | go | manual
   const [count, setCount] = useState(3);
-  const [startAt, setStartAt] = useState(null);
+  const [startAt, setStartAt] = useState(resume?.startAt ?? null);
   const [now, setNow] = useState(Date.now());
-  const [ends, setEnds] = useState([]);              // ms at the end of each finished block
-  const [rounds, setRounds] = useState(0);           // rounds done in a partitioned block
+  const [ends, setEnds] = useState(resume?.ends || []);              // ms at the end of each finished block
+  const [rounds, setRounds] = useState(resume?.rounds || 0);           // rounds done in a partitioned block
   const [quitArmed, setQuitArmed] = useState(false);
   const [mm, setMm] = useState("");
   const [ss, setSs] = useState("");
@@ -2413,12 +2507,12 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
   const [trackCap, setTrackCap] = useState(null);    // stop at this total (a round's share), else the movement's target
   const [live, setLive] = useState(0);               // camera count since it opened
   const liveRef = useRef(0);
-  const metaRef = useRef({});                         // per-block meta, by index
+  const metaRef = useRef(resume?.meta || {});         // per-block meta, by index
   // 2026-11-10 (JT, mid-run): ONE running total per movement for the whole
   // Murph. Reps done during a run ("stop, knock out 25 push-ups, keep going"),
   // in their own block, or in Any order all fill the same total, and a block
   // whose total is already full is ticked off when you reach it.
-  const [pools, setPools] = useState({});
+  const [pools, setPools] = useState(resume?.pools || {});
   const poolHist = useRef([]);                       // {key, prev, block} — Undo
   const kk = opts.half ? 0.5 : 1;
   const REPS = [
@@ -2432,14 +2526,14 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
   // GPS + steps
   const [gpsAcc, setGpsAcc] = useState(null);
   const [gpsErr, setGpsErr] = useState(null);
-  const [runM, setRunM] = useState(0);
-  const runMRef = useRef(0);
+  const [runM, setRunM] = useState(resume?.runM || 0);
+  const runMRef = useRef(resume?.runM || 0);
   const [steps, setSteps] = useState(0);
   const stepBase = useRef(null);
   const odo = useRef(createOdometer({ maxAcc: MURPH_GPS_OK_M }));
   const watchId = useRef(null);
   const segRef = useRef(null);
-  const calledMile = useRef(false);
+  const calledMile = useRef(!!resume?.calledMile);
   const [reachedAt, setReachedAt] = useState(null);   // when GPS hit the run distance
   const [autoLeft, setAutoLeft] = useState(null);     // seconds until the run clock stops itself
   const [keepGoing, setKeepGoing] = useState(false);
@@ -2474,6 +2568,29 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
     (async () => { try { lock = await navigator.wakeLock?.request?.("screen"); } catch (_) {} })();
     return () => { clearInterval(t); try { lock?.release?.(); } catch (_) {} };
   }, [stage]);
+
+  // Crash-safe progress: saved on every block/round/rep change and every 5 s
+  // while running (for the GPS distance). Cleared on finish or abandon.
+  const snapRef = useRef(null);
+  snapRef.current = stage === "go" && startAt && !finished.current ? {
+    v: 1, opts, startAt, ends, rounds, pools, meta: metaRef.current,
+    runM: runMRef.current, calledMile: calledMile.current,
+  } : null;
+  const saveSnap = () => {
+    const sn = snapRef.current;
+    if (!sn || finished.current) return;
+    try { localStorage.setItem(MURPH_LIVE_KEY, JSON.stringify({ ...sn, savedAt: Date.now() })); } catch (_) {}
+  };
+  useEffect(saveSnap, [stage, ends, rounds, pools]); // eslint-disable-line
+  useEffect(() => {
+    if (stage !== "go") return;
+    const t = setInterval(saveSnap, 5000);
+    const hide = () => { if (document.visibilityState === "hidden") saveSnap(); };
+    document.addEventListener("visibilitychange", hide);
+    window.addEventListener("pagehide", saveSnap);
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", hide); window.removeEventListener("pagehide", saveSnap); };
+  }, [stage]); // eslint-disable-line
+  useEffect(() => { if (resume) sayNow("Murph resumed. Clock is still running."); }, []); // eslint-disable-line
 
   // One GPS watch from the ready screen to the end: it warms up the lock
   // before START, and only adds distance while a run block is on.
