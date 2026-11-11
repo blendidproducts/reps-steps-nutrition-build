@@ -2410,6 +2410,7 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
   const [tracking, setTracking] = useState(false);
   const [trackBase, setTrackBase] = useState(0);     // that movement's total when the camera opened
   const [trackPool, setTrackPool] = useState(null);  // which movement the camera is counting
+  const [trackCap, setTrackCap] = useState(null);    // stop at this total (a round's share), else the movement's target
   const [live, setLive] = useState(0);               // camera count since it opened
   const liveRef = useRef(0);
   const metaRef = useRef({});                         // per-block meta, by index
@@ -2532,9 +2533,16 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
       : `${e.targetReps} ${e.name.replace(/^\d+\s*/, "")}`);
   };
 
-  const openTracker = (base, poolKey) => {
-    liveRef.current = 0; setLive(0); setTrackBase(base); setTrackPool(poolKey); setTracking(true);
+  const openTracker = (base, poolKey, cap = null) => {
+    liveRef.current = 0; setLive(0); setTrackBase(base); setTrackPool(poolKey); setTrackCap(cap); setTracking(true);
   };
+
+  // Rounds format (2026-11-10, JT: "each round there was no option to select
+  // the AiRTP" / "count by hand didn't launch anywhere"): each round now has a
+  // counter per movement, fed into the same running totals. Round r owns the
+  // slice of each total between cum(r) and cum(r + 1).
+  const roundCum = (e, r, key) => (e?.plan || []).slice(0, r).reduce((n, x) => n + (x[key] || 0), 0);
+  const roundFull = (e, r, P) => REPS.every((d) => (P[d.key] || 0) >= roundCum(e, r + 1, d.key));
 
   const begin = async () => {
     unlockMurphAudio();
@@ -2569,7 +2577,7 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
       let line = "";
       if (e.segment === "run") line = (m.gps_m ? "Tracked run" : "Timed run") + (r ? ` · + ${r} on the run` : "");
       else if (m.covered && !r) line = "Already done on the run";
-      else if (e.segment === "rounds") line = `${e.rounds} rounds · ${e.randomSplit ? "random" : "even"} split`;
+      else if (e.segment === "rounds") line = `${e.rounds} rounds · ${e.randomSplit ? "random" : "even"} split` + (ai ? ` · AiRTP counted ${ai}` : "");
       else line = r + (ai ? `${r ? " · " : ""}AiRTP counted ${ai}` : "");
       const meta = line || m.gps_m || m.steps
         ? { mode: "murph", line, gps_m: m.gps_m || 0, steps: m.steps || 0, reps: m.reps || null, ai: m.ai || null }
@@ -2629,6 +2637,7 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
       ...(ai ? { ai: { ...(m.ai || {}), [key]: ((m.ai || {})[key] || 0) + ai } } : {}),
     };
     if (v >= def.target && prev < def.target) { alertCue(false); sayNow(`${def.name} done.`); }
+    if (seg?.segment === "rounds" && roundFull(seg, rounds, next)) { roundDone(next); return true; }
     if (seg && seg.segment !== "run" && isFull(seg, next)) {
       if (seg.segment === "mix") sayNow("All reps done.");
       nextBlock(next);
@@ -2641,18 +2650,31 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
     const key = trackPool;
     const def = repDef(key);
     const counted = Math.max(0, reps || 0);
-    setTracking(false); setTrackPool(null); liveRef.current = 0; setLive(0);
+    setTracking(false); setTrackPool(null); setTrackCap(null); liveRef.current = 0; setLive(0);
     if (!def) return;
-    const used = Math.min(counted, Math.max(0, def.target - trackBase));   // never past the target
+    const cap = trackCap ?? def.target;
+    const used = Math.min(counted, Math.max(0, cap - trackBase));   // never past the target (or the round's share)
     if (used) addReps(key, trackBase + used, used);
   };
 
-  const roundDone = () => {
+  const roundDone = (P = pools) => {
     const r = rounds + 1;
-    if (r >= seg.rounds) { nextBlock(); return; }
+    if (r >= seg.rounds) { nextBlock(P); return; }
     setRounds(r);
     const nx = seg.plan?.[r];
     sayNow(nx ? `Round ${r + 1}. ${nx.pullups}, ${nx.pushups}, ${nx.squats}.` : `Round ${r + 1}`);
+  };
+
+  // ROUND DONE: whatever wasn't tapped/tracked this round is counted as done.
+  const finishRound = () => {
+    const i = ends.length, next = { ...pools }, m = metaRef.current[i] || {}, reps = { ...(m.reps || {}) };
+    for (const d of REPS) {
+      const want = roundCum(seg, rounds + 1, d.key), prev = next[d.key] || 0;
+      if (prev < want) { poolHist.current.push({ key: d.key, prev, block: i }); next[d.key] = want; reps[d.key] = (reps[d.key] || 0) + want - prev; }
+    }
+    metaRef.current[i] = { ...m, reps };
+    setPools(next);
+    roundDone(next);
   };
 
   const undo = () => {
@@ -2660,7 +2682,10 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
     if (h && h.block === ends.length) {
       poolHist.current.pop();
       const delta = (pools[h.key] || 0) - h.prev;
-      setPools({ ...pools, [h.key]: h.prev });
+      const restored = { ...pools, [h.key]: h.prev };
+      setPools(restored);
+      // that tap had finished a round: step back into it
+      if (seg?.segment === "rounds" && rounds > 0 && !roundFull(seg, rounds - 1, restored)) setRounds(rounds - 1);
       const m = metaRef.current[h.block];
       if (m?.reps) m.reps[h.key] = (m.reps[h.key] || 0) - delta;
       return;
@@ -2768,13 +2793,14 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
   } else if (seg && tracking && trackPool) {
     // AiRTP owns the screen; a small HUD keeps the Murph clock and count visible.
     const def = repDef(trackPool);
-    const shown = Math.min(def.target, trackBase + live);
+    const cap = trackCap ?? def.target;
+    const shown = Math.min(cap, trackBase + live);
     return (
       <>
         <RepTracker
           key={`murph-${ends.length}-${trackPool}`}
           exerciseName={def.exercise}
-          targetReps={def.target - trackBase}
+          targetReps={cap - trackBase}
           autoAdvance={true}
           keepCameraAlive={true}
           defaultFacingMode="user"
@@ -2789,7 +2815,9 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
             <div className="rounded-full bg-black/80 border border-red-500/60 px-4 py-1.5 flex items-center gap-3 text-white">
               <span className="text-[10px] font-black tracking-widest text-red-300">MURPH</span>
               <span className="text-lg font-black tabular-nums">{clock(totalMs)}</span>
-              <span className="text-sm font-bold tabular-nums text-green-300">{def.name} {shown}/{def.target}</span>
+              <span className="text-sm font-bold tabular-nums text-green-300">
+                {trackCap != null ? `${def.name} ${shown - roundCum(seg, rounds, trackPool)}/${cap - roundCum(seg, rounds, trackPool)} · round ${rounds + 1}` : `${def.name} ${shown}/${def.target}`}
+              </span>
             </div>
           </div>,
           document.body
@@ -2907,6 +2935,21 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
               <div className="h-full bg-red-500 transition-all" style={{ width: `${pct * 100}%` }} />
             </div>
           )}
+          {isRounds && (
+            <div className="mt-3 space-y-2 text-left">
+              {REPS.map((d) => {
+                const base = roundCum(seg, rounds, d.key);
+                const want = (seg.plan?.[rounds] || {})[d.key] || 0;
+                if (!want) return null;
+                const done = Math.max(0, Math.min(want, (pools[d.key] || 0) - base));
+                return (
+                  <MurphRepRow key={`${rounds}-${d.key}`} def={{ ...d, target: want }} done={done}
+                    onSet={(v) => addReps(d.key, base + v)}
+                    onCamera={d.exercise && aiOn ? () => openTracker(base + done, d.key, base + want) : null} />
+                );
+              })}
+            </div>
+          )}
           {seg.pool && (
             <div className="mt-3 text-left">
               <MurphRepRow def={repDef(seg.pool)} done={tally}
@@ -2919,7 +2962,7 @@ function MurphRunner({ battery, opts, onFinish, onAbort }) {
         {/* Pinned to the bottom of the scroll area: the run screen's rep rows
             can be taller than a phone, and RUN DONE must never scroll away. */}
         <div className="mt-auto sticky bottom-0 -mx-5 px-5 bg-[#020817] pb-[max(env(safe-area-inset-bottom),16px)] pt-3 space-y-1 border-t border-white/5">
-          <button onClick={isRounds ? roundDone
+          <button onClick={isRounds ? finishRound
             : seg.pool && tally < seg.targetReps ? () => { if (!addReps(seg.pool, seg.targetReps)) nextBlock(); }
             : () => nextBlock()}
             className="w-full min-h-[72px] rounded-2xl font-black text-xl text-black active:scale-95 flex items-center justify-center gap-2"
@@ -2964,7 +3007,9 @@ function MurphRepRow({ def, done, onSet, onCamera, compact = false }) {
     const t = setTimeout(() => setFlash(null), 1200);
     return () => clearTimeout(t);
   }, [flash]);
-  const steps = def.exercise ? [-5, 5, 10, 25] : [-1, 1, 5, 10];
+  // JT: "+1, +5, +10, +25, +50". Steps bigger than the whole target are dropped
+  // (a 13-pull-up round doesn't need +25).
+  const steps = [-1, ...[1, 5, 10, 25, 50].filter((n) => n === 1 || n <= def.target)];
   const bump = (n) => {
     const v = Math.max(0, Math.min(def.target, done + n));
     if (v === done) return;
@@ -2994,15 +3039,15 @@ function MurphRepRow({ def, done, onSet, onCamera, compact = false }) {
         <div className={`h-full transition-all ${full ? "bg-green-400" : "bg-red-500"}`}
           style={{ width: `${Math.min(100, (done / def.target) * 100)}%` }} />
       </div>
+      {!full && onCamera && (
+        <button onClick={onCamera} aria-label={`Count ${def.name} with the camera`}
+          className="w-full mt-2 min-h-[44px] rounded-lg font-black text-black text-sm flex items-center justify-center gap-1.5 active:scale-95"
+          style={{ background: "linear-gradient(160deg,#3DDC7A,#12923F)" }}>
+          <Camera className="w-4 h-4" /> AiRTP camera count
+        </button>
+      )}
       {!full && (
         <div className="flex gap-1.5 mt-2">
-          {onCamera && (
-            <button onClick={onCamera} aria-label={`Count ${def.name} with the camera`}
-              className="flex-[1.4] min-h-[44px] rounded-lg font-black text-black text-xs flex items-center justify-center gap-1 active:scale-95"
-              style={{ background: "linear-gradient(160deg,#3DDC7A,#12923F)" }}>
-              <Camera className="w-4 h-4" /> AiRTP
-            </button>
-          )}
           {steps.map((n) => (
             <button key={n} onClick={() => bump(n)}
               className={`flex-1 min-h-[44px] rounded-lg border text-sm font-bold active:scale-95 ${
