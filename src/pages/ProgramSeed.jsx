@@ -552,6 +552,78 @@ const ADVANCED_STRENGTH_PROGRAM = {
   ],
 };
 
+// ── Hero Prep — 8 weeks (2026-11-12, JT: "a whole program for military
+// specific workouts") ───────────────────────────────────────────────────────
+// Builds to the two big hero workouts the app runs end to end: Chad (1,000
+// step-ups) on day 52 and Murph on day 56. Every week: Murph-pattern rep
+// volume, a run, step-up volume for Chad, one official Hero WOD, and an
+// engine/core day; two rest days. Week 7 is a deload. Exercise names are the
+// canonical Exercise records so images and AiRTP tracking resolve.
+// Runs and rucks use "Running in Place" as the timer — do them outdoors if you
+// can (the Fitness Test → Hero Challenges versions track GPS).
+function heroPrepPlans() {
+  const ex = (name, sets, reps, time = 0, circuit = 1, rest = 60) =>
+    ({ exercise_name: name, sets, target_reps: reps, target_time: time, circuit_number: circuit, rest_after_circuit_seconds: rest });
+  const day = (n, name, exercises) => ({
+    day_number: n, day_name: `Day ${n}`, workout_name: name, is_rest_day: !exercises.length,
+    total_reps: exercises.reduce((t, e) => t + e.sets * (e.target_reps || 0), 0), exercises,
+  });
+  const rest = (n, name = "Rest & Recovery") => day(n, name, []);
+  const ROUNDS = [5, 6, 8, 10, 12, 14, 8];         // Murph-pattern rounds of 5/10/15
+  const RUN = [15, 18, 20, 22, 25, 28, 20];         // run minutes
+  const STEPS = [200, 300, 400, 500, 600, 700, 400]; // step-ups
+  const LOAD = ["no load", "no load", "10–20 lb", "20 lb", "20–30 lb", "30–45 lb", "20 lb"];
+  const HERO = [
+    ["Hero WOD: Loredo", [ex("Squat", 6, 24), ex("Push-Up", 6, 24), ex("Lunge", 6, 24), ex("Running in Place", 6, 0, 120)]],
+    ["Hero WOD: Maupin", [ex("Running in Place", 4, 0, 240), ex("Push-Up", 4, 49), ex("Sit-Up", 4, 49), ex("Squat", 4, 49)]],
+    ["Hero WOD: Jared", [ex("Running in Place", 4, 0, 240), ex("Pull-Up", 4, 40), ex("Push-Up", 4, 70)]],
+    ["Hero WOD: Riley (1.5 mi · 150 burpees · 1.5 mi)", [ex("Running in Place", 1, 0, 720, 1), ex("Burpee", 10, 15, 0, 2), ex("Running in Place", 1, 0, 720, 3)]],
+    ["Hero WOD: Severin (50 pull-ups · 100 push-ups · 5K)", [ex("Pull-Up", 5, 10, 0, 1), ex("Push-Up", 5, 20, 0, 2), ex("Running in Place", 1, 0, 1500, 3)]],
+    ["Hero WOD: Terry", [ex("Running in Place", 3, 0, 480, 1), ex("Push-Up", 2, 100, 0, 2), ex("Bear Crawl", 2, 0, 90, 3)]],
+    ["Half Murph (deload test)", [ex("Running in Place", 1, 0, 300, 1), ex("Pull-Up", 10, 5, 0, 2), ex("Push-Up", 10, 10, 0, 2), ex("Squat", 10, 15, 0, 2), ex("Running in Place", 1, 0, 300, 3)]],
+  ];
+  const plans = [];
+  for (let w = 0; w < 7; w++) {
+    const b = w * 7, r = ROUNDS[w];
+    plans.push(
+      day(b + 1, `Week ${w + 1} · Murph Volume — ${r} rounds of 5 / 10 / 15`,
+        [ex("Pull-Up", r, 5, 0, 1), ex("Push-Up", r, 10, 0, 1), ex("Squat", r, 15, 0, 1), ex("Plank", 2, 0, 45, 2)]),
+      day(b + 2, `Week ${w + 1} · Run — ${RUN[w]} min easy (outdoors if you can)`,
+        [ex("Running in Place", 1, 0, RUN[w] * 60, 1, 0), ex("Calf Raise", 2, 20, 0, 2, 45)]),
+      day(b + 3, `Week ${w + 1} · Chad Builder — ${STEPS[w]} step-ups (${LOAD[w]})`,
+        [ex("Step Up", STEPS[w] / 50, 50, 0, 1, 90), ex("Wall Sit", 2, 0, 45, 2), ex("Glute Bridge", 2, 15, 0, 3)]),
+      rest(b + 4),
+      day(b + 5, `Week ${w + 1} · ${HERO[w][0]}`, HERO[w][1]),
+      day(b + 6, `Week ${w + 1} · Engine + Core (add a ${20 + w * 5}-min ruck walk)`,
+        [ex("Burpee", 5, 10, 0, 1), ex("Mountain Climber", 5, 0, 30, 1), ex("Hollow Body Hold", 3, 0, 30, 2), ex("Bear Crawl", 3, 0, 40, 2)]),
+      rest(b + 7, "Rest & Mobility"),
+    );
+  }
+  plans.push(
+    day(50, "Week 8 · Taper — 5 rounds of 5 / 10 / 15", [ex("Pull-Up", 5, 5), ex("Push-Up", 5, 10), ex("Squat", 5, 15)]),
+    day(51, "Week 8 · Easy 15-min run + strides", [ex("Running in Place", 1, 0, 900, 1, 0)]),
+    day(52, "TEST · Chad — 1,000 step-ups (run it in Fitness Test → Hero Challenges to time it)",
+      [ex("Step Up", 10, 100, 0, 1, 60)]),
+    rest(53),
+    day(54, "Week 8 · Mobility", [ex("World's Greatest Stretch", 2, 0, 60), ex("Pigeon Pose", 2, 0, 45), ex("Downward Dog", 2, 0, 45)]),
+    rest(55, "Rest — Murph tomorrow"),
+    day(56, "TEST · Murph (run it in Fitness Test → Hero Challenges for GPS + time)",
+      [ex("Running in Place", 1, 0, 600, 1, 0), ex("Pull-Up", 20, 5, 0, 2), ex("Push-Up", 20, 10, 0, 2), ex("Squat", 20, 15, 0, 2), ex("Running in Place", 1, 0, 600, 3, 0)]),
+  );
+  return plans;
+}
+const HERO_PREP_PROGRAM = {
+  name: "Hero Prep — 8 Weeks (Murph & Chad)",
+  description: "Military hero-workout prep. 8 weeks of Murph-style rep volume, runs, weighted step-ups and one official Hero WOD a week (Loredo, Maupin, Jared, Riley, Severin, Terry), building to Chad (1,000 step-ups) on day 52 and Murph on day 56. Add a vest or ruck as the weeks progress.",
+  category: "mixed",
+  difficulty: "intermediate",
+  duration_days: 56,
+  is_preset: true,
+  program_type: "workout",
+  thumbnail_url: "",
+  daily_plans: heroPrepPlans(),
+};
+
 const SEED_ITEMS = [
   { kind: "workout",   label: "Start Here (7-Day Workout Program)",              data: START_HERE_PROGRAM },
   { kind: "workout",   label: "Beginner Strength Foundation (7-Day Workout Program)", data: BEGINNER_STRENGTH_PROGRAM },
@@ -559,6 +631,7 @@ const SEED_ITEMS = [
   { kind: "workout",   label: "Trimmer Fit 300 (7-Day Workout Program)",              data: TRIMMER_FIT_300_PROGRAM },
   { kind: "workout",   label: "Advanced Endurance (7-Day Workout Program)",           data: ADVANCED_ENDURANCE_PROGRAM },
   { kind: "workout",   label: "Advanced Strength Program (7-Day Workout Program)",    data: ADVANCED_STRENGTH_PROGRAM },
+  { kind: "workout",   label: "Hero Prep — 8 Weeks (Murph & Chad)",                  data: HERO_PREP_PROGRAM },
   { kind: "nutrition", label: "Foundations Nutrition Plan (7-Day)",              data: FOUNDATIONS_NUTRITION_PROGRAM },
 ];
 
