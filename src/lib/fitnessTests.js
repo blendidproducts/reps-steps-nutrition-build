@@ -193,6 +193,108 @@ export const tierFor = (score) =>
 // "Run your measured 1.5 miles and tap when you're back" is exact and needs no
 // new technology.
 
+// ── Hero workouts other than Murph (2026-11-12) ─────────────────────────────
+// Movements the hero runner can count. `exercise` = the AiRTP tracker's name;
+// null = tap to count (the camera can't judge it reliably).
+export const HERO_MOVES = {
+  pullups:    { name: "Pull-ups", exercise: null },
+  pushups:    { name: "Push-ups", exercise: "Push-Up" },
+  hrpushups:  { name: "Hand-release push-ups", exercise: "Push-Up" },
+  squats:     { name: "Air Squats", exercise: "Squat" },
+  situps:     { name: "Sit-ups", exercise: null },
+  burpees:    { name: "Burpees", exercise: null },
+  lunges:     { name: "Walking lunge steps", exercise: null },
+  stepups:    { name: "Box step-ups", exercise: "Step Up" },
+  hspu:       { name: "Handstand push-ups", exercise: null },
+  dips:       { name: "Ring dips", exercise: null },
+  backext:    { name: "Back extensions", exercise: null },
+};
+
+// Chad's three official levels (crossfit.com/chad-hero-workout).
+export const CHAD_LEVELS = {
+  rx:  { label: "Rx", reps: 1000, box: 20, loadM: 45, loadF: 35 },
+  int: { label: "Intermediate", reps: 1000, box: 20, loadM: 30, loadF: 20 },
+  beg: { label: "Beginner", reps: 500, box: 12, loadM: 0, loadF: 0 },
+};
+
+// seq items: { run: metres, label } · { move, reps } · { task: "100 m bear crawl" }
+// `rounds` repeats the sequence.
+export const HERO_WODS = [
+  {
+    key: "chad", name: "Chad (CHAD1000X)", short: "Chad", accent: "#f59e0b",
+    blurb: "1,000 box step-ups for time with a ruck or vest — Rx 45 lb (men) / 35 lb (women) on a 20-inch box. Pick your level, box and load.",
+    honoree: "Navy SEAL Senior Chief Chad Wilkinson, who served 21 years with multiple combat deployments and died on Oct. 29, 2018, after the toll of deployments, TBIs and PTSD. Veterans Crisis Line: dial 988, then press 1.",
+    options: "chad",
+    seqFor: (o) => {
+      const lv = CHAD_LEVELS[o.level || "rx"] || CHAD_LEVELS.rx;
+      const reps = o.reps || lv.reps, size = o.split || reps;
+      const out = [];
+      for (let done = 0; done < reps; done += size) out.push({ move: "stepups", reps: Math.min(size, reps - done) });
+      return out;
+    },
+    label: (o) => {
+      const lv = CHAD_LEVELS[o.level || "rx"] || CHAD_LEVELS.rx;
+      return [`${lv.label}`, `${o.reps || lv.reps} step-ups`, `${o.box || lv.box}-in box`,
+        o.load ? `${o.load}-lb ${o.carry || "ruck"}` : "no load", o.split ? `blocks of ${o.split}` : "straight through"].join(" · ");
+    },
+  },
+  { key: "jt", name: "JT", blurb: "21-15-9 reps for time: handstand push-ups, ring dips, push-ups.",
+    seq: [21, 15, 9].flatMap((n) => [{ move: "hspu", reps: n }, { move: "dips", reps: n }, { move: "pushups", reps: n }]) },
+  { key: "michael", name: "Michael", blurb: "3 rounds for time: 800 m run, 50 back extensions, 50 sit-ups.",
+    rounds: 3, seq: [{ run: 800 }, { move: "backext", reps: 50 }, { move: "situps", reps: 50 }] },
+  { key: "jared", name: "Jared", blurb: "4 rounds for time: 800 m run, 40 pull-ups, 70 push-ups.",
+    rounds: 4, seq: [{ run: 800 }, { move: "pullups", reps: 40 }, { move: "pushups", reps: 70 }] },
+  { key: "maupin", name: "Maupin", blurb: "4 rounds for time: 800 m run, 49 push-ups, 49 sit-ups, 49 squats.",
+    rounds: 4, seq: [{ run: 800 }, { move: "pushups", reps: 49 }, { move: "situps", reps: 49 }, { move: "squats", reps: 49 }] },
+  { key: "loredo", name: "Loredo", blurb: "6 rounds for time: 24 squats, 24 push-ups, 24 walking lunge steps, 400 m run.",
+    rounds: 6, seq: [{ move: "squats", reps: 24 }, { move: "pushups", reps: 24 }, { move: "lunges", reps: 24 }, { run: 400 }] },
+  { key: "riley", name: "Riley", blurb: "For time: 1.5-mile run, 150 burpees, 1.5-mile run. Wear a vest or body armor if you have one.",
+    vest: true, seq: [{ run: 2414, label: "1.5 miles" }, { move: "burpees", reps: 150 }, { run: 2414, label: "1.5 miles" }] },
+  { key: "severin", name: "Severin", blurb: "For time: 50 strict pull-ups, 100 hand-release push-ups, 5K run. Vest 20 lb (men) / 14 lb (women) if you have one.",
+    vest: true, seq: [{ move: "pullups", reps: 50 }, { move: "hrpushups", reps: 100 }, { run: 5000, label: "5K" }] },
+  { key: "terry", name: "Terry", blurb: "For time: 1-mile run, 100 push-ups, 100 m bear crawl, 1-mile run, 100 m bear crawl, 100 push-ups, 1-mile run.",
+    seq: [{ run: 1609, label: "1 mile" }, { move: "pushups", reps: 100 }, { task: "100 m bear crawl", est: 180 },
+      { run: 1609, label: "1 mile" }, { task: "100 m bear crawl", est: 180 }, { move: "pushups", reps: 100 }, { run: 1609, label: "1 mile" }] },
+];
+export const HERO_BY_KEY = Object.fromEntries(HERO_WODS.map((h) => [h.key, h]));
+
+const distLabel = (m, label) => label || (m % 1609 === 0 ? `${m / 1609} mile${m > 1609 ? "s" : ""}` : `${m} m`);
+/** Blocks for a hero workout. Each rep block knows the running total of its
+ *  movement before (`from`) and after (`until`) it, so a movement that shows
+ *  up every round counts the right slice. */
+export function heroEvents(h, o = {}) {
+  const seq0 = h.seqFor ? h.seqFor(o) : h.seq;
+  const seq = Array.from({ length: h.rounds || 1 }, () => seq0).flat();
+  const tot = {};
+  return seq.map((x, i) => {
+    const key = `${h.key}_${String(i + 1).padStart(2, "0")}`;
+    if (x.run) return {
+      key, name: `Run ${distLabel(x.run, x.label)}`, how: "target", segment: "run", unit: "secs",
+      distanceM: x.run, distanceLabel: distLabel(x.run, x.label), estSeconds: Math.round(x.run * 0.37),
+      cue: `Run ${distLabel(x.run, x.label)}. Tap when you're back.`,
+    };
+    if (x.task) return {
+      key, name: x.task, how: "target", segment: "task", unit: "secs", estSeconds: x.est || 120,
+      cue: `${x.task}. Tap DONE when you're finished.`,
+    };
+    const mv = HERO_MOVES[x.move];
+    const from = tot[x.move] || 0;
+    tot[x.move] = from + x.reps;
+    return {
+      key, name: `${x.reps} ${mv.name.toLowerCase()}`, how: "target", segment: "reps", unit: "secs",
+      targetReps: x.reps, estSeconds: Math.round(x.reps * 3), exercise: mv.exercise, pool: x.move,
+      from, until: tot[x.move],
+      cue: "Break them up however you like. Tap DONE when the last rep is in.",
+    };
+  });
+}
+/** Movement totals for a hero workout (what the counters fill). */
+export function heroPools(h, o = {}) {
+  const tot = {};
+  for (const e of heroEvents(h, o)) if (e.segment === "reps") tot[e.pool] = e.until;
+  return Object.entries(tot).map(([key, target]) => ({ key, name: HERO_MOVES[key].name, target, exercise: HERO_MOVES[key].exercise }));
+}
+
 export const BATTERIES = {
   military: {
     key: "military",
@@ -690,6 +792,24 @@ export const BATTERIES = {
     events: [], // filled just below by murphEvents()
   },
 
+  // ── MORE HERO WORKOUTS (2026-11-12, JT) ────────────────────────────────────
+  // Chad plus the official CrossFit Hero workouts that need only a body, a
+  // pull-up bar, a box, a road and (optionally) a vest — so the phone can run
+  // them end to end. Prescriptions are from CrossFit's "CrossFit Hero WOD All"
+  // list (crossfit.com, May 2026) and crossfit.com/chad-hero-workout.
+  // They all use MurphRunner (runner "murph") with `hero` describing the
+  // movements; heroEvents() builds the blocks. Scored FOR TIME, no pass/fail.
+  ...Object.fromEntries(HERO_WODS.map((h) => [h.key, {
+    key: h.key, name: h.name, group: "military", branch: "challenges",
+    blurb: h.blurb, icon: "flame", accent: h.accent || "#f97316",
+    scoring: "challenge", runner: "murph", needsProfile: false,
+    hero: h,
+    disclaimer:
+      `${h.name} is a hero workout, not an official test, so there is no pass/fail — your score is your time. ` +
+      "Scale the reps, the load or the box rather than skip it, and stop if you feel unwell.",
+    events: [],
+  }])),
+
   // ── PUBLIC SAFETY (2026-10-14) ─────────────────────────────────────────────
   // Pass/fail against official published minimums. Standards and sources live
   // in publicSafetyStandards.js; scoring "gate" + a PUBLIC_SAFETY entry is what
@@ -1043,6 +1163,7 @@ export function murphEvents({ half = false, partitioned = false, mix = false, ro
   return [run("murph_run1", "Run"), ...middle, run("murph_run2", "Run")];
 }
 BATTERIES.murph.events = murphEvents();
+for (const h of HERO_WODS) BATTERIES[h.key].events = heroEvents(h, {});
 
 /**
  * Is a holiday challenge "on" right now? Featured from 10 days before the date
@@ -1110,7 +1231,8 @@ export function compareToPrevious(events, previous) {
     if (before == null) return { ...e, delta: null };
     // Timed events where a smaller number is a better result. Everything else
     // (reps, held seconds, steps, pounds) improves upward.
-    const lowerIsBetter = LOWER_IS_BETTER.has(e.key);
+    // Hero workouts (keys like chad_01, jared_total) are all times.
+    const lowerIsBetter = LOWER_IS_BETTER.has(e.key) || /^(chad|jt|michael|jared|maupin|loredo|riley|severin|terry)_/.test(e.key);
     const diff = e.value - before;
     return {
       ...e,
@@ -1179,7 +1301,7 @@ export const batteriesInGroup = (group) =>
 // of record: "would I be competitive" rather than "am I within standard".
 export const MILITARY_BRANCHES = [
   // Seasonal hero workouts. First in the list so the featured one is one tap away.
-  { key: "challenges", label: "HERO CHALLENGES", sub: "Murph · Veterans Day, Nov 11", accent: "#ef4444" },
+  { key: "challenges", label: "HERO CHALLENGES", sub: "Murph · Chad · JT · Jared · Riley + more", accent: "#ef4444" },
   { key: "navy",     label: "NAVY",            sub: "Physical Readiness Test",      accent: "#4ade80" },
   { key: "army",     label: "ARMY",            sub: "Army Fitness Test",            accent: "#84cc16" },
   { key: "airforce", label: "AIR FORCE",       sub: "Physical Fitness Readiness Assessment", accent: "#60a5fa" },
@@ -1199,6 +1321,7 @@ export function eventFormatLabel(e) {
     if (e.segment === "run") return "for time · " + (e.distanceLabel || "distance");
     if (e.segment === "rounds") return "for time · " + e.rounds + " rounds";
     if (e.segment === "mix") return "for time · any order";
+    if (e.segment === "task") return "for time";
     return "for time · " + e.targetReps + " reps";
   }
   if (e.fixedSeconds) {
