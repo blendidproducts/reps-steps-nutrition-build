@@ -33,6 +33,7 @@ import WeightInput, { weightLabel } from "@/components/workout/WeightInput";
 // Saved workouts (2026-10-29): Base44 SavedWorkout, shown in My Workouts / My Programs.
 import SaveWorkoutPanel from "@/components/workout/SaveWorkoutPanel";
 import { saveWorkoutTemplate } from "@/lib/savedWorkouts";
+import { findAbProgram } from "@/lib/absPrograms";
 import { getWeightUnit, setWeightUnit, getLastWeight, rememberWeight, buildExercisesWithSets, setVolume, toLbs, convert, fmtNum, parseWeight } from "@/lib/weights";
 import {
   Brain, Timer, Zap, ChevronRight, ChevronLeft,
@@ -62,7 +63,7 @@ const ALL_EXERCISES = [
   { name: "Reverse Lunge", cue: "Side view · step back · push through front heel",      emoji: "🦶", cameraTip: "Place phone at hip height to side" },
   { name: "Jump Squat",    cue: "Side view · explode up · land softly bent knees",      emoji: "⚡", cameraTip: "Place phone at hip height to side" },
   { name: "Sumo Squat",    cue: "Side view · wide stance · toes at 45°",               emoji: "🏋️", cameraTip: "Place phone at hip height to side" },
-  { name: "Leg Raise",     cue: "Side view · press lower back down · legs straight",    emoji: "📐", cameraTip: "Place phone to your side on the floor" },
+  { name: "Leg Raise",     cue: "Leg lifts · side view · lower back down · legs straight", emoji: "📐", cameraTip: "Place phone to your side on the floor", group: "abs" },
   { name: "Butt Kicker",   cue: "Side view · kick heels to glutes · light on feet",     emoji: "👟", cameraTip: "Place phone at hip height to side" },
   // ── Push-up variations (elbow tracking) ──
   { name: "Wide Push-Up",    cue: "Side view · hands wider than shoulders · chest to floor",  emoji: "💪", cameraTip: "Place phone on floor beside you" },
@@ -84,11 +85,22 @@ const ALL_EXERCISES = [
   // number manually." These run RepTracker in manual mode (no camera, no
   // MediaPipe): tap anywhere to count, −1 to undo, TYPE # to enter the total.
   { name: "Burpee",           cue: "Squat · kick back to plank · chest down · jump up",  emoji: "🔥", cameraTip: "No tracking — tap to count, or type your number", manual: true },
-  { name: "Mountain Climber", cue: "Plank · drive knees to chest · hips level",            emoji: "⛰️", cameraTip: "No tracking — tap to count, or type your number", manual: true },
-  { name: "Sit-Up",           cue: "Knees bent · chest to knees · control the descent",    emoji: "🧘", cameraTip: "No tracking — tap to count, or type your number", manual: true },
-  { name: "Crunch",           cue: "Knees bent · shoulder blades off the floor",           emoji: "🎯", cameraTip: "No tracking — tap to count, or type your number", manual: true },
-  { name: "Bicycle Crunch",   cue: "Elbow to opposite knee · extend the other leg",        emoji: "🚲", cameraTip: "No tracking — tap to count, or type your number", manual: true },
+  { name: "Mountain Climber", cue: "Plank · drive knees to chest · hips level",            emoji: "⛰️", cameraTip: "No tracking — tap to count, or type your number", manual: true, group: "abs" },
+  { name: "Sit-Up",           cue: "Knees bent · chest to knees · control the descent",    emoji: "🧘", cameraTip: "No tracking — tap to count, or type your number", manual: true, group: "abs" },
+  { name: "Crunch",           cue: "Knees bent · shoulder blades off the floor",           emoji: "🎯", cameraTip: "No tracking — tap to count, or type your number", manual: true, group: "abs" },
+  { name: "Bicycle Crunch",   cue: "Elbow to opposite knee · extend the other leg",        emoji: "🚲", cameraTip: "No tracking — tap to count, or type your number", manual: true, group: "abs" },
+  // ── Abs section (2026-11-15) ──
+  // Bar-hanging moves are camera-tracked (hip angle, side view). JT: hanging
+  // knees-to-chest "was tracking my reps perfectly".
+  { name: "Hanging Knees to Chest", cue: "Hang from a bar · pull knees to chest · no swinging", emoji: "🧗", cameraTip: "Side view · step back so your whole body and the bar are in frame", group: "abs" },
+  { name: "Hanging Leg Raise",      cue: "Hang from a bar · straight legs to hip height",      emoji: "🧗", cameraTip: "Side view · step back so your whole body and the bar are in frame", group: "abs" },
+  { name: "Toes to Bar",            cue: "Hang · lats tight · pike your toes up to the bar",   emoji: "🦶", cameraTip: "Side view · step back so the bar and your feet are in frame", group: "abs", beta: true },
+  { name: "Lying Knees to Chest",   cue: "On your back · extend legs, then tuck knees to chest", emoji: "🌀", cameraTip: "Place phone to your side on the floor", group: "abs", beta: true },
+  { name: "Flutter Kick",     cue: "On your back · small fast kicks · lower back down",    emoji: "🦵", cameraTip: "No tracking — tap to count, or type your number", manual: true, group: "abs" },
+  { name: "V-Up",             cue: "Arms and legs up together · touch your toes",          emoji: "✌️", cameraTip: "No tracking — tap to count, or type your number", manual: true, group: "abs" },
+  { name: "Russian Twist",    cue: "Lean back 45° · rotate side to side · feet up = harder", emoji: "🔄", cameraTip: "No tracking — tap to count, or type your number", manual: true, group: "abs" },
 ];
+const ABS_EXERCISES = ALL_EXERCISES.filter(e => e.group === "abs");
 
 // Stable per-name config that forces RepTracker into manual tap mode. Cached so
 // RepTracker gets the same object on every render.
@@ -729,7 +741,20 @@ function ExitConfirmSheet({ onConfirm, onCancel }) {
 }
 
 // ── Timer overlay (time mode) ────────────────────────────────────────────────
-function TimerOverlay({ secondsLeft, exerciseIndex, total, setNum, totalSets, elapsedSecs, totalSteps, targetReps, isPaused, onSkip, onPause, onEndWorkout, onActiveRecovery, onAddSet }) {
+// 2026-11-15 (JT field test, Lunge): "I don't see the exercise I'm supposed to
+// do. What's the name of the exercise?" This bar sits ON TOP of RepTracker's
+// own title bar, so the name there was hidden. The name now lives in this bar.
+function ExerciseNameRow({ name, emoji }) {
+  if (!name) return null;
+  return (
+    <div className="px-3 pb-1.5 bg-black/90 flex items-center justify-center gap-2 border-b border-white/10">
+      {emoji && <span className="text-lg leading-none">{emoji}</span>}
+      <span className="text-white text-lg font-black tracking-tight truncate">{name}</span>
+    </div>
+  );
+}
+
+function TimerOverlay({ exName, exEmoji, secondsLeft, exerciseIndex, total, setNum, totalSets, elapsedSecs, totalSteps, targetReps, isPaused, onSkip, onPause, onEndWorkout, onActiveRecovery, onAddSet }) {
   const urgent = secondsLeft <= 5;
   return createPortal(
     <div className="fixed left-0 right-0 z-[10001]"
@@ -760,13 +785,14 @@ function TimerOverlay({ secondsLeft, exerciseIndex, total, setNum, totalSets, el
           <button onClick={onAddSet} className="text-green-400 text-[10px] font-bold border border-green-500/30 rounded-full px-2 py-1">+Set</button>
         </div>
       </div>
+      <ExerciseNameRow name={exName} emoji={exEmoji} />
     </div>,
     document.body
   );
 }
 
 // ── AMRAP top bar ────────────────────────────────────────────────────────────
-function AmrapBar({ exerciseIndex, total, setNum, totalSets, elapsedSecs, totalSteps, isSS, isPaused, onPause, onEndWorkout, onActiveRecovery, onAddSet }) {
+function AmrapBar({ exName, exEmoji, exerciseIndex, total, setNum, totalSets, elapsedSecs, totalSteps, isSS, isPaused, onPause, onEndWorkout, onActiveRecovery, onAddSet }) {
   return createPortal(
     <div className="fixed left-0 right-0 z-[10001]"
       style={{ top: "env(safe-area-inset-top, 0px)" }}>
@@ -793,6 +819,7 @@ function AmrapBar({ exerciseIndex, total, setNum, totalSets, elapsedSecs, totalS
           <button onClick={onAddSet} className="text-green-400 text-[10px] font-bold border border-green-500/30 rounded-full px-2 py-1">+Set</button>
         </div>
       </div>
+      <ExerciseNameRow name={exName} emoji={exEmoji} />
     </div>,
     document.body
   );
@@ -1220,6 +1247,64 @@ function ManualRepCounter({ onCount }) {
   );
 }
 
+// ── Rep Entry Screen (2026-11-15) ───────────────────────────────────────────
+// JT field test: "the burpee... just automatically went to the next exercise.
+// Need time to enter the reps." For moves the camera doesn't count (manual +
+// conditioning), the end of the set now stops here and WAITS — no timer, no
+// auto-advance — until the user saves a number. Shows the exercise sample again
+// so you can confirm what you just did. Prefilled with whatever was tapped.
+function RepEntryScreen({ exercise, imageUrl, initialReps = 0, setNum, totalSets, onSave }) {
+  const [val, setVal] = useState(String(initialReps || 0));
+  const n = Math.max(0, parseInt(val, 10) || 0);
+  const bump = (d) => setVal(String(Math.max(0, n + d)));
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+      className="fixed inset-0 z-[99997] bg-[#020817] flex flex-col overflow-y-auto"
+      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 16px)", paddingBottom: "calc(16px + var(--artp-cb-h, 0px))" }}>
+      <div className="px-5 flex-1 flex flex-col items-center gap-4 max-w-md w-full mx-auto">
+        <div className="text-center">
+          <p className="text-[#00a9ff] text-xs font-bold tracking-widest">SET {setNum}{totalSets > 1 ? ` OF ${totalSets}` : ""} COMPLETE</p>
+          <h2 className="text-white text-2xl font-black mt-1">Log your {exercise?.name}</h2>
+          <p className="text-gray-400 text-sm">Take your time — nothing moves on until you save.</p>
+        </div>
+
+        <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-white/15 bg-black/40 flex items-center justify-center">
+          {imageUrl
+            ? <img src={mediumImg(imageUrl)} alt={`${exercise?.name} sample`} decoding="async" className="w-full h-full object-contain" />
+            : <div className="text-6xl">{exercise?.emoji}</div>}
+          <span className="absolute top-2 left-2 text-[9px] font-bold tracking-widest bg-black/70 text-white/80 px-1.5 py-0.5 rounded">SAMPLE</span>
+        </div>
+        {exercise?.cue && <p className="text-gray-300 text-xs text-center -mt-2">{exercise.cue}</p>}
+
+        <div className="flex items-center gap-4">
+          <button type="button" onClick={() => bump(-1)} aria-label="minus one rep"
+            className="w-14 h-14 rounded-full bg-white/10 text-white text-3xl font-bold active:scale-95">−</button>
+          <input type="number" inputMode="numeric" pattern="[0-9]*" min="0" max="9999"
+            value={val} onFocus={(e) => e.target.select()}
+            onChange={(e) => setVal(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+            aria-label="Reps completed"
+            className="w-36 text-center text-6xl font-black tabular-nums bg-black/40 text-white rounded-2xl border border-white/20 py-2 outline-none focus:border-[#00a9ff]" />
+          <button type="button" onClick={() => bump(1)} aria-label="add one rep"
+            className="w-14 h-14 rounded-full bg-[#00a9ff] text-white text-3xl font-black active:scale-95">+</button>
+        </div>
+        <div className="flex gap-2">
+          {[5, 10].map(d => (
+            <button key={d} type="button" onClick={() => bump(d)}
+              className="px-4 h-10 rounded-xl bg-gray-800 border border-white/10 text-white font-bold active:scale-95">+{d}</button>
+          ))}
+          <button type="button" onClick={() => setVal("0")}
+            className="px-4 h-10 rounded-xl bg-gray-800 border border-white/10 text-gray-400 font-bold active:scale-95">Clear</button>
+        </div>
+
+        <button type="button" onClick={() => onSave(n)}
+          className="mt-auto w-full h-14 rounded-2xl bg-[#00a9ff] hover:bg-[#0090e0] text-white text-lg font-black shadow-lg shadow-[#00a9ff]/30 active:scale-95">
+          SAVE {n} REPS
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 // ── Warm-up Screen — guided timed mobility sequence ──────────────────────────
 function WarmupScreen({ onFinish, onSkipAll, imageMap = {}, totalSteps = 0 }) {
   const [idx, setIdx]   = useState(0);
@@ -1517,6 +1602,7 @@ function ARTPWorkoutInner() {
   const pendingReps   = useRef(0);
   const aiRepsRef     = useRef(0);   // live count from RepTracker (Round 15)
   const manualRepsRef = useRef(0);   // live count from ManualRepCounter
+  const [entryDraft, setEntryDraft] = useState(0); // prefill for the rep-entry screen
   const stepBaseRef   = useRef(0);
   const stepLastRef   = useRef(0);
   const exImageMapRef = useRef({}); // exercise name → image_url from backend
@@ -1642,6 +1728,36 @@ function ARTPWorkoutInner() {
       .then(() => toast.success(`Saved "${nm}" — find it in My Workouts`))
       .catch(() => toast.error("Saved on this phone only — couldn't reach your account"));
   };
+
+  // ── Ab programs / single move: /ARTPWorkout?abs=<id> or ?ex=<name> ──────
+  // Launched from the Abs page (2026-11-15). Loads the moves + 3 sets + mode;
+  // the user still presses START so they can set the phone up first.
+  useEffect(() => {
+    let params = null;
+    try { params = new URLSearchParams(window.location.search); } catch (_) { return; }
+    const absId = params.get("abs");
+    const exName = params.get("ex");
+    if (absId) {
+      const p = findAbProgram(absId);
+      if (!p) return;
+      const names = p.exercises.filter(n => ALL_EXERCISES.some(a => a.name === n));
+      if (!names.length) return;
+      setSelected(new Set(names));
+      setSupersets(new Set());
+      setTotalSets(p.sets || 3);
+      if (p.mode) setMode(p.mode);
+      if (p.repGoal) setRepGoalPerEx(p.repGoal);
+      if (p.timePerEx) setTimePerEx(p.timePerEx);
+      setSavedName(p.name);
+      toast.success(`Loaded "${p.name}" · ${p.sets || 3} sets — press START`);
+    } else if (exName && ALL_EXERCISES.some(a => a.name === exName)) {
+      setSelected(new Set([exName]));
+      setSupersets(new Set());
+      setTotalSets(3);
+      toast.success(`Loaded ${exName} · 3 sets — pick a mode and press START`);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Start a saved AiRTP workout: /ARTPWorkout?saved=<id> ────────────────
   useEffect(() => {
@@ -1816,6 +1932,37 @@ function ARTPWorkoutInner() {
     }
   }, [currentEx, isLastEx, supersets, currentSet, totalSets, totalSteps, saveArtpSession]);
 
+  // ── End of a set (2026-11-15) ──────────────────────────────────────────
+  // Every "set is over" path (timer hits 0, SKIP, DONE, goal reached) comes
+  // through here. Camera-counted moves record and move on as before. Moves the
+  // camera does NOT count (manual: Burpee, Mountain Climber, Sit-Up, ... and
+  // the tap-assisted conditioning moves) go to the "entry" phase and wait for
+  // the user to save a number. "entry" is its own phase so the working-phase
+  // timer can't re-fire finishExercise while the screen is up.
+  const needsRepEntry = useCallback((ex) => {
+    if (!ex || unitFor(ex.name) !== "reps") return false;
+    if (ex.manual || CONDITIONING_EXERCISES.has(ex.name)) return true;
+    try { return matchExercise(ex.name)?.trackable === false; } catch (_) { return false; }
+  }, []);
+
+  const endSet = useCallback((reps) => {
+    clearInterval(timerRef.current);
+    if (needsRepEntry(currentEx)) {
+      setEntryDraft(Math.max(reps || 0, manualRepsRef.current || 0, pendingReps.current || 0));
+      setPhase("entry");
+      speak(`Set done. Enter your ${currentEx.name} reps.`, 1.05, 1.05);
+      return;
+    }
+    finishExercise(reps);
+  }, [currentEx, needsRepEntry, finishExercise]);
+  const endSetRef = useRef(endSet);
+  endSetRef.current = endSet;
+
+  const saveEnteredReps = useCallback((n) => {
+    pendingReps.current = n;
+    finishExercise(n);
+  }, [finishExercise]);
+
   const advanceToNext = useCallback(() => {
     pendingReps.current = 0;
     aiRepsRef.current = 0;
@@ -1848,12 +1995,18 @@ function ARTPWorkoutInner() {
     clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setTimerSecs(s => {
-        if (s <= 1) { clearInterval(timerRef.current); finishExercise(pendingReps.current); return 0; }
+        // Pure updater (2026-11-15) — the end-of-set call lives in the effect
+        // below, so React's double-invoked updaters can't fire it twice.
+        if (s <= 1) { clearInterval(timerRef.current); return 0; }
         return s - 1;
       });
     }, 1000);
     return () => clearInterval(timerRef.current);
-  }, [phase, mode, exerciseIndex, currentSet, isPaused, finishExercise]);
+  }, [phase, mode, exerciseIndex, currentSet, isPaused]);
+
+  useEffect(() => {
+    if (phase === "working" && mode === "time" && timerSecs === 0) endSetRef.current(pendingReps.current);
+  }, [phase, mode, timerSecs]);
 
   // Audible time cues (Round 15) — the tiny top-bar timer can't be read from a
   // tripod across the room; the camera view now shows a big countdown too.
@@ -1895,8 +2048,8 @@ function ARTPWorkoutInner() {
     // the higher of the two, same rule as the timer/skip paths.
     const final = Math.max(reps || 0, manualRepsRef.current || 0);
     pendingReps.current = final;
-    finishExercise(final); // RepTracker DONE = advance immediately; no second tap needed
-  }, [finishExercise]);
+    endSet(final); // camera moves advance immediately; manual moves stop at rep entry
+  }, [endSet]);
 
   // Accumulate steps across StepTracker remounts (each phase creates a new instance starting from 0)
   const handleStepUpdate = useCallback((count) => {
@@ -2216,6 +2369,12 @@ function ARTPWorkoutInner() {
             <Zap className="w-4 h-4" /> Conditioning
           </button>
           <button
+            onClick={() => { setSelected(new Set(ABS_EXERCISES.filter(e => !e.beta).map(e => e.name))); setSupersets(new Set()); setTotalSets(3); }}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-black active:scale-95 transition-transform"
+            style={{ background: "linear-gradient(135deg, #eab308, #f59e0b)", boxShadow: "0 4px 14px rgba(234,179,8,0.35)" }}>
+            <Target className="w-4 h-4" /> Abs
+          </button>
+          <button
             onClick={() => selected.size === ALL_EXERCISES.length
               ? setSelected(new Set([ALL_EXERCISES[0].name]))
               : setSelected(new Set(ALL_EXERCISES.map(e => e.name)))}
@@ -2315,7 +2474,19 @@ function ARTPWorkoutInner() {
             </div>
           </div>
           <div className="divide-y divide-gray-800/50">
-            {ALL_EXERCISES.map((ex) => {
+            {/* 2026-11-15: abs grouped under their own header at the bottom. */}
+            {[...ALL_EXERCISES.filter(e => e.group !== "abs"), { _header: "abs" }, ...ABS_EXERCISES].map((ex) => {
+              if (ex._header) return (
+                <div key="hdr-abs" className="flex items-center justify-between px-3 py-2.5 bg-yellow-500/10">
+                  <p className="text-yellow-400 text-xs font-black tracking-widest">🎯 ABS & CORE</p>
+                  <div className="flex gap-1.5">
+                    <button onClick={() => setSelected(prev => new Set([...prev, ...ABS_EXERCISES.map(e => e.name)]))}
+                      className="px-2 py-0.5 rounded-md text-[10px] font-bold text-yellow-300 border border-yellow-500/40 active:scale-95">+ all abs</button>
+                    <button onClick={() => navigate(createPageUrl("Abs"))}
+                      className="px-2 py-0.5 rounded-md text-[10px] font-bold text-gray-300 border border-gray-600 active:scale-95">Ab programs</button>
+                  </div>
+                </div>
+              );
               const isSelected = selected.has(ex.name);
               const isSS = supersets.has(ex.name);
               return (
@@ -2335,7 +2506,9 @@ function ARTPWorkoutInner() {
                       <LinkIcon className="w-3.5 h-3.5" />
                     </button>
                   )}
-                  <span className="text-blue-400/60 text-[10px] flex-shrink-0">AI ✓</span>
+                  {ex.manual
+                    ? <span className="text-gray-500 text-[10px] flex-shrink-0">TAP ✋</span>
+                    : <span className="text-blue-400/60 text-[10px] flex-shrink-0">{ex.beta ? "AI β" : "AI ✓"}</span>}
                 </div>
               );
             })}
@@ -2587,6 +2760,27 @@ function ARTPWorkoutInner() {
         document.body
       )}
 
+      {/* ── Rep entry (manual / non-camera moves) ─────────────────── */}
+      {phase === "entry" && createPortal(
+        <>
+          <RepEntryScreen
+            key={`entry-${exerciseIndex}-set${currentSet}`}
+            exercise={currentEx}
+            imageUrl={exImageMapRef.current[currentEx?.name?.toLowerCase()]}
+            initialReps={entryDraft}
+            setNum={currentSet}
+            totalSets={totalSets}
+            onSave={saveEnteredReps}
+          />
+          <AnimatePresence>
+            {showExitSheet && (
+              <ExitConfirmSheet key="exit-entry" onConfirm={confirmEndWorkout} onCancel={() => setShowExitSheet(false)} />
+            )}
+          </AnimatePresence>
+        </>,
+        document.body
+      )}
+
       {/* ── Rest ──────────────────────────────────────────────────── */}
       {phase === "rest" && createPortal(
         <AnimatePresence>
@@ -2657,6 +2851,8 @@ function ARTPWorkoutInner() {
 
           {mode === "time" && (
             <TimerOverlay
+              exName={currentEx?.name}
+              exEmoji={currentEx?.emoji}
               secondsLeft={timerSecs}
               exerciseIndex={exerciseIndex}
               total={activeList.length}
@@ -2666,7 +2862,7 @@ function ARTPWorkoutInner() {
               totalSteps={totalSteps}
               targetReps={targetRepsPerEx}
               isPaused={isPaused}
-              onSkip={() => finishExercise(pendingReps.current)}
+              onSkip={() => endSet(pendingReps.current)}
               onPause={handlePauseToggle}
               onEndWorkout={handleEndWorkout}
               onActiveRecovery={() => { addPauseReason("recovery"); speak("Active recovery mode", 1.05, 1.05); }}
@@ -2676,6 +2872,8 @@ function ARTPWorkoutInner() {
 
           {(mode === "amrap" || mode === "goal") && (
             <AmrapBar
+              exName={currentEx?.name}
+              exEmoji={currentEx?.emoji}
               exerciseIndex={exerciseIndex}
               total={activeList.length}
               setNum={currentSet}
@@ -2696,6 +2894,9 @@ function ARTPWorkoutInner() {
             exerciseName={currentEx?.name}
             exerciseEmoji={currentEx?.emoji}
             customConfig={manualConfigFor(currentEx?.name)}
+            previewImageUrl={exImageMapRef.current[currentEx?.name?.toLowerCase()] ? mediumImg(exImageMapRef.current[currentEx.name.toLowerCase()]) : null}
+            previewCue={currentEx?.cue || ""}
+            previewTip={currentEx?.cameraTip || ""}
             setLabel={totalSets > 1 ? `Set ${currentSet}/${totalSets}` : ""}
             targetReps={mode === "goal" ? repGoalPerEx : mode === "time" ? targetRepsPerEx : 0}
             autoAdvance={mode === "goal"}

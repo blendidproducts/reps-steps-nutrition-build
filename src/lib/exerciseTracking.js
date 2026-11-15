@@ -1426,6 +1426,72 @@ export const EXERCISE_LIBRARY = [
     primaryJoint: 'Hip',
     formCues: ['Press lower back down', 'Keep legs straight', 'Rep counts when legs return to floor'],
   },
+  // ── Bar-hanging abs (2026-11-15) ────────────────────────────────────────
+  // JT field test: hanging knees-to-chest on a bar "was tracking my reps
+  // perfectly" (it was falling through to Leg Raise via 'hanging leg raise').
+  // Same signal — shoulder→hip→knee angle — so these reuse it with thresholds
+  // for each range of motion. Hanging is upright, so MediaPipe stays reliable
+  // (unlike the inverted Decline Push-Up). Side view, whole body in frame.
+  {
+    id: 'hanging_knee_raise',
+    name: 'Hanging Knees to Chest',
+    keywords: ['hanging knees to chest', 'hanging knee raise', 'hanging knee raises', 'hanging knee tuck', 'bar knee raise'],
+    mode: 'reps',
+    trackable: true,
+    category: 'Core',
+    color: '#eab308',
+    getAngle: (lm) => {
+      const L = getAngle(lm[11], lm[23], lm[25]);
+      const R = getAngle(lm[12], lm[24], lm[26]);
+      return (L + R) / 2;
+    },
+    upThreshold: 95,      // knees pulled up past hip height
+    downThreshold: 150,   // back to a dead hang — rep counted here
+    direction: 'up_then_down',
+    minRepIntervalMs: 900,
+    primaryJoint: 'Hip',
+    formCues: ['Side view · whole body in frame', 'Knees to chest, no swinging', 'Rep counts back at a full hang'],
+  },
+  {
+    id: 'toes_to_bar',
+    name: 'Toes to Bar',
+    keywords: ['toes to bar', 'toes-to-bar', 't2b'],
+    mode: 'reps',
+    trackable: 'experimental',
+    category: 'Core',
+    color: '#ca8a04',
+    getAngle: (lm) => {
+      const L = getAngle(lm[11], lm[23], lm[25]);
+      const R = getAngle(lm[12], lm[24], lm[26]);
+      return (L + R) / 2;
+    },
+    upThreshold: 60,      // legs pike all the way up
+    downThreshold: 150,   // back to a dead hang
+    direction: 'up_then_down',
+    minRepIntervalMs: 1000,
+    primaryJoint: 'Hip',
+    formCues: ['Side view · step back so bar + feet are in frame', 'Lats tight, pike toes to the bar', 'Rep counts back at a full hang'],
+  },
+  {
+    id: 'lying_knee_tuck',
+    name: 'Lying Knees to Chest',
+    keywords: ['lying knees to chest', 'knee tuck', 'knee tucks', 'lying knee raise', 'reverse crunch'],
+    mode: 'reps',
+    trackable: 'experimental',
+    category: 'Core',
+    color: '#eab308',
+    getAngle: (lm) => {
+      const L = getAngle(lm[11], lm[23], lm[25]);
+      const R = getAngle(lm[12], lm[24], lm[26]);
+      return (L + R) / 2;
+    },
+    upThreshold: 80,      // knees tucked to chest
+    downThreshold: 140,   // legs extended back out
+    direction: 'up_then_down',
+    minRepIntervalMs: 800,
+    primaryJoint: 'Hip',
+    formCues: ['Side view · phone on the floor beside you', 'Lower back pressed down', 'Extend legs out, then tuck knees in'],
+  },
   {
     id: 'plank',
     name: 'Plank',

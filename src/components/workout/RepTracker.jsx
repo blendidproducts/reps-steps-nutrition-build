@@ -67,7 +67,15 @@ function writeCustomDepths(map) {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function RepTracker({ exerciseName, targetReps, onComplete, onClose, defaultFacingMode = "user", exerciseEmoji = "", setLabel = "", paused = false, onPause, autoAdvance = false, onCountChange, keepCameraAlive = false, secondsLeft = null, timedMode = false, strictDepth = false, customConfig = null, countingEnabled = true }) {
+export default function RepTracker({ exerciseName, targetReps, onComplete, onClose, defaultFacingMode = "user", exerciseEmoji = "", setLabel = "", paused = false, onPause, autoAdvance = false, onCountChange, keepCameraAlive = false, secondsLeft = null, timedMode = false, strictDepth = false, customConfig = null, countingEnabled = true, previewImageUrl = null, previewCue = "", previewTip = "" }) {
+  // How-to card on the camera view (2026-11-15) — open by default, collapses
+  // to a GUIDE chip so it never has to sit over the body for the whole set.
+  const [showGuide, setShowGuide] = useState(true);
+  // Fold after 10s so it isn't parked over the depth meter all set.
+  useEffect(() => {
+    const t = setTimeout(() => setShowGuide(false), 10000);
+    return () => clearTimeout(t);
+  }, []);
   // customConfig (2026-10-14): a movement learned by the Movement Trainer
   // (lib/movementTemplates.js) is counted in place of a library exercise.
   const initialConfig = customConfig || matchExercise(exerciseName);
@@ -1049,7 +1057,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
         </div>
 
         {/* Tap zone */}
-        <button onClick={handleManualTap} className="relative flex-1 flex flex-col items-center justify-center gap-6 active:bg-white/5 transition-colors w-full">
+        <button onClick={handleManualTap} className={`relative flex-1 flex flex-col items-center justify-center ${(previewImageUrl || previewCue) ? "gap-3" : "gap-6"} active:bg-white/5 transition-colors w-full`}>
           <AnimatePresence>
             {repFlash && (
               <motion.div key="flash" initial={{ opacity: 0.4 }} animate={{ opacity: 0 }} transition={{ duration: 0.35 }}
@@ -1057,12 +1065,35 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
             )}
           </AnimatePresence>
 
+          {/* Sample preview (2026-11-15) — manual moves have no camera feed, so
+              the window shows what the move looks like instead of a blank
+              screen. pointer-events-none: taps still count through it. */}
+          {(previewImageUrl || previewCue) && (
+            <div className="pointer-events-none w-full max-w-xs px-4 flex flex-col items-center gap-1.5">
+              {previewImageUrl ? (
+                <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-white/15 bg-black/40">
+                  <img src={previewImageUrl} alt={`${exerciseName} sample`} decoding="async" className="w-full h-full object-contain" />
+                  <span className="absolute top-1.5 left-1.5 text-[9px] font-bold tracking-widest bg-black/70 text-white/80 px-1.5 py-0.5 rounded">SAMPLE</span>
+                </div>
+              ) : (
+                exerciseEmoji ? <div className="text-5xl leading-none">{exerciseEmoji}</div> : null
+              )}
+              {previewCue && <p className="text-white/60 text-xs text-center leading-snug">{previewCue}</p>}
+            </div>
+          )}
+
+          {timedMode && secondsLeft != null && (
+            <div className={`pointer-events-none px-4 py-0.5 rounded-2xl border bg-black/60 ${secondsLeft <= 5 ? "border-red-500/70" : "border-white/20"}`}>
+              <span className={`font-black tabular-nums text-3xl ${secondsLeft <= 5 ? "text-red-400" : "text-white"}`}>{secondsLeft}s</span>
+            </div>
+          )}
+
           <motion.div
             animate={repFlash ? { scale: 1.12 } : { scale: 1 }}
             transition={{ type: "spring", stiffness: 400, damping: 15 }}
             className="flex flex-col items-center"
           >
-            <div className="text-[120px] font-black leading-none tabular-nums" style={{ color: exerciseConfig?.color || "#00a9ff" }}>
+            <div className={`${(previewImageUrl || previewCue) ? "text-[88px]" : "text-[120px]"} font-black leading-none tabular-nums`} style={{ color: exerciseConfig?.color || "#00a9ff" }}>
               {repCount}
             </div>
             <div className="text-white/50 text-sm font-semibold uppercase tracking-widest mt-1">
@@ -1332,7 +1363,7 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
                 the digits so any residual overlap is less likely to matter. */}
             {timedMode && secondsLeft != null && !paused && (
               <div className="absolute left-0 right-0 flex justify-center z-10 pointer-events-none"
-                style={{ top: 'calc(env(safe-area-inset-top, 0px) + 84px)' }}>
+                style={{ top: 'calc(env(safe-area-inset-top, 0px) + 112px)' }}>
                 <div className={`px-5 py-1 rounded-3xl border backdrop-blur-sm bg-black/60 ${secondsLeft <= 5 ? "border-red-500/70" : "border-white/25"}`}>
                   <span className={`font-black tabular-nums leading-none ${secondsLeft <= 5 ? "text-red-400 animate-pulse" : "text-white"}`}
                     style={{ fontSize: "44px" }}>{secondsLeft}</span>
@@ -1343,6 +1374,41 @@ export default function RepTracker({ exerciseName, targetReps, onComplete, onClo
 
             {/* Round 20: floating center form-cue removed — it blocked the view;
                 the bottom bar still shows the rotating form tip */}
+
+            {/* How-to guide card (2026-11-15). JT on the Lunge: "There's no
+                guide... no actual name of the exercise... no instructions."
+                Name + sample picture + cue + camera setup, top-right, small.
+                Tap the X to fold it to a GUIDE chip; tap the chip to reopen. */}
+            {(previewImageUrl || previewCue || previewTip) && (
+              <div className="absolute right-2 z-10" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 176px)' }}>
+                {showGuide ? (
+                  <div className="w-[150px] bg-black/85 backdrop-blur-sm border border-white/20 rounded-2xl overflow-hidden shadow-xl">
+                    <div className="flex items-center justify-between px-2 pt-1.5">
+                      <span className="text-[9px] font-black tracking-widest text-[#00a9ff]">HOW TO</span>
+                      <button onClick={() => setShowGuide(false)} aria-label="Hide guide" className="p-0.5 text-gray-400">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <p className="px-2 text-white text-sm font-black leading-tight">
+                      {exerciseEmoji ? `${exerciseEmoji} ` : ""}{exerciseName}
+                    </p>
+                    {previewImageUrl && (
+                      <img src={previewImageUrl} alt={`${exerciseName} sample`} decoding="async"
+                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                        className="mt-1.5 w-full aspect-video object-cover border-y border-white/10" />
+                    )}
+                    {previewCue && <p className="px-2 pt-1.5 text-[11px] text-gray-200 leading-snug">{previewCue}</p>}
+                    {previewTip && <p className="px-2 pt-1 pb-2 text-[10px] text-[#00a9ff]/80 leading-snug">📷 {previewTip}</p>}
+                    {!previewTip && <div className="pb-2" />}
+                  </div>
+                ) : (
+                  <button onClick={() => setShowGuide(true)}
+                    className="bg-black/80 border border-white/20 rounded-full px-3 py-1.5 text-[11px] font-bold text-white flex items-center gap-1 shadow-lg">
+                    📖 GUIDE
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Rep counter */}
             <div className="absolute bottom-4 left-4 z-10">

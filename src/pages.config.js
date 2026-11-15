@@ -41,6 +41,7 @@ const Programs            = React.lazy(() => import('./pages/Programs'));
 const RandomWorkout       = React.lazy(() => import('./pages/RandomWorkout'));
 const Referrals           = React.lazy(() => import('./pages/Referrals'));
 const Stretches           = React.lazy(() => import('./pages/Stretches'));
+const Abs                 = React.lazy(() => import('./pages/Abs'));
 const Terms               = React.lazy(() => import('./pages/Terms'));
 const Upload3DModels      = React.lazy(() => import('./pages/Upload3DModels'));
 const WatchMode           = React.lazy(() => import('./pages/WatchMode'));
@@ -88,6 +89,7 @@ export const PAGES = {
   "SavedWorkouts":       SavedWorkouts,
   "Settings":            Settings,
   "Stretches":           Stretches,
+  "Abs":                 Abs,
   "Terms":               Terms,
   "Upload3DModels":      Upload3DModels,
   "WatchMode":           WatchMode,

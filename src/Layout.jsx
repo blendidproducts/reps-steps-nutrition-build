@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useNavigationManager, resolveTabForPath, TAB_ROOTS, pushTabPath } from "@/lib/NavigationManager";
 import { createPageUrl } from "@/utils";
 import rnsLogo from "@/assets/RnS_LOGO.png";
-import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box, Users, Clock, Brain, Watch, ShoppingBag, ListTodo, FileText, ClipboardCheck, ScanLine, CalendarDays } from "lucide-react";
+import { Home, Dumbbell, Settings, History, HelpCircle, Star, BookmarkPlus, Calendar, Camera, Apple, Play, Timer, Trophy, Ruler, Gift, Box, Users, Clock, Brain, Watch, ShoppingBag, ListTodo, FileText, ClipboardCheck, ScanLine, CalendarDays, Target } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { base44 } from "@/api/base44Client";
 import { loadProgram, isRestPlan, completeRestDay, createProgramDayWorkout } from "@/lib/programDay";
@@ -36,6 +36,7 @@ const navigationItems = [
   { title: "Movement Trainer", url: createPageUrl("MovementTrainer"), icon: ScanLine },
   { title: "AI Fitness Brain", url: createPageUrl("FitnessBrain"), icon: Brain },
   { title: "Exercises", url: createPageUrl("Exercises"), icon: Dumbbell },
+  { title: "Abs & Core", url: createPageUrl("Abs"), icon: Target },
   { title: "Stretches", url: createPageUrl("Stretches"), icon: Timer },
   { title: "Nutrition", url: createPageUrl("Nutrition"), icon: Apple },
   { title: "My Workouts", url: createPageUrl("SavedWorkouts"), icon: BookmarkPlus },
