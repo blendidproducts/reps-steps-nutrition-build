@@ -1203,24 +1203,38 @@ export default function AIWorkoutGenerator() {
                     chaining each exercise by hand. Chains every exercise to the
                     next, so the last one is never flagged - a superset needs
                     something to pair with. */}
-                <div className="mt-3 flex items-center justify-between gap-3 p-3 rounded-xl bg-purple-500/10 border border-purple-500/25">
+                {/* 2026-11-13 (JT: "superset all was not clicking, not active or
+                    enabled"): the 36x20px switch was too small to hit and its
+                    OFF state looked disabled on the dark theme. The whole row
+                    is now one big toggle button with a clear ON/OFF state. */}
+                <button
+                  type="button"
+                  onClick={() => setAllSupersets(!allSupersetted)}
+                  disabled={selectedExercises.length < 2}
+                  aria-pressed={allSupersetted}
+                  aria-label="Superset every exercise"
+                  className={`mt-3 w-full flex items-center justify-between gap-3 p-3 min-h-[60px] rounded-xl border text-left transition-colors active:scale-[0.99] disabled:opacity-40 ${
+                    allSupersetted ? "bg-purple-600/30 border-purple-400" : "bg-purple-500/10 border-purple-500/40"
+                  }`}
+                >
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <LinkIcon className="w-4 h-4 text-purple-400 flex-shrink-0" aria-hidden="true" />
-                      <Label className="text-white text-sm font-medium">Superset everything</Label>
+                      <LinkIcon className="w-4 h-4 text-purple-300 flex-shrink-0" aria-hidden="true" />
+                      <span className="text-white text-sm font-bold">Superset everything</span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-gray-300 mt-0.5">
                       {allSupersetted
-                        ? "No rest between any exercise"
-                        : "Chain every exercise to the next — no rest between them"}
+                        ? "On: no rest between any exercise. Tap to undo."
+                        : "Tap to chain every exercise to the next — no rest between them"}
                     </p>
                   </div>
-                  <Switch
-                    checked={allSupersetted}
-                    onCheckedChange={setAllSupersets}
-                    aria-label="Superset every exercise"
-                  />
-                </div>
+                  <span
+                    className={`flex-shrink-0 relative inline-flex items-center w-14 h-8 rounded-full transition-colors ${allSupersetted ? "bg-purple-500" : "bg-gray-600"}`}
+                    aria-hidden="true"
+                  >
+                    <span className={`absolute w-6 h-6 rounded-full bg-white shadow transition-transform ${allSupersetted ? "translate-x-7" : "translate-x-1"}`} />
+                  </span>
+                </button>
 
                 {/* Round 28: type or dictate a name (e.g. "Burpees") and add it to
                     the generated workout. Uses the same Exercise library the

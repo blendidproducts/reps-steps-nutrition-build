@@ -9,6 +9,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Ruler, TrendingUp, Plus, Calendar, Trash2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import StickySaveBar from "@/components/StickySaveBar";
 
 export default function BodyMeasurements() {
   const [measurements, setMeasurements] = useState([]);
@@ -229,7 +230,7 @@ export default function BodyMeasurements() {
               <CardTitle>New Measurement</CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form id="measure-form" onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <Label>Date</Label>
                   <Input
@@ -365,9 +366,8 @@ export default function BodyMeasurements() {
                   />
                 </div>
 
-                <Button type="submit" className="gradient-bg">
-                  Save Measurement
-                </Button>
+                {/* Pinned above the tab bar so it's always visible (2026-11-13). */}
+                <StickySaveBar type="submit" form="measure-form">Save Measurement</StickySaveBar>
               </form>
             </CardContent>
           </Card>

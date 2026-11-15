@@ -4,14 +4,139 @@ import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Brain, Timer, Info, TrendingUp, Activity, CheckCircle2, Moon, ChevronRight, MoreVertical, ClipboardCheck } from "lucide-react";
+import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Brain, Timer, Info, TrendingUp, Activity, CheckCircle2, Moon, ChevronRight, MoreVertical, ClipboardCheck, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import GithubReleasesWidget from "@/components/dashboard/GithubReleasesWidget";
 import ProgramStatusStrip from "@/components/ProgramStatusStrip";
 import { featuredChallenge } from "@/lib/fitnessTests";
+import { todaysRoutine, LEVELS, LEVEL_LABEL } from "@/lib/quickWorkouts";
+import { createQuickWorkout } from "@/lib/programDay";
 const FitnessQuiz = React.lazy(() => import("@/components/FitnessQuiz"));
 const MuscleRecovery = React.lazy(() => import("@/components/recovery/MuscleRecovery"));
+
+/* The three main actions share one card design (2026-11-13, JT: "it should
+   be the same three major buttons: generate AI workout, fitness tests, and AI
+   rep tracking"). Same size, icon tile, kicker, title, line and CTA; only the
+   colour and icon change, so they read as a set. */
+function AirtpGlyph({ className = "" }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 8.4V5.8A2.8 2.8 0 0 1 5.8 3h2.6" />
+      <path d="M15.6 3h2.6A2.8 2.8 0 0 1 21 5.8v2.6" />
+      <path d="M21 15.6v2.6a2.8 2.8 0 0 1-2.8 2.8h-2.6" />
+      <path d="M8.4 21H5.8A2.8 2.8 0 0 1 3 18.2v-2.6" />
+      <circle cx="12" cy="9.6" r="2.3" fill="#fff" stroke="none" />
+      <path d="M7.9 17.6c0-2.3 1.8-3.9 4.1-3.9s4.1 1.6 4.1 3.9z" fill="#fff" stroke="none" />
+    </svg>
+  );
+}
+function MajorCard({ color, dark, icon, kicker, title, line, cta, onClick, children }) {
+  return (
+    <div className="px-6 mb-4">
+      <div
+        onClick={onClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === "Enter" && onClick()}
+        className="relative rounded-2xl overflow-hidden cursor-pointer active:scale-[0.99] transition-transform p-5"
+        style={{
+          background: `linear-gradient(135deg, ${dark[0]} 0%, ${dark[1]} 45%, ${dark[2]} 100%)`,
+          border: `2px solid ${color}8c`,
+          boxShadow: `0 0 40px ${color}2e, 0 8px 32px rgba(0,0,0,0.45)`,
+        }}
+      >
+        <div className="flex items-start gap-4">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
+            style={{ background: `linear-gradient(135deg, ${color}, ${dark[0]})`, boxShadow: `0 0 22px ${color}66` }}>
+            {icon}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold tracking-widest uppercase mb-1" style={{ color }}>{kicker}</p>
+            <h2 className="text-2xl font-black text-white leading-tight">{title}</h2>
+            <p className="text-gray-300 text-sm mt-1 leading-snug">{line}</p>
+          </div>
+        </div>
+        {children}
+        <button
+          className="w-full mt-4 py-3.5 rounded-xl font-black text-sm tracking-wide text-white flex items-center justify-center gap-2 active:scale-[0.98]"
+          style={{ background: `linear-gradient(135deg, ${color}, ${dark[0]})`, boxShadow: `0 4px 15px ${color}59` }}
+        >
+          {cta} <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* START NOW — one tap to a workout (2026-11-13, JT: "I'm a beginner, I'm
+   intermediate, I'm advanced … they just click a button to start the
+   workout"). Each button opens today's routine for that level (it rotates
+   daily) straight into ActiveWorkout. Stretch buttons do the same. */
+const LEVEL_STYLE = {
+  beginner: { color: "#22c55e", emoji: "🌱", hint: "New, or getting back into it" },
+  intermediate: { color: "#00a9ff", emoji: "💪", hint: "You work out most weeks" },
+  advanced: { color: "#f97316", emoji: "🔥", hint: "Pull-ups, pistols, burpees" },
+};
+const routineMinutes = (rt, kind) => Math.max(5, Math.round(rt.exercises.reduce((m, e) =>
+  m + e.sets * ((e.target_reps ? e.target_reps * 3 : e.target_time) + (kind === "stretch" ? 10 : 45)), 0) / 60 + (kind === "stretch" ? 0 : 3)));
+
+function QuickStart({ navigate }) {
+  const [busy, setBusy] = useState(null);
+  const [err, setErr] = useState(null);
+  const go = async (kind, level) => {
+    if (busy) return;
+    setBusy(`${kind}-${level}`); setErr(null);
+    try {
+      const id = await createQuickWorkout(todaysRoutine(kind, level), level, kind);
+      navigate(`${createPageUrl("ActiveWorkout")}?workoutId=${id}`);
+    } catch (e) {
+      setErr(e?.message || "Couldn't start — try again."); setBusy(null);
+    }
+  };
+  return (
+    <div className="px-6 mb-6">
+      <div className="rounded-2xl p-5" style={{ background: "#0a0e1a", border: "2px solid rgba(255,255,255,0.14)" }}>
+        <h2 className="text-2xl font-black text-white leading-none">START NOW</h2>
+        <p className="text-gray-400 text-sm mt-1.5">Tap your level — today's workout opens right away. Not sure? Pick Beginner.</p>
+        <div className="space-y-2.5 mt-4">
+          {LEVELS.map((lv) => {
+            const st = LEVEL_STYLE[lv], rt = todaysRoutine("workout", lv), on = busy === `workout-${lv}`;
+            return (
+              <button key={lv} onClick={() => go("workout", lv)} disabled={!!busy}
+                className="w-full flex items-center gap-3 rounded-xl px-4 text-left active:scale-[0.98] transition-transform disabled:opacity-60"
+                style={{ minHeight: 68, background: `${st.color}1f`, border: `2px solid ${st.color}99` }}>
+                <span className="text-2xl" aria-hidden="true">{st.emoji}</span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-lg font-black text-white leading-tight">I'm {lv === "advanced" || lv === "intermediate" ? "" : "a "}{LEVEL_LABEL[lv]}</span>
+                  <span className="block text-[12px] text-gray-300 truncate">
+                    {on ? "Building your workout…" : `${rt.name} · ~${routineMinutes(rt, "workout")} min · ${st.hint}`}
+                  </span>
+                </span>
+                <Play className="w-6 h-6 flex-shrink-0" style={{ color: st.color, fill: st.color }} />
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[11px] font-bold tracking-widest text-gray-400 uppercase mt-5 mb-2">Just want to stretch?</p>
+        <div className="grid grid-cols-3 gap-2">
+          {LEVELS.map((lv) => {
+            const rt = todaysRoutine("stretch", lv), on = busy === `stretch-${lv}`;
+            return (
+              <button key={lv} onClick={() => go("stretch", lv)} disabled={!!busy}
+                className="rounded-xl px-2 py-2.5 text-center active:scale-[0.97] disabled:opacity-60"
+                style={{ minHeight: 60, background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.45)" }}>
+                <span className="block text-sm font-black text-white">{on ? "Opening…" : { beginner: "Easy", intermediate: "Medium", advanced: "Deep" }[lv]}</span>
+                <span className="block text-[10px] text-gray-400 mt-0.5">~{routineMinutes(rt, "stretch")} min stretch</span>
+              </button>
+            );
+          })}
+        </div>
+        {err && <p className="text-sm text-red-400 mt-3">{err}</p>}
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   const navigate = useNavigate();
@@ -127,22 +252,7 @@ export default function Home() {
           </p>
           
           <div className="flex justify-between items-end">
-            <div>
-              <Button 
-                onClick={() => navigate(createPageUrl("AIWorkoutGenerator"))}
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-full px-6 py-6 text-base font-semibold shadow-lg shadow-purple-500/20 flex items-center justify-between border-0 w-full sm:w-auto mb-3"
-              >
-                <div className="flex items-center gap-2">
-                  <Zap className="w-5 h-5" />
-                  Generate AI Workout
-                </div>
-                <ArrowRight className="w-5 h-5 ml-4" />
-              </Button>
-              <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
-                <Timer className="w-4 h-4" />
-                Takes 30 seconds
-              </div>
-            </div>
+            <div />
 
             {/* AI Match Score Card */}
             <div className="bg-[#0a0e1a]/95 backdrop-blur-md border border-gray-800 rounded-2xl p-3 shadow-2xl z-20 w-36 transform translate-y-6">
@@ -172,6 +282,8 @@ export default function Home() {
           taps open for today's plan + Start. Renders nothing when the user has
           no active program, so Home is untouched for everyone else. */}
       <ProgramStatusStrip />
+
+      <QuickStart navigate={navigate} />
 
       {/* ── HOLIDAY CHALLENGE (2026-11-09) ───────────────────────────────
           Veterans Day Murph. Shows only while featuredChallenge() says it's in
@@ -214,156 +326,63 @@ export default function Home() {
         );
       })()}
 
-      {/* ── FITNESS TEST ─────────────────────────────────────────────────
-          First card on the page, above everything else, because a test is how
-          you decide what to train - it comes before the workout, not after it.
-          The three chips are the three kinds of test and each one deep-links
-          straight to its group on the Fitness Test page, so a returning user
-          taps twice to start a retest instead of scrolling a list. */}
-      <div className="px-6 mb-6">
-        <div
-          onClick={() => navigate(createPageUrl("FitnessTest"))}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === "Enter" && navigate(createPageUrl("FitnessTest"))}
-          className="relative rounded-2xl overflow-hidden cursor-pointer active:scale-[0.99] transition-transform p-5"
-          style={{
-            background: "linear-gradient(135deg, #0b2742 0%, #071a2e 45%, #03101c 100%)",
-            border: "2px solid rgba(0,169,255,0.55)",
-            boxShadow: "0 0 40px rgba(0,169,255,0.18), 0 8px 32px rgba(0,0,0,0.45)",
-          }}
-        >
-          <div className="flex items-start gap-4">
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
-              style={{
-                background: "linear-gradient(135deg, #00a9ff, #0066cc)",
-                boxShadow: "0 0 22px rgba(0,169,255,0.4)",
-              }}
+      {/* ── THE THREE MAIN ACTIONS (2026-11-13) ─────────────────────────── */}
+      <MajorCard
+        color="#a855f7" dark={["#2a0f4a", "#1a0a30", "#0b0418"]}
+        icon={<Sparkles className="w-8 h-8 text-white" />}
+        kicker="Takes 30 seconds"
+        title="Generate AI Workout"
+        line="Pick your level, focus and time — get a full workout built for you."
+        cta="GENERATE AI WORKOUT"
+        onClick={() => navigate(createPageUrl("AIWorkoutGenerator"))}
+      />
+
+      <MajorCard
+        color="#00a9ff" dark={["#0b2742", "#071a2e", "#03101c"]}
+        icon={<ClipboardCheck className="w-8 h-8 text-white" />}
+        kicker="Military · first responder · custom"
+        title="Fitness Tests"
+        line="Find out where you actually stand. Scored, timed, recorded."
+        cta="TAKE A FITNESS TEST"
+        onClick={() => navigate(createPageUrl("FitnessTest"))}
+      >
+        <div className="grid grid-cols-3 gap-2 mt-4">
+          {[
+            { key: "military", label: "MILITARY", sub: "Every branch + heroes" },
+            { key: "repsandsteps", label: "REPS & STEPS", sub: "Your output score" },
+            { key: "custom", label: "CUSTOM", sub: "Build your own" },
+          ].map((g) => (
+            <button
+              key={g.key}
+              onClick={(e) => { e.stopPropagation(); navigate(`${createPageUrl("FitnessTest")}?group=${g.key}`); }}
+              className="text-left rounded-xl px-2.5 py-2 min-h-[52px] transition-colors hover:bg-white/10"
+              style={{ background: "rgba(0,169,255,0.10)", border: "1px solid rgba(0,169,255,0.30)" }}
             >
-              <ClipboardCheck className="w-7 h-7 text-white" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="text-2xl font-black text-white leading-none tracking-tight">
-                FITNESS TEST
-              </h2>
-              <p className="text-gray-300 text-sm mt-1.5 leading-snug">
-                Find out where you actually stand. Scored, timed, recorded.
-              </p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-[#00a9ff] ml-auto flex-shrink-0 mt-1" />
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 mt-4">
-            {[
-              { key: "military", label: "MILITARY", sub: "Every branch" },
-              { key: "repsandsteps", label: "REPS & STEPS", sub: "Your output score" },
-              { key: "custom", label: "CUSTOM", sub: "Build your own" },
-            ].map((g) => (
-              <button
-                key={g.key}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`${createPageUrl("FitnessTest")}?group=${g.key}`);
-                }}
-                className="text-left rounded-xl px-2.5 py-2 min-h-[52px] transition-colors hover:bg-white/10"
-                style={{ background: "rgba(0,169,255,0.10)", border: "1px solid rgba(0,169,255,0.30)" }}
-              >
-                <span className="block text-[11px] font-bold tracking-widest text-[#7fd4ff]">
-                  {g.label}
-                </span>
-                <span className="block text-[10px] text-gray-400 leading-tight mt-0.5">
-                  {g.sub}
-                </span>
-              </button>
-            ))}
-          </div>
+              <span className="block text-[11px] font-bold tracking-widest text-[#7fd4ff]">{g.label}</span>
+              <span className="block text-[10px] text-gray-400 leading-tight mt-0.5">{g.sub}</span>
+            </button>
+          ))}
         </div>
-      </div>
+      </MajorCard>
 
-      {/* ── ARTP — AI Rep Tracking Program ──────────────────────────────── */}
-      <div className="px-6 mb-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.5 }}
-        >
-          <div
-            onClick={() => navigate(createPageUrl("ARTPWorkout"))}
-            className="relative rounded-2xl overflow-hidden cursor-pointer group active:scale-[0.99] transition-transform"
-            style={{
-              background: "linear-gradient(135deg, #0f3d24 0%, #0a2818 45%, #041209 100%)",
-              border: "2px solid rgba(34,197,94,0.55)",
-              boxShadow: "0 0 40px rgba(34,197,94,0.18), 0 8px 32px rgba(0,0,0,0.45)",
-            }}
-          >
-            {/* Animated glow ring */}
-            <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-              style={{ boxShadow: "inset 0 0 30px rgba(34,197,94,0.12)" }} />
-
-            {/* AI PROGRAM badge */}
-            <div className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full px-2.5 py-1"
-              style={{ background: "rgba(34,197,94,0.18)", border: "1px solid rgba(34,197,94,0.45)" }}>
-              <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#4ade80" }} />
-              <span className="text-[10px] font-bold tracking-widest" style={{ color: "#4ade80" }}>AI PROGRAM</span>
-            </div>
-
-            <div className="p-5">
-              {/* Icon + headline */}
-              <div className="flex items-start gap-4 mb-4">
-                <div className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
-                  style={{
-                    background: "linear-gradient(135deg, #22c55e, #15803d)",
-                    boxShadow: "0 0 22px rgba(34,197,94,0.4)",
-                  }}
-                >
-                  <Zap className="w-8 h-8 text-white" />
-                </div>
-                <div>
-                  <p className="text-[11px] font-bold tracking-widest uppercase mb-1" style={{ color: "#4ade80" }}>
-                    Main Feature
-                  </p>
-                  <h2 className="text-2xl font-black text-white leading-tight">
-                    AI Workout Program
-                  </h2>
-                  <p className="text-gray-300 text-sm mt-1 leading-snug">
-                    Camera tracks your reps. Guided sets, rest &amp; steps.
-                  </p>
-                </div>
-              </div>
-
-              {/* Feature pills */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {["Auto Rep Count", "Step Tracker", "10 Exercises", "AMRAP + Timed"].map((tag) => (
-                  <span
-                    key={tag}
-                    className="text-[10px] font-semibold px-2.5 py-1 rounded-full"
-                    style={{
-                      background: "rgba(34,197,94,0.12)",
-                      border: "1px solid rgba(34,197,94,0.3)",
-                      color: "#86efac",
-                    }}
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-
-              {/* CTA Button */}
-              <button
-                className="w-full py-3.5 rounded-xl font-bold text-sm tracking-wide text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                style={{
-                  background: "linear-gradient(135deg, #22c55e, #15803d)",
-                  boxShadow: "0 4px 15px rgba(34,197,94,0.35)",
-                }}
-              >
-                <Play className="w-4 h-4 fill-white" />
-                START AI WORKOUT
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      </div>
+      <MajorCard
+        color="#22c55e" dark={["#0f3d24", "#0a2818", "#041209"]}
+        icon={<AirtpGlyph className="w-8 h-8" />}
+        kicker="AiRTP · main feature"
+        title="AI Rep Tracking"
+        line="Your camera counts the reps. Guided sets, rest and steps."
+        cta="START AI REP TRACKING"
+        onClick={() => navigate(createPageUrl("ARTPWorkout"))}
+      >
+        <div className="flex flex-wrap gap-2 mt-4">
+          {["Auto Rep Count", "Step Tracker", "AMRAP + Timed", "Front or side camera"].map((tag) => (
+            <span key={tag} className="text-[10px] font-semibold px-2.5 py-1 rounded-full"
+              style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", color: "#86efac" }}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      </MajorCard>
 
       {/* ── Go Pro promo ($9.99/mo) — hidden for existing Pro members ── */}
       {!isPro && (
@@ -547,11 +566,6 @@ export default function Home() {
             <div className="text-[10px] text-gray-500 font-medium">See analytics</div>
           </div>
         </div>
-      </div>
-
-      {/* Github Releases Widget */}
-      <div className="px-6 py-4">
-        <GithubReleasesWidget />
       </div>
     </div>
   );

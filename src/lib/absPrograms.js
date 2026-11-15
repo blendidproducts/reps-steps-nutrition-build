@@ -13,6 +13,7 @@
  * mode: "goal" = hit the rep target, then auto-advance to rest
  *       "time" = fixed seconds per move; manual moves stop for rep entry
  */
+import { ABS, LEVELS } from "@/lib/quickWorkouts";
 
 export const AB_MOVES = [
   // Camera-tracked
@@ -29,55 +30,31 @@ export const AB_MOVES = [
   { name: "Mountain Climber",       tracking: "manual", equipment: "Floor",       level: "intermediate", emoji: "⛰️", cue: "Plank, drive knees to chest, hips level." },
   { name: "Russian Twist",          tracking: "manual", equipment: "Floor",       level: "intermediate", emoji: "🔄", cue: "Lean back 45°, rotate side to side. Feet up is harder." },
   { name: "V-Up",                   tracking: "manual", equipment: "Floor",       level: "advanced",     emoji: "✌️", cue: "Arms and legs up together, touch your toes." },
+  { name: "Dead Bug",               tracking: "manual", equipment: "Floor",       level: "beginner",     emoji: "🐞", cue: "Lower back flat, reach the opposite arm and leg out slowly, switch sides." },
+  { name: "Plank to Push-Up",       tracking: "manual", equipment: "Floor",       level: "advanced",     emoji: "🧱", cue: "Forearm plank up to high plank one arm at a time, hips still." },
 ];
 
-export const AB_PROGRAMS = [
-  {
-    id: "abs-starter",
-    name: "Ab Starter",
-    description: "Floor only. Build the base: lifts, tucks and crunches.",
-    difficulty: "beginner",
-    color: "from-green-600 to-emerald-700",
-    sets: 3,
-    mode: "goal",
-    repGoal: 10,
-    exercises: ["Leg Raise", "Lying Knees to Chest", "Crunch", "Flutter Kick"],
-  },
-  {
-    id: "abs-hanging",
-    name: "Bar Abs",
-    description: "Hanging from a bar. Knees to chest, leg raises, then a floor finisher.",
-    difficulty: "intermediate",
-    color: "from-blue-600 to-indigo-700",
-    sets: 3,
-    mode: "goal",
-    repGoal: 12,
-    exercises: ["Hanging Knees to Chest", "Hanging Leg Raise", "Leg Raise", "Bicycle Crunch"],
-  },
-  {
-    id: "abs-core-burner",
-    name: "Core Burner",
-    description: "Timed circuit, 45 seconds a move. Log your reps on the tap moves.",
-    difficulty: "intermediate",
-    color: "from-orange-600 to-red-700",
-    sets: 3,
-    mode: "time",
-    timePerEx: 45,
-    exercises: ["Leg Raise", "Mountain Climber", "Russian Twist", "Lying Knees to Chest", "Sit-Up"],
-  },
-  {
-    id: "abs-advanced-bar",
-    name: "Advanced Bar Abs",
-    description: "Toes to bar and straight-leg raises. Strict, no kipping.",
-    difficulty: "advanced",
-    color: "from-red-600 to-rose-800",
-    sets: 3,
-    mode: "goal",
-    repGoal: 10,
-    exercises: ["Toes to Bar", "Hanging Leg Raise", "Hanging Knees to Chest", "V-Up"],
-  },
-];
+// 2026-11-15 (second pass): the four quick-pick programs from the first pass
+// were replaced by three researched levels — Beginner / Intermediate /
+// Advanced — defined ONCE in lib/quickWorkouts.js (ABS), which also seeds
+// them as 4-week preset programs. This file only adapts a level session for
+// AiRTP: AiRTP counts reps, so the session's timed holds are left out there
+// and run in the guided session instead.
+
+/** AiRTP id for a session: "<level>-<index>", e.g. "beginner-0". */
+export const abSessionId = (level, i) => `${level}-${i}`;
 
 export function findAbProgram(id) {
-  return AB_PROGRAMS.find(p => p.id === id) || null;
+  const [level, idx] = String(id || "").split("-");
+  if (!LEVELS.includes(level)) return null;
+  const s = ABS[level]?.[Number(idx)];
+  if (!s) return null;
+  const reps = s.exercises.filter(e => e.target_reps > 0);
+  return {
+    id, name: s.name, sets: 3, mode: "goal",
+    // One rep goal per AiRTP session: the lowest target in it, so the hardest
+    // move (e.g. toes to bar at 6) isn't asked for the leg-raise number.
+    repGoal: Math.min(...reps.map(e => e.target_reps)),
+    exercises: reps.map(e => e.exercise_name),
+  };
 }

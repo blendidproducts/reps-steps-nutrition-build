@@ -102,7 +102,10 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="bg-card border-border text-white max-w-md">
+      {/* 2026-11-13: anchored near the top and scrollable on phones, so the
+          keyboard can't push "Add to Log" off-screen; the button sticks to
+          the bottom of the dialog. */}
+      <DialogContent className="bg-card border-border text-white max-w-md max-h-[85dvh] overflow-y-auto top-[4dvh] translate-y-0 sm:top-[50%] sm:translate-y-[-50%]">
         <DialogHeader>
           <DialogTitle>Log Food</DialogTitle>
         </DialogHeader>
@@ -182,10 +185,12 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
                     </div>
                   </div>
                 </div>
-                <Button onClick={handleLogFood} className="w-full gradient-bg">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add to Log
-                </Button>
+                <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-1 bg-card">
+                  <Button onClick={handleLogFood} className="w-full gradient-bg h-14 text-lg font-black">
+                    <Plus className="w-5 h-5 mr-2" />
+                    Add to Log
+                  </Button>
+                </div>
               </div>
             )}
           </TabsContent>
@@ -242,14 +247,16 @@ export default function QuickAddFood({ onClose, onFoodAdded, date }) {
                 />
               </div>
             </div>
-            <Button
-              onClick={handleManualLog}
-              className="w-full gradient-bg"
-              disabled={!manualEntry.food_name || !manualEntry.calories}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add to Log
-            </Button>
+            <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-1 bg-card">
+              <Button
+                onClick={handleManualLog}
+                className="w-full gradient-bg h-14 text-lg font-black"
+                disabled={!manualEntry.food_name || !manualEntry.calories}
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Add to Log
+              </Button>
+            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>

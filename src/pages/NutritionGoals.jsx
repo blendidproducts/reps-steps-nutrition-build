@@ -10,6 +10,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { ArrowLeft, Target, Calculator, Save, Zap } from "lucide-react";
 import { motion } from "framer-motion";
+import StickySaveBar from "@/components/StickySaveBar";
 
 const goalPresets = {
   weight_loss: {
@@ -295,10 +296,10 @@ export default function NutritionGoals() {
           </CardContent>
         </Card>
 
-        <Button onClick={handleSave} className="w-full gradient-bg text-lg py-6" disabled={isSaving}>
-          <Save className="w-5 h-5 mr-2" />
+        {/* Pinned above the tab bar so it's always visible (2026-11-13). */}
+        <StickySaveBar onClick={handleSave} disabled={isSaving} icon={<Save className="w-5 h-5" />}>
           {isSaving ? "Saving..." : "Save Goals"}
-        </Button>
+        </StickySaveBar>
       </div>
     </div>
   );

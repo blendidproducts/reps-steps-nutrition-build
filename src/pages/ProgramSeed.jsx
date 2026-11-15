@@ -16,6 +16,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { NEW_PROGRAMS } from "@/lib/quickWorkouts";
 import {
   CheckCircle, XCircle, AlertTriangle, RefreshCw, ChevronLeft,
   Calendar, StopCircle
@@ -632,6 +633,8 @@ const SEED_ITEMS = [
   { kind: "workout",   label: "Advanced Endurance (7-Day Workout Program)",           data: ADVANCED_ENDURANCE_PROGRAM },
   { kind: "workout",   label: "Advanced Strength Program (7-Day Workout Program)",    data: ADVANCED_STRENGTH_PROGRAM },
   { kind: "workout",   label: "Hero Prep — 8 Weeks (Murph & Chad)",                  data: HERO_PREP_PROGRAM },
+  // 2026-11-13: 6 more workout programs (2 per level) + 3 stretch programs.
+  ...NEW_PROGRAMS.map((p) => ({ kind: "workout", label: `${p.name} (${p.duration_days}-Day ${p.name.includes("Stretch") || p.name.includes("Mobility") || p.name.includes("Flexibility") ? "Stretch" : "Workout"} Program)`, data: p })),
   { kind: "nutrition", label: "Foundations Nutrition Plan (7-Day)",              data: FOUNDATIONS_NUTRITION_PROGRAM },
 ];
 

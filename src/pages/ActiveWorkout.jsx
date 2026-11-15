@@ -418,6 +418,9 @@ export default function ActiveWorkout() {
         // circles, and walking warm-ups are coerced to timers.
         const d = findExerciseRecord(exList, we);
         let metric = d?.metric || we.metric || 'reps';
+        // 2026-11-13: a saved hold/stretch (time, no reps) stays timed even
+        // when its DB record says reps.
+        if (!we.target_reps && we.target_time > 0) metric = 'time';
         let target_time = we.target_time || d?.target_time || 0;
         if (metric !== 'time' && isTimedName(we.exercise_name)) metric = 'time';
         if (metric === 'time' && !target_time) target_time = 30;

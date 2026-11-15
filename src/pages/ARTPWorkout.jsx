@@ -99,6 +99,9 @@ const ALL_EXERCISES = [
   { name: "Flutter Kick",     cue: "On your back · small fast kicks · lower back down",    emoji: "🦵", cameraTip: "No tracking — tap to count, or type your number", manual: true, group: "abs" },
   { name: "V-Up",             cue: "Arms and legs up together · touch your toes",          emoji: "✌️", cameraTip: "No tracking — tap to count, or type your number", manual: true, group: "abs" },
   { name: "Russian Twist",    cue: "Lean back 45° · rotate side to side · feet up = harder", emoji: "🔄", cameraTip: "No tracking — tap to count, or type your number", manual: true, group: "abs" },
+  // In the Beginner/Advanced ab levels (lib/quickWorkouts.js ABS), so AiRTP can run the whole session.
+  { name: "Dead Bug",         cue: "On your back · lower back down · opposite arm + leg reach out", emoji: "🐞", cameraTip: "No tracking — tap to count, or type your number", manual: true, group: "abs" },
+  { name: "Plank to Push-Up", cue: "Forearm plank to high plank, one arm at a time · hips still", emoji: "🧱", cameraTip: "No tracking — tap to count, or type your number", manual: true, group: "abs" },
 ];
 const ABS_EXERCISES = ALL_EXERCISES.filter(e => e.group === "abs");
 

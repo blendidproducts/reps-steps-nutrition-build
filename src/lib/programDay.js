@@ -78,10 +78,13 @@ export async function createProgramDayWorkout(program, dayNumber) {
       exercise_id: db?.id || "custom",
       exercise_name: ex.exercise_name,
       target_reps: ex.target_reps,
+      // 2026-11-13: holds and stretches carry their time (was dropped, so a
+      // 60-s stretch ran as the 30-s default).
+      target_time: ex.target_time || 0,
       sets: ex.sets || 1,
       completed_reps: 0,
       completed_time: 0,
-      metric: "reps",
+      metric: !ex.target_reps && ex.target_time > 0 ? "time" : "reps",
       category: db?.category || "full_body",
       image_url: db?.image_url,
       instructions: db?.instructions,
@@ -130,4 +133,41 @@ export async function completeRestDay(program, dayNumber) {
 export async function loadProgram(programId) {
   const programs = await base44.entities.PresetProgram.filter({ id: programId });
   return programs?.[0] || null;
+}
+
+
+/**
+ * One-tap workout from Home's START NOW card (2026-11-13): a routine from
+ * quickWorkouts.js becomes a Workout record and returns its id for
+ * ActiveWorkout. Workouts get the usual warm-up; stretch routines don't.
+ */
+export async function createQuickWorkout(routine, level, kind = "workout") {
+  let library = [];
+  try { library = await base44.entities.Exercise.list(); } catch { /* names alone still run */ }
+  const find = (name) => library.find((e) => (e.name || "").toLowerCase() === (name || "").toLowerCase());
+  const exercises = routine.exercises.map((ex) => {
+    const db = find(ex.exercise_name);
+    return {
+      exercise_id: db?.id || "custom",
+      exercise_name: ex.exercise_name,
+      target_reps: ex.target_reps || 0,
+      target_time: ex.target_time || 0,
+      sets: ex.sets || 1,
+      completed_reps: 0,
+      completed_time: 0,
+      metric: !ex.target_reps && ex.target_time > 0 ? "time" : "reps",
+      category: db?.category || (kind === "stretch" ? "flexibility" : "full_body"),
+      image_url: db?.image_url,
+      instructions: db?.instructions,
+    };
+  });
+  const workout = await base44.entities.Workout.create({
+    name: `${routine.name} (${level[0].toUpperCase()}${level.slice(1)})`,
+    exercises: kind === "stretch" ? exercises : [...buildWarmups(new Set(exercises.map((e) => e.category))), ...exercises],
+    workout_type: "rep_based",
+    difficulty: level,
+    rest_time: kind === "stretch" ? 10 : level === "beginner" ? 75 : level === "intermediate" ? 60 : 45,
+  });
+  if (!workout?.id) throw new Error("Couldn't create the workout — check your connection.");
+  return workout.id;
 }

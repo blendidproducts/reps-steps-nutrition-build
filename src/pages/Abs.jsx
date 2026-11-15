@@ -1,24 +1,26 @@
 /**
  * Abs.jsx — Abs & Core section (2026-11-15)
  *
- * JT: "We should have a whole ab section. Stretches section is good. Now have
- * programs for the stretches, and we have programs for the abs."
+ * JT: "We should have a whole ab section... 3 levels of app workouts:
+ * beginner, intermediate, advanced. Those are individual programs."
  *
- * Mirrors /Stretches: a Library tab and a Programs tab. Unlike stretches
- * (timed holds), ab work is reps, so every Start goes to AiRTP:
- *   program -> /ARTPWorkout?abs=<id>   (moves + 3 sets + mode preloaded)
- *   one move -> /ARTPWorkout?ex=<name>  (that move, 3 sets)
- * Programs and moves live in lib/absPrograms.js so AiRTP reads the same list.
+ * Programs tab = three researched levels from lib/quickWorkouts.js (ABS). Each
+ * level is its own 4-week program (seeded as a Preset Program by /ProgramSeed)
+ * made of three sessions, A/B/C. Every session can start two ways:
+ *   Guided  -> createQuickWorkout -> /ActiveWorkout   (runs the holds too)
+ *   AI reps -> /ARTPWorkout?abs=<level>-<i>           (camera rep counting;
+ *              holds are skipped there because AiRTP counts reps)
+ * Library tab = single moves -> /ARTPWorkout?ex=<name>.
  */
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
-import { Badge } from "@/components/ui/badge";
-import { motion, AnimatePresence } from "framer-motion";
-import { Target, Play, ChevronDown, ChevronUp, Camera, Hand, Timer, ChevronRight } from "lucide-react";
+import { Target, Play, Camera, Hand, Timer, ChevronRight, TrendingUp, Calendar } from "lucide-react";
 import { optImg } from "@/lib/imgOpt";
-import { AB_MOVES, AB_PROGRAMS } from "@/lib/absPrograms";
+import { AB_MOVES, abSessionId } from "@/lib/absPrograms";
+import { ABS, AB_LEVEL_UP, AB_PROGRAMS_4WK, LEVELS, LEVEL_LABEL } from "@/lib/quickWorkouts";
+import { createQuickWorkout } from "@/lib/programDay";
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -27,7 +29,11 @@ const FILTERS = [
   { id: "ai", label: "AI Tracked" },
 ];
 
-const difficultyColor = { beginner: "bg-green-600", intermediate: "bg-yellow-600", advanced: "bg-red-600" };
+const LEVEL_STYLE = {
+  beginner:     { color: "#22c55e", grad: "from-green-600 to-emerald-700", emoji: "🌱" },
+  intermediate: { color: "#eab308", grad: "from-yellow-500 to-orange-600", emoji: "🔥" },
+  advanced:     { color: "#ef4444", grad: "from-red-600 to-rose-800",      emoji: "⚡" },
+};
 
 function TrackingBadge({ tracking }) {
   if (tracking === "manual") return (
@@ -42,12 +48,16 @@ function TrackingBadge({ tracking }) {
   );
 }
 
+const dose = (e) => e.target_reps > 0 ? `${e.sets} × ${e.target_reps}` : `${e.sets} × ${e.target_time}s`;
+
 export default function Abs() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("programs"); // programs | library
+  const [level, setLevel] = useState("beginner");
   const [filter, setFilter] = useState("all");
-  const [expanded, setExpanded] = useState(null);
   const [images, setImages] = useState({}); // lower-case name -> image_url
+  const [busy, setBusy] = useState(null);
+  const [err, setErr] = useState("");
 
   useEffect(() => {
     base44.entities.Exercise.list().then(list => {
@@ -57,7 +67,16 @@ export default function Abs() {
     }).catch(() => {});
   }, []);
 
-  const startProgram = (p) => navigate(`${createPageUrl("ARTPWorkout")}?abs=${encodeURIComponent(p.id)}`);
+  const startGuided = async (session, lv, key) => {
+    setErr(""); setBusy(key);
+    try {
+      const id = await createQuickWorkout(session, lv, "workout");
+      navigate(`${createPageUrl("ActiveWorkout")}?workoutId=${id}`);
+    } catch (e) {
+      setErr(e?.message || "Couldn't start — try again."); setBusy(null);
+    }
+  };
+  const startAi = (lv, i) => navigate(`${createPageUrl("ARTPWorkout")}?abs=${encodeURIComponent(abSessionId(lv, i))}`);
   const startMove = (m) => navigate(`${createPageUrl("ARTPWorkout")}?ex=${encodeURIComponent(m.name)}`);
 
   const moves = AB_MOVES.filter(m =>
@@ -65,8 +84,9 @@ export default function Abs() {
     filter === "bar" ? m.equipment === "Pull-up bar" :
     filter === "floor" ? m.equipment === "Floor" :
     m.tracking !== "manual");
-
   const moveByName = Object.fromEntries(AB_MOVES.map(m => [m.name, m]));
+  const program = AB_PROGRAMS_4WK[LEVELS.indexOf(level)];
+  const st = LEVEL_STYLE[level];
 
   return (
     <div style={{ backgroundColor: "#020817", minHeight: "100vh", color: "#f9fafb", paddingBottom: "100px" }}>
@@ -76,7 +96,7 @@ export default function Abs() {
           <h1 className="text-2xl font-bold mb-1 flex items-center gap-2">
             <Target className="w-6 h-6 text-yellow-400" /> Abs & Core
           </h1>
-          <p className="text-gray-400 text-sm">3-set ab programs with AI rep counting. Bar moves count from the camera.</p>
+          <p className="text-gray-400 text-sm">Calisthenics core in three levels. 3 sets of everything, 3 days a week.</p>
         </div>
       </div>
 
@@ -93,53 +113,87 @@ export default function Abs() {
           ))}
         </div>
 
-        {/* PROGRAMS */}
+        {/* PROGRAMS — one level at a time */}
         {tab === "programs" && (
           <div className="space-y-4">
-            {AB_PROGRAMS.map(p => (
-              <div key={p.id} className="bg-[#0e1525] border border-white/10 rounded-2xl overflow-hidden">
-                <div className={`bg-gradient-to-r ${p.color} p-4`}>
-                  <h3 className="text-white font-bold text-base">{p.name}</h3>
-                  <p className="text-white/80 text-xs mt-0.5">{p.description}</p>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    <Badge className={`${difficultyColor[p.difficulty]} text-white text-xs`}>{p.difficulty}</Badge>
-                    <Badge className="bg-white/20 text-white text-xs">{p.sets} sets</Badge>
-                    <Badge className="bg-white/20 text-white text-xs">{p.exercises.length} moves</Badge>
-                    <Badge className="bg-white/20 text-white text-xs">
-                      {p.mode === "time" ? `${p.timePerEx}s each` : `${p.repGoal} reps each`}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="p-4">
-                  <button onClick={() => setExpanded(expanded === p.id ? null : p.id)}
-                    className="flex items-center gap-2 text-gray-400 text-xs hover:text-white mb-3">
-                    {expanded === p.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    {expanded === p.id ? "Hide moves" : "Preview moves"}
-                  </button>
-                  <AnimatePresence>
-                    {expanded === p.id && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }} className="overflow-hidden mb-3">
-                        <div className="space-y-2">
-                          {p.exercises.map((n, i) => (
-                            <div key={n} className="flex items-center justify-between gap-2 bg-white/5 rounded-lg px-3 py-2">
-                              <span className="text-gray-200 text-sm">{i + 1}. {moveByName[n]?.emoji} {n}</span>
-                              <span className="text-[10px] text-gray-400 whitespace-nowrap">
-                                {moveByName[n]?.tracking === "manual" ? "tap ✋" : "AI 📷"}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  <button onClick={() => startProgram(p)}
-                    className="w-full h-11 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black font-bold flex items-center justify-center gap-2 active:scale-[0.98]">
-                    <Play className="w-4 h-4 fill-black" /> Start in AI Rep Tracking
-                  </button>
+            <div className="grid grid-cols-3 gap-2">
+              {LEVELS.map(lv => (
+                <button key={lv} onClick={() => setLevel(lv)}
+                  className="rounded-xl py-2.5 text-center font-black text-sm active:scale-[0.97]"
+                  style={level === lv
+                    ? { background: LEVEL_STYLE[lv].color, color: "#000" }
+                    : { background: `${LEVEL_STYLE[lv].color}1a`, border: `1px solid ${LEVEL_STYLE[lv].color}66`, color: "#fff" }}>
+                  {LEVEL_STYLE[lv].emoji} {LEVEL_LABEL[lv]}
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-[#0e1525] border border-white/10 rounded-2xl overflow-hidden">
+              <div className={`bg-gradient-to-r ${st.grad} p-4`}>
+                <h2 className="text-white font-black text-lg">{program.name}</h2>
+                <p className="text-white/85 text-xs mt-1">{program.description}</p>
+                <div className="flex flex-wrap gap-1.5 mt-2 text-[11px] font-bold">
+                  <span className="bg-black/25 rounded-full px-2 py-0.5">4 weeks</span>
+                  <span className="bg-black/25 rounded-full px-2 py-0.5">Mon · Wed · Fri</span>
+                  <span className="bg-black/25 rounded-full px-2 py-0.5">3 sets each</span>
+                  <span className="bg-black/25 rounded-full px-2 py-0.5">+10% a week, easy week 4</span>
                 </div>
               </div>
-            ))}
+              <div className="px-4 py-3 flex gap-2 items-start border-b border-white/10">
+                <TrendingUp className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: st.color }} />
+                <p className="text-gray-300 text-xs leading-snug">{AB_LEVEL_UP[level]}</p>
+              </div>
+              <button onClick={() => navigate(createPageUrl("PresetPrograms"))}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-white/5">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                <span className="flex-1 text-sm text-white font-semibold">Follow the full 4-week program</span>
+                <span className="text-[11px] text-gray-400">Preset Programs</span>
+                <ChevronRight className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+
+            {err && <p className="text-red-400 text-xs text-center">{err}</p>}
+
+            {/* Sessions A / B / C */}
+            {ABS[level].map((s, i) => {
+              const key = `${level}-${i}`;
+              return (
+                <div key={key} className="bg-[#0e1525] border border-white/10 rounded-2xl p-4">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <h3 className="text-white font-black text-base">{s.name}</h3>
+                    <span className="text-[11px] text-gray-400">{s.focus}</span>
+                  </div>
+                  <div className="mt-2.5 space-y-1.5">
+                    {s.exercises.map(e => (
+                      <div key={e.exercise_name} className="flex items-center justify-between gap-2 bg-white/5 rounded-lg px-3 py-2">
+                        <span className="text-gray-200 text-sm truncate">
+                          {moveByName[e.exercise_name]?.emoji || (e.target_time ? "⏱️" : "•")} {e.exercise_name}
+                        </span>
+                        <span className="text-xs font-bold tabular-nums whitespace-nowrap" style={{ color: st.color }}>{dose(e)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mt-3">
+                    <button onClick={() => startGuided(s, level, key)} disabled={!!busy}
+                      className="h-11 rounded-xl font-bold text-sm text-black flex items-center justify-center gap-1.5 active:scale-[0.98] disabled:opacity-60"
+                      style={{ background: st.color }}>
+                      <Play className="w-4 h-4 fill-black" /> {busy === key ? "Opening…" : "Guided session"}
+                    </button>
+                    <button onClick={() => startAi(level, i)} disabled={!!busy}
+                      className="h-11 rounded-xl font-bold text-sm text-white bg-[#00a9ff]/15 border border-[#00a9ff]/50 flex items-center justify-center gap-1.5 active:scale-[0.98] disabled:opacity-60">
+                      <Camera className="w-4 h-4 text-[#00a9ff]" /> AI rep count
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1.5 text-center">Guided runs the holds too · AI rep count does the rep moves on camera</p>
+                </div>
+              );
+            })}
+
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-xs text-gray-400 leading-relaxed">
+              <p className="text-white font-bold text-sm mb-1">How to train it</p>
+              Every rep strict: start from a still hang, tilt the pelvis up, lower over 2–3 seconds, no swinging.
+              Stop each set 1–2 reps before your form breaks. Rest a day between ab sessions.
+            </div>
 
             {/* Cool-down: point at the stretch programs */}
             <button onClick={() => navigate(createPageUrl("Stretches"))}
