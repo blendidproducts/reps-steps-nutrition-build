@@ -28,6 +28,9 @@ import { fullImg } from "@/lib/imgOpt";
 import WeightInput from "@/components/workout/WeightInput";
 import { getWeightUnit, setWeightUnit, getLastWeight, rememberWeight, buildExercisesWithSets } from "@/lib/weights";
 import ActiveRecoveryScreen from "@/components/workout/ActiveRecoveryScreen";
+// Live burn meter (2026-11-18)
+import BurnMeter, { useBurnTracker, useBodyStats, useHeartRate } from "@/components/workout/BurnMeter";
+import { MET, metForExercise, metForCardio } from "@/lib/burnEstimate";
 import {
   SupersetTransitionModal, AchievementPopup, VideoModal, ThreeDViewModal,
   SupersetConfigModal, SwapExerciseModal, VoiceCoachModal
@@ -556,7 +559,9 @@ export default function ActiveWorkout() {
       const finalSteps = combinedSteps;
       const walk = cardioIntervals.filter(c => c.type === 'walk'), jog = cardioIntervals.filter(c => c.type === 'jog'), sprint = cardioIntervals.filter(c => c.type === 'sprint');
       const mins = timer / 60;
-      const cal = Math.round(mins * 5 + calcReps * 0.15 + walk.reduce((s,c) => s+c.time,0)/60*2 + jog.reduce((s,c) => s+c.time,0)/60*5 + sprint.reduce((s,c) => s+c.time,0)/60*10 + (workout.weight_added_lbs ? workout.weight_added_lbs * 0.02 * mins : 0));
+      // The live meter's total (sourced METs) is what was on screen, so save
+      // that; the old rough formula is only the fallback if it never ran.
+      const cal = burn.totalRef.current > 0 ? Math.round(burn.totalRef.current) : Math.round(mins * 5 + calcReps * 0.15 + walk.reduce((s,c) => s+c.time,0)/60*2 + jog.reduce((s,c) => s+c.time,0)/60*5 + sprint.reduce((s,c) => s+c.time,0)/60*10 + (workout.weight_added_lbs ? workout.weight_added_lbs * 0.02 * mins : 0));
       await base44.entities.WorkoutSession.create({
         workout_id: workout.id, start_time: sessionStartTime.toISOString(), end_time: new Date().toISOString(), duration: timer, total_reps: calcReps,
         exercises_completed: workout.exercises.filter(ex => !ex.is_cardio_interval && ex.category !== 'warmup').map(ex => {
@@ -625,6 +630,15 @@ export default function ActiveWorkout() {
     return "";
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentReps, isActive, workout, currentExerciseIndex]);
+
+  // ── Live burn meter (2026-11-18). Hooks stay above the early returns. ──────
+  const burnStats = useBodyStats();
+  const burnMet = activeCardio ? metForCardio(activeCardio.type)
+    : isResting ? MET.rest
+    : metForExercise(workout?.exercises?.[currentExerciseIndex]?.exercise_name);
+  const burn = useBurnTracker({ running: !!isActive && !isPaused, met: burnMet, weightLbs: burnStats.weightLbs });
+  const { bpm: strapBpm } = useHeartRate();
+
   const getYouTubeVideoId = (name) => { const map = {'push':'IODxDxX7oi4','squat':'9cYEuFbBLSY','plank':'pSHjTRCQxIw','lunge':'QOVaHwm-Q6U','burpee':'dZgVxmf6jkA','pull':'eGo4IYlbE5g','dip':'yN6Q1UI_xkE','mountain climber':'nmwgirgXLYM','jumping jack':'c4DAnQ6DtF8','crunch':'5ER5Of4EISE'}; const n = name.toLowerCase(); for (const [k,v] of Object.entries(map)) if (n.includes(k)) return v; return 'g_tea8ZNk5A'; };
 
   if (!workout) return (
@@ -685,9 +699,9 @@ export default function ActiveWorkout() {
             <div className="flex flex-col items-center min-w-0"><div className="flex items-center gap-1"><Zap className="w-3 h-3 sm:w-4 sm:h-4 text-green-400 flex-shrink-0" /><span className="font-bold text-xs sm:text-sm">{formatTime(timer)}</span></div><span className="text-[10px] sm:text-xs text-gray-400">Active Time</span></div>
             <div className="flex flex-col items-center min-w-0"><div className="flex items-center gap-1"><Footprints className={`w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0 ${gpsError ? 'text-red-400' : 'text-purple-400'}`} /><span className="font-bold text-xs sm:text-sm">{combinedSteps.toLocaleString()}</span></div><span className="text-[10px] sm:text-xs text-gray-400">{totalWorkoutDistance.toFixed(2)} mi{gpsError && <span className="text-red-400 ml-1">⚠️</span>}</span></div>
             <div className="flex items-center gap-1 min-w-0"><Target className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" /><span className="text-xs sm:text-sm">{totalReps} / {getTotalEstimatedReps()}</span></div>
-            <button onClick={() => setShowHRInput(!showHRInput)} className={`flex items-center gap-1.5 ${realtimeHR ? 'text-red-500 animate-pulse' : 'text-red-400'}`}>
+            <button onClick={() => setShowHRInput(!showHRInput)} className={`flex items-center gap-1.5 ${(strapBpm || realtimeHR) ? 'text-red-500 animate-pulse' : 'text-red-400'}`}>
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" /></svg>
-              <span className="font-bold">{realtimeHR || heartRate || "HR"}</span>{realtimeHR && <span className="text-xs">BPM</span>}
+              <span className="font-bold">{strapBpm || realtimeHR || heartRate || "HR"}</span>{(strapBpm || realtimeHR) && <span className="text-xs">BPM</span>}
             </button>
             <button onClick={toggleVoiceControl} className={`flex items-center gap-1 px-2 py-1 rounded-lg shadow-lg select-none ${isVoiceActive ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white' : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'}`}>
               <svg className={`w-4 h-4 ${isVoiceActive ? 'animate-pulse' : ''}`} fill="currentColor" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
@@ -697,6 +711,13 @@ export default function ActiveWorkout() {
         </div>
 
         <div className="mb-2 px-2"><div className="flex justify-between text-[10px] sm:text-xs mb-1 text-gray-400"><span>Overall Progress</span><span>{Math.round(progress)}%</span></div><Progress value={progress} className="h-1.5" /></div>
+
+        {/* Live burn meter — in flow, under the progress bar, so it can't sit on top of anything */}
+        {isActive && (
+          <div className="mb-2 px-2">
+            <BurnMeter kcal={burn.kcal} rate={burn.rate} met={burnMet} age={burnStats.age} weightIsDefault={burnStats.weightIsDefault} />
+          </div>
+        )}
 
         {/* Modals */}
         <SupersetTransitionModal show={isSupersetTransition} activeCardio={activeCardio} workout={workout} currentExerciseIndex={currentExerciseIndex} cardioTimer={cardioTimer} formatTime={formatTime} startCardio={startCardio} stopCardio={stopCardio} skipSupersetTransition={skipSupersetTransition} stopCardioAndContinueSuperset={stopCardioAndContinueSuperset} />

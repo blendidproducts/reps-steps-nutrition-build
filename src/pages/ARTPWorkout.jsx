@@ -28,6 +28,9 @@ import { matchExercise } from "@/lib/exerciseTracking";
 import StepTracker from "@/components/StepTracker";
 import BuildStamp from "@/components/BuildStamp";
 import { thumbImg, mediumImg } from "@/lib/imgOpt";
+// Live burn meter (2026-11-18)
+import BurnMeter, { BurnChip, useBurnTracker, useBodyStats } from "@/components/workout/BurnMeter";
+import { MET, metForExercise, metForCardio } from "@/lib/burnEstimate";
 // Weights + volume (2026-10-27): per-set added weight, volume = weight x counted reps.
 import WeightInput, { weightLabel } from "@/components/workout/WeightInput";
 // Saved workouts (2026-10-29): Base44 SavedWorkout, shown in My Workouts / My Programs.
@@ -318,7 +321,7 @@ function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl, o
 
 // ── Guided Rest Screen — styled to match RestScreen.jsx ──────────────────────
 function GuidedRestScreen({ nextExercise, nextImageUrl, prevExercise, nextSetNum, totalSets, isLastExercise, totalSteps, onSkip, onEndWorkout,
-  exercises = [], exerciseIndex = 0, currentSet = 1, supersets, onAddSet }) {
+  exercises = [], exerciseIndex = 0, currentSet = 1, supersets, onAddSet, onCardioChange, burnSlot = null }) {
   const [restSecs,     setRestSecs]    = useState(REST_DEFAULT);
   const [cardioMode,   setCardioMode]  = useState(null); // null | 'walk' | 'jog' | 'sprint'
   const [cardioTimer,  setCardioTimer] = useState(0);
@@ -379,6 +382,7 @@ function GuidedRestScreen({ nextExercise, nextImageUrl, prevExercise, nextSetNum
   const startCardio = (type) => {
     frozenRef.current = Math.max(0, Math.ceil((endRef.current - Date.now()) / 1000)); // freeze remaining
     setCardioMode(type);
+    onCardioChange?.(type); // burn meter: walking/jogging burns more than standing
     setCardioTimer(0);
     speak(`${type}ing! Let's go!`, 1.1, 1.1);
   };
@@ -386,6 +390,7 @@ function GuidedRestScreen({ nextExercise, nextImageUrl, prevExercise, nextSetNum
     clearInterval(cardioRef.current);
     endRef.current = Date.now() + frozenRef.current * 1000; // resume where it paused
     setCardioMode(null);
+    onCardioChange?.(null);
   };
 
   const urgentRest  = restSecs <= 5 && restSecs > 0;
@@ -465,6 +470,7 @@ function GuidedRestScreen({ nextExercise, nextImageUrl, prevExercise, nextSetNum
 
               {/* Exercise cards + cardio */}
               <div className="flex-1 overflow-y-auto min-h-0 space-y-3 mt-2">
+                {burnSlot}
                 {/* Previous / Up Next cards */}
                 <div className="grid grid-cols-2 gap-2">
                   {prevExercise && (
@@ -757,7 +763,7 @@ function ExerciseNameRow({ name, emoji }) {
   );
 }
 
-function TimerOverlay({ exName, exEmoji, secondsLeft, exerciseIndex, total, setNum, totalSets, elapsedSecs, totalSteps, targetReps, isPaused, onSkip, onPause, onEndWorkout, onActiveRecovery, onAddSet }) {
+function TimerOverlay({ exName, exEmoji, secondsLeft, exerciseIndex, total, setNum, totalSets, elapsedSecs, totalSteps, targetReps, isPaused, onSkip, onPause, onEndWorkout, onActiveRecovery, onAddSet, kcal = 0 }) {
   const urgent = secondsLeft <= 5;
   return createPortal(
     <div className="fixed left-0 right-0 z-[10001]"
@@ -781,6 +787,7 @@ function TimerOverlay({ exName, exEmoji, secondsLeft, exerciseIndex, total, setN
             <Footprints className="w-2.5 h-2.5" />
             <span>{totalSteps}</span>
           </button>
+          <BurnChip kcal={kcal} />
           <span className="text-gray-400 text-[9px] font-mono">{formatTime(elapsedSecs)}</span>
           {/* Pause and End moved to the bottom ControlBar: as 10px pills wedged
               against the step counter they were ~20px tall and unhittable. */}
@@ -795,7 +802,7 @@ function TimerOverlay({ exName, exEmoji, secondsLeft, exerciseIndex, total, setN
 }
 
 // ── AMRAP top bar ────────────────────────────────────────────────────────────
-function AmrapBar({ exName, exEmoji, exerciseIndex, total, setNum, totalSets, elapsedSecs, totalSteps, isSS, isPaused, onPause, onEndWorkout, onActiveRecovery, onAddSet }) {
+function AmrapBar({ exName, exEmoji, exerciseIndex, total, setNum, totalSets, elapsedSecs, totalSteps, isSS, isPaused, onPause, onEndWorkout, onActiveRecovery, onAddSet, kcal = 0 }) {
   return createPortal(
     <div className="fixed left-0 right-0 z-[10001]"
       style={{ top: "env(safe-area-inset-top, 0px)" }}>
@@ -817,6 +824,7 @@ function AmrapBar({ exName, exEmoji, exerciseIndex, total, setNum, totalSets, el
             <Footprints className="w-2.5 h-2.5" />
             <span>{totalSteps}</span>
           </button>
+          <BurnChip kcal={kcal} />
           <span className="text-gray-400 text-[9px] font-mono">{formatTime(elapsedSecs)}</span>
           {/* Pause and End live in the bottom ControlBar now — see TimerOverlay. */}
           <button onClick={onAddSet} className="text-green-400 text-[10px] font-bold border border-green-500/30 rounded-full px-2 py-1">+Set</button>
@@ -926,7 +934,7 @@ function sumByUnit(scores) {
 }
 
 // ── Completion / Report screen ────────────────────────────────────────────────
-function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exerciseCount, onRestart, onExit, onViewAchievements, onAdjustReps, onAdjustWeight, getSaveTemplate, saveName }) {
+function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exerciseCount, onRestart, onExit, onViewAchievements, onAdjustReps, onAdjustWeight, getSaveTemplate, saveName, kcal = null }) {
   const totalReps = sumReps(scores);
   // Volume (weight x counted reps), shown in the person's chosen unit. Sets
   // logged in the other unit are converted; bodyweight sets add nothing.
@@ -936,8 +944,9 @@ function CompletionScreen({ scores, totalSteps, elapsedSecs, totalSets, exercise
   const [editingWeight, setEditingWeight] = useState(null); // score index being edited
   const unitTotals = sumByUnit(scores);   // e.g. { ft: 40 } from bear crawls
   const completedSets = totalSets;
-  // Estimate calories: ~8 cal/min HIIT
-  const calEstimate = Math.round((elapsedSecs / 60) * 8);
+  // Calories: the live burn meter's total (2026-11-18) so the report matches
+  // what was on screen; ~8 cal/min only if the meter never ran.
+  const calEstimate = kcal > 0 ? Math.round(kcal) : Math.round((elapsedSecs / 60) * 8);
 
   // Group scores by exercise name. Round 28 keeps each set's INDEX in `scores`
   // alongside its rep count, so the +/- controls can address the exact set.
@@ -1625,6 +1634,16 @@ function ARTPWorkoutInner() {
   const currentEx  = activeList[exerciseIndex];
   const isLastEx   = exerciseIndex === activeList.length - 1;
 
+  // ── Live burn meter (2026-11-18) ──────────────────────────────────────────
+  const [restCardio, setRestCardio] = useState(null); // walk/jog/sprint picked on the rest screen
+  useEffect(() => { if (phase !== "rest") setRestCardio(null); }, [phase]);
+  const burnStats = useBodyStats();
+  const burnMet = phase === "rest" ? (restCardio ? metForCardio(restCardio) : MET.rest) : metForExercise(currentEx?.name);
+  const burn = useBurnTracker({
+    running: (phase === "working" || phase === "rest") && !isPaused,
+    met: burnMet, weightLbs: burnStats.weightLbs,
+  });
+
   // (saved selection is loaded directly in lazy state initialisers above)
 
   // ── Crash-safe snapshot of the live workout ─────────────────────────────
@@ -1866,7 +1885,7 @@ function ARTPWorkoutInner() {
       // Reps only — a bear crawl's feet must not land in total_reps, which feeds
       // History, streaks and achievements.
       const totalReps = sumReps(finalScores);
-      const calEstimate = Math.round((finalElapsed / 60) * 8);
+      const calEstimate = burn.totalRef.current > 0 ? Math.round(burn.totalRef.current) : Math.round((finalElapsed / 60) * 8);
       // Per-set reps + weight, and volume in lbs (weights.js).
       const { exercises: exercisesCompleted, totalVolumeLbs } = buildExercisesWithSets(finalScores);
 
@@ -2038,6 +2057,7 @@ function ARTPWorkoutInner() {
     setElapsedSecs(0); setTotalSteps(0); setPauseReasons(new Set());
     pendingReps.current = 0; aiRepsRef.current = 0; manualRepsRef.current = 0;
     stepBaseRef.current = 0; stepLastRef.current = 0;
+    burn.reset();
     setPhase(warmupEnabled ? "warmup" : "countdown");
   };
 
@@ -2047,6 +2067,7 @@ function ARTPWorkoutInner() {
     setElapsedSecs(0); setTotalSteps(0); setPauseReasons(new Set());
     pendingReps.current = 0; aiRepsRef.current = 0; manualRepsRef.current = 0;
     stepBaseRef.current = 0; stepLastRef.current = 0;
+    burn.reset();
     setPhase("setup");
   };
 
@@ -2817,6 +2838,8 @@ function ARTPWorkoutInner() {
             currentSet={currentSet}
             supersets={supersets}
             onAddSet={() => { setTotalSets(s => s + 1); speak("Set added", 1.05, 1.05); }}
+            onCardioChange={setRestCardio}
+            burnSlot={<BurnMeter compact kcal={burn.kcal} rate={burn.rate} met={burnMet} age={burnStats.age} weightIsDefault={burnStats.weightIsDefault} />}
           />
           {showExitSheet && (
             <ExitConfirmSheet key="exit" onConfirm={confirmEndWorkout} onCancel={() => setShowExitSheet(false)} />
@@ -2840,6 +2863,7 @@ function ARTPWorkoutInner() {
           onAdjustWeight={adjustWeight}
           getSaveTemplate={buildArtpTemplate}
           saveName={savedName || `AiRTP ${new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" })}`}
+          kcal={burn.kcal}
         />,
         document.body
       )}
@@ -2878,6 +2902,7 @@ function ARTPWorkoutInner() {
               elapsedSecs={elapsedSecs}
               totalSteps={totalSteps}
               targetReps={targetRepsPerEx}
+              kcal={burn.kcal}
               isPaused={isPaused}
               onSkip={() => endSet(pendingReps.current)}
               onPause={handlePauseToggle}
@@ -2898,6 +2923,7 @@ function ARTPWorkoutInner() {
               elapsedSecs={elapsedSecs}
               totalSteps={totalSteps}
               isSS={supersets.has(currentEx?.name)}
+              kcal={burn.kcal}
               isPaused={isPaused}
               onPause={handlePauseToggle}
               onEndWorkout={handleEndWorkout}
