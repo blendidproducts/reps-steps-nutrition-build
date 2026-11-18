@@ -4,7 +4,7 @@ import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Brain, Timer, Info, TrendingUp, Activity, CheckCircle2, Moon, ChevronRight, MoreVertical, ClipboardCheck, Sparkles, X } from "lucide-react";
+import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Brain, Timer, Info, TrendingUp, Activity, CheckCircle2, Moon, ChevronRight, MoreVertical, ClipboardCheck, Sparkles, X, ChevronLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
@@ -95,20 +95,31 @@ function QuickStart({ navigate }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
+  /* 2026-11-18 (2nd pass), JT: "too low, I wanted it on the right side".
+     The trigger is now a pull tab pinned to the right edge of the screen, at
+     mid-height, visible without scrolling. The drawer slides out from that
+     same edge. Portaled like the drawer (Layout's motion transform traps
+     `fixed`). It only exists while Home is mounted. */
   return (
     <>
-      <div className="px-6 mb-6">
-        <button onClick={() => setOpen(true)} aria-expanded={open}
-          className="w-full flex items-center gap-3 rounded-2xl px-5 text-left active:scale-[0.99] transition-transform"
-          style={{ minHeight: 64, background: "#0a0e1a", border: "2px solid rgba(255,255,255,0.14)" }}>
-          <Play className="w-6 h-6 flex-shrink-0" style={{ color: "#00e5ff", fill: "#00e5ff" }} />
-          <span className="flex-1 min-w-0">
-            <span className="block text-lg font-black text-white leading-tight">START NOW</span>
-            <span className="block text-[12px] text-gray-400 truncate">One tap — pick your level, today's workout opens</span>
-          </span>
-          <ChevronRight className="w-7 h-7 flex-shrink-0 text-[#00e5ff]" />
-        </button>
-      </div>
+      {createPortal(
+        <AnimatePresence>
+          {!open && (
+            <motion.button key="qs-tab" onClick={() => setOpen(true)} aria-expanded={false} aria-label="Start now — pick your level"
+              className="fixed right-0 flex flex-col items-center gap-1.5 py-3 pl-1.5 pr-1 rounded-l-2xl active:scale-95"
+              style={{ top: "38vh", zIndex: 40, width: 40,
+                background: "linear-gradient(180deg, #00e5ff 0%, #0288d1 100%)",
+                boxShadow: "-4px 0 18px rgba(0,229,255,0.45)" }}
+              initial={{ x: 44 }} animate={{ x: 0 }} exit={{ x: 44 }} transition={{ type: "tween", duration: 0.2 }}>
+              <ChevronLeft className="w-5 h-5 text-[#020817]" strokeWidth={3} />
+              <span className="text-[13px] font-black tracking-widest text-[#020817]"
+                style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}>START NOW</span>
+              <Play className="w-4 h-4" style={{ color: "#020817", fill: "#020817" }} />
+            </motion.button>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
       {createPortal(
         <AnimatePresence>
           {open && (
@@ -441,7 +452,7 @@ export default function Home() {
         </div>
       </MajorCard>
 
-      {/* START NOW — collapsed bar under the three main cards; opens a side drawer */}
+      {/* START NOW — right-edge pull tab + side drawer (renders via portal, not here in the flow) */}
       <QuickStart navigate={navigate} />
 
       {/* ── Go Pro promo ($9.99/mo) — hidden for existing Pro members ── */}
