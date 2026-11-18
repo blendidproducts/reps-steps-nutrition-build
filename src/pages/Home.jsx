@@ -4,9 +4,10 @@ import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Brain, Timer, Info, TrendingUp, Activity, CheckCircle2, Moon, ChevronRight, MoreVertical, ClipboardCheck, Sparkles } from "lucide-react";
+import { Play, Zap, Target, Star, Dumbbell, Apple, Calendar, ArrowRight, Brain, Timer, Info, TrendingUp, Activity, CheckCircle2, Moon, ChevronRight, MoreVertical, ClipboardCheck, Sparkles, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 import ProgramStatusStrip from "@/components/ProgramStatusStrip";
 import { featuredChallenge } from "@/lib/fitnessTests";
 import { todaysRoutine, LEVELS, LEVEL_LABEL } from "@/lib/quickWorkouts";
@@ -81,7 +82,65 @@ const LEVEL_STYLE = {
 const routineMinutes = (rt, kind) => Math.max(5, Math.round(rt.exercises.reduce((m, e) =>
   m + e.sets * ((e.target_reps ? e.target_reps * 3 : e.target_time) + (kind === "stretch" ? 10 : 45)), 0) / 60 + (kind === "stretch" ? 0 : 3)));
 
+/* 2026-11-18, JT: START NOW shouldn't be the first thing on Home — the three
+   main cards are the focus. It's now a slim bar with an arrow below them;
+   tapping it slides the level/stretch options in from the side. The drawer is
+   portaled to document.body because a fixed element inside Layout's
+   framer-motion transform gets trapped (see CLAUDE.md rounds 20/22/28). */
 function QuickStart({ navigate }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+  return (
+    <>
+      <div className="px-6 mb-6">
+        <button onClick={() => setOpen(true)} aria-expanded={open}
+          className="w-full flex items-center gap-3 rounded-2xl px-5 text-left active:scale-[0.99] transition-transform"
+          style={{ minHeight: 64, background: "#0a0e1a", border: "2px solid rgba(255,255,255,0.14)" }}>
+          <Play className="w-6 h-6 flex-shrink-0" style={{ color: "#00e5ff", fill: "#00e5ff" }} />
+          <span className="flex-1 min-w-0">
+            <span className="block text-lg font-black text-white leading-tight">START NOW</span>
+            <span className="block text-[12px] text-gray-400 truncate">One tap — pick your level, today's workout opens</span>
+          </span>
+          <ChevronRight className="w-7 h-7 flex-shrink-0 text-[#00e5ff]" />
+        </button>
+      </div>
+      {createPortal(
+        <AnimatePresence>
+          {open && (
+            <>
+              <motion.div key="qs-backdrop" className="fixed inset-0" style={{ zIndex: 80, background: "rgba(0,0,0,0.6)" }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => setOpen(false)} />
+              <motion.div key="qs-drawer" role="dialog" aria-modal="true" aria-label="Start now"
+                className="fixed top-0 right-0 h-full overflow-y-auto"
+                style={{ zIndex: 81, width: "min(380px, 88vw)", background: "#020817",
+                  borderLeft: "2px solid rgba(0,229,255,0.35)", boxShadow: "-12px 0 40px rgba(0,0,0,0.6)",
+                  paddingTop: "env(safe-area-inset-top)", paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)" }}
+                initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+                transition={{ type: "tween", duration: 0.25 }}>
+                <div className="flex justify-end px-3 pt-3">
+                  <button onClick={() => setOpen(false)} aria-label="Close"
+                    className="w-11 h-11 rounded-full flex items-center justify-center text-gray-300 hover:bg-white/10">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                <QuickStartOptions navigate={navigate} />
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+    </>
+  );
+}
+
+function QuickStartOptions({ navigate }) {
   const [busy, setBusy] = useState(null);
   const [err, setErr] = useState(null);
   const go = async (kind, level) => {
@@ -95,8 +154,8 @@ function QuickStart({ navigate }) {
     }
   };
   return (
-    <div className="px-6 mb-6">
-      <div className="rounded-2xl p-5" style={{ background: "#0a0e1a", border: "2px solid rgba(255,255,255,0.14)" }}>
+    <div className="px-4 pb-2">
+      <div className="p-1">
         <h2 className="text-2xl font-black text-white leading-none">START NOW</h2>
         <p className="text-gray-400 text-sm mt-1.5">Tap your level — today's workout opens right away. Not sure? Pick Beginner.</p>
         <div className="space-y-2.5 mt-4">
@@ -283,8 +342,6 @@ export default function Home() {
           no active program, so Home is untouched for everyone else. */}
       <ProgramStatusStrip />
 
-      <QuickStart navigate={navigate} />
-
       {/* ── HOLIDAY CHALLENGE (2026-11-09) ───────────────────────────────
           Veterans Day Murph. Shows only while featuredChallenge() says it's in
           season (Nov 1 – Nov 12); renders nothing the rest of the year. */}
@@ -383,6 +440,9 @@ export default function Home() {
           ))}
         </div>
       </MajorCard>
+
+      {/* START NOW — collapsed bar under the three main cards; opens a side drawer */}
+      <QuickStart navigate={navigate} />
 
       {/* ── Go Pro promo ($9.99/mo) — hidden for existing Pro members ── */}
       {!isPro && (

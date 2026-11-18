@@ -62,6 +62,27 @@ export async function saveWorkoutTemplate({ name, exercises, source = "program",
   return base44.entities.SavedWorkout.create(rec);
 }
 
+/**
+ * Overwrite an existing SavedWorkout with a new exercise list (2026-11-17,
+ * "Save to → Replace a saved workout"). Keeps the same id, so any program day
+ * that points at it runs the new version. Returns the updated record.
+ */
+export async function replaceWorkoutTemplate(existing, { name, exercises, source = "program", artpSettings, description, difficulty }) {
+  const ex = cleanExercises(exercises);
+  if (!ex.length) throw new Error("This workout has no exercises to save.");
+  const patch = {
+    name: (name || "").trim() || existing?.name || "My Workout",
+    exercises: ex,
+    workout_type: ex.every((e) => e.target_time > 0 && !e.target_reps) ? "time_based" : "rep_based",
+    source,
+  };
+  if (description) patch.description = description;
+  if (difficulty) patch.difficulty = difficulty;
+  if (artpSettings) patch.artp_settings = artpSettings;
+  await base44.entities.SavedWorkout.update(existing.id, patch);
+  return { ...existing, ...patch };
+}
+
 /** A logged WorkoutSession → exercise list for a template (reps per set averaged). */
 export function exercisesFromSession(session) {
   return (session?.exercises_completed || [])

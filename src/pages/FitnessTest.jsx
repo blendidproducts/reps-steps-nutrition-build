@@ -27,7 +27,6 @@ import {
   CUSTOM_EVENT_POOL, buildCustomBattery,
   MILITARY_BRANCHES, batteriesInBranch, eventFormatLabel,
   murphEvents, featuredChallenge, MURPH_HONOREE, MURPH_ROUND_CHOICES,
-  heroEvents, heroPools, HERO_BY_KEY, CHAD_LEVELS,
 } from "@/lib/fitnessTests";
 import {
   PENDING, scoreAftTest, aftBand, scorePstTest, PST_PROGRAMS, PST_MINIMUMS,
@@ -195,92 +194,6 @@ function saveLocal(record) {
 }
 const lastOfBattery = (key) => loadHistory().find((r) => r.battery === key) || null;
 
-/* Murph → Workout History (2026-11-11, JT: "it did not add it to my history").
-   Fitness tests were only kept on the phone (localStorage) plus a Base44
-   `FitnessTest` entity that was never created, so the History page — which
-   lists WorkoutSession — never saw a Murph. Now a finished Murph is also
-   written as a WorkoutSession, and any Murph still sitting on the phone
-   without one is back-filled the next time the Fitness Test page opens. */
-function heroSession(rec) {
-  const hero = HERO_BY_KEY[rec.battery];
-  const o = rec.murph || {};
-  const ev = rec.events || [];
-  const total = ev.find((e) => e.key === `${rec.battery}_total`)?.value || 0;
-  const end = new Date(rec.taken_at || Date.now());
-  const gpsM = ev.reduce((n, e) => n + (e.meta?.gps_m || 0), 0);
-  const steps = ev.reduce((n, e) => n + (e.meta?.steps || 0), 0);
-  const ai = ev.reduce((n, e) => n + Object.values(e.meta?.ai || {}).reduce((a, b) => a + b, 0), 0);
-  const pools = heroPools(hero, o);
-  const load = o.load || (o.vest ? 20 : 0);
-  return {
-    workout_id: rec.battery,
-    start_time: new Date(end.getTime() - total * 1000).toISOString(),
-    end_time: end.toISOString(),
-    duration: total,
-    total_reps: pools.reduce((n, p) => n + p.target, 0),
-    exercises_completed: pools.map((p) => ({ exercise_name: p.name, reps_completed: p.target })),
-    weight_added_lbs: load,
-    ...(gpsM || steps ? { cardio_analytics: { total_steps: steps, total_distance_miles: Number((gpsM / M_PER_MILE).toFixed(2)) } } : {}),
-    notes: `${hero.name} · ${fmtSecs(total)}` + (hero.label ? ` · ${hero.label(o)}` : load ? ` · ${load}-lb vest` : "")
-      + (ai ? ` · AiRTP counted ${ai}` : "") + (o.manual ? " · time entered by hand" : ""),
-  };
-}
-function murphSession(rec) {
-  if (rec.battery !== "murph") return heroSession(rec);
-  const ev = rec.events || [];
-  const total = ev.find((e) => e.key === "murph_total")?.value || 0;
-  const end = new Date(rec.taken_at || Date.now());
-  const k = rec.murph?.half ? 0.5 : 1;
-  const runs = ev.filter((e) => e.key.startsWith("murph_run"));
-  const gpsM = ev.reduce((n, e) => n + (e.meta?.gps_m || 0), 0);
-  const steps = ev.reduce((n, e) => n + (e.meta?.steps || 0), 0);
-  const ai = ev.reduce((n, e) => n + (e.meta?.ai?.pushups || 0) + (e.meta?.ai?.squats || 0), 0);
-  const exercises = [
-    ...runs.slice(0, 1).map((e) => ({ exercise_name: `${k < 1 ? "½" : "1"} mile run`, reps_completed: 0, time_spent: e.value })),
-    { exercise_name: "Pull-ups", reps_completed: 100 * k },
-    { exercise_name: "Push-ups", reps_completed: 200 * k },
-    { exercise_name: "Air Squats", reps_completed: 300 * k },
-    ...runs.slice(1, 2).map((e) => ({ exercise_name: `${k < 1 ? "½" : "1"} mile run`, reps_completed: 0, time_spent: e.value })),
-  ];
-  return {
-    workout_id: "murph",
-    start_time: new Date(end.getTime() - total * 1000).toISOString(),
-    end_time: end.toISOString(),
-    duration: total,
-    total_reps: 600 * k,
-    exercises_completed: exercises,
-    weight_added_lbs: rec.murph?.vest ? 20 : 0,
-    ...(gpsM || steps ? { cardio_analytics: {
-      total_steps: steps,
-      total_distance_miles: Number((gpsM / M_PER_MILE).toFixed(2)),
-    } } : {}),
-    notes: `${rec.murph?.half ? "Half Murph" : "Murph"} · ${fmtSecs(total)} · ${murphLabel(rec.murph)}`
-      + (ai ? ` · AiRTP counted ${ai}` : "") + (rec.murph?.manual ? " · time entered by hand" : ""),
-  };
-}
-async function saveMurphSession(rec) {
-  if (!rec || BATTERIES[rec.battery]?.scoring !== "challenge" || rec.session_id) return rec;
-  try {
-    const row = await base44.entities.WorkoutSession.create(murphSession(rec));
-    if (row?.id) { const r = { ...rec, session_id: row.id }; saveLocal(r); return r; }
-  } catch (_) { /* offline or signed out: stays on the phone, retried next visit */ }
-  return rec;
-}
-
-/* Crash-safe Murph (2026-11-11): an hour-long workout is long enough for iOS
-   to reload the page (screen recording + camera + GPS is a lot of memory).
-   The runner saves its progress every few seconds; opening the page again
-   offers to pick up exactly where it stopped, clock included. */
-const MURPH_LIVE_KEY = "rns_murph_live";
-function loadMurphLive() {
-  try {
-    const s = JSON.parse(localStorage.getItem(MURPH_LIVE_KEY) || "null");
-    if (s && s.v === 1 && s.startAt && Date.now() - s.savedAt < 6 * 3600e3) return s;
-  } catch (_) {}
-  return null;
-}
-const clearMurphLive = () => { try { localStorage.removeItem(MURPH_LIVE_KEY); } catch (_) {} };
-
 /** Profile for the military battery, remembered so it's asked once. */
 function loadProfile() {
   try { return JSON.parse(localStorage.getItem("rns_test_profile") || "null"); } catch { return null; }
@@ -344,35 +257,11 @@ export default function FitnessTest() {
     try { return { ...d, ...JSON.parse(localStorage.getItem("rns_murph_opts") || "{}") }; }
     catch (_) { return d; }
   });
-  // Back-fill: any Murph finished on this phone that never reached History.
-  useEffect(() => {
-    (async () => {
-      for (const r of loadHistory().filter((x) => BATTERIES[x.battery]?.scoring === "challenge" && !x.session_id)) await saveMurphSession(r);
-    })();
-  }, []);
-  const [murphLive, setMurphLive] = useState(() => loadMurphLive());
-  const [murphResume, setMurphResume] = useState(null);
-
   const setMurph = (patch) => setMurphOpts((o) => {
     const n = { ...o, ...patch };
     try { localStorage.setItem("rns_murph_opts", JSON.stringify(n)); } catch (_) {}
     return n;
   });
-  // Other hero workouts (2026-11-12): one remembered option set per workout.
-  const [heroOptsMap, setHeroOptsMap] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("rns_hero_opts") || "{}"); } catch (_) { return {}; }
-  });
-  const HERO_DEFAULTS = { chad: { level: "rx", box: 20, load: 45, carry: "ruck", split: 100 } };
-  const optsFor = (key) => key === "murph" ? murphOpts
-    : { aiTrack: true, vest: false, ...(HERO_DEFAULTS[key] || {}), ...(heroOptsMap[key] || {}) };
-  const setHero = (key, patch) => {
-    if (key === "murph") return setMurph(patch);
-    setHeroOptsMap((m) => {
-      const n = { ...m, [key]: { ...(m[key] || {}), ...patch } };
-      try { localStorage.setItem("rns_hero_opts", JSON.stringify(n)); } catch (_) {}
-      return n;
-    });
-  };
 
   // Custom battery: the picked event keys, assembled on demand. Memoised so the
   // battery object keeps its identity between renders - finishEvent closes over
@@ -403,13 +292,11 @@ export default function FitnessTest() {
     if (b.needsLevelChoice) {
       return { ...b, events: b.events.filter((e) => !e.level || e.key === wctLevel) };
     }
-    if (b.hero) return { ...b, events: heroEvents(b.hero, optsFor(b.key)) };
     if (b.runner === "murph") {
       return { ...b, events: murphEvents(murphOpts) };
     }
     return b;
-  }, [batteryKey, customKeys, oftCardio, usmcUpper, marsocRuck, wctLevel, murphOpts, heroOptsMap]); // eslint-disable-line
-  const curOpts = battery?.runner === "murph" ? optsFor(battery.key) : null;
+  }, [batteryKey, customKeys, oftCardio, usmcUpper, marsocRuck, wctLevel, murphOpts]);
 
   const event = battery?.events[eventIndex] || null;
 
@@ -481,7 +368,7 @@ export default function FitnessTest() {
       // held to is part of what the result MEANS, so a past test has to keep it.
       combat: battery.hasCombatStandard ? aftCombat : false,
       program: battery.needsProgram ? pstProgram : null,
-      murph: battery.runner === "murph" ? { ...optsFor(battery.key), ...(extra?.murph || {}) } : null,
+      murph: battery.runner === "murph" ? { ...murphOpts, ...(extra?.murph || {}) } : null,
       events,
     };
     saveLocal(record);
@@ -495,7 +382,6 @@ export default function FitnessTest() {
     (async () => {
       try { await base44.entities.FitnessTest?.create?.(record); } catch (_) {}
     })();
-    if (battery.scoring === "challenge") { clearMurphLive(); saveMurphSession(record); }
   }
 
   const [result, setResult] = useState(null);
@@ -522,31 +408,6 @@ export default function FitnessTest() {
         </div>
 
         <div className="max-w-lg mx-auto px-4 py-5 space-y-3">
-          {murphLive && (
-            <div className="rounded-2xl border-2 border-amber-400 bg-amber-500/10 p-4">
-              <p className="font-black text-amber-300">{BATTERIES[murphLive.battery || "murph"]?.name || "Workout"} in progress</p>
-              <p className="text-[12px] text-gray-300 mt-1">
-                Started {new Date(murphLive.startAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-                {" · "}block {Math.min((murphLive.ends || []).length + 1, 99)} · the clock kept running.
-              </p>
-              <div className="flex gap-2 mt-3">
-                <button onClick={() => {
-                  const k = murphLive.battery || "murph";
-                  if (k === "murph") setMurphOpts(murphLive.opts);
-                  else setHeroOptsMap((m) => ({ ...m, [k]: murphLive.opts }));
-                  setBatteryKey(k); setMurphResume(murphLive);
-                  setMurphLive(null); setPhase("running");
-                }} className="flex-1 min-h-[48px] rounded-xl bg-amber-400 text-black font-black text-sm active:scale-95">
-                  RESUME
-                </button>
-                <button onClick={() => { clearMurphLive(); setMurphLive(null); }}
-                  className="flex-1 min-h-[48px] rounded-xl border border-gray-600 text-gray-300 font-bold text-sm active:scale-95">
-                  Discard
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Holiday challenge, featured while it's in season (2026-11-09). */}
           {featured && (
             <FeaturedChallengeCard f={featured} selected={batteryKey === featured.battery.key}
@@ -650,11 +511,8 @@ export default function FitnessTest() {
             );
           })}
 
-          {battery?.key === "murph" && (
+          {battery?.runner === "murph" && (
             <MurphOptions opts={murphOpts} onChange={setMurph} events={battery.events} />
-          )}
-          {battery?.hero && (
-            <HeroOptions hero={battery.hero} opts={curOpts} onChange={(p) => setHero(battery.key, p)} events={battery.events} />
           )}
 
           {/* The Marine upper-body choice is not cosmetic: push-ups are capped
@@ -1005,10 +863,9 @@ export default function FitnessTest() {
     return (
       <MurphRunner
         battery={battery}
-        opts={curOpts}
-        resume={murphResume}
-        onFinish={(events, murphExtra) => { setMurphResume(null); finishTest({}, { events, murph: murphExtra }); }}
-        onAbort={() => { clearMurphLive(); setMurphResume(null); restart(); }}
+        opts={murphOpts}
+        onFinish={(events, murphExtra) => finishTest({}, { events, murph: murphExtra })}
+        onAbort={() => restart()}
       />
     );
   }
@@ -1272,38 +1129,6 @@ function haversineM(a, b) {
 }
 const fmtMiles = (m) => `${(m / M_PER_MILE).toFixed(2)} mi`;
 
-// GPS odometer (2026-11-10). JT's Coros read 0.95 mi where the app read 1.00:
-// adding up every raw fix-to-fix hop counts GPS wobble as running (worst
-// while standing still or slowing down). Now: positions are lightly smoothed,
-// and distance is only booked once the smoothed point has moved a real amount
-// (5 m, or half the fix's accuracy if worse) from the last booked point — so
-// wobble around one spot never adds up. Simulated over a noisy mile (track,
-// streets, straight road): old method +1–10% over, this one within about ±1%.
-// Fixes worse than maxAcc are ignored; a jump faster than 9 m/s is drift.
-function createOdometer({ maxAcc = 30, maxSpeed = 9, alpha = 0.6, minM = 5 } = {}) {
-  let o = null, s = null, a = null, t0 = 0, misses = 0;
-  return {
-    reset() { o = null; s = null; a = null; misses = 0; },
-    // Feed one fix; returns the metres to add (usually 0 or a few metres).
-    push({ lat, lon, accuracy, t }) {
-      if (!(accuracy <= maxAcc)) return 0;
-      if (!o) { const r = Math.PI / 180, R = 6371000; o = { lat, lon, ky: R * r, kx: R * r * Math.cos(lat * r) }; }
-      const z = { x: (lon - o.lon) * o.kx, y: (lat - o.lat) * o.ky };
-      const acc = Math.max(3, accuracy);
-      if (!s || misses >= 5) { s = z; a = z; t0 = t; misses = 0; return 0; }   // first fix, or lost the thread
-      const dt = Math.max(0.2, (t - t0) / 1000);
-      if (Math.hypot(z.x - s.x, z.y - s.y) > maxSpeed * dt + 3 * acc) { misses += 1; return 0; }
-      misses = 0;
-      const w = dt > 3 ? 1 : alpha;                       // after a signal gap, take the fix as-is
-      s = { x: s.x + w * (z.x - s.x), y: s.y + w * (z.y - s.y) }; t0 = t;
-      const d = Math.hypot(s.x - a.x, s.y - a.y);
-      if (d < Math.max(minM, 0.5 * acc)) return 0;
-      a = s;
-      return d;
-    },
-  };
-}
-
 function RunRunner({ event, index, total, accent, onDone, onAbort }) {
   const target = parseDistanceM(event.distanceLabel);
   const LAP_M = 400;
@@ -1319,7 +1144,7 @@ function RunRunner({ event, index, total, accent, onDone, onAbort }) {
   const [gpsM, setGpsM] = useState(0);
   const [gpsAcc, setGpsAcc] = useState(null);
   const [gpsErr, setGpsErr] = useState(null);
-  const odo = useRef(createOdometer());
+  const lastFix = useRef(null);
   const watchId = useRef(null);
   const announced = useRef(false);
   const [finished, setFinished] = useState(null);   // { secs, meta } awaiting save
@@ -1332,15 +1157,25 @@ function RunRunner({ event, index, total, accent, onDone, onAbort }) {
     return () => clearInterval(t);
   }, [running]);
 
-  // GPS for ROUTE and FREE, through createOdometer (wobble-proof distance).
+  // GPS for ROUTE and FREE. Fixes worse than 30 m are ignored, and so is any
+  // jump implying > 9 m/s (faster than a 3-minute mile) — that's drift.
   useEffect(() => {
     if (!running || mode === "track") return;
     if (!navigator.geolocation) { setGpsErr("No GPS on this device"); return; }
     watchId.current = navigator.geolocation.watchPosition((pos) => {
       const { latitude: lat, longitude: lon, accuracy } = pos.coords;
       setGpsAcc(Math.round(accuracy));
-      const d = odo.current.push({ lat, lon, accuracy, t: pos.timestamp });
-      if (d) setGpsM((m) => m + d);
+      if (accuracy > 30) return;
+      const fix = { lat, lon, t: pos.timestamp };
+      const prev = lastFix.current;
+      if (prev) {
+        const d = haversineM(prev, fix);
+        const dt = Math.max(0.5, (fix.t - prev.t) / 1000);
+        if (d / dt > 9) return;
+        if (d < 2) return;                                // standing still
+        setGpsM((m) => m + d);
+      }
+      lastFix.current = fix;
     }, (err) => setGpsErr(err.code === 1 ? "Location permission is off — allow it to measure distance" : "Weak GPS signal"),
     { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
     return () => { if (watchId.current != null) navigator.geolocation.clearWatch(watchId.current); watchId.current = null; };
@@ -1354,7 +1189,7 @@ function RunRunner({ event, index, total, accent, onDone, onAbort }) {
 
   const start = () => {
     const t = Date.now();
-    odo.current.reset(); stepBase.current = null; announced.current = false;
+    lastFix.current = null; stepBase.current = null; announced.current = false;
     setGpsM(0); setSteps(0); setLaps([]); setFinished(null); setGpsErr(null);
     setStartAt(t); setNow(t); setRunning(true); sayNow("Go");
   };
@@ -1897,9 +1732,7 @@ function Results({ record: initialRecord, onRestart, onExit }) {
   // other half Murphs (and full with full).
   const previous = loadHistory().find(
     (r) => r.battery === record.battery && r.id !== record.id
-      && (battery.runner !== "murph" || (battery.hero
-        ? (battery.hero.label ? battery.hero.label(r.murph || {}) === battery.hero.label(record.murph || {}) : true)
-        : !!r.murph?.half === !!record.murph?.half))
+      && (battery.runner !== "murph" || !!r.murph?.half === !!record.murph?.half)
   ) || null;
 
   const prt = battery.scoring === "standards"
@@ -2432,79 +2265,6 @@ function FeaturedChallengeCard({ f, selected, onSelect }) {
   );
 }
 
-/* Setup for the other hero workouts (2026-11-12). Chad: level, box, load,
-   ruck or vest, and how to break up the 1,000. The rest: vest + AiRTP. */
-function HeroOptions({ hero, opts, onChange, events }) {
-  const Pill = ({ on, onClick, children }) => (
-    <button onClick={onClick}
-      className={`min-h-[40px] px-3 rounded-lg text-[12px] font-bold border ${on ? "bg-amber-400 text-black border-amber-400" : "border-gray-700 text-gray-300"}`}>
-      {children}
-    </button>
-  );
-  const Row = ({ label, children }) => (
-    <div>
-      <p className="text-[11px] text-gray-400 mb-1.5">{label}</p>
-      <div className="flex flex-wrap gap-1.5">{children}</div>
-    </div>
-  );
-  const chad = hero.key === "chad";
-  const lv = chad ? CHAD_LEVELS[opts.level || "rx"] : null;
-  return (
-    <div className="rounded-2xl border border-gray-800 bg-[#111] p-4 space-y-4">
-      <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Your {hero.short || hero.name}</p>
-      {chad && (
-        <>
-          <Row label="Level (official CHAD1000X)">
-            {Object.entries(CHAD_LEVELS).map(([k, v]) => (
-              <Pill key={k} on={(opts.level || "rx") === k}
-                onClick={() => onChange({ level: k, box: v.box, load: v.loadM, reps: undefined, split: v.reps >= 1000 ? 100 : 50 })}>
-                {v.label} · {v.reps}
-              </Pill>
-            ))}
-          </Row>
-          <p className="text-[11px] text-gray-500 -mt-2">
-            {lv.label}: {lv.reps} step-ups, {lv.box}-in box{lv.loadM ? `, ${lv.loadM} lb (men) / ${lv.loadF} lb (women)` : ", no load"}.
-          </p>
-          <Row label="Box height">
-            {[12, 16, 20, 24].map((b) => <Pill key={b} on={(opts.box || lv.box) === b} onClick={() => onChange({ box: b })}>{b} in</Pill>)}
-          </Row>
-          <Row label="Load">
-            {[0, 14, 20, 30, 35, 45].map((w) => <Pill key={w} on={(opts.load ?? 0) === w} onClick={() => onChange({ load: w })}>{w ? `${w} lb` : "None"}</Pill>)}
-          </Row>
-          {opts.load > 0 && (
-            <Row label="Carried as">
-              <Pill on={(opts.carry || "ruck") === "ruck"} onClick={() => onChange({ carry: "ruck" })}>Ruck</Pill>
-              <Pill on={opts.carry === "vest"} onClick={() => onChange({ carry: "vest" })}>Weight vest</Pill>
-            </Row>
-          )}
-          <Row label="Break it up">
-            {[0, 50, 100, 250].map((n) => (
-              <Pill key={n} on={(opts.split || 0) === n} onClick={() => onChange({ split: n })}>{n ? `Blocks of ${n}` : "Straight through"}</Pill>
-            ))}
-          </Row>
-        </>
-      )}
-      {!chad && hero.vest && (
-        <Row label="Vest or body armor">
-          <Pill on={!opts.vest} onClick={() => onChange({ vest: false })}>None</Pill>
-          <Pill on={!!opts.vest} onClick={() => onChange({ vest: true })}>20 lb</Pill>
-        </Row>
-      )}
-      <Row label="Rep counting">
-        <Pill on={opts.aiTrack !== false} onClick={() => onChange({ aiTrack: true })}>AiRTP camera + taps</Pill>
-        <Pill on={opts.aiTrack === false} onClick={() => onChange({ aiTrack: false })}>Taps only</Pill>
-      </Row>
-      <div className="rounded-xl bg-black/30 p-3">
-        <p className="text-[11px] text-gray-400 mb-1">The plan · {events.length} block{events.length === 1 ? "" : "s"}</p>
-        {events.slice(0, 12).map((e, i) => (
-          <p key={e.key} className="text-[12px] text-gray-200"><span className="text-gray-600 mr-2">{i + 1}</span>{e.name}</p>
-        ))}
-        {events.length > 12 && <p className="text-[11px] text-gray-500 mt-1">+ {events.length - 12} more</p>}
-      </div>
-    </div>
-  );
-}
-
 /* Setup: which Murph. Three independent switches plus the plan they produce. */
 function MurphOptions({ opts, onChange, events }) {
   const Toggle = ({ k, on, off }) => (
@@ -2610,16 +2370,14 @@ function MurphOptions({ opts, onChange, events }) {
    shows distance, pace and steps and calls out the mile. */
 const MURPH_GPS_OK_M = 30;   // a fix this good or better counts as "connected"
 
-const seg0DistanceM = (e) => (e?.segment === "run" && e.distanceM ? e.distanceM : null);
-
-function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
+function MurphRunner({ battery, opts, onFinish, onAbort }) {
   const events = battery.events;
-  const [stage, setStage] = useState(resume ? "go" : "ready");      // ready | countdown | go | manual
+  const [stage, setStage] = useState("ready");      // ready | countdown | go | manual
   const [count, setCount] = useState(3);
-  const [startAt, setStartAt] = useState(resume?.startAt ?? null);
+  const [startAt, setStartAt] = useState(null);
   const [now, setNow] = useState(Date.now());
-  const [ends, setEnds] = useState(resume?.ends || []);              // ms at the end of each finished block
-  const [rounds, setRounds] = useState(resume?.rounds || 0);           // rounds done in a partitioned block
+  const [ends, setEnds] = useState([]);              // ms at the end of each finished block
+  const [rounds, setRounds] = useState(0);           // rounds done in a partitioned block
   const [quitArmed, setQuitArmed] = useState(false);
   const [mm, setMm] = useState("");
   const [ss, setSs] = useState("");
@@ -2630,49 +2388,40 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
   const [tracking, setTracking] = useState(false);
   const [trackBase, setTrackBase] = useState(0);     // that movement's total when the camera opened
   const [trackPool, setTrackPool] = useState(null);  // which movement the camera is counting
-  const [trackCap, setTrackCap] = useState(null);    // stop at this total (a round's share), else the movement's target
   const [live, setLive] = useState(0);               // camera count since it opened
   const liveRef = useRef(0);
-  const metaRef = useRef(resume?.meta || {});         // per-block meta, by index
+  const metaRef = useRef({});                         // per-block meta, by index
   // 2026-11-10 (JT, mid-run): ONE running total per movement for the whole
   // Murph. Reps done during a run ("stop, knock out 25 push-ups, keep going"),
   // in their own block, or in Any order all fill the same total, and a block
   // whose total is already full is ticked off when you reach it.
-  const [pools, setPools] = useState(resume?.pools || {});
+  const [pools, setPools] = useState({});
   const poolHist = useRef([]);                       // {key, prev, block} — Undo
   const kk = opts.half ? 0.5 : 1;
-  // 2026-11-12: the same runner drives every hero workout. `hero` (Chad, JT,
-  // Jared …) supplies its own movements; Murph keeps its three.
-  const hero = battery.hero || null;
-  const REPS = hero ? heroPools(hero, opts) : [
+  const REPS = [
     { key: "pullups", name: "Pull-ups", target: 100 * kk, exercise: null, steps: [1, 5, 10] },
     { key: "pushups", name: "Push-ups", target: 200 * kk, exercise: "Push-Up", steps: [5, 10, 25] },
     { key: "squats", name: "Air Squats", target: 300 * kk, exercise: "Squat", steps: [5, 10, 25] },
   ];
   const repDef = (key) => REPS.find((r) => r.key === key);
-  const extrasOn = !hero && !opts.partitioned;   // reps-on-the-run is a Murph thing
-  const title = hero ? (hero.short || hero.name) : opts.half ? "Half Murph" : "Murph";
-  const honoree = hero ? hero.honoree : MURPH_HONOREE;
-  const totalKey = `${battery.key}_total`;
-  const loadLb = hero ? (opts.load || (opts.vest ? 20 : 0)) : (opts.vest ? 20 : 0);
+  const extrasOn = !opts.partitioned;   // Rounds format is a fixed 5-10-15 structure
 
   // GPS + steps
   const [gpsAcc, setGpsAcc] = useState(null);
   const [gpsErr, setGpsErr] = useState(null);
-  const [runM, setRunM] = useState(resume?.runM || 0);
-  const runMRef = useRef(resume?.runM || 0);
+  const [runM, setRunM] = useState(0);
+  const runMRef = useRef(0);
   const [steps, setSteps] = useState(0);
   const stepBase = useRef(null);
-  const odo = useRef(createOdometer({ maxAcc: MURPH_GPS_OK_M }));
+  const lastFix = useRef(null);
   const watchId = useRef(null);
   const segRef = useRef(null);
-  const calledMile = useRef(!!resume?.calledMile);
+  const calledMile = useRef(false);
   const [reachedAt, setReachedAt] = useState(null);   // when GPS hit the run distance
   const [autoLeft, setAutoLeft] = useState(null);     // seconds until the run clock stops itself
   const [keepGoing, setKeepGoing] = useState(false);
   const hasRuns = events.some((e) => e.segment === "run");
-  const runTarget = seg0DistanceM(events[ends.length]) ?? (opts.half ? M_PER_MILE / 2 : M_PER_MILE);
-  const runLabel = (e) => e?.distanceLabel || (opts.half ? "½ mile" : "1 mile");
+  const runTarget = opts.half ? M_PER_MILE / 2 : M_PER_MILE;
   const gpsOk = gpsAcc != null && gpsAcc <= MURPH_GPS_OK_M;
 
   const seg = events[ends.length] || null;
@@ -2688,7 +2437,7 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
   const canTrack = (e) => aiOn && e?.segment === "reps" && !!e.exercise;
   const isFull = (e, P) => {
     if (!e) return false;
-    if (e.segment === "reps" && e.pool) return (P[e.pool] || 0) >= (e.until ?? repDef(e.pool).target);
+    if (e.segment === "reps" && e.pool) return (P[e.pool] || 0) >= repDef(e.pool).target;
     if (e.segment === "mix") return REPS.every((r) => (P[r.key] || 0) >= r.target);
     return false;
   };
@@ -2703,29 +2452,6 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
     return () => { clearInterval(t); try { lock?.release?.(); } catch (_) {} };
   }, [stage]);
 
-  // Crash-safe progress: saved on every block/round/rep change and every 5 s
-  // while running (for the GPS distance). Cleared on finish or abandon.
-  const snapRef = useRef(null);
-  snapRef.current = stage === "go" && startAt && !finished.current ? {
-    v: 1, battery: battery.key, opts, startAt, ends, rounds, pools, meta: metaRef.current,
-    runM: runMRef.current, calledMile: calledMile.current,
-  } : null;
-  const saveSnap = () => {
-    const sn = snapRef.current;
-    if (!sn || finished.current) return;
-    try { localStorage.setItem(MURPH_LIVE_KEY, JSON.stringify({ ...sn, savedAt: Date.now() })); } catch (_) {}
-  };
-  useEffect(saveSnap, [stage, ends, rounds, pools]); // eslint-disable-line
-  useEffect(() => {
-    if (stage !== "go") return;
-    const t = setInterval(saveSnap, 5000);
-    const hide = () => { if (document.visibilityState === "hidden") saveSnap(); };
-    document.addEventListener("visibilitychange", hide);
-    window.addEventListener("pagehide", saveSnap);
-    return () => { clearInterval(t); document.removeEventListener("visibilitychange", hide); window.removeEventListener("pagehide", saveSnap); };
-  }, [stage]); // eslint-disable-line
-  useEffect(() => { if (resume) sayNow(`${title} resumed. Clock is still running.`); }, []); // eslint-disable-line
-
   // One GPS watch from the ready screen to the end: it warms up the lock
   // before START, and only adds distance while a run block is on.
   useEffect(() => {
@@ -2735,9 +2461,16 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
     watchId.current = navigator.geolocation.watchPosition((pos) => {
       const { latitude: lat, longitude: lon, accuracy } = pos.coords;
       setGpsAcc(Math.round(accuracy)); setGpsErr(null);
-      if (segRef.current?.segment !== "run") { odo.current.reset(); return; }   // walking around between sets doesn't count
-      const d = odo.current.push({ lat, lon, accuracy, t: pos.timestamp });
-      if (d) { runMRef.current += d; setRunM(runMRef.current); }
+      if (segRef.current?.segment !== "run" || accuracy > MURPH_GPS_OK_M) return;
+      const fix = { lat, lon, t: pos.timestamp };
+      const prev = lastFix.current;
+      if (prev) {
+        const d = haversineM(prev, fix);
+        const dt = Math.max(0.5, (fix.t - prev.t) / 1000);
+        if (d / dt > 9 || d < 2) return;   // drift, or standing still
+        runMRef.current += d; setRunM(runMRef.current);
+      }
+      lastFix.current = fix;
     }, (err) => setGpsErr(err.code === 1 ? "Location is off for this site — allow it to track the miles" : "Weak GPS signal"),
     { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
   }, [stage, hasRuns]);
@@ -2756,7 +2489,7 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
     setReachedAt(Date.now()); setKeepGoing(false); setAutoLeft(5);
     alertCue(true);
     const last = ends.length + 1 >= events.length;
-    sayNow(`${runLabel(seg)} reached. ${last ? "Stopping the clock" : "Next block"} in five seconds.`);
+    sayNow(`${opts.half ? "Half mile" : "One mile"} reached. ${last ? "Stopping the clock" : "Next block"} in five seconds.`);
   }, [runM, seg, runTarget, opts.half, stage]);
   useEffect(() => {
     if (autoLeft == null || keepGoing || tracking) return;   // camera open: wait until it closes
@@ -2770,31 +2503,23 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
   }, [autoLeft, keepGoing, tracking]);
 
   const resetRun = () => {
-    runMRef.current = 0; setRunM(0); odo.current.reset();
+    runMRef.current = 0; setRunM(0); lastFix.current = null;
     stepBase.current = null; setSteps(0); calledMile.current = false;
     setReachedAt(null); setAutoLeft(null); setKeepGoing(false);
   };
 
   const announce = (e) => {
     if (!e) return;
-    sayNow(e.segment === "run" ? `Run. ${runLabel(e)}.`
-      : e.segment === "task" ? e.name
+    sayNow(e.segment === "run" ? (opts.half ? "Run. Half a mile." : "Run. One mile.")
       : e.segment === "mix" ? "Any order. Pull-ups, push-ups, squats. Switch whenever you want."
       : e.segment === "rounds" ? `${e.rounds} rounds. Round 1: ${e.plan[0].pullups} pull-ups, ${e.plan[0].pushups} push-ups, ${e.plan[0].squats} squats.`
-      : e.pool ? `${(e.until ?? repDef(e.pool).target) - (pools[e.pool] || 0)} ${repDef(e.pool).name} to go`
+      : e.pool ? `${repDef(e.pool).target - (pools[e.pool] || 0)} ${repDef(e.pool).name} to go`
       : `${e.targetReps} ${e.name.replace(/^\d+\s*/, "")}`);
   };
 
-  const openTracker = (base, poolKey, cap = null) => {
-    liveRef.current = 0; setLive(0); setTrackBase(base); setTrackPool(poolKey); setTrackCap(cap); setTracking(true);
+  const openTracker = (base, poolKey) => {
+    liveRef.current = 0; setLive(0); setTrackBase(base); setTrackPool(poolKey); setTracking(true);
   };
-
-  // Rounds format (2026-11-10, JT: "each round there was no option to select
-  // the AiRTP" / "count by hand didn't launch anywhere"): each round now has a
-  // counter per movement, fed into the same running totals. Round r owns the
-  // slice of each total between cum(r) and cum(r + 1).
-  const roundCum = (e, r, key) => (e?.plan || []).slice(0, r).reduce((n, x) => n + (x[key] || 0), 0);
-  const roundFull = (e, r, P) => REPS.every((d) => (P[d.key] || 0) >= roundCum(e, r + 1, d.key));
 
   const begin = async () => {
     unlockMurphAudio();
@@ -2811,7 +2536,7 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
       setStartAt(t0); setNow(t0); setStage("go");
       sayNow("Go");
       setTimeout(() => announce(events[0]), 700);
-      if (canTrack(events[0])) openTracker(0, events[0].pool, events[0].until ?? null);
+      if (canTrack(events[0])) openTracker(0, events[0].pool);
     }, 1000);
   };
 
@@ -2829,7 +2554,7 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
       let line = "";
       if (e.segment === "run") line = (m.gps_m ? "Tracked run" : "Timed run") + (r ? ` · + ${r} on the run` : "");
       else if (m.covered && !r) line = "Already done on the run";
-      else if (e.segment === "rounds") line = `${e.rounds} rounds · ${e.randomSplit ? "random" : "even"} split` + (ai ? ` · AiRTP counted ${ai}` : "");
+      else if (e.segment === "rounds") line = `${e.rounds} rounds · ${e.randomSplit ? "random" : "even"} split`;
       else line = r + (ai ? `${r ? " · " : ""}AiRTP counted ${ai}` : "");
       const meta = line || m.gps_m || m.steps
         ? { mode: "murph", line, gps_m: m.gps_m || 0, steps: m.steps || 0, reps: m.reps || null, ai: m.ai || null }
@@ -2841,7 +2566,7 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
       };
     });
     const total = Math.round((allEnds[allEnds.length - 1] - startAt) / 1000);
-    out.push({ key: totalKey, name: "Total time", unit: "secs", value: total });
+    out.push({ key: "murph_total", name: "Total time", unit: "secs", value: total });
     sayNow(`Time. ${Math.floor(total / 60)} minutes ${total % 60} seconds. Well done.`);
     onFinish(out, { manual: false });
   };
@@ -2868,7 +2593,7 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
     if (next.length >= events.length) complete(next);
     else {
       announce(nxt);
-      if (canTrack(nxt)) openTracker(P[nxt.pool] || 0, nxt.pool, nxt.until ?? null);
+      if (canTrack(nxt)) openTracker(P[nxt.pool] || 0, nxt.pool);
     }
   };
 
@@ -2889,7 +2614,6 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
       ...(ai ? { ai: { ...(m.ai || {}), [key]: ((m.ai || {})[key] || 0) + ai } } : {}),
     };
     if (v >= def.target && prev < def.target) { alertCue(false); sayNow(`${def.name} done.`); }
-    if (seg?.segment === "rounds" && roundFull(seg, rounds, next)) { roundDone(next); return true; }
     if (seg && seg.segment !== "run" && isFull(seg, next)) {
       if (seg.segment === "mix") sayNow("All reps done.");
       nextBlock(next);
@@ -2902,31 +2626,18 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
     const key = trackPool;
     const def = repDef(key);
     const counted = Math.max(0, reps || 0);
-    setTracking(false); setTrackPool(null); setTrackCap(null); liveRef.current = 0; setLive(0);
+    setTracking(false); setTrackPool(null); liveRef.current = 0; setLive(0);
     if (!def) return;
-    const cap = trackCap ?? def.target;
-    const used = Math.min(counted, Math.max(0, cap - trackBase));   // never past the target (or the round's share)
+    const used = Math.min(counted, Math.max(0, def.target - trackBase));   // never past the target
     if (used) addReps(key, trackBase + used, used);
   };
 
-  const roundDone = (P = pools) => {
+  const roundDone = () => {
     const r = rounds + 1;
-    if (r >= seg.rounds) { nextBlock(P); return; }
+    if (r >= seg.rounds) { nextBlock(); return; }
     setRounds(r);
     const nx = seg.plan?.[r];
     sayNow(nx ? `Round ${r + 1}. ${nx.pullups}, ${nx.pushups}, ${nx.squats}.` : `Round ${r + 1}`);
-  };
-
-  // ROUND DONE: whatever wasn't tapped/tracked this round is counted as done.
-  const finishRound = () => {
-    const i = ends.length, next = { ...pools }, m = metaRef.current[i] || {}, reps = { ...(m.reps || {}) };
-    for (const d of REPS) {
-      const want = roundCum(seg, rounds + 1, d.key), prev = next[d.key] || 0;
-      if (prev < want) { poolHist.current.push({ key: d.key, prev, block: i }); next[d.key] = want; reps[d.key] = (reps[d.key] || 0) + want - prev; }
-    }
-    metaRef.current[i] = { ...m, reps };
-    setPools(next);
-    roundDone(next);
   };
 
   const undo = () => {
@@ -2934,10 +2645,7 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
     if (h && h.block === ends.length) {
       poolHist.current.pop();
       const delta = (pools[h.key] || 0) - h.prev;
-      const restored = { ...pools, [h.key]: h.prev };
-      setPools(restored);
-      // that tap had finished a round: step back into it
-      if (seg?.segment === "rounds" && rounds > 0 && !roundFull(seg, rounds - 1, restored)) setRounds(rounds - 1);
+      setPools({ ...pools, [h.key]: h.prev });
       const m = metaRef.current[h.block];
       if (m?.reps) m.reps[h.key] = (m.reps[h.key] || 0) - delta;
       return;
@@ -2958,7 +2666,7 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
     const total = (Number(mm) || 0) * 60 + (Number(ss) || 0);
     if (total <= 0 || finished.current) return;
     finished.current = true;
-    onFinish([{ key: totalKey, name: "Total time", unit: "secs", value: total }], { manual: true });
+    onFinish([{ key: "murph_total", name: "Total time", unit: "secs", value: total }], { manual: true });
   };
 
   const quit = () => {
@@ -2969,7 +2677,7 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
   const header = (
     <div className="flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),20px)] pb-3">
       <span className="text-[11px] font-black uppercase tracking-widest text-red-300">
-        {title}{loadLb ? ` · ${loadLb} lb` : ""}
+        {opts.half ? "Half Murph" : "Murph"}{opts.vest ? " · vest" : ""}
       </span>
       <button onClick={quit} className="text-[11px] text-red-400 font-bold border border-red-500/40 rounded-full px-3 py-1.5">
         {quitArmed ? "Tap again to quit" : "Abandon"}
@@ -2986,15 +2694,14 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
         ) : (
           <>
             <Flag className="w-10 h-10 text-red-400" />
-            <h2 className="text-3xl font-black mt-3">{title.toUpperCase()}</h2>
-            {honoree && <p className="text-[11px] text-gray-400 mt-2 max-w-xs leading-snug">{honoree}</p>}
-            {hero?.label && <p className="text-[12px] text-amber-300 mt-2">{hero.label(opts)}</p>}
+            <h2 className="text-3xl font-black mt-3">{opts.half ? "HALF MURPH" : "MURPH"}</h2>
+            <p className="text-[11px] text-gray-400 mt-2 max-w-xs leading-snug">{MURPH_HONOREE}</p>
             <div className="mt-5 w-full max-w-xs space-y-1.5 text-left">
               {events.map((e, i) => (
                 <p key={e.key} className="text-sm text-gray-200"><span className="text-gray-600 font-bold mr-2">{i + 1}</span>{e.name}</p>
               ))}
             </div>
-            {loadLb > 0 && <p className="text-[11px] text-amber-300 mt-3">{hero?.key === "chad" ? `${opts.carry === "vest" ? "Vest" : "Ruck"} on? ${loadLb} lb, the whole way.` : `Vest on? ${loadLb} lb, the whole way.`}</p>}
+            {opts.vest && <p className="text-[11px] text-amber-300 mt-3">Vest on? 20 lb, the whole way.</p>}
             {hasRuns && (
               <div className={`mt-4 w-full max-w-xs rounded-xl border px-3 py-2 flex items-center gap-2 text-left ${
                 gpsOk ? "border-green-500/50 bg-green-950/30" : "border-amber-500/40 bg-amber-950/20"}`}>
@@ -3027,7 +2734,7 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
   } else if (stage === "manual") {
     body = (
       <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-        <h2 className="text-2xl font-black">Enter your {title} time</h2>
+        <h2 className="text-2xl font-black">Enter your Murph time</h2>
         <p className="text-[11px] text-gray-400 mt-2">Total, first step to last.</p>
         <div className="flex items-center gap-2 mt-5">
           <input type="number" inputMode="numeric" min="0" value={mm} onChange={(e) => setMm(e.target.value)}
@@ -3046,18 +2753,17 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
   } else if (seg && tracking && trackPool) {
     // AiRTP owns the screen; a small HUD keeps the Murph clock and count visible.
     const def = repDef(trackPool);
-    const cap = trackCap ?? def.target;
-    const shown = Math.min(cap, trackBase + live);
+    const shown = Math.min(def.target, trackBase + live);
     return (
       <>
         <RepTracker
           key={`murph-${ends.length}-${trackPool}`}
           exerciseName={def.exercise}
-          targetReps={cap - trackBase}
+          targetReps={def.target - trackBase}
           autoAdvance={true}
           keepCameraAlive={true}
           defaultFacingMode="user"
-          setLabel={`${title} · ${def.name}`}
+          setLabel={`Murph · ${def.name}`}
           onCountChange={(c) => { liveRef.current = c; setLive(c); }}
           onComplete={(reps) => commitTrack(reps)}
           onClose={() => commitTrack(liveRef.current)}
@@ -3066,12 +2772,9 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
           <div className="fixed inset-x-0 flex justify-center pointer-events-none"
             style={{ top: "calc(env(safe-area-inset-top) + 84px)", zIndex: 100000 }}>
             <div className="rounded-full bg-black/80 border border-red-500/60 px-4 py-1.5 flex items-center gap-3 text-white">
-              <span className="text-[10px] font-black tracking-widest text-red-300">{title.toUpperCase()}</span>
+              <span className="text-[10px] font-black tracking-widest text-red-300">MURPH</span>
               <span className="text-lg font-black tabular-nums">{clock(totalMs)}</span>
-              <span className="text-sm font-bold tabular-nums text-green-300">
-                {trackCap != null && seg.segment === "rounds" ? `${def.name} ${shown - roundCum(seg, rounds, trackPool)}/${cap - roundCum(seg, rounds, trackPool)} · round ${rounds + 1}`
-                  : trackCap != null ? `${def.name} ${shown - (seg.from || 0)}/${cap - (seg.from || 0)}` : `${def.name} ${shown}/${def.target}`}
-              </span>
+              <span className="text-sm font-bold tabular-nums text-green-300">{def.name} {shown}/{def.target}</span>
             </div>
           </div>,
           document.body
@@ -3081,7 +2784,7 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
   } else if (seg) {
     const isRounds = seg.segment === "rounds";
     const isRun = seg.segment === "run";
-    const pct = isRounds ? rounds / seg.rounds : seg.targetReps ? Math.min(1, (tally - (seg.from || 0)) / seg.targetReps) : 0;
+    const pct = isRounds ? rounds / seg.rounds : seg.targetReps ? Math.min(1, tally / seg.targetReps) : 0;
     body = (
       <div className="flex-1 min-h-0 overflow-y-auto flex flex-col px-5">
         <div className="text-center pt-2">
@@ -3119,16 +2822,44 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
           </p>
           {seg.segment === "mix" && (
             <div className="mt-3 space-y-2 text-left">
-              {REPS.map((r) => (
-                <MurphRepRow key={r.key} def={r} done={pools[r.key] || 0}
-                  onSet={(v) => addReps(r.key, v)}
-                  onCamera={r.exercise && aiOn ? () => openTracker(pools[r.key] || 0, r.key) : null} />
-              ))}
+              {seg.pools.map((pl) => {
+                const done = pools[pl.key] || 0;
+                const full = done >= pl.target;
+                const steps = pl.exercise ? [-5, 5, 10] : [-1, 1, 5, 10];
+                return (
+                  <div key={pl.key} className={`rounded-xl border p-2.5 ${full ? "border-green-500/50 bg-green-950/20" : "border-gray-700 bg-black/30"}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-sm">{full ? "✓ " : ""}{pl.name}</span>
+                      <span className="font-black tabular-nums">{done}<span className="text-gray-500 text-xs"> / {pl.target}</span></span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-gray-800 mt-1.5 overflow-hidden">
+                      <div className={`h-full ${full ? "bg-green-400" : "bg-red-500"}`} style={{ width: `${Math.min(100, (done / pl.target) * 100)}%` }} />
+                    </div>
+                    {!full && (
+                      <div className="flex gap-1.5 mt-2">
+                        {pl.exercise && aiOn && (
+                          <button onClick={() => openTracker(done, pl.key)}
+                            className="flex-[2] min-h-[44px] rounded-lg font-black text-black text-xs flex items-center justify-center gap-1 active:scale-95"
+                            style={{ background: "linear-gradient(160deg,#3DDC7A,#12923F)" }}>
+                            <Camera className="w-4 h-4" /> AiRTP
+                          </button>
+                        )}
+                        {steps.map((n) => (
+                          <button key={n} onClick={() => addReps(pl.key, done + n)}
+                            className="flex-1 min-h-[44px] rounded-lg border border-gray-700 text-xs font-bold text-gray-200 active:scale-95">
+                            {n > 0 ? `+${n}` : n}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
           {isRun && reachedAt && (
             <div className="mt-3 rounded-xl border-2 border-green-400 bg-green-500/15 p-3 text-center">
-              <p className="text-xl font-black text-green-300">✓ {runLabel(seg).toUpperCase()} REACHED</p>
+              <p className="text-xl font-black text-green-300">✓ {opts.half ? "½ MILE" : "1 MILE"} REACHED</p>
               <p className="text-[12px] text-gray-300">Run split {clock(reachedAt - segStart)}</p>
               {autoLeft != null && !keepGoing ? (
                 <div className="flex gap-2 mt-2">
@@ -3150,7 +2881,7 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
             <div className="mt-3 grid grid-cols-3 gap-2 text-center">
               <div>
                 <p className="text-2xl font-black tabular-nums">{(runM / M_PER_MILE).toFixed(2)}</p>
-                <p className="text-[10px] text-gray-400">of {(runTarget / M_PER_MILE).toFixed(2)} mi</p>
+                <p className="text-[10px] text-gray-400">of {opts.half ? "0.50" : "1.00"} mi</p>
               </div>
               <div>
                 <p className="text-2xl font-black tabular-nums">
@@ -3175,50 +2906,68 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
               <p className="text-[10px] uppercase tracking-widest text-gray-400 text-center">
                 Reps on the run · they count toward your totals
               </p>
-              <div className="mt-2 space-y-2">
-                {REPS.map((r) => (
-                  <MurphRepRow key={r.key} def={r} done={pools[r.key] || 0} compact
-                    onSet={(v) => addReps(r.key, v)}
-                    onCamera={r.exercise && aiOn ? () => openTracker(pools[r.key] || 0, r.key) : null} />
-                ))}
+              <div className="mt-2 space-y-1.5">
+                {REPS.map((r) => {
+                  const done = pools[r.key] || 0;
+                  const full = done >= r.target;
+                  return (
+                    <div key={r.key} className="flex items-center gap-1.5">
+                      <div className="w-[84px] shrink-0">
+                        <p className="text-[12px] font-bold leading-tight">{full ? "✓ " : ""}{r.name}</p>
+                        <p className="text-[11px] text-gray-400 tabular-nums">{done}/{r.target}</p>
+                      </div>
+                      {!full && r.exercise && aiOn && (
+                        <button onClick={() => openTracker(done, r.key)}
+                          className="min-h-[42px] px-2.5 rounded-lg font-black text-black text-[11px] flex items-center gap-1 active:scale-95 shrink-0"
+                          style={{ background: "linear-gradient(160deg,#3DDC7A,#12923F)" }}>
+                          <Camera className="w-3.5 h-3.5" /> AiRTP
+                        </button>
+                      )}
+                      {!full && r.steps.map((n) => (
+                        <button key={n} onClick={() => addReps(r.key, done + n)}
+                          className="flex-1 min-h-[42px] rounded-lg border border-gray-700 text-[12px] font-bold text-gray-200 active:scale-95">
+                          +{n}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
-          {isRounds && (
+          {canTrack(seg) && (
+            <button onClick={() => openTracker(tally, seg.pool)}
+              className="mt-3 w-full min-h-[56px] rounded-xl font-black text-black flex items-center justify-center gap-2 active:scale-95"
+              style={{ background: "linear-gradient(160deg,#3DDC7A,#12923F)" }}>
+              <Camera className="w-5 h-5" />
+              {tally ? `RESUME AiRTP · ${seg.targetReps - tally} LEFT` : `AiRTP COUNT ${seg.targetReps}`}
+            </button>
+          )}
+          {(isRounds || seg.targetReps) && (
             <div className="h-2 rounded-full bg-gray-800 mt-3 overflow-hidden">
               <div className="h-full bg-red-500 transition-all" style={{ width: `${pct * 100}%` }} />
             </div>
           )}
-          {isRounds && (
-            <div className="mt-3 space-y-2 text-left">
-              {REPS.map((d) => {
-                const base = roundCum(seg, rounds, d.key);
-                const want = (seg.plan?.[rounds] || {})[d.key] || 0;
-                if (!want) return null;
-                const done = Math.max(0, Math.min(want, (pools[d.key] || 0) - base));
-                return (
-                  <MurphRepRow key={`${rounds}-${d.key}`} def={{ ...d, target: want }} done={done}
-                    onSet={(v) => addReps(d.key, base + v)}
-                    onCamera={d.exercise && aiOn ? () => openTracker(base + done, d.key, base + want) : null} />
-                );
-              })}
-            </div>
-          )}
-          {seg.pool && (
-            <div className="mt-3 text-left">
-              <MurphRepRow def={{ ...repDef(seg.pool), target: (seg.until ?? repDef(seg.pool).target) - (seg.from || 0) }}
-                done={Math.max(0, tally - (seg.from || 0))}
-                onSet={(v) => addReps(seg.pool, (seg.from || 0) + v)}
-                onCamera={canTrack(seg) ? () => openTracker(tally, seg.pool, seg.until ?? null) : null} />
+          {seg.targetReps && (
+            <div className="mt-3">
+              <p className="text-[11px] text-gray-400">
+                {canTrack(seg) ? "Counted" : "Optional count"}: <b className="text-white tabular-nums">{tally}</b> / {seg.targetReps}
+              </p>
+              <div className="grid grid-cols-4 gap-2 mt-2">
+                {[-5, 5, 10, 25].map((n) => (
+                  <button key={n} onClick={() => addReps(seg.pool, tally + n)}
+                    className="min-h-[44px] rounded-xl border border-gray-700 text-sm font-bold text-gray-200 active:scale-95">
+                    {n > 0 ? `+${n}` : n}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Pinned to the bottom of the scroll area: the run screen's rep rows
-            can be taller than a phone, and RUN DONE must never scroll away. */}
-        <div className="mt-auto sticky bottom-0 -mx-5 px-5 bg-[#020817] pb-[max(env(safe-area-inset-bottom),16px)] pt-3 space-y-1 border-t border-white/5">
-          <button onClick={isRounds ? finishRound
-            : seg.pool && tally < (seg.until ?? seg.targetReps) ? () => { if (!addReps(seg.pool, seg.until ?? seg.targetReps)) nextBlock(); }
+        <div className="mt-auto pb-[max(env(safe-area-inset-bottom),20px)] pt-4 space-y-2">
+          <button onClick={isRounds ? roundDone
+            : seg.pool && tally < seg.targetReps ? () => { if (!addReps(seg.pool, seg.targetReps)) nextBlock(); }
             : () => nextBlock()}
             className="w-full min-h-[72px] rounded-2xl font-black text-xl text-black active:scale-95 flex items-center justify-center gap-2"
             style={{ background: "#4ade80" }}>
@@ -3226,7 +2975,6 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
             {isRounds ? (rounds + 1 >= seg.rounds ? "LAST ROUND DONE" : "ROUND DONE")
               : isRun ? (ends.length + 1 >= events.length ? "FINISHED — STOP CLOCK" : "RUN DONE")
               : seg.segment === "mix" ? "ALL REPS DONE"
-              : seg.segment === "task" ? "DONE"
               : `ALL ${seg.targetReps} DONE`}
           </button>
           <button onClick={undo} disabled={!ends.length && !rounds && !poolHist.current.length}
@@ -3251,92 +2999,19 @@ function MurphRunner({ battery, opts, resume = null, onFinish, onAbort }) {
   );
 }
 
-/* One movement's counter (2026-11-10, JT): a big running count that updates
-   the moment you tap +5 / +10 (with a "+10" flash so you know it took), and
-   the AiRTP camera button right beside the tap buttons — one tap to switch to
-   tracking. Used on the run screen, in Any order and in the single blocks. */
-function MurphRepRow({ def, done, onSet, onCamera, compact = false }) {
-  const full = done >= def.target;
-  const [flash, setFlash] = useState(null);
-  useEffect(() => {
-    if (flash == null) return;
-    const t = setTimeout(() => setFlash(null), 1200);
-    return () => clearTimeout(t);
-  }, [flash]);
-  // JT: "+1, +5, +10, +25, +50". Steps bigger than the whole target are dropped
-  // (a 13-pull-up round doesn't need +25).
-  const steps = [-1, ...[1, 5, 10, 25, 50].filter((n) => n === 1 || n <= def.target)];
-  const bump = (n) => {
-    const v = Math.max(0, Math.min(def.target, done + n));
-    if (v === done) return;
-    onSet(v);
-    setFlash({ n: v - done, k: Date.now() });
-  };
-  return (
-    <div className={`rounded-xl border p-2.5 ${full ? "border-green-500/50 bg-green-950/20" : "border-gray-700 bg-black/30"}`}>
-      <div className="flex items-end justify-between gap-2">
-        <div>
-          <p className="font-black text-sm leading-tight">{full ? "✓ " : ""}{def.name}</p>
-          <p className="text-[10px] text-gray-500 leading-tight">
-            {full ? "Done" : `${def.target - done} to go`}{!def.exercise && !full ? " · tap to count" : ""}
-          </p>
-        </div>
-        <div className="flex items-baseline gap-1.5 tabular-nums">
-          {flash && (
-            <span key={flash.k} className={`text-sm font-black ${flash.n > 0 ? "text-green-400" : "text-amber-400"}`}>
-              {flash.n > 0 ? `+${flash.n}` : flash.n}
-            </span>
-          )}
-          <span className={`${compact ? "text-2xl" : "text-3xl"} font-black text-white leading-none`}>{done}</span>
-          <span className="text-sm text-gray-500">/ {def.target}</span>
-        </div>
-      </div>
-      <div className="h-1.5 rounded-full bg-gray-800 mt-2 overflow-hidden">
-        <div className={`h-full transition-all ${full ? "bg-green-400" : "bg-red-500"}`}
-          style={{ width: `${Math.min(100, (done / def.target) * 100)}%` }} />
-      </div>
-      {!full && onCamera && (
-        <button onClick={onCamera} aria-label={`Count ${def.name} with the camera`}
-          className="w-full mt-2 min-h-[44px] rounded-lg font-black text-black text-sm flex items-center justify-center gap-1.5 active:scale-95"
-          style={{ background: "linear-gradient(160deg,#3DDC7A,#12923F)" }}>
-          <Camera className="w-4 h-4" /> AiRTP camera count
-        </button>
-      )}
-      {!full && (
-        <div className="flex gap-1.5 mt-2">
-          {steps.map((n) => (
-            <button key={n} onClick={() => bump(n)}
-              className={`flex-1 min-h-[44px] rounded-lg border text-sm font-bold active:scale-95 ${
-                n < 0 ? "border-gray-800 text-gray-500" : "border-gray-600 text-gray-100"}`}>
-              {n > 0 ? `+${n}` : `−${-n}`}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* Results: the time, how it compares, and a share button for Veterans Day. */
 function ChallengeResult({ record, battery, previous }) {
-  const hero = battery.hero || null;
-  const tk = `${record.battery}_total`;
-  const total = record.events.find((e) => e.key === tk)?.value || 0;
-  const prevTotal = previous?.events?.find((e) => e.key === tk)?.value || null;
+  const total = record.events.find((e) => e.key === "murph_total")?.value || 0;
+  const prevTotal = previous?.events?.find((e) => e.key === "murph_total")?.value || null;
   const diff = prevTotal ? total - prevTotal : null;
   const [shareMsg, setShareMsg] = useState("");
-  const o = record.murph || {};
-  const heroLoad = o.load || (o.vest ? 20 : 0);
-  const text = hero
-    ? `I finished the ${hero.name} hero workout in ${fmtSecs(total)}${hero.label ? ` (${hero.label(o)})` : heroLoad ? ` with a ${heroLoad}-lb vest` : ""}. `
-      + `${hero.blurb.split(" Pick")[0]} Track yours with Reps & Steps: https://repsandstepsartp.base44.app/FitnessTest?test=${record.battery} #HeroWOD #RepsAndSteps`
-    : `I finished ${record.murph?.half ? "Half Murph" : "Murph"} in ${fmtSecs(total)}`
+  const text = `I finished ${record.murph?.half ? "Half Murph" : "Murph"} in ${fmtSecs(total)}`
     + `${record.murph?.vest ? " with a 20-lb vest" : ""} for Veterans Day. `
     + `1 mile, 100 pull-ups, 200 push-ups, 300 squats, 1 mile — in honor of LT Michael P. Murphy and every veteran. `
     + `Take the challenge with Reps & Steps: ${MURPH_SHARE_URL} #Murph #VeteransDay #RepsAndSteps`;
   const share = async () => {
     try {
-      if (navigator.share) { await navigator.share({ title: hero ? hero.name : "Murph Challenge", text }); setShareMsg("Shared"); return; }
+      if (navigator.share) { await navigator.share({ title: "Murph Challenge", text }); setShareMsg("Shared"); return; }
     } catch (e) { if (e?.name === "AbortError") return; }
     try { await navigator.clipboard.writeText(text); setShareMsg("Copied — paste it anywhere"); }
     catch (_) { setShareMsg("Couldn't share on this device"); }
@@ -3347,7 +3022,7 @@ function ChallengeResult({ record, battery, previous }) {
       <p className="text-[10px] uppercase tracking-widest text-red-300">Your time</p>
       <p className="text-6xl font-black tabular-nums leading-none mt-1">{fmtSecs(total)}</p>
       <p className="text-[11px] text-gray-400 mt-2">
-        {hero ? (hero.label ? hero.label(o) : heroLoad ? `${heroLoad}-lb vest` : "no vest") : murphLabel(record.murph)}{record.murph?.manual ? " · entered by hand" : ""}
+        {murphLabel(record.murph)}{record.murph?.manual ? " · entered by hand" : ""}
       </p>
       {diff != null && diff !== 0 && (
         <p className={`text-sm font-bold mt-2 ${diff < 0 ? "text-green-400" : "text-amber-400"}`}>
@@ -3355,12 +3030,12 @@ function ChallengeResult({ record, battery, previous }) {
         </p>
       )}
       {!previous && (
-        <p className="text-[11px] text-gray-400 mt-2">Your first one on record. {hero ? "Beat it next time." : "Beat it next year."}</p>
+        <p className="text-[11px] text-gray-400 mt-2">Your first one on record. Beat it next year.</p>
       )}
-      <p className="text-[11px] text-gray-300 mt-3 leading-snug">{hero ? (hero.honoree ? `In honor of ${hero.honoree}` : "An official CrossFit Hero workout, in honor of those who gave everything.") : MURPH_HONOREE} Thank you to everyone who has served.</p>
+      <p className="text-[11px] text-gray-300 mt-3 leading-snug">{MURPH_HONOREE} Thank you to everyone who has served.</p>
       <button onClick={share}
         className="mt-4 w-full min-h-[52px] rounded-xl bg-white text-[#7f1d1d] font-black text-sm flex items-center justify-center gap-2 active:scale-95">
-        <Share2 className="w-4 h-4" /> Share my {hero ? hero.short || hero.name : "Murph"} time
+        <Share2 className="w-4 h-4" /> Share my Murph time
       </button>
       {shareMsg && <p className="text-[11px] text-gray-400 mt-2">{shareMsg}</p>}
     </div>

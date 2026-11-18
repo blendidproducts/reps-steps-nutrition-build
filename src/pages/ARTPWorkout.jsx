@@ -1717,11 +1717,16 @@ function ARTPWorkoutInner() {
     artpSettings: { ...(mode ? { mode } : {}), totalSets, timePerEx, repGoalPerEx, targetRepsPerEx },
   });
 
-  const saveProgram = (name) => {
-    const nm = name?.trim() || "My ARTP";
+  // The quick "Reload" slot on this screen (this phone only).
+  const saveLocalSlot = (nm) => {
     localStorage.setItem(SAVE_KEY, JSON.stringify({ selectedNames: [...selected], supersetNames: [...supersets] }));
     localStorage.setItem(SAVE_KEY + "_name", nm);
     setSavedName(nm);
+  };
+
+  const saveProgram = (name) => {
+    const nm = name?.trim() || "My ARTP";
+    saveLocalSlot(nm);
     setShowSaveInput(false);
     setSaveNameInput("");
     // 2026-10-29: also a real SavedWorkout, so it's in My Workouts on every
@@ -2336,7 +2341,7 @@ function ARTPWorkoutInner() {
           /* No saved program yet — show save button prominently */
           <div className="rounded-2xl border border-dashed border-gray-700 p-3 text-center">
             <p className="text-gray-500 text-xs mb-2">No saved program · customise below and save</p>
-            <button onClick={() => { setShowSaveInput(true); setSaveNameInput("My ARTP"); }}
+            <button onClick={() => { setShowSaveInput("save"); setSaveNameInput("My ARTP"); }}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1a1a1a] border border-gray-600 text-gray-300 text-xs font-bold active:scale-95 transition-transform">
               <Save className="w-3.5 h-3.5" /> Save Current Selection
             </button>
@@ -2345,8 +2350,17 @@ function ARTPWorkoutInner() {
 
         {/* Save / Rename input */}
         <AnimatePresence>
-          {showSaveInput && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+          {showSaveInput === "save" && (
+            <motion.div key="save-to" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+              {/* 2026-11-17: "Save to" dropdown — My Workouts, a program day, or replace a saved workout */}
+              <SaveWorkoutPanel defaultName={saveNameInput || "My ARTP"} getTemplate={buildArtpTemplate}
+                onDone={(rec) => saveLocalSlot(rec?.name || "My ARTP")} />
+              <button onClick={() => setShowSaveInput(false)}
+                className="mt-1.5 w-full text-[11px] text-gray-500 underline text-center">Close</button>
+            </motion.div>
+          )}
+          {showSaveInput === true && (
+            <motion.div key="rename" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
               <div className="flex gap-2">
                 <input value={saveNameInput} onChange={e => setSaveNameInput(e.target.value)}
                   placeholder="Program name…"
