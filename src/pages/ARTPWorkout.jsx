@@ -29,7 +29,7 @@ import StepTracker from "@/components/StepTracker";
 import BuildStamp from "@/components/BuildStamp";
 import { thumbImg, mediumImg } from "@/lib/imgOpt";
 // Live burn meter (2026-11-18)
-import BurnMeter, { BurnChip, useBurnTracker, useBodyStats } from "@/components/workout/BurnMeter";
+import BurnMeter, { BurnChip, HeartRateMini, useBurnTracker, useBodyStats } from "@/components/workout/BurnMeter";
 import { MET, metForExercise, metForCardio } from "@/lib/burnEstimate";
 // Weights + volume (2026-10-27): per-set added weight, volume = weight x counted reps.
 import WeightInput, { weightLabel } from "@/components/workout/WeightInput";
@@ -756,9 +756,11 @@ function ExitConfirmSheet({ onConfirm, onCancel }) {
 function ExerciseNameRow({ name, emoji }) {
   if (!name) return null;
   return (
-    <div className="px-3 pb-1.5 bg-black/90 flex items-center justify-center gap-2 border-b border-white/10">
+    <div className="relative px-3 pb-1.5 bg-black/90 flex items-center justify-center gap-2 border-b border-white/10">
       {emoji && <span className="text-lg leading-none">{emoji}</span>}
-      <span className="text-white text-lg font-black tracking-tight truncate">{name}</span>
+      <span className="text-white text-lg font-black tracking-tight truncate max-w-[58%]">{name}</span>
+      {/* Live heart-rate graph (2026-11-19): only once a strap is sending. */}
+      <HeartRateMini className="absolute right-2 top-0 w-[27%]" />
     </div>
   );
 }

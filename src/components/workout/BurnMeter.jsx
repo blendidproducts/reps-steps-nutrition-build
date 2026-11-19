@@ -7,7 +7,12 @@
                        screen keeps reporting on the next (same idea as the
                        shared camera in RepTracker).
    - <BurnMeter/>    — the card (ActiveWorkout, ARTP rest screen).
-   - <BurnChip/>     — a one-line pill for the ARTP camera top bar.
+   - <BurnChip/>     — a one-line pill for the ARTP camera top bar. Tap it to
+                       connect a strap when none is live (2026-11-19).
+   - <HeartRateGraph/> — live scrolling BPM line over zone bands (2026-11-19).
+   - <HeartRateMini/> — slim graph that sits beside the exercise name in the
+                       ARTP camera top bar (no extra height, so nothing under
+                       the bar moves); nothing until a strap has sent a reading.
 
    Web Bluetooth exists in Chrome on Android/desktop (and the Android TWA),
    NOT in iOS Safari or most WebViews. Where it's missing the connect button
@@ -16,7 +21,7 @@
 import React, { useEffect, useReducer, useRef, useState } from "react";
 import { Flame, Heart, Bluetooth } from "lucide-react";
 import {
-  activeKcalPerMin, getBodyStats, hrZone, metBand, HR_ZONES,
+  activeKcalPerMin, getBodyStats, hrZone, hrMax, metBand, HR_ZONES,
   lbsToKg, DEFAULT_WEIGHT_LBS, DEFAULT_AGE,
 } from "@/lib/burnEstimate";
 
@@ -62,7 +67,21 @@ export function useBurnTracker({ running, met, weightLbs }) {
 }
 
 /* ── heart-rate strap (module singleton) ──────────────────────────────────── */
-const hr = { bpm: null, status: "idle", name: "", device: null, at: 0, listeners: new Set() };
+const hr = { bpm: null, status: "idle", name: "", device: null, at: 0, history: [], listeners: new Set() };
+const HISTORY_MS = 15 * 60 * 1000; // keep 15 min of readings for the graphs
+
+function recordBpm(bpm, now = Date.now()) {
+  const h = hr.history;
+  // Straps send about once a second; collapse bursts so the line stays smooth.
+  if (h.length && now - h[h.length - 1].t < 800) h[h.length - 1] = { t: now, bpm };
+  else h.push({ t: now, bpm });
+  while (h.length && now - h[0].t > HISTORY_MS) h.shift();
+}
+
+/** Test/demo hook: feed a reading as if a strap sent it. */
+export function _pushHeartRateForTest(bpm, t = Date.now()) {
+  hr.bpm = bpm; hr.at = t; hr.status = "live"; recordBpm(bpm, t); emit();
+}
 const emit = () => hr.listeners.forEach((f) => f());
 
 export const hrSupported = () =>
@@ -84,7 +103,7 @@ export async function connectHeartRate() {
       // whether the value is UINT8 or UINT16 (little-endian).
       const v = e.target.value;
       const bpm = (v.getUint8(0) & 1) ? v.getUint16(1, true) : v.getUint8(1);
-      if (bpm > 0) { hr.bpm = bpm; hr.at = Date.now(); hr.status = "live"; emit(); }
+      if (bpm > 0) { const now = Date.now(); hr.bpm = bpm; hr.at = now; hr.status = "live"; recordBpm(bpm, now); emit(); }
     });
     await ch.startNotifications();
     hr.status = "live"; emit();
@@ -111,7 +130,7 @@ export function useHeartRate() {
     }, 2000);
     return () => { hr.listeners.delete(force); clearInterval(id); };
   }, []);
-  return { bpm: hr.bpm, status: hr.status, name: hr.name, supported: hrSupported() };
+  return { bpm: hr.bpm, status: hr.status, name: hr.name, history: hr.history, supported: hrSupported() };
 }
 
 /* ── visuals ──────────────────────────────────────────────────────────────── */
@@ -204,6 +223,7 @@ export function BurnMeter({ kcal, rate, met, age, weightIsDefault, compact = fal
             )}
           </div>
           <IntensityBar active={intensity} />
+          <HeartRateGraph age={age} height={compact ? 44 : 56} className="mt-2" />
           {(supported && status !== "live") || (weightIsDefault && !compact) ? (
             <div className="flex items-center justify-between gap-2 mt-1.5">
               {weightIsDefault && !compact
@@ -226,15 +246,140 @@ export function BurnMeter({ kcal, rate, met, age, weightIsDefault, compact = fal
 
 /** One-line pill for tight HUDs (ARTP camera top bar). */
 export function BurnChip({ kcal }) {
-  const { bpm } = useHeartRate();
+  const { bpm, status, supported } = useHeartRate();
+  // No strap yet → tapping the chip opens the Bluetooth chooser (it needs a
+  // tap anyway; Web Bluetooth only opens from a user gesture).
+  const canConnect = supported && status !== "live";
   return (
-    <span className="flex items-center gap-1 text-[9px] font-bold rounded-full px-1.5 py-0.5 tabular-nums"
-      style={{ color: "#fdba74", border: "1px solid rgba(249,115,22,0.45)", background: "rgba(249,115,22,0.12)" }}
-      aria-label={`${Math.round(kcal)} estimated active calories${bpm ? `, heart rate ${bpm}` : ""}`}>
+    <button type="button" onClick={canConnect ? connectHeartRate : undefined}
+      className="flex items-center gap-1 text-[9px] font-bold rounded-full px-1.5 py-0.5 tabular-nums"
+      style={{ color: "#fdba74", border: "1px solid rgba(249,115,22,0.45)", background: "rgba(249,115,22,0.12)", minHeight: 22 }}
+      aria-label={`${Math.round(kcal)} estimated active calories${bpm ? `, heart rate ${bpm}` : canConnect ? ". Tap to connect a heart-rate strap" : ""}`}>
       <Flame className="w-2.5 h-2.5" style={{ fill: "#f97316", color: "#f97316" }} />
       {Math.round(kcal)}
-      {bpm && (<><Heart className="w-2.5 h-2.5 ml-0.5 text-red-500 fill-red-500" />{bpm}</>)}
-    </span>
+      {bpm
+        ? (<><Heart className="w-2.5 h-2.5 ml-0.5 text-red-500 fill-red-500" />{bpm}</>)
+        : canConnect && (<><Heart className="w-2.5 h-2.5 ml-0.5 text-red-400" />{status === "connecting" ? "…" : "+"}</>)}
+    </button>
+  );
+}
+
+/* ── live heart-rate graph ───────────────────────────────────────────────── */
+function useTick(ms) {
+  const [, tick] = useReducer((x) => x + 1, 0);
+  useEffect(() => { const id = setInterval(tick, ms); return () => clearInterval(id); }, [ms]);
+}
+
+/**
+ * Scrolling BPM line for the last `windowSec`, drawn over the five zone bands
+ * (same colours as the intensity bar). Gaps over 5 s (strap dropped out) break
+ * the line instead of drawing a straight bridge. Renders nothing until the
+ * strap has sent at least one reading in the window.
+ */
+export function HeartRateGraph({ age, windowSec = 120, height = 56, slim = false, className = "" }) {
+  const { bpm, history } = useHeartRate();
+  useTick(1000);
+  const now = Date.now();
+  const from = now - windowSec * 1000;
+  const pts = history.filter((p) => p.t >= from);
+  if (!pts.length) return null;
+
+  const max = hrMax(age || DEFAULT_AGE);
+  const vals = pts.map((p) => p.bpm);
+  const hi = Math.max(...vals), lo = Math.min(...vals);
+  const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+  // Headroom on top for the BPM label, a little below the lowest reading.
+  const span = hi - lo;
+  let yMin = Math.max(30, Math.floor((lo - Math.max(6, span * 0.15)) / 5) * 5);
+  let yMax = Math.ceil((hi + Math.max(16, span * 0.6)) / 5) * 5;
+  if (yMax - yMin < 40) yMax = yMin + 40;
+
+  const W = 300, H = 100;
+  const x = (t) => ((t - from) / (windowSec * 1000)) * W;
+  const y = (v) => H - ((v - yMin) / (yMax - yMin)) * H;
+
+  // Zone bands, clipped to the visible bpm range.
+  const bands = HR_ZONES.map((z, i) => {
+    const b0 = (z.min / 100) * max;
+    const b1 = i + 1 < HR_ZONES.length ? (HR_ZONES[i + 1].min / 100) * max : Infinity;
+    const top = Math.min(b1, yMax), bot = Math.max(b0, yMin);
+    return top > bot ? { color: z.color, yTop: y(top), h: y(bot) - y(top) } : null;
+  }).filter(Boolean);
+
+  // Runs of same-zone colour; a gap > 5 s (strap dropped out) breaks the line.
+  const ageN = age || DEFAULT_AGE;
+  const segs = [];
+  pts.forEach((p, i) => {
+    const xy = `${x(p.t).toFixed(1)},${y(p.bpm).toFixed(1)}`;
+    const c = hrZone(p.bpm, ageN)?.color || "#ef4444";
+    const gap = !i || p.t - pts[i - 1].t > 5000;
+    const cur = segs[segs.length - 1];
+    if (gap) segs.push({ c, pts: [xy] });
+    else if (cur.c !== c) { cur.pts.push(xy); segs.push({ c, pts: [cur.pts[cur.pts.length - 2], xy] }); }
+    else cur.pts.push(xy);
+  });
+  const last = pts[pts.length - 1];
+  const zone = hrZone(last.bpm, age || DEFAULT_AGE);
+  const color = zone?.color || "#ef4444";
+  const stale = !bpm;
+
+  return (
+    <div className={`relative ${className}`} style={{ height }}
+      role="img" aria-label={`Heart rate graph, last ${Math.round(windowSec / 60 * 10) / 10} minutes: now ${bpm || "no signal"}, average ${avg}, max ${hi}`}>
+      <svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none"
+        className="absolute inset-0 rounded-lg overflow-hidden" style={{ background: "rgba(0,0,0,0.35)" }} aria-hidden="true">
+        {bands.map((b, i) => (
+          <rect key={i} x="0" y={b.yTop} width={W} height={b.h} fill={b.color} opacity={slim ? 0.12 : 0.17} />
+        ))}
+        {segs.map((s, i) => (
+          <polyline key={i} points={s.pts.join(" ")} fill="none" stroke={s.c} strokeWidth={slim ? 2.5 : 2.2}
+            strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"
+            opacity={stale ? 0.45 : 1} />
+        ))}
+      </svg>
+      {/* live dot at the newest reading (HTML so it stays round when stretched) */}
+      {!stale && (
+        <span className="absolute rounded-full" style={{
+          width: 7, height: 7, background: color, boxShadow: `0 0 8px ${color}`,
+          left: `calc(${(x(last.t) / W) * 100}% - 3.5px)`, top: `calc(${(y(last.bpm) / H) * 100}% - 3.5px)`,
+        }} />
+      )}
+      <div className="absolute top-0.5 left-1.5 flex items-baseline gap-1 pointer-events-none">
+        <Heart className="w-3 h-3 self-center text-red-500 fill-red-500"
+          style={{ animation: stale ? "none" : "burnPulse 0.8s ease-in-out infinite" }} />
+        <span className={`${slim ? "text-xs" : "text-sm"} font-black tabular-nums text-white`} style={{ textShadow: "0 1px 3px #000" }}>
+          {stale ? "--" : bpm}
+        </span>
+        {!slim && (
+          <span className="text-[9px] font-bold text-gray-300" style={{ textShadow: "0 1px 3px #000" }}>
+            {stale ? "no signal" : `BPM${zone ? ` · ${zone.label}` : ""}`}
+          </span>
+        )}
+      </div>
+      {!slim && (
+        <div className="absolute top-0.5 right-1.5 text-[9px] font-bold text-gray-300 tabular-nums pointer-events-none" style={{ textShadow: "0 1px 3px #000" }}>
+          avg {avg} · max {hi}
+        </div>
+      )}
+      {!slim && (
+        <div className="absolute bottom-0.5 left-1.5 text-[8px] text-gray-500 pointer-events-none">
+          {windowSec >= 60 ? `${Math.round(windowSec / 60)} min` : `${windowSec}s`}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Slim graph for the ARTP camera top bar. Nothing until a strap reads. */
+export function HeartRateMini({ className = "" }) {
+  const { history } = useHeartRate();
+  const { age } = useBodyStats();
+  if (!history.length || Date.now() - history[history.length - 1].t > 60000) return null;
+  return (
+    <div className={className}>
+      <style>{KEYFRAMES}</style>
+      <HeartRateGraph age={age} windowSec={90} height={28} slim />
+    </div>
   );
 }
 
