@@ -4,6 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Plus, Minus, Square, Footprints, Route, Zap, Target, Link as LinkIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+// Bike / swim cardio (2026-11-19)
+import MoreCardio from "@/components/workout/MoreCardio";
+import { cardioVerb } from "@/lib/cardioTypes";
 import { thumbImg } from "@/lib/imgOpt";
 
 export default function RestScreen({
@@ -86,6 +89,7 @@ export default function RestScreen({
                     <Button onClick={() => startCardio('jog')} aria-label="Start jogging cardio" className="flex flex-col items-center gap-1 h-auto py-3 bg-yellow-600/20 border-2 border-yellow-500 text-yellow-300 hover:bg-yellow-600/40 touch-manipulation"><Route className="w-5 h-5" aria-hidden="true" /><span className="text-[10px] font-bold">JOG</span></Button>
                     <Button onClick={() => startCardio('sprint')} aria-label="Start sprinting cardio" className="flex flex-col items-center gap-1 h-auto py-3 bg-red-600/20 border-2 border-red-500 text-red-300 hover:bg-red-600/40 touch-manipulation"><Zap className="w-5 h-5" aria-hidden="true" /><span className="text-[10px] font-bold">SPRINT</span></Button>
                   </div>
+                  <MoreCardio onPick={startCardio} className="mt-2" />
                 </div>
                 <div className="flex-shrink-0 grid grid-cols-2 gap-2 border-t border-brand-blue/20 pt-2">
                   <Button onClick={skipRest} aria-label="Skip rest and continue workout" variant="outline" className="border-gray-500 text-gray-300 hover:bg-gray-700 touch-manipulation min-h-[52px] text-xs font-bold">SKIP REST</Button>
@@ -95,7 +99,7 @@ export default function RestScreen({
             ) : (
               <>
                 <div className="flex-shrink-0">
-                  <h2 className="text-2xl font-bold mb-2 text-brand-blue uppercase text-center">{activeCardio.type}ING</h2>
+                  <h2 className="text-2xl font-bold mb-2 text-brand-blue uppercase text-center">{cardioVerb(activeCardio.type)}</h2>
                   <div className="text-6xl font-bold mb-3 text-brand-blue animate-pulse text-center">{formatTime(cardioTimer)}</div>
                   <div className="mb-3">
                     <p className="text-xs text-gray-400 text-center">Total Cardio: {restCardioTotal}s / {workout.rest_time || 60}s</p>

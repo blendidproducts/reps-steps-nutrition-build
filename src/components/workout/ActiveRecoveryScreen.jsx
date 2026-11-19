@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Minus, Square, Footprints, Route, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+// Bike / swim cardio (2026-11-19)
+import MoreCardio from "@/components/workout/MoreCardio";
+import { cardioVerb } from "@/lib/cardioTypes";
 
 export default function ActiveRecoveryScreen({
   show, activeCardio, restTimer, cardioTimer, formatTime,
@@ -39,6 +42,7 @@ export default function ActiveRecoveryScreen({
                     <Button onClick={() => startCardio('jog')} aria-label="Start jogging" className="flex flex-col items-center gap-1 h-auto py-3 bg-yellow-600/20 border-2 border-yellow-500 text-yellow-300 hover:bg-yellow-600/40 touch-manipulation"><Route className="w-5 h-5" aria-hidden="true" /><span className="text-[10px] font-bold">JOG</span></Button>
                     <Button onClick={() => startCardio('sprint')} aria-label="Start sprinting" className="flex flex-col items-center gap-1 h-auto py-3 bg-red-600/20 border-2 border-red-500 text-red-300 hover:bg-red-600/40 touch-manipulation"><Zap className="w-5 h-5" aria-hidden="true" /><span className="text-[10px] font-bold">SPRINT</span></Button>
                   </div>
+                  <MoreCardio onPick={startCardio} className="mt-2" />
                 </div>
                 <div className="flex-shrink-0 border-t border-cyan-500/20 pt-2">
                   <Button onClick={onClose} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold touch-manipulation min-h-[52px]">DONE - Continue Workout</Button>
@@ -46,7 +50,7 @@ export default function ActiveRecoveryScreen({
               </>
             ) : (
               <>
-                <h2 className="text-2xl font-bold mb-2 text-brand-blue uppercase text-center flex-shrink-0">{activeCardio.type}ING</h2>
+                <h2 className="text-2xl font-bold mb-2 text-brand-blue uppercase text-center flex-shrink-0">{cardioVerb(activeCardio.type)}</h2>
                 <div className="text-6xl font-bold mb-3 text-brand-blue animate-pulse text-center flex-shrink-0">{formatTime(cardioTimer)}</div>
                 <div className="grid grid-cols-2 gap-2 flex-shrink-0">
                   <Button onClick={stopCardio} className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold touch-manipulation min-h-[52px] text-xs"><Square className="w-4 h-4 mr-1" />STOP & SWITCH</Button>

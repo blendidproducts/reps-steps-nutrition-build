@@ -9,6 +9,9 @@ import {
   RefreshCw, Link as LinkIcon, Check, Search, Trophy, Box
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+// Bike / swim cardio (2026-11-19)
+import MoreCardio from "@/components/workout/MoreCardio";
+import { cardioVerb } from "@/lib/cardioTypes";
 import Exercise3DViewer from "@/components/Exercise3DViewer";
 
 export function SupersetTransitionModal({ show, activeCardio, workout, currentExerciseIndex, cardioTimer, formatTime, startCardio, stopCardio, skipSupersetTransition, stopCardioAndContinueSuperset }) {
@@ -39,11 +42,12 @@ export function SupersetTransitionModal({ show, activeCardio, workout, currentEx
                   <Button onClick={() => startCardio('jog')} aria-label="Start jogging" className="flex flex-col items-center gap-2 h-auto py-4 bg-yellow-600/20 border-2 border-yellow-500 text-yellow-300 hover:bg-yellow-600/40"><Route className="w-6 h-6" aria-hidden="true" /><span className="text-xs font-bold">JOG</span></Button>
                   <Button onClick={() => startCardio('sprint')} aria-label="Start sprinting" className="flex flex-col items-center gap-2 h-auto py-4 bg-red-600/20 border-2 border-red-500 text-red-300 hover:bg-red-600/40"><Zap className="w-6 h-6" aria-hidden="true" /><span className="text-xs font-bold">SPRINT</span></Button>
                 </div>
+                <MoreCardio onPick={startCardio} className="mt-2" />
                 <Button onClick={skipSupersetTransition} aria-label="Skip cardio and continue superset" className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold touch-manipulation min-h-[48px] mb-2">SKIP - Continue Superset</Button>
               </>
             ) : (
               <>
-                <h2 className="text-3xl font-bold mb-2 text-brand-blue uppercase">{activeCardio.type}ING</h2>
+                <h2 className="text-3xl font-bold mb-2 text-brand-blue uppercase">{cardioVerb(activeCardio.type)}</h2>
                 <div className="text-7xl font-bold mb-4 text-brand-blue animate-pulse">{formatTime(cardioTimer)}</div>
                 <div className="grid grid-cols-2 gap-2 pb-2">
                   <Button onClick={stopCardio} aria-label="Stop cardio and switch activity" className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold touch-manipulation min-h-[56px] text-sm"><Square className="w-4 h-4 mr-1" aria-hidden="true" />STOP & SWITCH</Button>

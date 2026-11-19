@@ -31,6 +31,9 @@ import { thumbImg, mediumImg } from "@/lib/imgOpt";
 // Live burn meter (2026-11-18)
 import BurnMeter, { BurnChip, HeartRateMini, useBurnTracker, useBodyStats } from "@/components/workout/BurnMeter";
 import { MET, metForExercise, metForCardio } from "@/lib/burnEstimate";
+// Bike / swim cardio (2026-11-19)
+import MoreCardio from "@/components/workout/MoreCardio";
+import { cardioVerb } from "@/lib/cardioTypes";
 // Weights + volume (2026-10-27): per-set added weight, volume = weight x counted reps.
 import WeightInput, { weightLabel } from "@/components/workout/WeightInput";
 // Saved workouts (2026-10-29): Base44 SavedWorkout, shown in My Workouts / My Programs.
@@ -323,7 +326,7 @@ function ExercisePreviewCard({ exercise, setNum, totalSets, onStart, imageUrl, o
 function GuidedRestScreen({ nextExercise, nextImageUrl, prevExercise, nextSetNum, totalSets, isLastExercise, totalSteps, onSkip, onEndWorkout,
   exercises = [], exerciseIndex = 0, currentSet = 1, supersets, onAddSet, onCardioChange, burnSlot = null }) {
   const [restSecs,     setRestSecs]    = useState(REST_DEFAULT);
-  const [cardioMode,   setCardioMode]  = useState(null); // null | 'walk' | 'jog' | 'sprint'
+  const [cardioMode,   setCardioMode]  = useState(null); // null | a key of CARDIO_TYPES (walk/jog/sprint/mtb/road_bike/swim)
   const [cardioTimer,  setCardioTimer] = useState(0);
   const [cardioTotal,  setCardioTotal] = useState(0);   // total seconds of cardio this rest
   const timerRef    = useRef(null);
@@ -384,7 +387,7 @@ function GuidedRestScreen({ nextExercise, nextImageUrl, prevExercise, nextSetNum
     setCardioMode(type);
     onCardioChange?.(type); // burn meter: walking/jogging burns more than standing
     setCardioTimer(0);
-    speak(`${type}ing! Let's go!`, 1.1, 1.1);
+    speak(`${cardioVerb(type)}! Let's go!`, 1.1, 1.1);
   };
   const stopCardio  = () => {
     clearInterval(cardioRef.current);
@@ -518,6 +521,7 @@ function GuidedRestScreen({ nextExercise, nextImageUrl, prevExercise, nextSetNum
                     <span className="text-[10px] font-black">SPRINT</span>
                   </button>
                 </div>
+                <MoreCardio onPick={startCardio} />
 
                 {/* ── The whole circuit ───────────────────────────────────────
                     Rest is the only moment in a workout with time to read, so
@@ -595,7 +599,7 @@ function GuidedRestScreen({ nextExercise, nextImageUrl, prevExercise, nextSetNum
               {/* Active cardio view */}
               <div className="flex-shrink-0">
                 <h2 className="text-2xl font-black text-[#00a9ff] uppercase text-center mb-2">
-                  {cardioMode}ing
+                  {cardioVerb(cardioMode)}
                 </h2>
                 <div className="text-6xl font-black text-[#00a9ff] animate-pulse text-center mb-3 tabular-nums">
                   {formatTime(cardioTimer)}
@@ -643,7 +647,7 @@ function MidExerciseRecovery({ totalSteps, onClose }) {
     return () => clearInterval(cardioRef.current);
   }, [cardioMode]);
 
-  const startCardio = (type) => { setCardioMode(type); setCardioTimer(0); speak(`${type}ing! Let's go!`, 1.1, 1.1); };
+  const startCardio = (type) => { setCardioMode(type); setCardioTimer(0); speak(`${cardioVerb(type)}! Let's go!`, 1.1, 1.1); };
   const stopCardio  = () => { clearInterval(cardioRef.current); setCardioMode(null); };
 
   return createPortal(
@@ -682,6 +686,7 @@ function MidExerciseRecovery({ totalSteps, onClose }) {
                 <span className="text-xs font-black">SPRINT</span>
               </button>
             </div>
+            <MoreCardio onPick={startCardio} />
             <div className="flex items-center justify-center gap-2 mt-1">
               <Footprints className="w-4 h-4 text-gray-400" />
               <span className="text-white font-black text-lg">{totalSteps}</span>
@@ -694,7 +699,7 @@ function MidExerciseRecovery({ totalSteps, onClose }) {
           </div>
         ) : (
           <div className="p-4 space-y-3">
-            <p className="text-2xl font-black text-[#00a9ff] text-center uppercase animate-pulse">{cardioMode}ing</p>
+            <p className="text-2xl font-black text-[#00a9ff] text-center uppercase animate-pulse">{cardioVerb(cardioMode)}</p>
             <p className="text-5xl font-black text-white text-center tabular-nums">{formatTime(cardioTimer)}</p>
             <div className="flex items-center justify-center gap-2">
               <Footprints className="w-5 h-5 text-gray-400" />

@@ -31,6 +31,8 @@ import ActiveRecoveryScreen from "@/components/workout/ActiveRecoveryScreen";
 // Live burn meter (2026-11-18)
 import BurnMeter, { useBurnTracker, useBodyStats, useHeartRate } from "@/components/workout/BurnMeter";
 import { MET, metForExercise, metForCardio } from "@/lib/burnEstimate";
+// Bike / swim cardio (2026-11-19)
+import { cardioLabel, MORE_CARDIO } from "@/lib/cardioTypes";
 import {
   SupersetTransitionModal, AchievementPopup, VideoModal, ThreeDViewModal,
   SupersetConfigModal, SwapExerciseModal, VoiceCoachModal
@@ -291,7 +293,7 @@ export default function ActiveWorkout() {
         setPersonalRecords(prev => ({...prev, longestSprint: cardioTimer})); setTimeout(() => setAchievementPopup(null), 4000);
       }
       setCardioIntervals(prev => [...prev, entry]); setActiveCardio(null); setCardioTimer(0); setCurrentGpsDistance(0);
-      toast.success(`${activeCardio.type} completed: ${formatTime(cardioTimer)}`);
+      toast.success(`${cardioLabel(activeCardio.type)} completed: ${formatTime(cardioTimer)}`);
     }
   };
   const stopCardioAndContinueSuperset = () => { if (activeCardio) stopCardio(); skipSupersetTransition(); };
@@ -317,6 +319,9 @@ export default function ActiveWorkout() {
         else if (cmd.includes('walk')) { startCardio('walk'); speak('Walking.'); }
         else if (cmd.includes('jog')) { startCardio('jog'); speak('Jogging.'); }
         else if (cmd.includes('sprint') || cmd.includes('run')) { startCardio('sprint'); speak('Sprinting!'); }
+        else if (cmd.includes('mountain')) { startCardio('mtb'); speak('Mountain biking.'); }
+        else if (cmd.includes('bike') || cmd.includes('cycl')) { startCardio('road_bike'); speak('Road biking.'); }
+        else if (cmd.includes('swim')) { startCardio('swim'); speak('Swimming.'); }
         else if (cmd.includes('stop')) { if (activeCardio) { stopCardio(); speak('Cardio stopped.'); } else { speak('Pausing.'); pauseWorkout(); } }
         else if (cmd.includes('next')) { nextExercise(); speak('Next exercise.'); }
       }
@@ -576,6 +581,11 @@ export default function ActiveWorkout() {
           walk: { count: walk.length, total_time: walk.reduce((s,c) => s+c.time,0), avg_time: walk.length ? Math.round(walk.reduce((s,c) => s+c.time,0)/walk.length) : 0, total_steps: Math.round(walk.reduce((s,c) => s+(c.time/60)*110,0)), total_distance_miles: Math.round(walk.reduce((s,c) => s+(c.gps_distance||(c.time/3600)*3.5),0)*100)/100 },
           jog: { count: jog.length, total_time: jog.reduce((s,c) => s+c.time,0), avg_time: jog.length ? Math.round(jog.reduce((s,c) => s+c.time,0)/jog.length) : 0, total_steps: Math.round(jog.reduce((s,c) => s+(c.time/60)*170,0)), total_distance_miles: Math.round(jog.reduce((s,c) => s+(c.gps_distance||(c.time/3600)*6),0)*100)/100 },
           sprint: { count: sprint.length, total_time: sprint.reduce((s,c) => s+c.time,0), longest_sprint: sprint.length ? Math.max(...sprint.map(c => c.time)) : 0, shortest_sprint: sprint.length ? Math.min(...sprint.map(c => c.time)) : 0, avg_time: sprint.length ? Math.round(sprint.reduce((s,c) => s+c.time,0)/sprint.length) : 0, total_steps: Math.round(sprint.reduce((s,c) => s+(c.time/60)*190,0)), total_distance_miles: Math.round(sprint.reduce((s,c) => s+(c.gps_distance||(c.time/3600)*10),0)*100)/100 },
+          // Bike / swim (2026-11-19): time, and GPS distance where the phone had it.
+          ...Object.fromEntries(MORE_CARDIO.map(t => {
+            const xs = cardioIntervals.filter(c => c.type === t), tot = xs.reduce((a, c) => a + c.time, 0);
+            return [t, { count: xs.length, total_time: tot, avg_time: xs.length ? Math.round(tot / xs.length) : 0, total_distance_miles: Math.round(xs.reduce((a, c) => a + (c.gps_distance || 0), 0) * 100) / 100 }];
+          })),
           total_steps: finalSteps, total_distance_miles: Math.round(totalWorkoutDistance * 100) / 100
         }
       });

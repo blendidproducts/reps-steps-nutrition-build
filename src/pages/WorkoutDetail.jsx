@@ -9,6 +9,8 @@ import { Calendar, Clock, Target, TrendingUp, ArrowLeft, Zap, Dumbbell, Footprin
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+// Bike / swim cardio (2026-11-19)
+import { CARDIO_TYPES, MORE_CARDIO } from "@/lib/cardioTypes";
 
 export default function WorkoutDetail() {
   const navigate = useNavigate();
@@ -233,6 +235,22 @@ export default function WorkoutDetail() {
                     )}
                   </div>
                 )}
+
+                {MORE_CARDIO.filter(t => session.cardio_analytics[t]?.count > 0).map(t => {
+                  const a = session.cardio_analytics[t], c = CARDIO_TYPES[t];
+                  return (
+                    <div key={t} className="bg-cyan-600/10 border border-cyan-500/30 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xl" aria-hidden="true">{c.emoji}</span>
+                        <h3 className="font-bold text-cyan-300 uppercase">{c.label}</h3>
+                      </div>
+                      <p className="text-sm text-gray-300">Count: {a.count}</p>
+                      <p className="text-sm text-gray-300">Total: {formatTime(a.total_time)}</p>
+                      <p className="text-sm text-gray-300">Avg: {formatTime(a.avg_time)}</p>
+                      {a.total_distance_miles > 0 && <p className="text-sm text-cyan-300 font-bold mt-2">Distance: {a.total_distance_miles} mi</p>}
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

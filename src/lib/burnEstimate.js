@@ -25,6 +25,9 @@ export const MET = {
   walk: 3.5,     // 17190 walking, 2.8-3.2 mph, level, moderate pace
   jog: 7.0,      // 12020 jogging, general
   sprint: 11.8,  // 12070 running, 8 mph (7.5 min/mile)
+  mtb: 8.5,       // 01009 bicycling, mountain, general
+  road_bike: 8.0, // 01030 bicycling, 12-13.9 mph, leisure, moderate effort
+  swim: 5.8,      // 18310 swimming laps, freestyle, front crawl, slow, light or moderate effort
   rest: 1.3,     // 07040 standing quietly
 };
 
